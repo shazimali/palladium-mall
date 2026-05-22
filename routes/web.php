@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UnitController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -15,6 +20,34 @@ Route::middleware('guest')->group(function () {
 
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
     Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
+
+});
+
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Units — admin + super-admin only
+    Route::middleware('permission:units.view')->group(function () {
+        Route::resource('units', UnitController::class)->except(['show']);
+        Route::get('units/{unit}', [UnitController::class, 'show'])->name('units.show');
+    });
+
+    // Users — admin + super-admin only
+    Route::middleware('permission:users.view')->group(function () {
+        Route::resource('users', UserController::class)->except(['show']);
+        Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    });
+
+    Route::middleware('permission:roles.view')->group(function () {
+        Route::resource('roles', RoleController::class);
+    });
+
+    Route::middleware('permission:permissions.view')->group(function () {
+        Route::resource('permissions', PermissionController::class);
+    });
+
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 });
 
 /*
@@ -26,11 +59,6 @@ Route::middleware('auth')->group(function () {
 
     // Logout
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
-
-    // Dashboard
-    Route::get('/', function () {
-        return view('pages.dashboard.ecommerce', ['title' => 'E-commerce Dashboard']);
-    })->name('dashboard');
 
     // Calendar
     Route::get('/calendar', function () {
@@ -95,15 +123,4 @@ Route::middleware('auth')->group(function () {
     Route::get('/videos', function () {
         return view('pages.ui-elements.videos', ['title' => 'Videos']);
     })->name('videos');
-
-    // Admin User Management
-    Route::middleware(['permission:admin.access'])
-        ->name('admin.')
-        ->group(function () {
-            Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
-            Route::patch('users/{user}/toggle-status', [\App\Http\Controllers\Admin\UserController::class, 'toggleStatus'])
-                 ->name('users.toggle-status');
-            Route::resource('roles', \App\Http\Controllers\Admin\RoleController::class);
-            Route::resource('permissions', \App\Http\Controllers\Admin\PermissionController::class);
-        });
 });

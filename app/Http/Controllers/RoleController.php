@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreRoleRequest;
@@ -15,13 +15,13 @@ class RoleController extends Controller
     public function index(): View
     {
         $roles = Role::withCount(['permissions', 'users'])->orderBy('display_name')->get();
-        return view('pages.admin.roles.index', compact('roles'));
+        return view('roles.index', compact('roles'));
     }
 
     public function create(): View
     {
         $permissions = Permission::orderBy('group')->orderBy('display_name')->get()->groupBy('group');
-        return view('pages.admin.roles.create', compact('permissions'));
+        return view('roles.create', compact('permissions'));
     }
 
     public function store(StoreRoleRequest $request): RedirectResponse
@@ -32,15 +32,15 @@ class RoleController extends Controller
             $role->permissions()->sync($request->permissions);
         }
 
-        return redirect()->route('admin.roles.index')
+        return redirect()->route('roles.index')
             ->with('success', 'Role created successfully.');
     }
 
     public function edit(Role $role): View
     {
-        $permissions      = Permission::orderBy('group')->orderBy('display_name')->get()->groupBy('group');
-        $rolePermissions  = $role->permissions->pluck('id')->toArray();
-        return view('pages.admin.roles.edit', compact('role', 'permissions', 'rolePermissions'));
+        $permissions = Permission::orderBy('group')->orderBy('display_name')->get()->groupBy('group');
+        $rolePermissions = $role->permissions->pluck('id')->toArray();
+        return view('roles.edit', compact('role', 'permissions', 'rolePermissions'));
     }
 
     public function update(UpdateRoleRequest $request, Role $role): RedirectResponse
@@ -48,19 +48,19 @@ class RoleController extends Controller
         $role->update($request->safe()->except('permissions'));
         $role->permissions()->sync($request->permissions ?? []);
 
-        return redirect()->route('admin.roles.index')
+        return redirect()->route('roles.index')
             ->with('success', 'Role updated successfully.');
     }
 
     public function destroy(Role $role): RedirectResponse
     {
         if ($role->users()->exists()) {
-            return redirect()->route('admin.roles.index')
+            return redirect()->route('roles.index')
                 ->with('error', 'Cannot delete a role that has users assigned to it.');
         }
 
         $role->delete();
-        return redirect()->route('admin.roles.index')
+        return redirect()->route('roles.index')
             ->with('success', 'Role deleted successfully.');
     }
 }

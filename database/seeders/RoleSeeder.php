@@ -42,7 +42,6 @@ class RoleSeeder extends Seeder
         );
 
         $editorPermissions = Permission::whereIn('name', [
-            'admin.access',
             'users.view',
             'users.create',
             'users.edit',

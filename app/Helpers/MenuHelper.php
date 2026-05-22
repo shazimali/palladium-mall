@@ -80,7 +80,6 @@ class MenuHelper
             ],
         ];
     }
-
     public static function getMenuGroups()
     {
         $groups = [
@@ -94,31 +93,45 @@ class MenuHelper
             ]
         ];
 
-        if (auth()->check() && auth()->user()->can('admin.access')) {
-            $groups[] = [
-                'title' => 'User Management',
-                'items' => [
-                    [
-                        'icon' => 'user-profile',
-                        'name' => 'Users',
-                        'path' => '/users',
-                    ],
-                    [
-                        'icon' => 'tables',
-                        'name' => 'Roles',
-                        'path' => '/roles',
-                    ],
-                    [
-                        'icon' => 'forms',
-                        'name' => 'Permissions',
-                        'path' => '/permissions',
-                    ]
-                ]
-            ];
+        if (auth()->check()) {
+            $user = auth()->user();
+            $adminItems = [];
+
+            if ($user->can('users.view')) {
+                $adminItems[] = [
+                    'icon' => 'user-profile',
+                    'name' => 'Users',
+                    'path' => '/users',
+                ];
+            }
+
+            if ($user->can('roles.view')) {
+                $adminItems[] = [
+                    'icon' => 'tables',
+                    'name' => 'Roles',
+                    'path' => '/roles',
+                ];
+            }
+
+            if ($user->can('permissions.view')) {
+                $adminItems[] = [
+                    'icon' => 'forms',
+                    'name' => 'Permissions',
+                    'path' => '/permissions',
+                ];
+            }
+
+            if (!empty($adminItems)) {
+                $groups[] = [
+                    'title' => 'User Management',
+                    'items' => $adminItems,
+                ];
+            }
         }
 
         return $groups;
     }
+
 
     public static function isActive($path)
     {

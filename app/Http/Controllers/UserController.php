@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
@@ -22,32 +22,32 @@ class UserController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
         if ($request->filled('role')) {
-            $query->whereHas('roles', fn ($q) => $q->where('name', $request->role));
+            $query->whereHas('roles', fn($q) => $q->where('name', $request->role));
         }
 
         $users = $query->paginate(15)->withQueryString();
         $roles = Role::orderBy('display_name')->get();
 
-        return view('pages.admin.users.index', compact('users', 'roles'));
+        return view('users.index', compact('users', 'roles'));
     }
 
     public function create(): View
     {
         $roles = Role::orderBy('display_name')->get();
-        return view('pages.admin.users.create', compact('roles'));
+        return view('users.create', compact('roles'));
     }
 
     public function store(StoreUserRequest $request): RedirectResponse
     {
         $user = User::create([
-            'name'      => $request->name,
-            'email'     => $request->email,
-            'password'  => Hash::make($request->password),
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
             'is_active' => $request->boolean('is_active', true),
         ]);
 
@@ -55,22 +55,22 @@ class UserController extends Controller
             $user->roles()->sync($request->roles);
         }
 
-        return redirect()->route('admin.users.index')
+        return redirect()->route('users.index')
             ->with('success', 'User created successfully.');
     }
 
     public function edit(User $user): View
     {
-        $roles     = Role::orderBy('display_name')->get();
+        $roles = Role::orderBy('display_name')->get();
         $userRoles = $user->roles->pluck('id')->toArray();
-        return view('pages.admin.users.edit', compact('user', 'roles', 'userRoles'));
+        return view('users.edit', compact('user', 'roles', 'userRoles'));
     }
 
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         $data = [
-            'name'      => $request->name,
-            'email'     => $request->email,
+            'name' => $request->name,
+            'email' => $request->email,
             'is_active' => $request->boolean('is_active'),
         ];
 
@@ -81,33 +81,33 @@ class UserController extends Controller
         $user->update($data);
         $user->roles()->sync($request->roles ?? []);
 
-        return redirect()->route('admin.users.index')
+        return redirect()->route('users.index')
             ->with('success', 'User updated successfully.');
     }
 
     public function destroy(User $user): RedirectResponse
     {
         if ($user->id === auth()->id()) {
-            return redirect()->route('admin.users.index')
+            return redirect()->route('users.index')
                 ->with('error', 'You cannot delete your own account.');
         }
 
         $user->delete();
-        return redirect()->route('admin.users.index')
+        return redirect()->route('users.index')
             ->with('success', 'User deleted successfully.');
     }
 
     public function toggleStatus(User $user): RedirectResponse
     {
         if ($user->id === auth()->id()) {
-            return redirect()->route('admin.users.index')
+            return redirect()->route('users.index')
                 ->with('error', 'You cannot deactivate your own account.');
         }
 
-        $user->update(['is_active' => ! $user->is_active]);
+        $user->update(['is_active' => !$user->is_active]);
         $status = $user->is_active ? 'activated' : 'deactivated';
 
-        return redirect()->route('admin.users.index')
+        return redirect()->route('users.index')
             ->with('success', "User {$status} successfully.");
     }
 }

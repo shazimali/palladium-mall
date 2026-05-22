@@ -28,6 +28,10 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
+        if (auth()->user()->hasRole('tenant')) {
+            return redirect()->intended(route('tenant.dashboard'));
+        }
+
         return redirect()->intended(route('dashboard'));
     }
 

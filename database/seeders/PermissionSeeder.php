@@ -10,12 +10,6 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            // Admin Access
-            [
-                'name' => 'admin.access',
-                'display_name' => 'Access Admin Panel',
-                'group' => 'Admin'
-            ],
             // Users CRUD
             [
                 'name' => 'users.view',
