@@ -82,19 +82,46 @@ class MenuHelper
     }
     public static function getMenuGroups()
     {
+        $user = auth()->user();
+
+        $mainItems = self::getMainNavItems();
+
+        if (auth()->check() && $user->can('units.view')) {
+            $mainItems[] = [
+                'icon' => 'tables',
+                'name' => 'Flat/Shops',
+                'path' => '/units',
+            ];
+        }
+
+        if (auth()->check() && $user->can('tenants.view')) {
+            $mainItems[] = [
+                'icon' => 'forms',
+                'name' => 'Tenants',
+                'path' => '/tenants',
+            ];
+        }
+
+        if (auth()->check() && $user->can('agreements.view')) {
+            $mainItems[] = [
+                'icon' => 'calendar',
+                'name' => 'Agreements',
+                'path' => '/agreements',
+            ];
+        }
+
         $groups = [
             [
                 'title' => 'Menu',
-                'items' => self::getMainNavItems()
+                'items' => $mainItems,
             ],
             [
                 'title' => 'Others',
-                'items' => self::getOthersItems()
-            ]
+                'items' => self::getOthersItems(),
+            ],
         ];
 
         if (auth()->check()) {
-            $user = auth()->user();
             $adminItems = [];
 
             if ($user->can('users.view')) {

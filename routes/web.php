@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -45,6 +47,18 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:permissions.view')->group(function () {
         Route::resource('permissions', PermissionController::class);
+    });
+
+    Route::middleware('permission:units.view')->group(function () {
+        Route::resource('units', UnitController::class)->except(['show']);
+    });
+
+    Route::middleware('permission:tenants.view')->group(function () {
+        Route::resource('tenants', TenantController::class);
+    });
+
+    Route::middleware('permission:agreements.view')->group(function () {
+        Route::resource('agreements', AgreementController::class);
     });
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

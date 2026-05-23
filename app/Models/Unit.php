@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -78,5 +79,15 @@ class Unit extends Model
             'sold' => 'badge-secondary',
             default => 'badge-secondary',
         };
+    }
+
+    public function tenant(): HasOne
+    {
+        return $this->hasOne(Tenant::class)->where('status', 'active');
+    }
+
+    public function hasActiveTenant(): bool
+    {
+        return $this->tenant()->exists();
     }
 }
