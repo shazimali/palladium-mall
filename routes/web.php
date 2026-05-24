@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UtilityReadingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -60,6 +62,30 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:agreements.view')->group(function () {
         Route::resource('agreements', AgreementController::class);
     });
+
+    Route::middleware('permission:utilities.view')->group(function () {
+        Route::resource('utilities', UtilityReadingController::class);
+        Route::post('utilities/{utility}/mark-paid', [UtilityReadingController::class, 'markPaid'])
+            ->name('utilities.mark-paid');
+    });
+
+    // AJAX routes — no permission middleware needed, just auth
+    Route::get('ajax/tenant-by-unit', [UtilityReadingController::class, 'getTenantByUnit'])
+        ->name('ajax.tenant-by-unit');
+    Route::get('ajax/previous-reading', [UtilityReadingController::class, 'getPreviousReading'])
+        ->name('ajax.previous-reading');
+
+    Route::middleware('permission:payments.view')->group(function () {
+        Route::resource('payments', PaymentController::class);
+        Route::post('payments/{payment}/record', [PaymentController::class, 'recordPayment'])
+            ->name('payments.record');
+        Route::post('payments/bulk-generate', [PaymentController::class, 'bulkGenerate'])
+            ->name('payments.bulk-generate');
+    });
+
+    // AJAX
+    Route::get('ajax/agreement-by-tenant', [PaymentController::class, 'getAgreementByTenant'])
+        ->name('ajax.agreement-by-tenant');
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 });

@@ -100,4 +100,14 @@ class Tenant extends Model
     {
         return $this->hasOne(Agreement::class)->where('status', 'active')->latestOfMany();
     }
+
+    public function utilityReadings(): HasMany
+    {
+        return $this->hasMany(UtilityReading::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
 }
