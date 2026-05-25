@@ -4,11 +4,18 @@
 FROM php:8.3-apache AS base
 
 RUN apt-get update && apt-get install -y \
-    git unzip curl \
-    libzip-dev libonig-dev libxml2-dev libicu-dev \
-    libpng-dev libjpeg-dev libfreetype6-dev \
-    libxslt-dev libfontconfig1 \
-    libpq-dev \
+    git \
+    unzip \
+    curl \
+    libzip-dev \
+    libonig-dev \
+    libxml2-dev \
+    libicu-dev \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libxslt-dev \
+    libfontconfig1 \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
     pdo_mysql \
@@ -18,12 +25,7 @@ RUN apt-get update && apt-get install -y \
     gd \
     bcmath \
     exif \
-    dom \
-    xml \
     xsl \
-    xmlreader \
-    xmlwriter \
-    simplexml \
     && a2enmod rewrite \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -67,31 +69,23 @@ COPY postcss.config.* ./
 
 RUN npm run build
 
-# ==================================================
 # Stage 4: Final Runtime Image
-# ==================================================
 FROM base
 
-# Copy vendor from composer stage
 COPY --from=vendor /app/vendor ./vendor
-
-# Copy built frontend assets
 COPY --from=node-builder /app/public/build ./public/build
 
-# Copy application source
+# Copy source — .dockerignore prevents vendor/node_modules/build overwrite
 COPY . .
 
-# Apache config
 RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 
-# Startup script
 COPY docker/startup.sh /usr/local/bin/startup.sh
 RUN chmod +x /usr/local/bin/startup.sh
 
-# Permissions
 RUN chown -R www-data:www-data storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
 EXPOSE 80
-CMD ["startup.sh"]
+CMD ["/usr/local/bin/startup.sh"]
