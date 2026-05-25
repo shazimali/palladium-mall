@@ -73,10 +73,20 @@ jobs:
 
     outputs:
       image_tag: ${{ steps.sha.outputs.tag }}
+      image_name: ${{ steps.image.outputs.name }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Format Image Name
+        id: image
+        run: |
+          FULL_IMAGE="${{ secrets.IMAGE_NAME }}"
+          if [[ "$FULL_IMAGE" != *"/"* ]]; then
+            FULL_IMAGE="${{ secrets.DOCKER_HUB_USERNAME }}/$FULL_IMAGE"
+          fi
+          echo "name=$FULL_IMAGE" >> $GITHUB_OUTPUT
 
       - name: Set short SHA tag
         id: sha
@@ -97,10 +107,10 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.IMAGE_NAME }}:${{ steps.sha.outputs.tag }}
-            ${{ secrets.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ secrets.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.IMAGE_NAME }}:buildcache,mode=max
+            ${{ steps.image.outputs.name }}:${{ steps.sha.outputs.tag }}
+            ${{ steps.image.outputs.name }}:latest
+          cache-from: type=registry,ref=${{ steps.image.outputs.name }}:buildcache
+          cache-to: type=registry,ref=${{ steps.image.outputs.name }}:buildcache,mode=max
 
   # ─────────────────────────────────────────────────────────────
   # JOB 3 – Deploy to VPS
@@ -134,9 +144,9 @@ jobs:
             set -e
 
             IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
-            FULL_IMAGE="${{ secrets.IMAGE_NAME }}"
+            FULL_IMAGE="${{ needs.build-and-push.outputs.image_name }}"
 
-            # Safely extract repository name if secrets.IMAGE_NAME contains a slash (e.g., username/repo)
+            # Safely extract repository name if image name contains a slash (e.g., username/repo)
             if [[ "$FULL_IMAGE" == *"/"* ]]; then
               REPO_NAME="${FULL_IMAGE#*/}"
             else
