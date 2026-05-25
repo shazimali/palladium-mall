@@ -47,7 +47,8 @@ RUN composer install \
     --no-interaction \
     --prefer-dist \
     --optimize-autoloader \
-    --no-scripts
+    --no-scripts \
+    --ignore-platform-reqs
 
 # ==================================================
 # Stage 3: Node Build (Vite + Tailwind)
