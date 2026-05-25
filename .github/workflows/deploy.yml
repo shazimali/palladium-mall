@@ -1,0 +1,156 @@
+name: CI / CD – Palladium Mall
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ${{ secrets.IMAGE_NAME }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # JOB 1 – Tests
+  # ─────────────────────────────────────────────────────────────
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql, sqlite, mbstring, exif, pcntl, bcmath, gd, zip, intl, dom, xml, xsl, xmlreader, xmlwriter, simplexml
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Copy .env for testing
+        run: cp .env.example .env.testing
+
+      - name: Generate app key
+        run: php artisan key:generate --env=testing
+
+      - name: Run Pest tests
+        run: php artisan test --parallel
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 2 – Build & Push to Docker Hub (main only)
+  # ─────────────────────────────────────────────────────────────
+  build-and-push:
+    name: Build & Push Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    outputs:
+      image_tag: ${{ steps.sha.outputs.tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set short SHA tag
+        id: sha
+        run: echo "tag=sha-$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.IMAGE_NAME }}:${{ steps.sha.outputs.tag }}
+            ${{ secrets.IMAGE_NAME }}:latest
+          cache-from: type=registry,ref=${{ secrets.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.IMAGE_NAME }}:buildcache,mode=max
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 3 – Deploy to VPS
+  # ─────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload docker-compose.yml to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "/var/www/palladium_mall"
+
+      - name: SSH deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+
+            IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
+            FULL_IMAGE="${{ secrets.IMAGE_NAME }}"
+
+            # Safely extract repository name if secrets.IMAGE_NAME contains a slash (e.g., username/repo)
+            if [[ "$FULL_IMAGE" == *"/"* ]]; then
+              REPO_NAME="${FULL_IMAGE#*/}"
+            else
+              REPO_NAME="$FULL_IMAGE"
+            fi
+
+            echo "▶ Pulling $FULL_IMAGE:$IMAGE_TAG ..."
+            docker pull $FULL_IMAGE:$IMAGE_TAG
+
+            echo "▶ Restarting container..."
+            cd /var/www/palladium_mall
+            IMAGE_TAG=$IMAGE_TAG DOCKERHUB_USERNAME="${{ secrets.DOCKER_HUB_USERNAME }}" IMAGE_NAME="$REPO_NAME" docker compose up -d --no-deps --force-recreate palladium_mall_app
+
+            echo "▶ Pruning old images..."
+            docker image prune -f --filter "until=72h"
+
+            echo "✅ Deploy complete — $FULL_IMAGE:$IMAGE_TAG is live."

@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  palladium_mall_app:
+    image: ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG:-latest}
+    container_name: palladium_mall_app
+    restart: always
+    env_file:
+      - /var/www/palladium_mall/.env
+    ports:
+      - "8084:80"
+    networks:
+      - global_network
+    volumes:
+      - palladium_mall_storage:/var/www/palladium_mall/storage
+      - palladium_mall_cache:/var/www/palladium_mall/bootstrap/cache
+      - /var/www/palladium_mall/.env:/var/www/palladium_mall/.env
+
+networks:
+  global_network:
+    external: true
+
+volumes:
+  palladium_mall_storage:
+  palladium_mall_cache:
