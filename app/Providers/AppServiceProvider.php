@@ -27,17 +27,17 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Dynamic Permissions registration
-        if (\Illuminate\Support\Facades\Schema::hasTable('permissions')) {
-            try {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('permissions')) {
                 $permissions = \App\Models\Permission::all();
                 foreach ($permissions as $permission) {
                     \Illuminate\Support\Facades\Gate::define($permission->name, function ($user) use ($permission) {
                         return $user->hasPermission($permission->name);
                     });
                 }
-            } catch (\Exception $e) {
-                // Fail silently if DB is not setup yet during deployments/migrations
             }
+        } catch (\Exception $e) {
+            // Fail silently if DB is not setup yet during deployments/migrations
         }
     }
 }
