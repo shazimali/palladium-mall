@@ -32,12 +32,15 @@ echo "🔁 Running migrations..."
 php artisan migrate --force
 
 echo "🔗 Fixing storage link..."
+mkdir -p /var/www/palladium_mall/storage/framework/views
+mkdir -p /var/www/palladium_mall/storage/framework/cache
+mkdir -p /var/www/palladium_mall/storage/framework/sessions
 php artisan storage:link --force || true
 
 echo "🚀 Running optimizations..."
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan view:cache || true
 php artisan event:cache || true
 
 echo "✅ Starting Apache..."
