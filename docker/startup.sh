@@ -3,7 +3,9 @@ set -e
 
 echo "⏳ Waiting for database connection..."
 
-# Use a raw TCP check — works on fresh databases too
+# Load .env file
+export $(grep -v '^#' /var/www/palladium_mall/.env | xargs)
+
 until php -r "
   \$dsn = 'mysql:host=' . getenv('DB_HOST') . ';port=' . (getenv('DB_PORT') ?: 3306);
   try {
@@ -19,7 +21,6 @@ done
 
 echo "✅ Database ready"
 
-# Generate APP_KEY only if truly missing from environment
 if [ -z "$APP_KEY" ]; then
     echo "🗝️ Generating APP_KEY..."
     php artisan key:generate --force
@@ -27,15 +28,12 @@ else
     echo "✅ APP_KEY already set"
 fi
 
-# Run migrations — fail loudly on error
 echo "🔁 Running migrations..."
 php artisan migrate --force
 
-# Fix storage symlink (idempotent)
 echo "🔗 Fixing storage link..."
 php artisan storage:link --force || true
 
-# Laravel optimizations
 echo "🚀 Running optimizations..."
 php artisan config:cache
 php artisan route:cache
