@@ -127,6 +127,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('ledger.view')) {
+            $mainItems[] = [
+                'icon' => 'money',
+                'name' => 'Ledger',
+                'path' => '/ledger',
+            ];
+        }
+
         $groups = [
             [
                 'title' => 'Menu',

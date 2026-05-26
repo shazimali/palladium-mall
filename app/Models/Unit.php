@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class Unit extends Model
 {
@@ -95,5 +96,72 @@ class Unit extends Model
     public function utilityReadings(): HasMany
     {
         return $this->hasMany(UtilityReading::class);
+    }
+
+
+    public function ledgerEntries(
+        ?string $from = null,
+        ?string $to = null,
+        ?string $type = null,
+        ?string $status = null
+    ): Collection {
+        // All payments for this unit
+        $payments = Payment::with('tenant')
+            ->where('unit_id', $this->id)
+            ->when($from, fn($q) => $q->where('month', '>=', $from))
+            ->when($to, fn($q) => $q->where('month', '<=', $to))
+            ->when($type, fn($q) => $q->where('type', $type))
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->get()
+            ->map(fn($p) => [
+                'date' => $p->due_date,
+                'month' => $p->month,
+                'description' => ucfirst($p->type) . ' — ' . $p->month->format('F Y'),
+                'tenant' => $p->tenant->name,
+                'category' => 'payment',
+                'type' => $p->type,
+                'amount_due' => (float) $p->amount,
+                'amount_paid' => (float) $p->amount_paid,
+                'status' => $p->status,
+                'paid_at' => $p->paid_at,
+                'source_type' => 'payment',
+            ]);
+
+        // All utility readings for this unit
+        $utilities = UtilityReading::with('tenant')
+            ->where('unit_id', $this->id)
+            ->when($from, fn($q) => $q->where('month', '>=', $from))
+            ->when($to, fn($q) => $q->where('month', '<=', $to))
+            ->when(
+                $type && in_array($type, ['electricity', 'water', 'gas']),
+                fn($q) => $q->where('type', $type)
+            )
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->get()
+            ->map(fn($u) => [
+                'date' => $u->due_date,
+                'month' => $u->month,
+                'description' => ucfirst($u->type) . ' — ' . $u->month->format('F Y'),
+                'tenant' => $u->tenant->name,
+                'category' => 'utility',
+                'type' => $u->type,
+                'amount_due' => (float) $u->bill_amount,
+                'amount_paid' => $u->isPaid() ? (float) $u->bill_amount : 0,
+                'status' => $u->status,
+                'paid_at' => $u->paid_at,
+                'source_type' => 'utility',
+            ]);
+
+        $merged = $payments->concat($utilities)
+            ->sortBy('date')
+            ->values();
+
+        $runningBalance = 0;
+
+        return $merged->map(function ($entry) use (&$runningBalance) {
+            $runningBalance += $entry['amount_due'] - $entry['amount_paid'];
+            $entry['balance'] = $runningBalance;
+            return $entry;
+        });
     }
 }

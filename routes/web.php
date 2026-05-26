@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
@@ -86,6 +87,12 @@ Route::middleware('auth')->group(function () {
     // AJAX
     Route::get('ajax/agreement-by-tenant', [PaymentController::class, 'getAgreementByTenant'])
         ->name('ajax.agreement-by-tenant');
+
+    Route::middleware('permission:ledger.view')->group(function () {
+        Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
+        Route::get('ledger/export/excel', [LedgerController::class, 'exportExcel'])->name('ledger.excel');
+        Route::get('ledger/export/pdf', [LedgerController::class, 'exportPdf'])->name('ledger.pdf');
+    });
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 });
