@@ -30,12 +30,18 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             flatpickr('#month', {
-                dateFormat: 'Y-m-d',
+                dateFormat: 'Y-m-01',
                 altInput: true,
                 altFormat: 'F Y',
-                allowInput: false,
                 disableMobile: true,
-                disable: [function (date) { return date.getDate() !== 1; }],
+                plugins: [
+                    new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    })
+                ],
             });
 
             flatpickr('#due_date', {

@@ -180,4 +180,9 @@ class Tenant extends Model
             return $entry;
         });
     }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class);
+    }
 }

@@ -53,22 +53,21 @@
                 </div>
 
                 {{-- Header row --}}
-                <div class="grid grid-cols-12 gap-3 px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
-                    <div class="col-span-5">Description</div>
-                    <div class="col-span-3">Type</div>
-                    <div class="col-span-3">Amount (Rs.)</div>
-                    <div class="col-span-1"></div>
+                <div class="grid grid-cols-12 gap-3 px-1 pb-2 pr-10 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-800">
+                    <div class="col-span-4">Description</div>
+                    <div class="col-span-4">Type</div>
+                    <div class="col-span-4">Amount (Rs.)</div>
                 </div>
 
                 <div id="itemsContainer" class="mt-1 space-y-1">
                     @foreach($invoice->items as $i => $item)
                         <div
-                            class="item-row grid grid-cols-12 gap-3 items-center py-2 border-b border-gray-100 dark:border-gray-800/60">
-                            <div class="col-span-5">
+                            class="item-row relative grid grid-cols-12 gap-3 items-center py-2 pr-10 border-b border-gray-100 dark:border-gray-800/60">
+                            <div class="col-span-4">
                                 <input type="text" name="items[{{ $i }}][description]" value="{{ $item->description }}"
                                     class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                             </div>
-                            <div class="col-span-3">
+                            <div class="col-span-4">
                                 <select name="items[{{ $i }}][type]"
                                     class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                                     @foreach(['rent', 'maintenance', 'electricity', 'water', 'gas', 'fine', 'other'] as $type)
@@ -78,19 +77,17 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-span-3">
+                            <div class="col-span-4">
                                 <input type="number" name="items[{{ $i }}][amount]" value="{{ $item->amount }}" min="0"
                                     step="0.01"
                                     class="item-amount w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                             </div>
-                            <div class="col-span-1 flex justify-center">
-                                <button type="button" onclick="removeItem(this)"
-                                    class="inline-flex items-center rounded-lg p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                </button>
-                            </div>
+                            <button type="button" onclick="removeItem(this)"
+                                class="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center rounded-lg p-2 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                         </div>
                     @endforeach
                 </div>
@@ -150,30 +147,28 @@
             function itemRowHtml(index) {
                 const opts = types.map(t => `<option value="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</option>`).join('');
                 return `
-            <div class="item-row grid grid-cols-12 gap-3 items-center py-2 border-b border-gray-100 dark:border-gray-800/60">
-                <div class="col-span-5">
+            <div class="item-row relative grid grid-cols-12 gap-3 items-center py-2 pr-10 border-b border-gray-100 dark:border-gray-800/60">
+                <div class="col-span-4">
                     <input type="text" name="items[${index}][description]" placeholder="Description"
                         class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                 </div>
-                <div class="col-span-3">
+                <div class="col-span-4">
                     <select name="items[${index}][type]"
                         class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                         ${opts}
                     </select>
                 </div>
-                <div class="col-span-3">
+                <div class="col-span-4">
                     <input type="number" name="items[${index}][amount]" min="0" step="0.01"
                         placeholder="0.00"
                         class="item-amount w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                 </div>
-                <div class="col-span-1 flex justify-center">
-                    <button type="button" onclick="removeItem(this)"
-                        class="inline-flex items-center rounded-lg p-2 text-red-400 hover:bg-red-50 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
+                <button type="button" onclick="removeItem(this)"
+                    class="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center rounded-lg p-2 text-red-400 hover:bg-red-50 transition-colors">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             </div>`;
             }
 

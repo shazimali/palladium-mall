@@ -105,7 +105,7 @@ class MenuHelper
 
         if (auth()->check() && $user->can('agreements.view')) {
             $mainItems[] = [
-                'icon' => 'calendar',
+                'icon' => 'pages',
                 'name' => 'Agreements',
                 'path' => '/agreements',
             ];
@@ -113,7 +113,7 @@ class MenuHelper
 
         if (auth()->check() && $user->can('utilities.view')) {
             $mainItems[] = [
-                'icon' => 'chart-pie',
+                'icon' => 'authentication',
                 'name' => 'Utilities',
                 'path' => '/utilities',
             ];
@@ -129,9 +129,17 @@ class MenuHelper
 
         if (auth()->check() && $user->can('ledger.view')) {
             $mainItems[] = [
-                'icon' => 'money',
+                'icon' => 'task',
                 'name' => 'Ledger',
                 'path' => '/ledger',
+            ];
+        }
+
+        if (auth()->check() && $user->can('invoices.view')) {
+            $mainItems[] = [
+                'icon' => 'ui-elements',
+                'name' => 'Invoices',
+                'path' => '/invoices',
             ];
         }
 

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
@@ -93,6 +94,17 @@ Route::middleware('auth')->group(function () {
         Route::get('ledger/export/excel', [LedgerController::class, 'exportExcel'])->name('ledger.excel');
         Route::get('ledger/export/pdf', [LedgerController::class, 'exportPdf'])->name('ledger.pdf');
     });
+
+    Route::middleware(['auth', 'permission:invoices.view'])->group(function () {
+        Route::resource('invoices', InvoiceController::class);
+        Route::get('invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
+        Route::post('invoices/{invoice}/mark-sent', [InvoiceController::class, 'markSent'])->name('invoices.mark-sent');
+        Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.mark-paid');
+    });
+
+    // AJAX
+    Route::middleware('auth')->get('ajax/invoice-items', [InvoiceController::class, 'pullItems'])
+        ->name('ajax.invoice-items');
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 });
