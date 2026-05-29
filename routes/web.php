@@ -6,6 +6,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TenantController;
 use App\Http\Controllers\UnitController;
@@ -93,6 +94,12 @@ Route::middleware('auth')->group(function () {
         Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
         Route::get('ledger/export/excel', [LedgerController::class, 'exportExcel'])->name('ledger.excel');
         Route::get('ledger/export/pdf', [LedgerController::class, 'exportPdf'])->name('ledger.pdf');
+    });
+
+    Route::middleware('permission:reports.view')->group(function () {
+        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.excel');
+        Route::get('reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
     });
 
     Route::middleware(['auth', 'permission:invoices.view'])->group(function () {

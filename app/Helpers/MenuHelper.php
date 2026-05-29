@@ -143,6 +143,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('reports.view')) {
+            $mainItems[] = [
+                'icon' => 'charts',
+                'name' => 'Reports',
+                'path' => '/reports',
+            ];
+        }
+
         $groups = [
             [
                 'title' => 'Menu',
