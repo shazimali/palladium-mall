@@ -115,7 +115,7 @@
         @include('layouts.backdrop')
         @include('layouts.sidebar')
 
-        <div class="flex-1 transition-all duration-300 ease-in-out"
+        <div class="flex-1 min-w-0 overflow-x-hidden transition-all duration-300 ease-in-out"
             :class="{
                 'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
                 'xl:ml-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isHovered,

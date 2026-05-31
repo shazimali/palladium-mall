@@ -3,54 +3,56 @@
 @section('content')
   <div class="space-y-6">
 
-    {{-- ── Row 1: Stat Cards ──────────────────────────────────────── --}}
-    <x-pmms.stat-cards 
-      :totalUnits="$totalUnits" 
-      :occupiedUnits="$occupiedUnits" 
+    {{-- ── Page Header ──────────────────────────────────────────────── --}}
+    <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h1 class="text-xl font-extrabold text-gray-800 dark:text-white/90">Dashboard</h1>
+        <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+          Welcome back! Here's what's happening at Palladium Mall.
+        </p>
+      </div>
+      <span class="text-xs font-medium text-gray-400 dark:text-gray-500">
+        {{ now()->format('l, d M Y') }}
+      </span>
+    </div>
+
+    {{-- ── Row 1: Stat Cards ──────────────────────────────────────────── --}}
+    <x-pmms.stat-cards
+      :totalUnits="$totalUnits"
+      :occupiedUnits="$occupiedUnits"
       :vacantUnits="$vacantUnits"
-      :rentDue="$rentDue" 
-      :utilitiesDue="$utilitiesDue" 
-      :occupancyRate="$occupancyRate" 
+      :rentDue="$rentDue"
+      :utilitiesDue="$utilitiesDue"
+      :occupancyRate="$occupancyRate"
     />
 
-    {{-- ── Row 2: 2-Column Dashboard Layout ──────────────────────── --}}
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
-      
-      {{-- Left Side: Main Data & Charts (Col Span 8) --}}
-      <div class="space-y-6 lg:col-span-8">
-        {{-- Rent Collection Chart --}}
-        <x-pmms.rent-chart 
-          :chartMonths="$chartMonths" 
-          :chartDue="$chartDue" 
-          :chartPaid="$chartPaid" 
-        />
+    {{-- ── Widgets: All Full Width ──────────────────────────────────── --}}
+    <div class="space-y-6">
 
-        {{-- Recent Payments --}}
-        <x-pmms.recent-payments 
-          :payments="$recentPayments" 
-        />
-      </div>
+      <x-pmms.rent-chart
+        :chartMonths="$chartMonths"
+        :chartDue="$chartDue"
+        :chartPaid="$chartPaid"
+      />
 
-      {{-- Right Side: Quick Widgets & Status (Col Span 4) --}}
-      <div class="space-y-6 lg:col-span-4">
-        {{-- Occupancy breakdown donut --}}
-        <x-pmms.occupancy-chart 
-          :occupiedUnits="$occupiedUnits" 
-          :vacantUnits="$vacantUnits" 
-          :soldUnits="$soldUnits"
-          :occupancyRate="$occupancyRate" 
-        />
+      <x-pmms.occupancy-chart
+        :occupiedUnits="$occupiedUnits"
+        :vacantUnits="$vacantUnits"
+        :soldUnits="$soldUnits"
+        :occupancyRate="$occupancyRate"
+      />
 
-        {{-- Overdue Payments --}}
-        <x-pmms.overdue-payments 
-          :payments="$overduePayments" 
-        />
+      <x-pmms.recent-payments
+        :payments="$recentPayments"
+      />
 
-        {{-- Expiring Agreements --}}
-        <x-pmms.expiring-agreements 
-          :agreements="$expiringAgreements" 
-        />
-      </div>
+      <x-pmms.overdue-payments
+        :payments="$overduePayments"
+      />
+
+      <x-pmms.expiring-agreements
+        :agreements="$expiringAgreements"
+      />
 
     </div>
 
@@ -61,65 +63,72 @@
   <script>
     document.addEventListener('DOMContentLoaded', function () {
 
-      const isDark = document.documentElement.classList.contains('dark');
+      const isDark    = document.documentElement.classList.contains('dark');
       const textColor = isDark ? '#94A3B8' : '#64748B';
       const gridColor = isDark ? '#1E293B' : '#F1F5F9';
+      const bgColor   = isDark ? 'transparent' : 'transparent';
 
-      // ── Rent Collection Bar Chart ──────────────────────────────────────
+      // ── Rent Collection Bar Chart ───────────────────────────────────
       const rentChartEl = document.querySelector('#pmmsRentChart');
       if (rentChartEl) {
         new ApexCharts(rentChartEl, {
           chart: {
             type: 'bar',
-            height: 280,
+            height: 270,
             toolbar: { show: false },
-            background: 'transparent',
+            background: bgColor,
+            fontFamily: 'Outfit, sans-serif',
+            animations: { enabled: true, easing: 'easeinout', speed: 600 },
           },
           series: [
-            { name: 'Rent Due', data: @json($chartDue) },
-            { name: 'Collected', data: @json($chartPaid) },
+            { name: 'Rent Due',   data: @json($chartDue) },
+            { name: 'Collected',  data: @json($chartPaid) },
           ],
-          colors: ['#E2E8F0', '#1A56DB'],
+          colors: ['#CBD5E1', '#465fff'],
           plotOptions: {
             bar: {
-              borderRadius: 4,
-              columnWidth: '55%',
+              borderRadius: 6,
+              columnWidth: '52%',
+              borderRadiusApplication: 'end',
             },
           },
           dataLabels: { enabled: false },
           xaxis: {
             categories: @json($chartMonths),
-            labels: { style: { colors: textColor, fontSize: '12px' } },
+            labels: { style: { colors: textColor, fontSize: '12px', fontFamily: 'Outfit, sans-serif' } },
             axisBorder: { show: false },
-            axisTicks: { show: false },
+            axisTicks:  { show: false },
           },
           yaxis: {
             labels: {
-              style: { colors: textColor, fontSize: '12px' },
+              style: { colors: textColor, fontSize: '11px', fontFamily: 'Outfit, sans-serif' },
               formatter: (val) => 'Rs. ' + (val / 1000).toFixed(0) + 'K',
             },
           },
-          grid: { borderColor: gridColor, strokeDashArray: 4 },
-          legend: {
-            position: 'top',
-            horizontalAlign: 'right',
-            labels: { colors: textColor },
+          grid: {
+            borderColor: gridColor,
+            strokeDashArray: 5,
+            xaxis: { lines: { show: false } },
           },
+          legend: { show: false },
           tooltip: {
+            theme: isDark ? 'dark' : 'light',
             y: { formatter: (val) => 'Rs. ' + val.toLocaleString('en-PK') },
           },
         }).render();
       }
 
-      // ── Occupancy Donut Chart ──────────────────────────────────────────
+      // ── Occupancy Donut Chart ───────────────────────────────────────
       const donutEl = document.querySelector('#pmmsOccupancyChart');
       if (donutEl) {
         new ApexCharts(donutEl, {
           chart: {
             type: 'donut',
-            height: 200,
-            background: 'transparent',
+            height: 190,
+            background: bgColor,
             toolbar: { show: false },
+            fontFamily: 'Outfit, sans-serif',
+            animations: { enabled: true, easing: 'easeinout', speed: 600 },
           },
           series: [
             {{ $occupiedUnits }},
@@ -127,18 +136,20 @@
             {{ $soldUnits }},
           ],
           labels: ['Occupied', 'Vacant', 'Sold'],
-          colors: ['#059669', '#F59E0B', '#94A3B8'],
+          colors: ['#12b76a', '#f79009', '#94a3b8'],
           plotOptions: {
             pie: {
               donut: {
-                size: '72%',
+                size: '74%',
                 labels: { show: false },
               },
             },
           },
           dataLabels: { enabled: false },
           legend: { show: false },
+          stroke: { width: 0 },
           tooltip: {
+            theme: isDark ? 'dark' : 'light',
             y: { formatter: (val) => val + ' units' },
           },
         }).render();
