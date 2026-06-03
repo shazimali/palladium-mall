@@ -25,9 +25,10 @@ class StoreUnitRequest extends FormRequest
     {
         return [
             'unit_number' => ['required', 'string', 'max:20', 'unique:units,unit_number'],
-            'floor' => ['nullable', 'string', 'max:50'],
-            'block' => ['nullable', 'string', 'max:50'],
-            'type' => ['required', 'in:flat,shop'],
+            'floor_id' => ['required', 'exists:floors,id'],
+            'block_id' => ['required', 'exists:blocks,id'],
+            'area_id' => ['required', 'exists:areas,id'],
+            'type' => ['required', 'in:flat,shop,office'],
             'status' => ['required', 'in:vacant,occupied,sold'],
             'area_sqft' => ['nullable', 'numeric', 'min:0'],
             'elec_meter_id' => ['nullable', 'string', 'max:50'],

@@ -12,7 +12,7 @@ return new class extends Migration {
             $table->string('unit_number');          // A-101, S-G01
             $table->string('floor')->nullable();     // Floor 1, Ground
             $table->string('block')->nullable();     // Block A, Block B
-            $table->enum('type', ['flat', 'shop']);
+            $table->enum('type', ['flat', 'shop', 'office']);
             $table->enum('status', ['vacant', 'occupied', 'sold'])->default('vacant');
             $table->decimal('area_sqft', 8, 2)->nullable();
             $table->string('elec_meter_id')->nullable();

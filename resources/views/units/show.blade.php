@@ -5,15 +5,16 @@
 
     <x-common.component-card
         title="Unit — {{ $unit->unit_number }}"
-        desc="{{ ucfirst($unit->type) }} · {{ $unit->floor ?? '' }} {{ $unit->block ?? '' }}">
+        desc="{{ ucfirst($unit->type) }} · {{ $unit->floor->name ?? '' }} {{ $unit->block->name ?? '' }}">
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach([
                 ['Unit Number',   $unit->unit_number],
                 ['Type',          ucfirst($unit->type)],
-                ['Floor',         $unit->floor         ?? '—'],
-                ['Block',         $unit->block         ?? '—'],
-                ['Area',          $unit->area_sqft ? $unit->area_sqft.' sq.ft.' : '—'],
+                ['Floor',         $unit->floor->name ?? '—'],
+                ['Block',         $unit->block->name ?? '—'],
+                ['Area / Zone',   $unit->area->name  ?? '—'],
+                ['Area (sq.ft.)', $unit->area_sqft ? $unit->area_sqft.' sq.ft.' : '—'],
                 ['Status',        ucfirst($unit->status)],
                 ['Elec. Meter',   $unit->elec_meter_id  ?? '—'],
                 ['Water Meter',   $unit->water_meter_id ?? '—'],

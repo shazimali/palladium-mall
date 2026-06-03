@@ -17,8 +17,8 @@
                 @foreach($units as $unit)
                     <option value="{{ $unit->id }}" {{ old('unit_id', $reading->unit_id ?? '') == $unit->id ? 'selected' : '' }}>
                         {{ $unit->unit_number }}
-                        {{ $unit->floor ? '— ' . $unit->floor : '' }}
-                        {{ $unit->block ? '/ ' . $unit->block : '' }}
+                        {{ $unit->floor ? '— ' . $unit->floor->name : '' }}
+                        {{ $unit->block ? '/ ' . $unit->block->name : '' }}
                     </option>
                 @endforeach
             </select>

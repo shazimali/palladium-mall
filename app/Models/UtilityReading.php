@@ -15,6 +15,7 @@ class UtilityReading extends Model
 
     protected $fillable = [
         'unit_id',
+        'meter_id',
         'tenant_id',
         'type',
         'month',
@@ -53,6 +54,11 @@ class UtilityReading extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function meter(): BelongsTo
+    {
+        return $this->belongsTo(Meter::class);
     }
 
     // -----------------------------------------------------------------------

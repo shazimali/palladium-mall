@@ -110,8 +110,8 @@
                 @foreach($units as $unit)
                     <option value="{{ $unit->id }}" {{ old('unit_id', $tenant->unit_id ?? '') == $unit->id ? 'selected' : '' }}>
                         {{ $unit->unit_number }}
-                        {{ $unit->floor ? '— ' . $unit->floor : '' }}
-                        {{ $unit->block ? '/ ' . $unit->block : '' }}
+                        {{ $unit->floor ? '— ' . $unit->floor->name : '' }}
+                        {{ $unit->block ? '/ ' . $unit->block->name : '' }}
                         ({{ ucfirst($unit->type) }})
                     </option>
                 @endforeach

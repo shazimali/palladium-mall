@@ -309,7 +309,7 @@
             <div class="value">{{ $invoice->unit->unit_number }}</div>
             <div class="sub">{{ ucfirst($invoice->unit->type) }}</div>
             @if($invoice->unit->floor)
-                <div class="sub">{{ $invoice->unit->floor }} {{ $invoice->unit->block ? '/ ' . $invoice->unit->block : '' }}
+                <div class="sub">{{ $invoice->unit->floor->name }} {{ $invoice->unit->block ? '/ ' . $invoice->unit->block->name : '' }}
                 </div>
             @endif
         </div>

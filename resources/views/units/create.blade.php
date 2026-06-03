@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Add New Unit" />
+    <x-common.page-breadcrumb pageTitle="Add New Flat/Shop" />
 
-    <x-common.component-card title="Add New Unit" desc="Register a new flat or shop in the system">
+    <x-common.component-card title="Add New Flat/Shop" desc="Register a new flat or shop in the system">
         <form action="{{ route('units.store') }}" method="POST">
             @csrf
             @include('units._form')

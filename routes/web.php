@@ -9,6 +9,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\TenantController;
+use App\Http\Controllers\MeterController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UtilityReadingController;
@@ -77,6 +78,12 @@ Route::middleware('auth')->group(function () {
         ->name('ajax.tenant-by-unit');
     Route::get('ajax/previous-reading', [UtilityReadingController::class, 'getPreviousReading'])
         ->name('ajax.previous-reading');
+
+    // Meter AJAX routes (embedded in Unit create/edit)
+    Route::get('ajax/meters/{unit}', [MeterController::class, 'byUnit'])->name('ajax.meters.by-unit');
+    Route::post('ajax/meters', [MeterController::class, 'store'])->name('ajax.meters.store');
+    Route::put('ajax/meters/{meter}', [MeterController::class, 'update'])->name('ajax.meters.update');
+    Route::delete('ajax/meters/{meter}', [MeterController::class, 'destroy'])->name('ajax.meters.destroy');
 
     Route::middleware('permission:payments.view')->group(function () {
         Route::resource('payments', PaymentController::class);

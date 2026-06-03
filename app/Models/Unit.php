@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -16,14 +17,12 @@ class Unit extends Model
 
     protected $fillable = [
         'unit_number',
-        'floor',
-        'block',
+        'floor_id',
+        'block_id',
+        'area_id',
         'type',
         'status',
         'area_sqft',
-        'elec_meter_id',
-        'water_meter_id',
-        'gas_meter_id',
         'notes',
     ];
 
@@ -54,8 +53,9 @@ class Unit extends Model
     {
         return $query->where(function (Builder $q) use ($term) {
             $q->where('unit_number', 'like', "%{$term}%")
-                ->orWhere('floor', 'like', "%{$term}%")
-                ->orWhere('block', 'like', "%{$term}%");
+                ->orWhereHas('floor', fn($f) => $f->where('name', 'like', "%{$term}%"))
+                ->orWhereHas('block', fn($b) => $b->where('name', 'like', "%{$term}%"))
+                ->orWhereHas('area', fn($a) => $a->where('name', 'like', "%{$term}%"));
         });
     }
 
@@ -83,6 +83,21 @@ class Unit extends Model
         };
     }
 
+    public function floor(): BelongsTo
+    {
+        return $this->belongsTo(Floor::class);
+    }
+
+    public function block(): BelongsTo
+    {
+        return $this->belongsTo(Block::class);
+    }
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
+
     public function tenant(): HasOne
     {
         return $this->hasOne(Tenant::class)->where('status', 'active');
@@ -96,6 +111,26 @@ class Unit extends Model
     public function utilityReadings(): HasMany
     {
         return $this->hasMany(UtilityReading::class);
+    }
+
+    public function meters(): HasMany
+    {
+        return $this->hasMany(Meter::class);
+    }
+
+    public function electricityMeter(): HasOne
+    {
+        return $this->hasOne(Meter::class)->where('type', 'electricity');
+    }
+
+    public function waterMeter(): HasOne
+    {
+        return $this->hasOne(Meter::class)->where('type', 'water');
+    }
+
+    public function gasMeter(): HasOne
+    {
+        return $this->hasOne(Meter::class)->where('type', 'gas');
     }
 
 

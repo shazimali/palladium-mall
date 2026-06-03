@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Agreement;
+use App\Models\Meter;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\Unit;
@@ -19,6 +20,9 @@ class DemoDataSeeder extends Seeder
     {
         $this->command->info('Seeding demo units...');
         $this->seedUnits();
+
+        $this->command->info('Seeding demo meters...');
+        $this->seedMeters();
 
         $this->command->info('Seeding demo tenants + agreements...');
         $this->seedTenants();
@@ -40,32 +44,106 @@ class DemoDataSeeder extends Seeder
     // -----------------------------------------------------------------------
     private function seedUnits(): void
     {
-        $units = [
-            // Block A — Floor 1
-            ['unit_number' => 'A-101', 'floor' => 'Floor 1', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied', 'elec_meter_id' => 'EM-101', 'water_meter_id' => 'WM-101', 'gas_meter_id' => 'GM-101'],
-            ['unit_number' => 'A-102', 'floor' => 'Floor 1', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied', 'elec_meter_id' => 'EM-102', 'water_meter_id' => 'WM-102', 'gas_meter_id' => 'GM-102'],
-            ['unit_number' => 'A-103', 'floor' => 'Floor 1', 'block' => 'Block A', 'type' => 'flat', 'status' => 'vacant', 'elec_meter_id' => 'EM-103', 'water_meter_id' => 'WM-103', 'gas_meter_id' => 'GM-103'],
+        // 1. Create/Retrieve Floors, Blocks, and Areas
+        $floor1 = \App\Models\Floor::firstOrCreate(['name' => '1st']);
+        $floor2 = \App\Models\Floor::firstOrCreate(['name' => '2nd']);
+        $floor3 = \App\Models\Floor::firstOrCreate(['name' => '3rd']);
+        $floor4 = \App\Models\Floor::firstOrCreate(['name' => '4th']);
+        $ground = \App\Models\Floor::firstOrCreate(['name' => 'Ground']);
 
-            // Block A — Floor 2
-            ['unit_number' => 'A-201', 'floor' => 'Floor 2', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied', 'elec_meter_id' => 'EM-201', 'water_meter_id' => 'WM-201', 'gas_meter_id' => 'GM-201'],
-            ['unit_number' => 'A-202', 'floor' => 'Floor 2', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied', 'elec_meter_id' => 'EM-202', 'water_meter_id' => 'WM-202', 'gas_meter_id' => 'GM-202'],
+        $blockA = \App\Models\Block::firstOrCreate(['name' => 'Abubakar']);
+        $blockB = \App\Models\Block::firstOrCreate(['name' => 'Usman']);
 
-            // Block B — Floor 1
-            ['unit_number' => 'B-101', 'floor' => 'Floor 1', 'block' => 'Block B', 'type' => 'flat', 'status' => 'occupied', 'elec_meter_id' => 'EM-B101', 'water_meter_id' => 'WM-B101', 'gas_meter_id' => 'GM-B101'],
-            ['unit_number' => 'B-102', 'floor' => 'Floor 1', 'block' => 'Block B', 'type' => 'flat', 'status' => 'vacant', 'elec_meter_id' => 'EM-B102', 'water_meter_id' => 'WM-B102', 'gas_meter_id' => 'GM-B102'],
-            ['unit_number' => 'B-103', 'floor' => 'Floor 1', 'block' => 'Block B', 'type' => 'flat', 'status' => 'occupied', 'elec_meter_id' => 'EM-B103', 'water_meter_id' => 'WM-B103', 'gas_meter_id' => 'GM-B103'],
+        $apartmentsZone = \App\Models\Area::firstOrCreate(['name' => 'Single']);
+        $retailZone = \App\Models\Area::firstOrCreate(['name' => 'Double']);
 
-            // Block B — Floor 2
-            ['unit_number' => 'B-201', 'floor' => 'Floor 2', 'block' => 'Block B', 'type' => 'flat', 'status' => 'sold', 'elec_meter_id' => 'EM-B201', 'water_meter_id' => 'WM-B201', 'gas_meter_id' => 'GM-B201'],
-
-            // Ground Floor — Shops
-            ['unit_number' => 'S-G01', 'floor' => 'Ground', 'block' => 'Block A', 'type' => 'shop', 'status' => 'occupied', 'elec_meter_id' => 'EM-G01', 'water_meter_id' => 'WM-G01', 'gas_meter_id' => 'GM-G01'],
-            ['unit_number' => 'S-G02', 'floor' => 'Ground', 'block' => 'Block A', 'type' => 'shop', 'status' => 'occupied', 'elec_meter_id' => 'EM-G02', 'water_meter_id' => 'WM-G02', 'gas_meter_id' => 'GM-G02'],
-            ['unit_number' => 'S-G03', 'floor' => 'Ground', 'block' => 'Block B', 'type' => 'shop', 'status' => 'vacant', 'elec_meter_id' => 'EM-G03', 'water_meter_id' => 'WM-G03', 'gas_meter_id' => 'GM-G03'],
+        // Define mapping arrays
+        $floorMap = [
+            'Floor 1' => $floor1->id,
+            'Floor 2' => $floor2->id,
+            'Floor 3' => $floor3->id,
+            'Floor 4' => $floor4->id,
+            'Ground' => $ground->id,
         ];
 
-        foreach ($units as $unit) {
-            Unit::firstOrCreate(['unit_number' => $unit['unit_number']], $unit);
+        $blockMap = [
+            'Block A' => $blockA->id,
+            'Block B' => $blockB->id,
+        ];
+
+        $units = [
+            // Block A — Floor 1
+            ['unit_number' => 'A-101', 'floor' => 'Floor 1', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied'],
+            ['unit_number' => 'A-102', 'floor' => 'Floor 1', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied'],
+            ['unit_number' => 'A-103', 'floor' => 'Floor 1', 'block' => 'Block A', 'type' => 'flat', 'status' => 'vacant'],
+
+            // Block A — Floor 2
+            ['unit_number' => 'A-201', 'floor' => 'Floor 2', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied'],
+            ['unit_number' => 'A-202', 'floor' => 'Floor 2', 'block' => 'Block A', 'type' => 'flat', 'status' => 'occupied'],
+
+            // Block B — Floor 1
+            ['unit_number' => 'B-101', 'floor' => 'Floor 1', 'block' => 'Block B', 'type' => 'flat', 'status' => 'occupied'],
+            ['unit_number' => 'B-102', 'floor' => 'Floor 1', 'block' => 'Block B', 'type' => 'flat', 'status' => 'vacant'],
+            ['unit_number' => 'B-103', 'floor' => 'Floor 1', 'block' => 'Block B', 'type' => 'flat', 'status' => 'occupied'],
+
+            // Block B — Floor 2
+            ['unit_number' => 'B-201', 'floor' => 'Floor 2', 'block' => 'Block B', 'type' => 'flat', 'status' => 'sold'],
+
+            // Ground Floor — Shops
+            ['unit_number' => 'S-G01', 'floor' => 'Ground', 'block' => 'Block A', 'type' => 'shop', 'status' => 'occupied'],
+            ['unit_number' => 'S-G02', 'floor' => 'Ground', 'block' => 'Block A', 'type' => 'shop', 'status' => 'occupied'],
+            ['unit_number' => 'S-G03', 'floor' => 'Ground', 'block' => 'Block B', 'type' => 'shop', 'status' => 'vacant'],
+        ];
+
+        foreach ($units as $unitData) {
+            $floorId = $floorMap[$unitData['floor']] ?? null;
+            $blockId = $blockMap[$unitData['block']] ?? null;
+            $areaId = $unitData['type'] === 'flat' ? $apartmentsZone->id : $retailZone->id;
+
+            Unit::firstOrCreate(
+                ['unit_number' => $unitData['unit_number']],
+                [
+                    'floor_id' => $floorId,
+                    'block_id' => $blockId,
+                    'area_id'  => $areaId,
+                    'type'     => $unitData['type'],
+                    'status'   => $unitData['status'],
+                ]
+            );
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Meters
+    // -----------------------------------------------------------------------
+    private function seedMeters(): void
+    {
+        // Seed all 3 meter types for every unit that has a unit_number
+        $meterMap = [
+            'A-101' => ['electricity' => 'LESCO-A101-E', 'water' => 'WASA-A101-W', 'gas' => 'SNGPL-A101-G'],
+            'A-102' => ['electricity' => 'LESCO-A102-E', 'water' => 'WASA-A102-W', 'gas' => 'SNGPL-A102-G'],
+            'A-103' => ['electricity' => 'LESCO-A103-E', 'water' => 'WASA-A103-W', 'gas' => 'SNGPL-A103-G'],
+            'A-201' => ['electricity' => 'LESCO-A201-E', 'water' => 'WASA-A201-W', 'gas' => 'SNGPL-A201-G'],
+            'A-202' => ['electricity' => 'LESCO-A202-E', 'water' => 'WASA-A202-W', 'gas' => 'SNGPL-A202-G'],
+            'B-101' => ['electricity' => 'LESCO-B101-E', 'water' => 'WASA-B101-W', 'gas' => 'SNGPL-B101-G'],
+            'B-102' => ['electricity' => 'LESCO-B102-E', 'water' => 'WASA-B102-W', 'gas' => 'SNGPL-B102-G'],
+            'B-103' => ['electricity' => 'LESCO-B103-E', 'water' => 'WASA-B103-W', 'gas' => 'SNGPL-B103-G'],
+            'B-201' => ['electricity' => 'LESCO-B201-E', 'water' => 'WASA-B201-W', 'gas' => 'SNGPL-B201-G'],
+            'S-G01' => ['electricity' => 'LESCO-SG01-E', 'water' => 'WASA-SG01-W', 'gas' => 'SNGPL-SG01-G'],
+            'S-G02' => ['electricity' => 'LESCO-SG02-E', 'water' => 'WASA-SG02-W', 'gas' => 'SNGPL-SG02-G'],
+            'S-G03' => ['electricity' => 'LESCO-SG03-E', 'water' => 'WASA-SG03-W', 'gas' => 'SNGPL-SG03-G'],
+        ];
+
+        foreach ($meterMap as $unitNumber => $meters) {
+            $unit = Unit::where('unit_number', $unitNumber)->first();
+            if (! $unit) continue;
+
+            foreach ($meters as $type => $refNo) {
+                Meter::firstOrCreate(
+                    ['unit_id' => $unit->id, 'type' => $type],
+                    ['meter_ref_no' => $refNo, 'is_active' => true]
+                );
+            }
         }
     }
 

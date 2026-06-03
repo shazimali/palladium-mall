@@ -15,15 +15,15 @@
             this.initializeActiveMenus();
         },
         initializeActiveMenus() {
-            const currentPath = '{{ $currentPath }}';
+            const currentPath = window.location.pathname;
 
             @foreach ($menuGroups as $groupIndex => $menuGroup)
                 @foreach ($menuGroup['items'] as $itemIndex => $item)
                     @if (isset($item['subItems']))
-                        // Check if any submenu item matches current path
+                        // Check if any submenu item matches current path (prefix)
                         @foreach ($item['subItems'] as $subItem)
-                            if (currentPath === '{{ ltrim($subItem['path'], '/') }}' ||
-                                window.location.pathname === '{{ $subItem['path'] }}') {
+                            if (currentPath === '{{ $subItem['path'] }}' ||
+                                currentPath.startsWith('{{ $subItem['path'] }}/')) {
                                 this.openSubmenus['{{ $groupIndex }}-{{ $itemIndex }}'] = true;
                         } @endforeach
                     @endif
@@ -46,7 +46,9 @@
             return this.openSubmenus[key] || false;
         },
         isActive(path) {
-            return window.location.pathname === path || '{{ $currentPath }}' === path.replace(/^\//, '');
+            const current = window.location.pathname;
+            // Active if exact match OR current path starts with path + '/'
+            return current === path || current.startsWith(path + '/');
         }
     }" :class="{
         'w-[290px]': $store.sidebar.isExpanded || $store.sidebar.isMobileOpen || $store.sidebar.isHovered,

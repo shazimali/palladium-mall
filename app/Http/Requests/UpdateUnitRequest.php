@@ -32,9 +32,10 @@ class UpdateUnitRequest extends FormRequest
                 'max:20',
                 Rule::unique('units', 'unit_number')->ignore($this->unit)
             ],
-            'floor' => ['nullable', 'string', 'max:50'],
-            'block' => ['nullable', 'string', 'max:50'],
-            'type' => ['required', 'in:flat,shop'],
+            'floor_id' => ['nullable', 'exists:floors,id'],
+            'block_id' => ['nullable', 'exists:blocks,id'],
+            'area_id' => ['nullable', 'exists:areas,id'],
+            'type' => ['required', 'in:flat,shop,office'],
             'status' => ['required', 'in:vacant,occupied,sold'],
             'area_sqft' => ['nullable', 'numeric', 'min:0'],
             'elec_meter_id' => ['nullable', 'string', 'max:50'],

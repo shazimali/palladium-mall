@@ -16,7 +16,7 @@
         </div>
     @endif
 
-    <x-common.component-card title="All Units" desc="Manage flats and shops — add, edit or update status">
+    <x-common.component-card title="All Flats / Shops" desc="Manage flats and shops — add, edit or update status">
 
         {{-- Top bar --}}
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -42,7 +42,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'status', 'type', 'block']))
+                @if(request()->anyFilled(['search', 'status', 'type', 'floor_id', 'block_id', 'area_id']))
                     <a href="{{ route('units.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
                         Clear
@@ -54,27 +54,27 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        Add Unit
+                        Add Flat/Shop
                     </a>
                 @endif
             </div>
         </div>
 
         <!-- Filters & Search -->
-        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <form action="{{ route('units.index') }}" method="GET"
-                class="flex flex-col gap-4 sm:flex-row sm:items-center">
-                
+        <div
+            class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+            <form action="{{ route('units.index') }}" method="GET" class="flex flex-col gap-4 sm:flex-row sm:items-center">
+
                 <!-- Search Input -->
                 <div class="relative flex-1 max-w-md">
                     <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2">
-                        <svg class="fill-gray-500 dark:fill-gray-400" width="18" height="18" viewBox="0 0 20 20" fill="none">
+                        <svg class="fill-gray-500 dark:fill-gray-400" width="18" height="18" viewBox="0 0 20 20"
+                            fill="none">
                             <path fill-rule="evenodd" clip-rule="evenodd"
                                 d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
                         </svg>
                     </span>
-                    <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Search by unit no..."
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by unit no..."
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
@@ -98,17 +98,45 @@
                     </select>
                 </div>
 
-                <!-- Block Filter -->
+                <!-- Floor Filter -->
                 <div class="relative">
-                    <select name="block" onchange="this.form.submit()"
+                    <select name="floor_id" onchange="this.form.submit()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                        <option value="">All Blocks</option>
-                        @foreach($blocks ?? [] as $blockName)
-                            <option value="{{ $blockName }}" {{ request('block') === $blockName ? 'selected' : '' }}>{{ $blockName }}</option>
+                        <option value="">All Floors</option>
+                        @foreach($floors ?? [] as $floor)
+                            <option value="{{ $floor->id }}" {{ request('floor_id') == $floor->id ? 'selected' : '' }}>
+                                {{ $floor->name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
-                
+
+                <!-- Block Filter -->
+                <div class="relative">
+                    <select name="block_id" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Blocks</option>
+                        @foreach($blocks ?? [] as $block)
+                            <option value="{{ $block->id }}" {{ request('block_id') == $block->id ? 'selected' : '' }}>
+                                {{ $block->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Area Filter -->
+                <div class="relative">
+                    <select name="area_id" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Areas</option>
+                        @foreach($areas ?? [] as $area)
+                            <option value="{{ $area->id }}" {{ request('area_id') == $area->id ? 'selected' : '' }}>
+                                {{ $area->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <button type="submit" class="hidden">Submit</button>
             </form>
         </div>
@@ -119,14 +147,12 @@
                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                     <tr>
                         <th class="px-4 py-3">#</th>
-                        <th class="px-4 py-3">Unit No.</th>
+                        <th class="px-4 py-3">Flat No.</th>
                         <th class="px-4 py-3">Floor</th>
                         <th class="px-4 py-3">Block</th>
+                        <th class="px-4 py-3">Area / Zone</th>
                         <th class="px-4 py-3">Type</th>
                         <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3">Area (sqft)</th>
-                        <th class="px-4 py-3">Elec. Meter</th>
-                        <th class="px-4 py-3">Water Meter</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -137,12 +163,12 @@
                                     <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
                                         {{ $unit->unit_number }}
                                     </td>
-                                    <td class="px-4 py-3">{{ $unit->floor ?? '—' }}</td>
-                                    <td class="px-4 py-3">{{ $unit->block ?? '—' }}</td>
+                                    <td class="px-4 py-3">{{ $unit->floor->name ?? '—' }}</td>
+                                    <td class="px-4 py-3">{{ $unit->block->name ?? '—' }}</td>
+                                    <td class="px-4 py-3">{{ $unit->area->name ?? '—' }}</td>
                                     <td class="px-4 py-3">
-                                        <span
-                                            class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
-                                                    {{ $unit->type === 'flat'
+                                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
+                                                                                                                                                                    {{ $unit->type === 'flat'
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' }}">
                                             {{ ucfirst($unit->type) }}
@@ -150,7 +176,7 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
-                                                    {{ $unit->status === 'occupied'
+                                                                                                                                                                    {{ $unit->status === 'occupied'
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                         : ($unit->status === 'vacant'
                             ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
@@ -158,9 +184,6 @@
                                             {{ ucfirst($unit->status) }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3">{{ $unit->area_sqft ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-xs text-gray-500">{{ $unit->elec_meter_id ?? '—' }}</td>
-                                    <td class="px-4 py-3 text-xs text-gray-500">{{ $unit->water_meter_id ?? '—' }}</td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-2">
                                             {{-- View --}}
@@ -218,16 +241,16 @@
                                         d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                 </svg>
                                 No units found. <a href="{{ route('units.create') }}" class="text-brand-500 hover:underline">Add
-                                    your first unit.</a>
+                                    your first Flat/Shop.</a>
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
-        @if($units->hasPages())
-            <div class="border-t border-gray-100 p-4 dark:border-gray-800">
-                {{ $units->links() }}
-            </div>
-        @endif
+            @if($units->hasPages())
+                <div class="border-t border-gray-100 p-4 dark:border-gray-800">
+                    {{ $units->links() }}
+                </div>
+            @endif
     </x-common.component-card>
 @endsection
