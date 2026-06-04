@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-4xl px-4 py-6">
 
     <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants</a>
+        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants and Agreements</a>
         <span>/</span>
         <a href="{{ route('tenants.show', $tenant) }}" class="hover:text-brand-500">{{ $tenant->name }}</a>
         <span>/</span>
@@ -50,8 +50,17 @@
                 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
                         <label class="{{ $label }}">Move-Out Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="checklist_date" value="{{ old('checklist_date', now()->format('Y-m-d')) }}"
-                               class="{{ $input }} {{ $errors->has('checklist_date') ? 'border-red-400' : '' }}">
+                        <div class="relative">
+                            <input type="text" name="checklist_date" id="checklist_date"
+                                   value="{{ old('checklist_date', now()->format('Y-m-d')) }}"
+                                   placeholder="Select move-out date"
+                                   class="{{ $input }} pr-10 {{ $errors->has('checklist_date') ? 'border-red-400' : '' }}" readonly>
+                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </span>
+                        </div>
                         @error('checklist_date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div>
@@ -185,3 +194,22 @@
     </div>
 </div>
 @endsection
+
+@once
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dateEl = document.getElementById('checklist_date');
+    if (dateEl && typeof flatpickr !== 'undefined') {
+        flatpickr(dateEl, {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd M Y',
+            disableMobile: true,
+            allowInput: false,
+        });
+    }
+});
+</script>
+@endpush
+@endonce

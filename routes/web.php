@@ -67,11 +67,13 @@ Route::middleware('auth')->group(function () {
         Route::get('tenants/{tenant}/step/{step}',  [TenantController::class, 'showStep'])->name('tenants.showStep');
         Route::post('tenants/{tenant}/step/{step}', [TenantController::class, 'saveStep'])->name('tenants.saveStep');
         Route::post('tenants/{tenant}/confirm',     [TenantController::class, 'confirm'])->name('tenants.confirm');
+        Route::get('tenants/{tenant}/print/{step}', [TenantController::class, 'printStep'])->name('tenants.printStep');
         // Standard resource (except create/store — handled above)
         Route::resource('tenants', TenantController::class)->except(['create', 'store']);
         // Move-out
-        Route::get('tenants/{tenant}/move-out',    [MoveOutController::class, 'create'])->name('tenants.moveOut.create');
-        Route::post('tenants/{tenant}/move-out',   [MoveOutController::class, 'store'])->name('tenants.moveOut.store');
+        Route::get('tenants/{tenant}/move-out',       [MoveOutController::class, 'create'])->name('tenants.moveOut.create');
+        Route::post('tenants/{tenant}/move-out',      [MoveOutController::class, 'store'])->name('tenants.moveOut.store');
+        Route::get('tenants/{tenant}/print-move-out', [MoveOutController::class, 'printMoveOut'])->name('tenants.printMoveOut');
     });
 
     Route::middleware('permission:agreements.view')->group(function () {
@@ -93,6 +95,8 @@ Route::middleware('auth')->group(function () {
     // AJAX routes — no permission middleware needed, just auth
     Route::get('ajax/tenant-by-unit', [UtilityReadingController::class, 'getTenantByUnit'])
         ->name('ajax.tenant-by-unit');
+    Route::get('ajax/tenant-by-cnic', [TenantController::class, 'getTenantByCnic'])
+        ->name('ajax.tenant-by-cnic');
     Route::get('ajax/previous-reading', [UtilityReadingController::class, 'getPreviousReading'])
         ->name('ajax.previous-reading');
 

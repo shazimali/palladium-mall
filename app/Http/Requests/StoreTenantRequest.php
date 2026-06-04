@@ -24,7 +24,7 @@ class StoreTenantRequest extends FormRequest
                 'unique:tenants,cnic',
                 'regex:/^\d{5}-\d{7}-\d{1}$/'
             ],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'email' => ['nullable', 'email', 'max:150'],
             'address' => ['nullable', 'string', 'max:255'],
             'occupation' => ['nullable', 'string', 'max:100'],
@@ -41,6 +41,7 @@ class StoreTenantRequest extends FormRequest
         return [
             'cnic.regex' => 'CNIC format must be: 35201-1234567-1',
             'cnic.unique' => 'This CNIC is already registered.',
+            'phone.regex' => 'Phone format must be: 0300-1234567 or 042-35123456',
             'unit_id.exists' => 'Selected unit does not exist.',
             'cnic_front_image.max' => 'CNIC front image must not exceed 2MB.',
             'cnic_back_image.max' => 'CNIC back image must not exceed 2MB.',

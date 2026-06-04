@@ -231,6 +231,112 @@ document.addEventListener('DOMContentLoaded', function () {
         cnicEl.value = formatCnic(cnicEl.value);
     }
 
+    @if(!$t)
+    // ── AJAX Lookup for Existing Tenant by CNIC ─────────────────────
+    const form = cnicEl.closest('form');
+    let notificationContainer = document.getElementById('cnic_exists_alert');
+    if (!notificationContainer && form) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'cnic_exists_alert';
+        notificationContainer.className = 'mt-3 hidden rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400 transition-all duration-300';
+        cnicEl.parentNode.appendChild(notificationContainer);
+    }
+
+    const originalAction = form ? form.action : '';
+    let methodInput = null;
+
+    cnicEl.addEventListener('input', function () {
+        const cnic = this.value;
+        if (/^\d{5}-\d{7}-\d$/.test(cnic)) {
+            fetch(`/ajax/tenant-by-cnic?cnic=${encodeURIComponent(cnic)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.found && form && notificationContainer) {
+                        notificationContainer.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="font-semibold text-brand-600 dark:text-brand-400">Existing Tenant Found:</span> ${data.tenant.name}
+                                </div>
+                                <button type="button" id="btn_autofill" class="ml-3 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-600 transition-colors">
+                                    Load Old Profile
+                                </button>
+                            </div>
+                        `;
+                        notificationContainer.className = 'mt-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400 transition-all duration-300';
+                        notificationContainer.classList.remove('hidden');
+
+                        document.getElementById('btn_autofill').addEventListener('click', function () {
+                            form.querySelector('input[name="name"]').value = data.tenant.name || '';
+                            form.querySelector('input[name="father_name"]').value = data.tenant.father_name || '';
+                            
+                            if (data.tenant.date_of_birth) {
+                                const dobEl = document.getElementById('dob_picker');
+                                if (dobEl && dobEl._flatpickr) {
+                                    dobEl._flatpickr.setDate(data.tenant.date_of_birth);
+                                } else if (dobEl) {
+                                    dobEl.value = data.tenant.date_of_birth;
+                                }
+                            }
+
+                            if (data.tenant.gender) {
+                                form.querySelector('select[name="gender"]').value = data.tenant.gender;
+                            }
+                            if (data.tenant.marital_status) {
+                                form.querySelector('select[name="marital_status"]').value = data.tenant.marital_status;
+                            }
+
+                            form.querySelector('input[name="phone"]').value = data.tenant.phone || '';
+                            form.querySelector('input[name="whatsapp_number"]').value = data.tenant.whatsapp_number || '';
+                            form.querySelector('input[name="email"]').value = data.tenant.email || '';
+                            form.querySelector('input[name="occupation"]').value = data.tenant.occupation || '';
+                            form.querySelector('input[name="address"]').value = data.tenant.address || '';
+                            form.querySelector('input[name="monthly_income"]').value = data.tenant.monthly_income || '';
+                            form.querySelector('input[name="adults_count"]').value = data.tenant.adults_count || 1;
+                            form.querySelector('input[name="children_count"]').value = data.tenant.children_count || 0;
+                            if (data.tenant.tenancy_type) {
+                                form.querySelector('select[name="tenancy_type"]').value = data.tenant.tenancy_type;
+                            }
+
+                            // Update form action and method to target update route
+                            form.action = `/tenants/${data.tenant.id}`;
+                            if (!methodInput) {
+                                methodInput = document.createElement('input');
+                                methodInput.type = 'hidden';
+                                methodInput.name = '_method';
+                                methodInput.value = 'PUT';
+                                form.appendChild(methodInput);
+                            }
+
+                            // Show a success message
+                            notificationContainer.className = 'mt-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400 transition-all duration-300';
+                            notificationContainer.innerHTML = `<span class="font-semibold">Success:</span> Existing details loaded! Submitting will update their profile and begin a new agreement wizard.`;
+                        });
+                    } else {
+                        resetForm();
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching tenant details:', err);
+                });
+        } else {
+            resetForm();
+        }
+    });
+
+    function resetForm() {
+        if (notificationContainer) {
+            notificationContainer.classList.add('hidden');
+        }
+        if (form) {
+            form.action = originalAction;
+        }
+        if (methodInput) {
+            methodInput.remove();
+            methodInput = null;
+        }
+    }
+    @endif
+
 });
 </script>
 @endpush

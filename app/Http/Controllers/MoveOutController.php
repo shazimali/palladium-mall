@@ -61,4 +61,27 @@ class MoveOutController extends Controller
         return redirect()->route('tenants.show', $tenant)
             ->with('success', 'Move-out inspection saved. Unit is now vacant.');
     }
+
+    public function printMoveOut(Tenant $tenant): View
+    {
+        $tenant->load(['unit', 'moveInChecklists' => function($q) {
+            $q->where('type', 'move_out');
+        }]);
+
+        $moveOut = $tenant->moveInChecklists->where('type', 'move_out')->first();
+
+        if (!$moveOut) {
+            abort(404, 'Move-out inspection not found for this tenant.');
+        }
+
+        // Get the agreement that was active at the time of move-out
+        $agreement = $tenant->agreements()->where('id', $moveOut->agreement_id)->first()
+            ?? $tenant->agreements()->latest()->first();
+
+        return view('tenants.print.move_out', [
+            'tenant' => $tenant,
+            'moveOut' => $moveOut,
+            'agreement' => $agreement,
+        ]);
+    }
 }

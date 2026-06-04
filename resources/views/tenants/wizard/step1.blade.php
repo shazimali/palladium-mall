@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-4xl px-4 py-6">
 
     <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants</a>
+        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants and Agreements</a>
         <span>/</span>
         <a href="{{ route('tenants.show', $tenant) }}" class="hover:text-brand-500">{{ $tenant->name }}</a>
         <span>/</span>
@@ -20,9 +20,18 @@
     @include('tenants.wizard._progress', ['currentStep' => $step, 'tenantId' => $tenant->id])
 
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800">
-            <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Step 1 — Tenant Personal Information</h1>
-            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Update the tenant's personal details.</p>
+        <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800 flex justify-between items-center">
+            <div>
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Step 1 — Tenant Personal Information</h1>
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Update the tenant's personal details.</p>
+            </div>
+            <a href="{{ route('tenants.printStep', [$tenant, 1]) }}" target="_blank"
+               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 transition-colors">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print
+            </a>
         </div>
 
         <form method="POST" action="{{ route('tenants.update', $tenant) }}" enctype="multipart/form-data" class="px-6 py-6 space-y-6">

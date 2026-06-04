@@ -5,7 +5,7 @@
 
     {{-- Breadcrumb --}}
     <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants</a>
+        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants and Agreements</a>
         <span>/</span>
         <span class="text-gray-800 dark:text-white/90">{{ $title }}</span>
     </div>

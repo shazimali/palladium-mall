@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-4xl px-4 py-6">
 
     <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants</a>
+        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants and Agreements</a>
         <span>/</span>
         <span class="text-gray-800 dark:text-white/90">{{ $title }}</span>
     </div>
@@ -18,9 +18,20 @@
     @include('tenants.wizard._progress', ['currentStep' => $step, 'tenantId' => $tenant->id])
 
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800">
-            <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Step 3 — Unit & Agreement Terms</h1>
-            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Assign a unit and set the tenancy agreement terms.</p>
+        <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800 flex justify-between items-center">
+            <div>
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Step 3 — Unit & Agreement Terms</h1>
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Assign a unit and set the tenancy agreement terms.</p>
+            </div>
+            @if($agreement)
+                <a href="{{ route('tenants.printStep', [$tenant, 3]) }}" target="_blank"
+                   class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 transition-colors">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                </a>
+            @endif
         </div>
 
         <form method="POST" action="{{ route('tenants.saveStep', [$tenant, 3]) }}" class="px-6 py-6 space-y-6">
@@ -62,15 +73,33 @@
 
                     <div>
                         <label class="{{ $label }}">Start Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="start_date" value="{{ old('start_date', optional($a?->start_date)->format('Y-m-d') ?? '') }}"
-                               class="{{ $input }} {{ $errors->has('start_date') ? 'border-red-400' : '' }}">
+                        <div class="relative">
+                            <input type="text" name="start_date" id="start_date"
+                                   value="{{ old('start_date', optional($a?->start_date)->format('Y-m-d') ?? '') }}"
+                                   placeholder="Select start date"
+                                   class="{{ $input }} pr-10 {{ $errors->has('start_date') ? 'border-red-400' : '' }}" readonly>
+                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </span>
+                        </div>
                         @error('start_date') <p class="{{ $error }}">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
                         <label class="{{ $label }}">End Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="end_date" value="{{ old('end_date', optional($a?->end_date)->format('Y-m-d') ?? '') }}"
-                               class="{{ $input }} {{ $errors->has('end_date') ? 'border-red-400' : '' }}">
+                        <div class="relative">
+                            <input type="text" name="end_date" id="end_date"
+                                   value="{{ old('end_date', optional($a?->end_date)->format('Y-m-d') ?? '') }}"
+                                   placeholder="Select end date"
+                                   class="{{ $input }} pr-10 {{ $errors->has('end_date') ? 'border-red-400' : '' }}" readonly>
+                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </span>
+                        </div>
                         @error('end_date') <p class="{{ $error }}">{{ $message }}</p> @enderror
                     </div>
 
@@ -151,3 +180,41 @@
     </div>
 </div>
 @endsection
+
+@once
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof flatpickr !== 'undefined') {
+        const startEl = document.getElementById('start_date');
+        const endEl = document.getElementById('end_date');
+
+        if (startEl) {
+            flatpickr(startEl, {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd M Y',
+                disableMobile: true,
+                allowInput: false,
+                onChange: function(selectedDates, dateStr, instance) {
+                    if (endEl && endEl._flatpickr) {
+                        endEl._flatpickr.set('minDate', dateStr);
+                    }
+                }
+            });
+        }
+
+        if (endEl) {
+            flatpickr(endEl, {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd M Y',
+                disableMobile: true,
+                allowInput: false,
+            });
+        }
+    }
+});
+</script>
+@endpush
+@endonce

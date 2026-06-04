@@ -27,7 +27,7 @@ class UpdateTenantRequest extends FormRequest
                 'regex:/^\d{5}-\d{7}-\d{1}$/',
                 Rule::unique('tenants', 'cnic')->ignore($tenant->id)
             ],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
             'email' => ['nullable', 'email', 'max:150'],
             'address' => ['nullable', 'string', 'max:255'],
             'occupation' => ['nullable', 'string', 'max:100'],
@@ -44,6 +44,7 @@ class UpdateTenantRequest extends FormRequest
         return [
             'cnic.regex' => 'CNIC format must be: 35201-1234567-1',
             'cnic.unique' => 'This CNIC is already registered to another tenant.',
+            'phone.regex' => 'Phone format must be: 0300-1234567 or 042-35123456',
         ];
     }
 }

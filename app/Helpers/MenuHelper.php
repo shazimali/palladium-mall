@@ -98,7 +98,7 @@ class MenuHelper
         if (auth()->check() && $user->can('tenants.view')) {
             $mainItems[] = [
                 'icon' => 'forms',
-                'name' => 'Tenants',
+                'name' => 'Tenants and Agreements',
                 'path' => '/tenants',
             ];
         }

@@ -87,7 +87,6 @@
         <option value="">Select status</option>
         <option value="vacant" {{ old('status', $unit->status ?? '') === 'vacant' ? 'selected' : '' }}>Vacant</option>
         <option value="occupied" {{ old('status', $unit->status ?? '') === 'occupied' ? 'selected' : '' }}>Occupied</option>
-        <option value="sold" {{ old('status', $unit->status ?? '') === 'sold' ? 'selected' : '' }}>Sold</option>
     </select>
     @error('status')
         <p class="mt-1 text-xs text-red-500">{{ $message }}</p>

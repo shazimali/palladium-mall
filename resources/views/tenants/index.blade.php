@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Tenant Management" />
+    <x-common.page-breadcrumb pageTitle="Tenants and Agreements" />
 
     @if(session('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
@@ -15,7 +15,7 @@
         </div>
     @endif
 
-    <x-common.component-card title="All Tenants" desc="Manage tenant profiles and unit assignments">
+    <x-common.component-card title="All Tenants and Agreements" desc="Manage tenant profiles and unit assignments">
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-wrap gap-2">

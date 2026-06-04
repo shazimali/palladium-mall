@@ -5,7 +5,7 @@
 
     {{-- Breadcrumb --}}
     <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants</a>
+        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants and Agreements</a>
         <span>/</span>
         <span class="text-gray-800 dark:text-white/90">{{ $tenant->name }}</span>
     </div>
@@ -82,7 +82,16 @@
 
         {{-- Personal --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
-            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Personal</h3>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Personal</h3>
+                <a href="{{ route('tenants.printStep', [$tenant, 1]) }}" target="_blank"
+                   class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                </a>
+            </div>
             <dl class="space-y-2 text-sm">
                 @if($tenant->father_name) <div class="flex justify-between"><dt class="text-gray-500">Father</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ $tenant->father_name }}</dd></div> @endif
                 @if($tenant->date_of_birth) <div class="flex justify-between"><dt class="text-gray-500">DOB</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ $tenant->date_of_birth->format('d M Y') }}</dd></div> @endif
@@ -95,7 +104,18 @@
 
         {{-- Guarantor --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
-            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Guarantor</h3>
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Guarantor</h3>
+                @if($tenant->guarantor)
+                    <a href="{{ route('tenants.printStep', [$tenant, 2]) }}" target="_blank"
+                       class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print
+                    </a>
+                @endif
+            </div>
             @if($tenant->guarantor)
                 <dl class="space-y-2 text-sm">
                     <div class="flex justify-between"><dt class="text-gray-500">Name</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ $tenant->guarantor->name }}</dd></div>
@@ -129,7 +149,17 @@
     <div class="mb-6 rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Active Agreement</h3>
-            <a href="{{ route('tenants.showStep', [$tenant, 3]) }}" class="text-xs text-brand-500 hover:underline">Edit Terms</a>
+            <div class="flex items-center gap-3">
+                <a href="{{ route('tenants.printStep', [$tenant, 3]) }}" target="_blank"
+                   class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                </a>
+                <span class="text-gray-300 dark:text-gray-700">|</span>
+                <a href="{{ route('tenants.showStep', [$tenant, 3]) }}" class="text-xs text-brand-500 hover:underline">Edit Terms</a>
+            </div>
         </div>
         <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
             <div><div class="text-gray-400 text-xs">Start Date</div><div class="font-medium text-gray-800 dark:text-gray-200">{{ $ag->start_date->format('d M Y') }}</div></div>
@@ -149,7 +179,11 @@
     @endif
 
     {{-- ── Documents + Move-In Checklist Progress ───────────────────────── --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    @php
+        $moc = $tenant->moveInChecklists->where('type', 'move_out')->first();
+        $gridCols = $moc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2';
+    @endphp
+    <div class="mb-6 grid grid-cols-1 gap-4 {{ $gridCols }}">
 
         {{-- Doc Checklist --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
@@ -195,6 +229,37 @@
                 <p class="text-sm text-yellow-500">Not yet completed</p>
             @endif
         </div>
+
+        {{-- Move-out --}}
+        @if($moc)
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Move-out Inspection</h3>
+                <a href="{{ route('tenants.printMoveOut', $tenant) }}" target="_blank"
+                   class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print
+                </a>
+            </div>
+            @php $checked = $moc->countChecked(); $total = $moc->countTotal(); @endphp
+            <div class="mb-2 flex items-center gap-3">
+                <div class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
+                    <div class="h-2 rounded-full bg-orange-500 transition-all" style="width: {{ $total > 0 ? round($checked / $total * 100) : 0 }}%"></div>
+                </div>
+                <span class="text-xs font-medium text-gray-600 dark:text-gray-400">{{ $checked }}/{{ $total }}</span>
+            </div>
+            @if($moc->flat_condition)
+                <p class="text-xs {{ $moc->flat_condition === 'good' ? 'text-green-500' : 'text-orange-500' }}">
+                    Condition: {{ ucfirst(str_replace('_', ' ', $moc->flat_condition)) }}
+                </p>
+            @endif
+            @if($moc->deposit_deduction > 0)
+                <p class="text-xs text-red-500 mt-1">Deduction: PKR {{ number_format($moc->deposit_deduction) }}</p>
+            @endif
+        </div>
+        @endif
 
     </div>
 

@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-4xl px-4 py-6">
 
     <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants</a>
+        <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants and Agreements</a>
         <span>/</span>
         <span class="text-gray-800 dark:text-white/90">{{ $title }}</span>
     </div>
@@ -44,7 +44,16 @@
                         <div><span class="font-medium">Adults:</span> {{ $tenant->adults_count }} | <span class="font-medium">Children:</span> {{ $tenant->children_count }}</div>
                     </div>
                 </div>
-                <a href="{{ route('tenants.showStep', [$tenant, 1]) }}" class="text-xs text-brand-500 hover:underline flex-shrink-0">Edit</a>
+                <div class="flex flex-col items-end gap-1.5 flex-shrink-0">
+                    <a href="{{ route('tenants.printStep', [$tenant, 1]) }}" target="_blank"
+                       class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print
+                    </a>
+                    <a href="{{ route('tenants.showStep', [$tenant, 1]) }}" class="text-xs text-gray-400 hover:text-brand-500 hover:underline">Edit</a>
+                </div>
             </div>
         </div>
 
@@ -53,7 +62,19 @@
             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Guarantor</h3>
-                    <a href="{{ route('tenants.showStep', [$tenant, 2]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                    <div class="flex items-center gap-3">
+                        @if($guarantor)
+                            <a href="{{ route('tenants.printStep', [$tenant, 2]) }}" target="_blank"
+                               class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                Print
+                            </a>
+                            <span class="text-gray-300 dark:text-gray-700">|</span>
+                        @endif
+                        <a href="{{ route('tenants.showStep', [$tenant, 2]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                    </div>
                 </div>
                 @if($guarantor)
                     <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
@@ -86,7 +107,19 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Agreement Terms</h3>
-                <a href="{{ route('tenants.showStep', [$tenant, 3]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                <div class="flex items-center gap-3">
+                    @if($agreement)
+                        <a href="{{ route('tenants.printStep', [$tenant, 3]) }}" target="_blank"
+                           class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Print
+                        </a>
+                        <span class="text-gray-300 dark:text-gray-700">|</span>
+                    @endif
+                    <a href="{{ route('tenants.showStep', [$tenant, 3]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                </div>
             </div>
             @if($agreement)
                 <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
