@@ -104,4 +104,20 @@ class UnitController extends Controller
             ->route('units.index')
             ->with('success', 'Flat/Shop removed successfully.');
     }
+    public function vacate(Unit $unit): RedirectResponse
+    {
+        $unit->update(['status' => 'vacant']);
+
+        \App\Models\Agreement::where('unit_id', $unit->id)
+            ->where('status', 'active')
+            ->update(['status' => 'terminated']);
+
+        return redirect()->route('units.show', $unit)
+            ->with('success', 'Unit marked as vacant.');
+    }
+
+    public function addTenant(Unit $unit): RedirectResponse
+    {
+        return redirect()->route('tenants.create', ['unit_id' => $unit->id]);
+    }
 }

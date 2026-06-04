@@ -103,14 +103,6 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('agreements.view')) {
-            $mainItems[] = [
-                'icon' => 'pages',
-                'name' => 'Agreements',
-                'path' => '/agreements',
-            ];
-        }
-
         if (auth()->check() && $user->can('utilities.view')) {
             $mainItems[] = [
                 'icon' => 'authentication',

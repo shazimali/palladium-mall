@@ -21,8 +21,11 @@ class Agreement extends Model
         'start_date',
         'end_date',
         'monthly_rent',
+        'maintenance_charge',
         'security_deposit',
+        'payment_due_day',
         'grace_period_days',
+        'notice_period_months',
         'fine_per_day',
         'terms',
         'status',
@@ -33,9 +36,12 @@ class Agreement extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'monthly_rent' => 'decimal:2',
+        'maintenance_charge' => 'decimal:2',
         'security_deposit' => 'decimal:2',
         'fine_per_day' => 'decimal:2',
         'grace_period_days' => 'integer',
+        'payment_due_day' => 'integer',
+        'notice_period_months' => 'integer',
     ];
 
     // -----------------------------------------------------------------------

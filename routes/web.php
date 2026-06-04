@@ -4,6 +4,7 @@ use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\MoveOutController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ReportController;
@@ -60,11 +61,27 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:tenants.view')->group(function () {
-        Route::resource('tenants', TenantController::class);
+        // Wizard steps
+        Route::get('tenants/create',                [TenantController::class, 'create'])->name('tenants.create');
+        Route::post('tenants',                      [TenantController::class, 'store'])->name('tenants.store');
+        Route::get('tenants/{tenant}/step/{step}',  [TenantController::class, 'showStep'])->name('tenants.showStep');
+        Route::post('tenants/{tenant}/step/{step}', [TenantController::class, 'saveStep'])->name('tenants.saveStep');
+        Route::post('tenants/{tenant}/confirm',     [TenantController::class, 'confirm'])->name('tenants.confirm');
+        // Standard resource (except create/store — handled above)
+        Route::resource('tenants', TenantController::class)->except(['create', 'store']);
+        // Move-out
+        Route::get('tenants/{tenant}/move-out',    [MoveOutController::class, 'create'])->name('tenants.moveOut.create');
+        Route::post('tenants/{tenant}/move-out',   [MoveOutController::class, 'store'])->name('tenants.moveOut.store');
     });
 
     Route::middleware('permission:agreements.view')->group(function () {
-        Route::resource('agreements', AgreementController::class);
+        // Agreements are view-only — creation happens via tenant wizard
+        Route::resource('agreements', AgreementController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
+    });
+
+    Route::middleware('permission:units.view')->group(function () {
+        Route::post('units/{unit}/vacate',      [UnitController::class, 'vacate'])->name('units.vacate');
+        Route::get('units/{unit}/add-tenant',   [UnitController::class, 'addTenant'])->name('units.addTenant');
     });
 
     Route::middleware('permission:utilities.view')->group(function () {

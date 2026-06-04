@@ -69,6 +69,7 @@
                         <option value="">All Statuses</option>
                         <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                         <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                        <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
                     </select>
                 </div>
                 
@@ -103,21 +104,32 @@
                                     <td class="px-4 py-3 font-mono text-xs">{{ $tenant->cnic }}</td>
                                     <td class="px-4 py-3">{{ $tenant->phone }}</td>
                                     <td class="px-4 py-3">
+                                        @if($tenant->unit)
                                         <span
                                             class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
                                             {{ $tenant->unit->unit_number }}
                                         </span>
+                                        @else
+                                        <span class="text-gray-400 text-xs">—</span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3 text-xs">
                                         {{ $tenant->dependents ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3">
-                                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
-                                                    {{ $tenant->status === 'active'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' }}">
-                                            {{ ucfirst($tenant->status) }}
+                                        @if($tenant->status === 'draft')
+                                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                                            Draft
                                         </span>
+                                        @elseif($tenant->status === 'active')
+                                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                            Active
+                                        </span>
+                                        @else
+                                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                                            Inactive
+                                        </span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-2">
@@ -134,15 +146,25 @@
                                             </a>
 
                                             @if(auth()->user()->hasPermission('tenants.edit') || auth()->user()->isSuperAdmin())
-                                                <a href="{{ route('tenants.edit', $tenant) }}"
-                                                    class="inline-flex items-center rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                                    title="Edit">
-                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </a>
+                                                @if($tenant->isDraft())
+                                                    <a href="{{ route('tenants.showStep', [$tenant, $tenant->wizardStep()]) }}"
+                                                        class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-yellow-600 bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 transition-colors"
+                                                        title="Resume wizard">
+                                                        <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                        </svg>
+                                                        Resume
+                                                    </a>
+                                                @else
+                                                    <a href="{{ route('tenants.showStep', [$tenant, 1]) }}"
+                                                        class="inline-flex items-center rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                                        title="Edit">
+                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </a>
+                                                @endif
                                             @endif
 
                                             @if(auth()->user()->hasPermission('tenants.delete') || auth()->user()->isSuperAdmin())
