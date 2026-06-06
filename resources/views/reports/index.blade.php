@@ -107,6 +107,52 @@
                     </select>
                 </div>
 
+                {{-- Landlord --}}
+                <div>
+                    <label for="landlord_id" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Landlord
+                    </label>
+                    <select id="landlord_id" name="landlord_id"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Landlords</option>
+                        @foreach($landlords as $landlord)
+                            <option value="{{ $landlord->id }}" {{ ($filters['landlord_id'] ?? '') == $landlord->id ? 'selected' : '' }}>
+                                {{ $landlord->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Payment Method --}}
+                <div>
+                    <label for="payment_method" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Payment Method
+                    </label>
+                    <select id="payment_method" name="payment_method"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Payment Methods</option>
+                        <option value="cash" {{ ($filters['payment_method'] ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
+                        <option value="bank_transfer" {{ ($filters['payment_method'] ?? '') === 'bank_transfer' ? 'selected' : '' }}>Bank Transfer</option>
+                        <option value="cheque" {{ ($filters['payment_method'] ?? '') === 'cheque' ? 'selected' : '' }}>Cheque</option>
+                        <option value="other" {{ ($filters['payment_method'] ?? '') === 'other' ? 'selected' : '' }}>Other</option>
+                    </select>
+                </div>
+
+                {{-- Payment Account --}}
+                <div>
+                    <label for="payment_account_id" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Payment Account
+                    </label>
+                    <select id="payment_account_id" name="payment_account_id"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Accounts</option>
+                        @foreach($paymentAccounts as $account)
+                            <option value="{{ $account->id }}" {{ ($filters['payment_account_id'] ?? '') == $account->id ? 'selected' : '' }}>
+                                {{ $account->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
 
             {{-- Action Buttons --}}
@@ -206,14 +252,16 @@
                 @else
                     <div class="overflow-x-auto">
                         <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                            <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                            <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
                                 <tr>
                                     <th class="px-4 py-3">#</th>
                                     <th class="px-4 py-3">Month</th>
                                     <th class="px-4 py-3">Flat/Shop</th>
                                     <th class="px-4 py-3">Tenant</th>
+                                    <th class="px-4 py-3">Landlord</th>
                                     <th class="px-4 py-3">Type</th>
-                                    <th class="px-4 py-3">Description</th>
+                                    <th class="px-4 py-3">Payment Method</th>
+                                    <th class="px-4 py-3">Payment Account</th>
                                     <th class="px-4 py-3">Amount Due</th>
                                     <th class="px-4 py-3">Amount Paid</th>
                                     <th class="px-4 py-3">Balance</th>
@@ -240,6 +288,10 @@
                                             {{ $entry['tenant'] }}
                                         </td>
 
+                                        <td class="px-4 py-3 text-gray-700 dark:text-white/80">
+                                            {{ $entry['landlord'] }}
+                                        </td>
+
                                         <td class="px-4 py-3">
                                             @php
                                                 $typeClass = match($entry['type']) {
@@ -258,7 +310,11 @@
                                         </td>
 
                                         <td class="px-4 py-3 text-gray-700 dark:text-white/80">
-                                            {{ $entry['description'] }}
+                                            {{ $entry['payment_method'] }}
+                                        </td>
+
+                                        <td class="px-4 py-3 text-gray-700 dark:text-white/80">
+                                            {{ $entry['payment_account'] }}
                                         </td>
 
                                         <td data-order="{{ $entry['amount_due'] }}" class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
@@ -294,7 +350,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="bg-gray-50 dark:bg-gray-800 font-semibold text-sm">
-                                    <td colspan="6" class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                    <td colspan="8" class="px-4 py-3 text-gray-700 dark:text-gray-300">
                                         Totals ({{ $summary['count'] }} records)
                                     </td>
                                     <td class="px-4 py-3 text-gray-800 dark:text-white">
@@ -480,6 +536,12 @@
     .dark table.dataTable thead th.dt-orderable-asc:hover,
     .dark table.dataTable thead th.dt-orderable-desc:hover {
         background-color: #1d2939;
+    }
+    .dark th,
+    .dark table thead th,
+    .dark #reportTable thead th,
+    .dark table.dataTable thead th {
+        color: #ffffff !important;
     }
 </style>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>

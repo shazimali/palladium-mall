@@ -11,9 +11,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
+use App\Traits\LogsActivity;
+
 class Unit extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'unit_number',
@@ -25,10 +27,12 @@ class Unit extends Model
         'area_sqft',
         'notes',
         'landlord_id',
+        'date',
     ];
 
     protected $casts = [
         'area_sqft' => 'decimal:2',
+        'date' => 'date',
     ];
 
     // -----------------------------------------------------------------------
@@ -102,6 +106,16 @@ class Unit extends Model
     public function landlord(): BelongsTo
     {
         return $this->belongsTo(Landlord::class);
+    }
+
+    public function agreements(): HasMany
+    {
+        return $this->hasMany(Agreement::class)->orderBy('start_date', 'desc');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->orderBy('due_date', 'desc');
     }
 
     public function tenant(): HasOne

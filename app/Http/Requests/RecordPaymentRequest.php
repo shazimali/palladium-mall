@@ -16,7 +16,7 @@ class RecordPaymentRequest extends FormRequest
     {
         return [
             'amount_paid' => ['required', 'numeric', 'min:0'],
-            'payment_method' => ['required', 'in:cash,bank_transfer,cheque,other'],
+            'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference' => ['nullable', 'string', 'max:100'],
             'paid_at' => ['required', 'date'],
             'receipt' => [

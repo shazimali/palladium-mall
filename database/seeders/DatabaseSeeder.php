@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             LedgerPermissionSeeder::class,
             UtilityReadingPermissionSeeder::class,
             LandlordPermissionSeeder::class,
+            PaymentAccountPermissionSeeder::class,
             RoleSeeder::class,
             AdminUserSeeder::class,
             DemoDataSeeder::class,

@@ -26,6 +26,7 @@
                 ['Amount Due',      'Rs. '.number_format($payment->amount)],
                 ['Amount Paid',     'Rs. '.number_format($payment->amount_paid)],
                 ['Balance',         'Rs. '.number_format($payment->balanceDue())],
+                ['Payment Account', $payment->paymentAccount ? $payment->paymentAccount->name : '—'],
                 ['Payment Method',  $payment->payment_method ? ucfirst(str_replace('_',' ',$payment->payment_method)) : '—'],
                 ['Reference',       $payment->reference ?? '—'],
                 ['Due Date',        $payment->due_date->format('d M Y')],

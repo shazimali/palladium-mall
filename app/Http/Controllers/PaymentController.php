@@ -21,7 +21,7 @@ class PaymentController extends Controller
 {
     public function index(Request $request): View
     {
-        $payments = Payment::with(['tenant', 'unit', 'agreement'])
+        $payments = Payment::with(['tenant', 'unit', 'agreement', 'paymentAccount'])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->type, fn($q) => $q->ofType($request->type))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
@@ -39,10 +39,13 @@ class PaymentController extends Controller
             'overdue_count' => Payment::overdue()->count(),
         ];
 
+        $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
+
         return view('payments.index', [
             'title' => 'Rent & Payments',
             'payments' => $payments,
             'summary' => $summary,
+            'paymentAccounts' => $paymentAccounts,
         ]);
     }
 
@@ -74,11 +77,13 @@ class PaymentController extends Controller
 
     public function show(Payment $payment): View
     {
-        $payment->load(['tenant', 'unit', 'agreement']);
-
+        $payment->load(['tenant', 'unit', 'agreement', 'paymentAccount']);
+        $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
+ 
         return view('payments.show', [
             'title' => 'Payment — ' . $payment->tenant->name,
             'payment' => $payment,
+            'paymentAccounts' => $paymentAccounts,
         ]);
     }
 
@@ -127,6 +132,10 @@ class PaymentController extends Controller
     public function recordPayment(RecordPaymentRequest $request, Payment $payment): RedirectResponse
     {
         $data = $request->validated();
+ 
+        // Resolve payment_method from the selected payment account
+        $paymentAccount = \App\Models\PaymentAccount::findOrFail($data['payment_account_id']);
+        $data['payment_method'] = $paymentAccount->type;
 
         // Handle receipt upload
         if ($request->hasFile('receipt')) {

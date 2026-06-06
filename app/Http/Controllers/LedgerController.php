@@ -63,6 +63,11 @@ class LedgerController extends Controller
 
         $filename = 'ledger-' . str($subject)->slug() . '-' . now()->format('Y-m-d') . '.xlsx';
 
+        \App\Models\ActivityLog::log('export_excel', "Exported Tenant Ledger to Excel: {$filename}", null, [
+            'subject' => $subject,
+            'filters' => $request->all(),
+        ]);
+
         return Excel::download(
             new TenantLedgerExport($entries, $subject, $summary),
             $filename
@@ -91,7 +96,14 @@ class LedgerController extends Controller
             'filters' => $filters,
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('ledger-' . str($subject)->slug() . '-' . now()->format('Y-m-d') . '.pdf');
+        $filename = 'ledger-' . str($subject)->slug() . '-' . now()->format('Y-m-d') . '.pdf';
+
+        \App\Models\ActivityLog::log('export_pdf', "Exported Tenant Ledger to PDF: {$filename}", null, [
+            'subject' => $subject,
+            'filters' => $filters,
+        ]);
+
+        return $pdf->download($filename);
     }
 
     // -----------------------------------------------------------------------

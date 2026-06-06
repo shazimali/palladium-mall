@@ -41,5 +41,35 @@ class AppServiceProvider extends ServiceProvider
         } catch (\Exception $e) {
             // Fail silently if DB is not setup yet during deployments/migrations
         }
+
+        // Log logins
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Login::class,
+            function (\Illuminate\Auth\Events\Login $event) {
+                \App\Models\ActivityLog::create([
+                    'user_id' => $event->user->id,
+                    'action' => 'login',
+                    'description' => "{$event->user->name} logged in successfully",
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+            }
+        );
+
+        // Log logouts
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Auth\Events\Logout::class,
+            function (\Illuminate\Auth\Events\Logout $event) {
+                if ($event->user) {
+                    \App\Models\ActivityLog::create([
+                        'user_id' => $event->user->id,
+                        'action' => 'logout',
+                        'description' => "{$event->user->name} logged out successfully",
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                    ]);
+                }
+            }
+        );
     }
 }

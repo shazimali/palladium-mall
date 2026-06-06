@@ -208,8 +208,10 @@
                 <th>Date</th>
                 <th>Flat/Shop</th>
                 <th>Tenant</th>
+                <th>Landlord</th>
                 <th>Type</th>
-                <th>Description</th>
+                <th>Payment Method</th>
+                <th>Payment Account</th>
                 <th>Amount Due</th>
                 <th>Amount Paid</th>
                 <th>Balance</th>
@@ -224,12 +226,14 @@
                     <td>{{ $entry['date']?->format('d M Y') ?? '—' }}</td>
                     <td style="font-weight:600;">{{ $entry['unit'] ?? '—' }}</td>
                     <td>{{ $entry['tenant'] ?? '—' }}</td>
+                    <td>{{ $entry['landlord'] ?? '—' }}</td>
                     <td>
                         <span class="badge type-{{ $entry['type'] ?? 'other' }}">
                             {{ ucfirst($entry['type'] ?? '') }}
                         </span>
                     </td>
-                    <td>{{ $entry['description'] ?? '' }}</td>
+                    <td>{{ $entry['payment_method'] ?? '—' }}</td>
+                    <td>{{ $entry['payment_account'] ?? '—' }}</td>
                     <td style="font-weight:600;">Rs. {{ number_format($entry['amount_due'], 2) }}</td>
                     <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['amount_paid'], 2) }}</td>
                     <td style="font-weight:700;color:{{ $entry['balance'] > 0 ? '#DC2626' : '#059669' }};">
@@ -243,7 +247,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="11" style="text-align:center;padding:16px;color:#94A3B8;">
+                    <td colspan="13" style="text-align:center;padding:16px;color:#94A3B8;">
                         No records found for the selected filters.
                     </td>
                 </tr>
@@ -251,7 +255,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="7" style="color:#1D3461;">
+                <td colspan="9" style="color:#1D3461;">
                     Totals — {{ number_format($summary['count']) }} records
                 </td>
                 <td style="color:#1D3461;">Rs. {{ number_format($summary['total_due'], 2) }}</td>

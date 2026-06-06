@@ -9,9 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
+use App\Traits\LogsActivity;
+
 class Payment extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
         'tenant_id',
@@ -34,6 +36,7 @@ class Payment extends Model
         'current_reading',
         'units_consumed',
         'rate_per_unit',
+        'payment_account_id',
     ];
 
     protected $casts = [
@@ -70,6 +73,11 @@ class Payment extends Model
     public function meter(): BelongsTo
     {
         return $this->belongsTo(Meter::class);
+    }
+ 
+    public function paymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(PaymentAccount::class);
     }
 
     // -----------------------------------------------------------------------

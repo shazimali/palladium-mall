@@ -95,20 +95,35 @@
     </div>
 </div>
 
-{{-- Status --}}
-<div>
-    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-        Status <span class="text-red-500">*</span>
-    </label>
-    <select name="status" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
-            {{ $errors->has('status') ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : '' }}">
-        <option value="">Select status</option>
-        <option value="vacant" {{ old('status', $unit->status ?? '') === 'vacant' ? 'selected' : '' }}>Vacant</option>
-        <option value="occupied" {{ old('status', $unit->status ?? '') === 'occupied' ? 'selected' : '' }}>Occupied</option>
-    </select>
-    @error('status')
-        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-    @enderror
+{{-- Status & Date --}}
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+    <div>
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Status <span class="text-red-500">*</span>
+        </label>
+        <select name="status" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
+                {{ $errors->has('status') ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : '' }}">
+            <option value="">Select status</option>
+            <option value="vacant" {{ old('status', $unit->status ?? '') === 'vacant' ? 'selected' : '' }}>Vacant</option>
+            <option value="occupied" {{ old('status', $unit->status ?? '') === 'occupied' ? 'selected' : '' }}>Occupied</option>
+        </select>
+        @error('status')
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <div>
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Creation Date
+        </label>
+        <input type="date" name="date"
+            value="{{ old('date', isset($unit->date) ? $unit->date->toDateString() : '') }}"
+            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
+            {{ $errors->has('date') ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : '' }}">
+        @error('date')
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+        @enderror
+    </div>
 </div>
 
 {{-- Utility Meters --}}

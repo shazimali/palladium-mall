@@ -34,18 +34,20 @@ class ReportExport implements
     public function collection(): Collection
     {
         return $this->entries->map(fn($e) => [
-            'Month'       => $e['month']?->format('M Y')    ?? '—',
-            'Date'        => $e['date']?->format('d M Y')   ?? '—',
-            'Flat/Shop'   => $e['unit']                     ?? '—',
-            'Tenant'      => $e['tenant']                   ?? '—',
-            'Category'    => ucfirst($e['category']         ?? ''),
-            'Type'        => ucfirst($e['type']             ?? ''),
-            'Description' => $e['description']              ?? '',
-            'Amount Due'  => number_format((float) $e['amount_due'],  2),
-            'Amount Paid' => number_format((float) $e['amount_paid'], 2),
-            'Balance'     => number_format((float) $e['balance'],     2),
-            'Status'      => ucfirst($e['status']           ?? ''),
-            'Paid At'     => $e['paid_at'] ? $e['paid_at']->format('d M Y') : '—',
+            'Month'           => $e['month']?->format('M Y')    ?? '—',
+            'Date'            => $e['date']?->format('d M Y')   ?? '—',
+            'Flat/Shop'       => $e['unit']                     ?? '—',
+            'Tenant'          => $e['tenant']                   ?? '—',
+            'Landlord'        => $e['landlord']                 ?? '—',
+            'Category'        => ucfirst($e['category']         ?? ''),
+            'Type'            => ucfirst($e['type']             ?? ''),
+            'Payment Method'  => $e['payment_method']           ?? '—',
+            'Payment Account' => $e['payment_account']          ?? '—',
+            'Amount Due'      => number_format((float) $e['amount_due'],  2),
+            'Amount Paid'     => number_format((float) $e['amount_paid'], 2),
+            'Balance'         => number_format((float) $e['balance'],     2),
+            'Status'          => ucfirst($e['status']           ?? ''),
+            'Paid At'         => $e['paid_at'] ? $e['paid_at']->format('d M Y') : '—',
         ]);
     }
 
@@ -60,9 +62,11 @@ class ReportExport implements
             'Date',
             'Flat/Shop',
             'Tenant',
+            'Landlord',
             'Category',
             'Type',
-            'Description',
+            'Payment Method',
+            'Payment Account',
             'Amount Due (Rs.)',
             'Amount Paid (Rs.)',
             'Balance (Rs.)',
@@ -123,14 +127,16 @@ class ReportExport implements
             'B' => 14,  // Date
             'C' => 14,  // Flat/Shop
             'D' => 22,  // Tenant
-            'E' => 12,  // Category
-            'F' => 14,  // Type
-            'G' => 34,  // Description
-            'H' => 18,  // Amount Due
-            'I' => 18,  // Amount Paid
-            'J' => 16,  // Balance
-            'K' => 12,  // Status
-            'L' => 14,  // Paid At
+            'E' => 22,  // Landlord
+            'F' => 12,  // Category
+            'G' => 14,  // Type
+            'H' => 18,  // Payment Method
+            'I' => 22,  // Payment Account
+            'J' => 18,  // Amount Due
+            'K' => 18,  // Amount Paid
+            'L' => 16,  // Balance
+            'M' => 12,  // Status
+            'N' => 14,  // Paid At
         ];
     }
 

@@ -73,6 +73,11 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'Delete Permissions',
                 'group' => 'Permission Management'
             ],
+            [
+                'name' => 'activity_logs.view',
+                'display_name' => 'View Activity Logs',
+                'group' => 'System Auditing'
+            ],
         ];
 
         foreach ($permissions as $permission) {

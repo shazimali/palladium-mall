@@ -13,6 +13,7 @@ use App\Http\Controllers\MeterController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LandlordController;
+use App\Http\Controllers\PaymentAccountController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -55,6 +56,10 @@ Route::middleware('auth')->group(function () {
         Route::resource('permissions', PermissionController::class);
     });
 
+    Route::middleware('permission:activity_logs.view')->group(function () {
+        Route::get('activity-logs', [\App\Http\Controllers\ActivityLogController::class, 'index'])->name('activity-logs.index');
+    });
+
     Route::middleware('permission:units.view')->group(function () {
         Route::resource('units', UnitController::class)->except(['show']);
     });
@@ -77,6 +82,10 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:landlords.view')->group(function () {
         Route::resource('landlords', LandlordController::class);
+    });
+ 
+    Route::middleware('permission:payment_accounts.view')->group(function () {
+        Route::resource('payment-accounts', PaymentAccountController::class);
     });
 
     Route::middleware('permission:agreements.view')->group(function () {

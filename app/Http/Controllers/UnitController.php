@@ -55,7 +55,11 @@ class UnitController extends Controller
 
     public function store(StoreUnitRequest $request): RedirectResponse
     {
-        Unit::create($request->validated());
+        $data = $request->validated();
+        if (empty($data['date'])) {
+            $data['date'] = now()->toDateString();
+        }
+        Unit::create($data);
 
         return redirect()
             ->route('units.index')
@@ -64,12 +68,97 @@ class UnitController extends Controller
 
     public function show(Unit $unit): View
     {
-        $unit->load(['floor', 'block', 'area', 'meters', 'landlord']);
+        $unit->load([
+            'floor', 'block', 'area', 'meters', 'landlord',
+            'agreements.tenant',
+            'payments.tenant',
+            'payments.paymentAccount'
+        ]);
+
+        $agreements = $unit->agreements;
+        $payments = $unit->payments;
+
+        // KPI Calculations
+        $total_earnings = (float) $payments->whereIn('status', ['paid', 'partial'])->sum('amount_paid');
+        $total_outstanding = (float) $payments->sum('amount') - (float) $payments->sum('amount_paid');
+        $agreements_count = $agreements->count();
+
+        // Compile timeline
+        $timeline = collect();
+
+        foreach ($agreements as $agreement) {
+            $timeline->push([
+                'type' => 'agreement',
+                'date' => $agreement->start_date,
+                'title' => 'Agreement Signed',
+                'subtitle' => 'Tenant: ' . ($agreement->tenant->name ?? '—'),
+                'details' => 'Monthly Rent: Rs. ' . number_format($agreement->monthly_rent) . ' | Security Deposit: Rs. ' . number_format($agreement->security_deposit),
+                'status' => $agreement->status,
+                'status_badge' => $agreement->status_badge_class,
+                'icon' => '📄',
+                'url' => route('agreements.show', $agreement->id),
+            ]);
+            
+            if ($agreement->status === 'terminated') {
+                $timeline->push([
+                    'type' => 'agreement_terminated',
+                    'date' => $agreement->updated_at,
+                    'title' => 'Agreement Terminated',
+                    'subtitle' => 'Tenant: ' . ($agreement->tenant->name ?? '—'),
+                    'details' => 'The tenancy agreement has been terminated.',
+                    'status' => 'terminated',
+                    'status_badge' => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                    'icon' => '❌',
+                    'url' => route('agreements.show', $agreement->id),
+                ]);
+            }
+        }
+
+        foreach ($payments as $payment) {
+            $title = $payment->type_label . ' Received';
+            $icon = '💰';
+            if ($payment->type === 'rent') {
+                $icon = '🏠';
+            } elseif (in_array($payment->type, ['electricity', 'water', 'gas'])) {
+                $icon = '⚡';
+            }
+            
+            if ($payment->status === 'unpaid') {
+                $title = $payment->type_label . ' Billed';
+            }
+
+            $details = 'Amount: Rs. ' . number_format($payment->amount) . ' | Paid: Rs. ' . number_format($payment->amount_paid);
+            if ($payment->paymentAccount) {
+                $details .= ' via ' . $payment->paymentAccount->name;
+            }
+            if ($payment->reference) {
+                $details .= ' (Ref: ' . $payment->reference . ')';
+            }
+
+            $timeline->push([
+                'type' => 'payment',
+                'date' => $payment->paid_at ?? $payment->due_date,
+                'title' => $title,
+                'subtitle' => 'Tenant: ' . ($payment->tenant->name ?? '—'),
+                'details' => $details,
+                'status' => $payment->status,
+                'status_badge' => $payment->status_badge_class,
+                'icon' => $icon,
+                'url' => route('payments.show', $payment->id),
+            ]);
+        }
+
+        // Sort chronological timeline by date descending
+        $timeline = $timeline->sortByDesc('date')->values();
 
         return view('units.show', [
             'title' => 'Unit — ' . $unit->unit_number,
             'unit' => $unit,
             'meters' => $unit->meters->keyBy('type'),
+            'total_earnings' => $total_earnings,
+            'total_outstanding' => $total_outstanding,
+            'agreements_count' => $agreements_count,
+            'timeline' => $timeline,
         ]);
     }
 
@@ -90,7 +179,11 @@ class UnitController extends Controller
 
     public function update(UpdateUnitRequest $request, Unit $unit): RedirectResponse
     {
-        $unit->update($request->validated());
+        $data = $request->validated();
+        if (empty($data['date'])) {
+            $data['date'] = now()->toDateString();
+        }
+        $unit->update($data);
 
         return redirect()
             ->route('units.index')

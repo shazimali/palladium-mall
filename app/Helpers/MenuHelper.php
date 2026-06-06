@@ -120,6 +120,14 @@ class MenuHelper
                 'path' => '/payments',
             ];
         }
+ 
+        if (auth()->check() && $user->can('payment_accounts.view')) {
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Payment Accounts',
+                'path' => '/payment-accounts',
+            ];
+        }
 
         if (auth()->check() && $user->can('reports.view')) {
             $mainItems[] = [
@@ -164,6 +172,14 @@ class MenuHelper
                     'icon' => 'forms',
                     'name' => 'Permissions',
                     'path' => '/permissions',
+                ];
+            }
+
+            if ($user->can('activity_logs.view')) {
+                $adminItems[] = [
+                    'icon' => 'task',
+                    'name' => 'Activity Logs',
+                    'path' => '/activity-logs',
                 ];
             }
 

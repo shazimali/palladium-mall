@@ -43,6 +43,7 @@ class UpdateUnitRequest extends FormRequest
             'water_meter_id' => ['nullable', 'string', 'max:50'],
             'gas_meter_id' => ['nullable', 'string', 'max:50'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'date' => ['nullable', 'date'],
         ];
     }
 }
