@@ -49,6 +49,11 @@
                     </a>
                 @endif
                 @if(auth()->user()->hasPermission('units.create') || auth()->user()->isSuperAdmin())
+                    <a href="{{ route('units.import.form') }}"
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
+                        <span>📤</span>
+                        Import CSV
+                    </a>
                     <a href="{{ route('units.create') }}"
                         class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

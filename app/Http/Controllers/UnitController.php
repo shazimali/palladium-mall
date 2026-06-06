@@ -12,6 +12,10 @@ use App\Http\Requests\UpdateUnitRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use App\Models\Landlord;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class UnitController extends Controller
 {
@@ -214,5 +218,303 @@ class UnitController extends Controller
     public function addTenant(Unit $unit): RedirectResponse
     {
         return redirect()->route('tenants.create', ['unit_id' => $unit->id]);
+    }
+
+    public function importForm(): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('units.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return view('units.import', [
+            'title' => 'Import Flats/Shops via CSV',
+        ]);
+    }
+
+    public function downloadTemplate()
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('units.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="units_import_template.csv"',
+        ];
+
+        $columns = [
+            'unit_number',
+            'floor',
+            'block',
+            'area',
+            'type',
+            'status',
+            'landlord_name',
+            'area_sqft',
+            'date',
+            'electricity_meter',
+            'water_meter',
+            'gas_meter',
+            'notes'
+        ];
+
+        $callback = function () use ($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            
+            // Example Row 1
+            fputcsv($file, [
+                'A-101',
+                '1st',
+                'Abubakar',
+                'Single',
+                'flat',
+                'vacant',
+                'Malik Riaz',
+                '1200',
+                '2026-06-06',
+                'ELEC-A101',
+                'WAT-A101',
+                'GAS-A101',
+                'Spacious 2-bedroom flat facing the park.'
+            ]);
+
+            // Example Row 2
+            fputcsv($file, [
+                'S-G01',
+                'Ground',
+                'Usman',
+                'Double',
+                'shop',
+                'occupied',
+                'Mian Mansha',
+                '850',
+                '2026-06-01',
+                'ELEC-SG01',
+                '',
+                '',
+                'Corner shop near the main gate.'
+            ]);
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function importSubmit(Request $request): RedirectResponse
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('units.create')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->validate([
+            'csv_file' => ['required', 'file', 'mimes:csv,txt'],
+        ]);
+
+        $file = $request->file('csv_file');
+        $path = $file->getRealPath();
+        $handle = fopen($path, 'r');
+        if (!$handle) {
+            return back()->withErrors(['csv_file' => 'Could not open the uploaded CSV file.']);
+        }
+
+        $headers = fgetcsv($handle);
+        if (!$headers) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'Uploaded CSV file is empty.']);
+        }
+
+        // Clean headers (trim, lowercase)
+        $headers = array_map(function ($h) {
+            return trim(strtolower($h));
+        }, $headers);
+
+        // Verify required headers
+        $requiredHeaders = ['unit_number', 'floor', 'block', 'area', 'type', 'status', 'landlord_name'];
+        $missingHeaders = array_diff($requiredHeaders, $headers);
+        if (!empty($missingHeaders)) {
+            fclose($handle);
+            return back()->withErrors(['csv_file' => 'Missing required CSV headers: ' . implode(', ', $missingHeaders)]);
+        }
+
+        $errors = [];
+        $csvUnitNumbers = [];
+        $validRows = [];
+        $rowIndex = 2; // Row 1 is headers
+
+        while (($row = fgetcsv($handle)) !== false) {
+            // Skip empty rows
+            if (count($row) === 1 && empty($row[0])) {
+                $rowIndex++;
+                continue;
+            }
+
+            // Combine headers with row values
+            $rowData = [];
+            foreach ($headers as $index => $header) {
+                $rowData[$header] = isset($row[$index]) ? trim($row[$index]) : '';
+            }
+
+            $rowErrors = [];
+
+            // 1. unit_number validation
+            if (empty($rowData['unit_number'])) {
+                $rowErrors[] = "Unit Number is required.";
+            } else {
+                $unitNumber = $rowData['unit_number'];
+                if (in_array($unitNumber, $csvUnitNumbers)) {
+                    $rowErrors[] = "Duplicate Unit Number '{$unitNumber}' within CSV.";
+                } else {
+                    $csvUnitNumbers[] = $unitNumber;
+                }
+
+                // Check DB uniqueness
+                if (Unit::where('unit_number', $unitNumber)->exists()) {
+                    $rowErrors[] = "Unit Number '{$unitNumber}' already exists in database.";
+                }
+            }
+
+            // 2. Type validation
+            if (empty($rowData['type'])) {
+                $rowErrors[] = "Type is required.";
+            } else {
+                $type = strtolower($rowData['type']);
+                if (!in_array($type, ['flat', 'shop', 'office'])) {
+                    $rowErrors[] = "Type '{$rowData['type']}' is invalid. Allowed: flat, shop, office.";
+                } else {
+                    $rowData['type'] = $type;
+                }
+            }
+
+            // 3. Status validation
+            if (empty($rowData['status'])) {
+                $rowErrors[] = "Status is required.";
+            } else {
+                $status = strtolower($rowData['status']);
+                if (!in_array($status, ['vacant', 'occupied', 'sold'])) {
+                    $rowErrors[] = "Status '{$rowData['status']}' is invalid. Allowed: vacant, occupied, sold.";
+                } else {
+                    $rowData['status'] = $status;
+                }
+            }
+
+            // 4. Required lookups
+            if (empty($rowData['floor'])) {
+                $rowErrors[] = "Floor is required.";
+            }
+            if (empty($rowData['block'])) {
+                $rowErrors[] = "Block is required.";
+            }
+            if (empty($rowData['area'])) {
+                $rowErrors[] = "Area/Zone is required.";
+            }
+
+            // 5. Landlord name lookup check
+            if (empty($rowData['landlord_name'])) {
+                $rowErrors[] = "Landlord Name is required.";
+            } else {
+                $landlordName = $rowData['landlord_name'];
+                $landlordExists = Landlord::where('name', 'like', $landlordName)->exists();
+                if (!$landlordExists) {
+                    $rowErrors[] = "Landlord '{$landlordName}' does not exist. Create the landlord first.";
+                }
+            }
+
+            // 6. Optional numeric check
+            if (!empty($rowData['area_sqft']) && !is_numeric($rowData['area_sqft'])) {
+                $rowErrors[] = "Area Sqft must be numeric.";
+            }
+
+            // 7. Optional date check
+            if (!empty($rowData['date'])) {
+                try {
+                    Carbon::parse($rowData['date']);
+                } catch (\Exception $e) {
+                    $rowErrors[] = "Invalid Date format '{$rowData['date']}'. Use YYYY-MM-DD.";
+                }
+            }
+
+            if (!empty($rowErrors)) {
+                $errors[$rowIndex] = $rowErrors;
+            } else {
+                $validRows[$rowIndex] = $rowData;
+            }
+
+            $rowIndex++;
+        }
+        fclose($handle);
+
+        if (!empty($errors)) {
+            return back()->with('import_errors', $errors)->withInput();
+        }
+
+        DB::beginTransaction();
+        try {
+            $importedCount = 0;
+            foreach ($validRows as $rowData) {
+                // Find or create lookups
+                $floor = Floor::firstOrCreate(['name' => trim($rowData['floor'])]);
+                $block = Block::firstOrCreate(['name' => trim($rowData['block'])]);
+                $area = Area::firstOrCreate(['name' => trim($rowData['area'])]);
+                $landlord = Landlord::where('name', 'like', trim($rowData['landlord_name']))->first();
+
+                $date = !empty($rowData['date']) ? Carbon::parse($rowData['date'])->toDateString() : now()->toDateString();
+
+                $unit = Unit::create([
+                    'unit_number' => $rowData['unit_number'],
+                    'floor_id' => $floor->id,
+                    'block_id' => $block->id,
+                    'area_id' => $area->id,
+                    'landlord_id' => $landlord->id,
+                    'type' => $rowData['type'],
+                    'status' => $rowData['status'],
+                    'area_sqft' => !empty($rowData['area_sqft']) ? (float) $rowData['area_sqft'] : null,
+                    'notes' => !empty($rowData['notes']) ? $rowData['notes'] : null,
+                    'date' => $date,
+                ]);
+
+                // Create meters if specified
+                if (!empty($rowData['electricity_meter'])) {
+                    Meter::create([
+                        'unit_id' => $unit->id,
+                        'type' => 'electricity',
+                        'meter_ref_no' => trim($rowData['electricity_meter']),
+                        'is_active' => true,
+                    ]);
+                }
+                if (!empty($rowData['water_meter'])) {
+                    Meter::create([
+                        'unit_id' => $unit->id,
+                        'type' => 'water',
+                        'meter_ref_no' => trim($rowData['water_meter']),
+                        'is_active' => true,
+                    ]);
+                }
+                if (!empty($rowData['gas_meter'])) {
+                    Meter::create([
+                        'unit_id' => $unit->id,
+                        'type' => 'gas',
+                        'meter_ref_no' => trim($rowData['gas_meter']),
+                        'is_active' => true,
+                    ]);
+                }
+
+                $importedCount++;
+            }
+
+            if (class_exists(ActivityLog::class)) {
+                ActivityLog::log('import_csv', "Bulk imported {$importedCount} units via CSV file");
+            }
+
+            DB::commit();
+
+            return redirect()->route('units.index')
+                ->with('success', "Successfully imported {$importedCount} units.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['csv_file' => 'Database error occurred: ' . $e->getMessage()]);
+        }
     }
 }

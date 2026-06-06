@@ -37,6 +37,9 @@ Route::middleware('auth')->group(function () {
 
     // Units — admin + super-admin only
     Route::middleware('permission:units.view')->group(function () {
+        Route::get('units/import', [UnitController::class, 'importForm'])->name('units.import.form');
+        Route::post('units/import', [UnitController::class, 'importSubmit'])->name('units.import.submit');
+        Route::get('units/import/template', [UnitController::class, 'downloadTemplate'])->name('units.import.template');
         Route::resource('units', UnitController::class)->except(['show']);
         Route::get('units/{unit}', [UnitController::class, 'show'])->name('units.show');
     });

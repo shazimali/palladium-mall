@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // 1. Add new columns to tenants
@@ -31,9 +30,16 @@ return new class extends Migration
     {
         Schema::table('tenants', function (Blueprint $table) {
             $table->dropColumn([
-                'father_name', 'date_of_birth', 'gender', 'marital_status',
-                'whatsapp_number', 'monthly_income', 'tenancy_type',
-                'adults_count', 'children_count', 'passport_photo',
+                'father_name',
+                'date_of_birth',
+                'gender',
+                'marital_status',
+                'whatsapp_number',
+                'monthly_income',
+                'tenancy_type',
+                'adults_count',
+                'children_count',
+                'passport_photo',
             ]);
         });
 

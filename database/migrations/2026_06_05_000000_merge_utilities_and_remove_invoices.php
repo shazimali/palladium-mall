@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         // 1. Alter the enum type column to string to accept utility types (electricity, water, gas)
@@ -47,28 +46,28 @@ return new class extends Migration
 
                 if (!$exists) {
                     DB::table('payments')->insert([
-                        'tenant_id'          => $reading->tenant_id,
-                        'unit_id'            => $reading->unit_id,
-                        'agreement_id'       => DB::table('agreements')
-                                                    ->where('tenant_id', $reading->tenant_id)
-                                                    ->where('status', 'active')
-                                                    ->value('id') ?? DB::table('agreements')->where('tenant_id', $reading->tenant_id)->value('id') ?? 1,
-                        'type'               => $reading->type, // 'electricity', 'water', 'gas'
-                        'month'              => $reading->month,
-                        'amount'             => $reading->bill_amount,
-                        'amount_paid'        => $reading->status === 'paid' ? $reading->bill_amount : 0.00,
-                        'status'             => $status,
-                        'due_date'           => $reading->due_date,
-                        'paid_at'            => $reading->paid_at,
-                        'receipt'            => $reading->bill_proof,
-                        'notes'              => $reading->notes,
-                        'meter_id'           => $reading->meter_id,
-                        'previous_reading'   => $reading->previous_reading,
-                        'current_reading'    => $reading->current_reading,
-                        'units_consumed'     => $reading->units_consumed,
-                        'rate_per_unit'      => $reading->rate_per_unit,
-                        'created_at'         => $reading->created_at,
-                        'updated_at'         => $reading->updated_at,
+                        'tenant_id' => $reading->tenant_id,
+                        'unit_id' => $reading->unit_id,
+                        'agreement_id' => DB::table('agreements')
+                            ->where('tenant_id', $reading->tenant_id)
+                            ->where('status', 'active')
+                            ->value('id') ?? DB::table('agreements')->where('tenant_id', $reading->tenant_id)->value('id') ?? 1,
+                        'type' => $reading->type, // 'electricity', 'water', 'gas'
+                        'month' => $reading->month,
+                        'amount' => $reading->bill_amount,
+                        'amount_paid' => $reading->status === 'paid' ? $reading->bill_amount : 0.00,
+                        'status' => $status,
+                        'due_date' => $reading->due_date,
+                        'paid_at' => $reading->paid_at,
+                        'receipt' => $reading->bill_proof,
+                        'notes' => $reading->notes,
+                        'meter_id' => $reading->meter_id,
+                        'previous_reading' => $reading->previous_reading,
+                        'current_reading' => $reading->current_reading,
+                        'units_consumed' => $reading->units_consumed,
+                        'rate_per_unit' => $reading->rate_per_unit,
+                        'created_at' => $reading->created_at,
+                        'updated_at' => $reading->updated_at,
                     ]);
                 }
             }
