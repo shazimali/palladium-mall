@@ -7,10 +7,8 @@ use App\Models\Meter;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\Unit;
-use App\Models\UtilityReading;
-use App\Models\Invoice;
-use App\Models\InvoiceItem;
-use App\Services\InvoiceService;
+use App\Models\Landlord;
+use App\Models\PaymentAccount;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
@@ -18,6 +16,9 @@ class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->command->info('Seeding demo landlords...');
+        $this->seedLandlords();
+
         $this->command->info('Seeding demo units...');
         $this->seedUnits();
 
@@ -27,16 +28,55 @@ class DemoDataSeeder extends Seeder
         $this->command->info('Seeding demo tenants + agreements...');
         $this->seedTenants();
 
+        $this->command->info('Seeding demo payment accounts...');
+        $this->seedPaymentAccounts();
+
         $this->command->info('Seeding demo payments...');
         $this->seedPayments();
 
         $this->command->info('Seeding demo utility readings...');
         $this->seedUtilities();
 
-        $this->command->info('Seeding demo invoices...');
-        $this->seedInvoices();
-
         $this->command->info('Demo data seeded successfully.');
+    }
+
+    // -----------------------------------------------------------------------
+    // Landlords
+    // -----------------------------------------------------------------------
+    private function seedLandlords(): void
+    {
+        Landlord::firstOrCreate(
+            ['name' => 'Malik Riaz'],
+            [
+                'phone' => '0300-9876543',
+                'email' => 'malik@riaz.com',
+                'cnic' => '35201-1111111-1',
+                'address' => 'Bahria Town, Lahore',
+                'notes' => 'VVIP landlord portfolio owner'
+            ]
+        );
+
+        Landlord::firstOrCreate(
+            ['name' => 'Mian Mansha'],
+            [
+                'phone' => '0301-8765432',
+                'email' => 'mansha@nishat.net',
+                'cnic' => '35201-2222222-2',
+                'address' => 'Nishat House, Gulberg, Lahore',
+                'notes' => 'Premium commercial property landlord'
+            ]
+        );
+
+        Landlord::firstOrCreate(
+            ['name' => 'Sadruddin Hashwani'],
+            [
+                'phone' => '0302-7654321',
+                'email' => 'hashwani@hashoo.com',
+                'cnic' => '35201-3333333-3',
+                'address' => 'Pearl Continental, Lahore',
+                'notes' => 'Executive landlord investor'
+            ]
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -57,7 +97,6 @@ class DemoDataSeeder extends Seeder
         $apartmentsZone = \App\Models\Area::firstOrCreate(['name' => 'Single']);
         $retailZone = \App\Models\Area::firstOrCreate(['name' => 'Double']);
 
-        // Define mapping arrays
         $floorMap = [
             'Floor 1' => $floor1->id,
             'Floor 2' => $floor2->id,
@@ -70,6 +109,8 @@ class DemoDataSeeder extends Seeder
             'Block A' => $blockA->id,
             'Block B' => $blockB->id,
         ];
+
+        $landlords = Landlord::pluck('id')->toArray();
 
         $units = [
             // Block A — Floor 1
@@ -100,6 +141,14 @@ class DemoDataSeeder extends Seeder
             $blockId = $blockMap[$unitData['block']] ?? null;
             $areaId = $unitData['type'] === 'flat' ? $apartmentsZone->id : $retailZone->id;
 
+            // Pick a deterministic landlord
+            $landlordId = !empty($landlords) 
+                ? $landlords[crc32($unitData['unit_number']) % count($landlords)] 
+                : null;
+
+            // Deterministic date (e.g. 12-24 months ago)
+            $creationDate = Carbon::now()->subMonths(crc32($unitData['unit_number']) % 12 + 12)->toDateString();
+
             Unit::firstOrCreate(
                 ['unit_number' => $unitData['unit_number']],
                 [
@@ -108,6 +157,8 @@ class DemoDataSeeder extends Seeder
                     'area_id'  => $areaId,
                     'type'     => $unitData['type'],
                     'status'   => $unitData['status'],
+                    'landlord_id' => $landlordId,
+                    'date' => $creationDate,
                 ]
             );
         }
@@ -118,7 +169,6 @@ class DemoDataSeeder extends Seeder
     // -----------------------------------------------------------------------
     private function seedMeters(): void
     {
-        // Seed all 3 meter types for every unit that has a unit_number
         $meterMap = [
             'A-101' => ['electricity' => 'LESCO-A101-E', 'water' => 'WASA-A101-W', 'gas' => 'SNGPL-A101-G'],
             'A-102' => ['electricity' => 'LESCO-A102-E', 'water' => 'WASA-A102-W', 'gas' => 'SNGPL-A102-G'],
@@ -256,7 +306,7 @@ class DemoDataSeeder extends Seeder
             if (!$unit)
                 continue;
 
-            // Skip if tenant already exists for this unit
+            // Skip if tenant already exists
             if (Tenant::where('unit_id', $unit->id)->exists())
                 continue;
 
@@ -290,11 +340,55 @@ class DemoDataSeeder extends Seeder
     }
 
     // -----------------------------------------------------------------------
-    // Payments — last 6 months
+    // Payment Accounts
+    // -----------------------------------------------------------------------
+    private function seedPaymentAccounts(): void
+    {
+        PaymentAccount::firstOrCreate(
+            ['name' => 'HBL Collection A/C'],
+            [
+                'account_number' => '1234-56789-01',
+                'account_holder' => 'Palladium Mall Collection',
+                'bank_name' => 'Habib Bank Limited',
+                'type' => 'bank_transfer',
+                'is_active' => true,
+                'notes' => 'Primary rent collection bank account'
+            ]
+        );
+
+        PaymentAccount::firstOrCreate(
+            ['name' => 'Al-Falah Rent Collection'],
+            [
+                'account_number' => '9876-54321-02',
+                'account_holder' => 'Palladium Mall Administration',
+                'bank_name' => 'Bank Alfalah',
+                'type' => 'bank_transfer',
+                'is_active' => true,
+                'notes' => 'Alternate bank channel for incoming rent transfers'
+            ]
+        );
+
+        PaymentAccount::firstOrCreate(
+            ['name' => 'Petty Cash Box'],
+            [
+                'account_number' => 'CASH-001',
+                'account_holder' => 'Cash Safe Vault',
+                'bank_name' => 'Physical Vault',
+                'type' => 'cash',
+                'is_active' => true,
+                'notes' => 'Direct cashier desk safe box'
+            ]
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Payments
     // -----------------------------------------------------------------------
     private function seedPayments(): void
     {
         $tenants = Tenant::with(['unit', 'activeAgreement'])->get();
+        $cashAcc = PaymentAccount::where('type', 'cash')->first();
+        $bankAcc = PaymentAccount::where('type', 'bank_transfer')->first();
 
         for ($monthsAgo = 5; $monthsAgo >= 0; $monthsAgo--) {
             $month = Carbon::now()->subMonths($monthsAgo)->startOfMonth();
@@ -324,25 +418,25 @@ class DemoDataSeeder extends Seeder
                     )
                         continue;
 
-                    // Current month — some unpaid, some partial, some overdue
                     if ($isCurrentMonth) {
                         $scenario = match ($tenant->name) {
-                            'Ahmed Raza' => ['status' => 'paid', 'paid' => $amount, 'method' => 'cash'],
-                            'Sara Khan' => ['status' => 'paid', 'paid' => $amount, 'method' => 'bank_transfer'],
-                            'Ali Malik' => ['status' => 'partial', 'paid' => $amount * 0.5, 'method' => 'cash'],
-                            'Fatima Sheikh' => ['status' => 'unpaid', 'paid' => 0, 'method' => null],
-                            'Usman Tariq' => ['status' => 'unpaid', 'paid' => 0, 'method' => null],
-                            'Zainab Hussain' => ['status' => 'paid', 'paid' => $amount, 'method' => 'bank_transfer'],
-                            'Zara Boutique' => ['status' => 'paid', 'paid' => $amount, 'method' => 'cheque'],
-                            'Tech Zone' => ['status' => 'unpaid', 'paid' => 0, 'method' => null],
-                            default => ['status' => 'unpaid', 'paid' => 0, 'method' => null],
+                            'Ahmed Raza' => ['status' => 'paid', 'paid' => $amount, 'method' => 'cash', 'acc' => $cashAcc],
+                            'Sara Khan' => ['status' => 'paid', 'paid' => $amount, 'method' => 'bank_transfer', 'acc' => $bankAcc],
+                            'Ali Malik' => ['status' => 'partial', 'paid' => $amount * 0.5, 'method' => 'cash', 'acc' => $cashAcc],
+                            'Fatima Sheikh' => ['status' => 'unpaid', 'paid' => 0, 'method' => null, 'acc' => null],
+                            'Usman Tariq' => ['status' => 'unpaid', 'paid' => 0, 'method' => null, 'acc' => null],
+                            'Zainab Hussain' => ['status' => 'paid', 'paid' => $amount, 'method' => 'bank_transfer', 'acc' => $bankAcc],
+                            'Zara Boutique' => ['status' => 'paid', 'paid' => $amount, 'method' => 'cheque', 'acc' => $bankAcc],
+                            'Tech Zone' => ['status' => 'unpaid', 'paid' => 0, 'method' => null, 'acc' => null],
+                            default => ['status' => 'unpaid', 'paid' => 0, 'method' => null, 'acc' => null],
                         };
                     } else {
-                        // Past months — mostly paid, occasional overdue
                         $rand = rand(1, 10);
+                        $method = ['cash', 'bank_transfer', 'cheque'][rand(0, 2)];
+                        $acc = $method === 'cash' ? $cashAcc : $bankAcc;
                         $scenario = $rand <= 8
-                            ? ['status' => 'paid', 'paid' => $amount, 'method' => ['cash', 'bank_transfer', 'cheque'][rand(0, 2)]]
-                            : ['status' => 'unpaid', 'paid' => 0, 'method' => null];
+                            ? ['status' => 'paid', 'paid' => $amount, 'method' => $method, 'acc' => $acc]
+                            : ['status' => 'unpaid', 'paid' => 0, 'method' => null, 'acc' => null];
                     }
 
                     Payment::create([
@@ -354,6 +448,7 @@ class DemoDataSeeder extends Seeder
                         'amount' => $amount,
                         'amount_paid' => $scenario['paid'],
                         'payment_method' => $scenario['method'],
+                        'payment_account_id' => $scenario['acc'] ? $scenario['acc']->id : null,
                         'status' => $scenario['status'],
                         'due_date' => $dueDate->toDateString(),
                         'paid_at' => $scenario['status'] === 'paid'
@@ -366,11 +461,13 @@ class DemoDataSeeder extends Seeder
     }
 
     // -----------------------------------------------------------------------
-    // Utility Readings — last 3 months
+    // Utility Readings (stored as Payments)
     // -----------------------------------------------------------------------
     private function seedUtilities(): void
     {
         $tenants = Tenant::with(['unit', 'activeAgreement'])->get();
+        $cashAcc = PaymentAccount::where('type', 'cash')->first();
+        $bankAcc = PaymentAccount::where('type', 'bank_transfer')->first();
 
         $baseReadings = [
             'electricity' => ['prev' => 12000, 'units' => 380, 'rate' => 25],
@@ -390,7 +487,7 @@ class DemoDataSeeder extends Seeder
 
                 foreach (['electricity', 'water', 'gas'] as $type) {
                     if (
-                        UtilityReading::where('unit_id', $tenant->unit_id)
+                        Payment::where('unit_id', $tenant->unit_id)
                             ->where('type', $type)
                             ->where('month', $month->toDateString())
                             ->exists()
@@ -405,94 +502,31 @@ class DemoDataSeeder extends Seeder
                     $bill = round($units * $base['rate']);
 
                     $isPaid = $isCurrentMonth ? rand(0, 1) === 1 : rand(0, 3) !== 0;
+                    $method = $isPaid ? (rand(0, 1) ? 'bank_transfer' : 'cash') : null;
+                    $acc = $isPaid ? ($method === 'cash' ? $cashAcc : $bankAcc) : null;
 
-                    UtilityReading::create([
+                    $meterId = Meter::where('unit_id', $tenant->unit_id)
+                        ->where('type', $type)
+                        ->value('id');
+
+                    Payment::create([
                         'unit_id' => $tenant->unit_id,
                         'tenant_id' => $tenant->id,
+                        'agreement_id' => $agreement->id,
                         'type' => $type,
                         'month' => $month->toDateString(),
                         'previous_reading' => $prev,
                         'current_reading' => $curr,
                         'units_consumed' => $units,
                         'rate_per_unit' => $base['rate'],
-                        'bill_amount' => $bill,
+                        'amount' => $bill,
+                        'amount_paid' => $isPaid ? $bill : 0,
                         'due_date' => $dueDate->toDateString(),
                         'status' => $isPaid ? 'paid' : 'unpaid',
                         'paid_at' => $isPaid ? $month->copy()->addDays(rand(1, 14)) : null,
-                    ]);
-                }
-            }
-        }
-    }
-
-    // -----------------------------------------------------------------------
-    // Invoices — matching existing payments and utilities
-    // -----------------------------------------------------------------------
-    private function seedInvoices(): void
-    {
-        $invoiceService = app(InvoiceService::class);
-        $tenants = Tenant::all();
-
-        for ($monthsAgo = 5; $monthsAgo >= 0; $monthsAgo--) {
-            $month = Carbon::now()->subMonths($monthsAgo)->startOfMonth();
-            $dueDate = $month->copy()->addDays(15);
-
-            foreach ($tenants as $tenant) {
-                // Skip if invoice already exists for this tenant and month
-                if (Invoice::where('tenant_id', $tenant->id)->where('month', $month->toDateString())->exists()) {
-                    continue;
-                }
-
-                // Pull items for this month
-                $items = $invoiceService->pullItems($tenant->id, $month->toDateString());
-
-                if (empty($items)) {
-                    continue;
-                }
-
-                // Create the invoice
-                $invoice = $invoiceService->create(
-                    tenant: $tenant,
-                    month: $month->toDateString(),
-                    dueDate: $dueDate->toDateString(),
-                    items: $items,
-                    notes: 'Demo invoice generated for ' . $month->format('F Y') . '.'
-                );
-
-                // Determine and update invoice status based on payment status
-                // Rent payment status
-                $rentPayment = Payment::where('tenant_id', $tenant->id)
-                    ->where('month', $month->toDateString())
-                    ->where('type', 'rent')
-                    ->first();
-
-                // Maintenance payment status
-                $maintPayment = Payment::where('tenant_id', $tenant->id)
-                    ->where('month', $month->toDateString())
-                    ->where('type', 'maintenance')
-                    ->first();
-
-                // Check if both are paid (or if there are unpaid utilities)
-                $allPaymentsPaid = true;
-                if ($rentPayment && $rentPayment->status !== 'paid') {
-                    $allPaymentsPaid = false;
-                }
-                if ($maintPayment && $maintPayment->status !== 'paid') {
-                    $allPaymentsPaid = false;
-                }
-
-                // Check utility readings
-                $unpaidUtilities = UtilityReading::where('tenant_id', $tenant->id)
-                    ->where('month', $month->toDateString())
-                    ->where('status', '!=', 'paid')
-                    ->exists();
-
-                if ($allPaymentsPaid && !$unpaidUtilities) {
-                    $invoice->update(['status' => 'paid']);
-                } else {
-                    $invoice->update([
-                        'status' => 'sent',
-                        'sent_at' => $month->copy()->addDays(2),
+                        'meter_id' => $meterId,
+                        'payment_method' => $method,
+                        'payment_account_id' => $acc ? $acc->id : null,
                     ]);
                 }
             }
