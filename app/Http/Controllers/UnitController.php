@@ -18,7 +18,7 @@ class UnitController extends Controller
     public function index(Request $request): View
     {
         $units = Unit::query()
-            ->with(['floor', 'block', 'area'])
+            ->with(['floor', 'block', 'area', 'landlord'])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->type, fn($q) => $q->where('type', $request->type))
@@ -49,6 +49,7 @@ class UnitController extends Controller
             'floors' => Floor::orderBy('name')->get(),
             'blocks' => Block::orderBy('name')->get(),
             'areas' => Area::orderBy('name')->get(),
+            'landlords' => \App\Models\Landlord::orderBy('name')->get(),
         ]);
     }
 
@@ -63,7 +64,7 @@ class UnitController extends Controller
 
     public function show(Unit $unit): View
     {
-        $unit->load(['floor', 'block', 'area', 'meters']);
+        $unit->load(['floor', 'block', 'area', 'meters', 'landlord']);
 
         return view('units.show', [
             'title' => 'Unit — ' . $unit->unit_number,
@@ -74,7 +75,7 @@ class UnitController extends Controller
 
     public function edit(Unit $unit): View
     {
-        $unit->load('meters');
+        $unit->load(['meters', 'landlord']);
 
         return view('units.edit', [
             'title' => 'Edit Unit — ' . $unit->unit_number,
@@ -82,6 +83,7 @@ class UnitController extends Controller
             'floors' => Floor::orderBy('name')->get(),
             'blocks' => Block::orderBy('name')->get(),
             'areas' => Area::orderBy('name')->get(),
+            'landlords' => \App\Models\Landlord::orderBy('name')->get(),
             'existingMeters' => $unit->meters->keyBy('type'),
         ]);
     }

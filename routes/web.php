@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\MoveOutController;
 use App\Http\Controllers\PaymentController;
@@ -13,7 +12,7 @@ use App\Http\Controllers\TenantController;
 use App\Http\Controllers\MeterController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\UtilityReadingController;
+use App\Http\Controllers\LandlordController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -76,6 +75,10 @@ Route::middleware('auth')->group(function () {
         Route::get('tenants/{tenant}/print-move-out', [MoveOutController::class, 'printMoveOut'])->name('tenants.printMoveOut');
     });
 
+    Route::middleware('permission:landlords.view')->group(function () {
+        Route::resource('landlords', LandlordController::class);
+    });
+
     Route::middleware('permission:agreements.view')->group(function () {
         // Agreements are view-only — creation happens via tenant wizard
         Route::resource('agreements', AgreementController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
@@ -86,18 +89,12 @@ Route::middleware('auth')->group(function () {
         Route::get('units/{unit}/add-tenant',   [UnitController::class, 'addTenant'])->name('units.addTenant');
     });
 
-    Route::middleware('permission:utilities.view')->group(function () {
-        Route::resource('utilities', UtilityReadingController::class);
-        Route::post('utilities/{utility}/mark-paid', [UtilityReadingController::class, 'markPaid'])
-            ->name('utilities.mark-paid');
-    });
-
     // AJAX routes — no permission middleware needed, just auth
-    Route::get('ajax/tenant-by-unit', [UtilityReadingController::class, 'getTenantByUnit'])
+    Route::get('ajax/tenant-by-unit', [PaymentController::class, 'getTenantByUnit'])
         ->name('ajax.tenant-by-unit');
     Route::get('ajax/tenant-by-cnic', [TenantController::class, 'getTenantByCnic'])
         ->name('ajax.tenant-by-cnic');
-    Route::get('ajax/previous-reading', [UtilityReadingController::class, 'getPreviousReading'])
+    Route::get('ajax/previous-reading', [PaymentController::class, 'getPreviousReading'])
         ->name('ajax.previous-reading');
 
     // Meter AJAX routes (embedded in Unit create/edit)
@@ -107,6 +104,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('ajax/meters/{meter}', [MeterController::class, 'destroy'])->name('ajax.meters.destroy');
 
     Route::middleware('permission:payments.view')->group(function () {
+        Route::get('payments/utilities/create', [PaymentController::class, 'createUtilityReading'])
+            ->name('payments.utilities.create');
+        Route::post('payments/utilities', [PaymentController::class, 'storeUtilityReading'])
+            ->name('payments.utilities.store');
+        Route::get('payments/{payment}/print', [PaymentController::class, 'print'])
+            ->name('payments.print');
+
         Route::resource('payments', PaymentController::class);
         Route::post('payments/{payment}/record', [PaymentController::class, 'recordPayment'])
             ->name('payments.record');
@@ -130,16 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
     });
 
-    Route::middleware(['auth', 'permission:invoices.view'])->group(function () {
-        Route::resource('invoices', InvoiceController::class);
-        Route::get('invoices/{invoice}/download', [InvoiceController::class, 'download'])->name('invoices.download');
-        Route::post('invoices/{invoice}/mark-sent', [InvoiceController::class, 'markSent'])->name('invoices.mark-sent');
-        Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.mark-paid');
-    });
-
     // AJAX
-    Route::middleware('auth')->get('ajax/invoice-items', [InvoiceController::class, 'pullItems'])
-        ->name('ajax.invoice-items');
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 });

@@ -9,20 +9,27 @@
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach([
-                ['Unit Number',   $unit->unit_number],
-                ['Type',          ucfirst($unit->type)],
-                ['Floor',         $unit->floor->name ?? '—'],
-                ['Block',         $unit->block->name ?? '—'],
-                ['Area / Zone',   $unit->area->name  ?? '—'],
-                ['Area (sq.ft.)', $unit->area_sqft ? $unit->area_sqft.' sq.ft.' : '—'],
-                ['Status',        ucfirst($unit->status)],
-                ['Elec. Meter',   $unit->elec_meter_id  ?? '—'],
-                ['Water Meter',   $unit->water_meter_id ?? '—'],
-                ['Gas Meter',     $unit->gas_meter_id   ?? '—'],
-            ] as [$label, $value])
+                ['Unit Number',   $unit->unit_number, null],
+                ['Type',          ucfirst($unit->type), null],
+                ['Floor',         $unit->floor->name ?? '—', null],
+                ['Block',         $unit->block->name ?? '—', null],
+                ['Area / Zone',   $unit->area->name  ?? '—', null],
+                ['Area (sq.ft.)', $unit->area_sqft ? $unit->area_sqft.' sq.ft.' : '—', null],
+                ['Status',        ucfirst($unit->status), null],
+                ['Landlord',      $unit->landlord->name ?? '—', $unit->landlord_id ? route('landlords.show', $unit->landlord_id) : null],
+                ['Elec. Meter',   $unit->elec_meter_id  ?? '—', null],
+                ['Water Meter',   $unit->water_meter_id ?? '—', null],
+                ['Gas Meter',     $unit->gas_meter_id   ?? '—', null],
+            ] as [$label, $value, $url])
                 <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03]">
                     <p class="text-xs text-gray-400 dark:text-gray-500">{{ $label }}</p>
-                    <p class="mt-0.5 text-sm font-medium text-gray-800 dark:text-white/90">{{ $value }}</p>
+                    @if($url)
+                        <p class="mt-0.5 text-sm font-medium text-brand-500 hover:underline">
+                            <a href="{{ $url }}">{{ $value }}</a>
+                        </p>
+                    @else
+                        <p class="mt-0.5 text-sm font-medium text-gray-800 dark:text-white/90">{{ $value }}</p>
+                    @endif
                 </div>
             @endforeach
         </div>

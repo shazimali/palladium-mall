@@ -68,7 +68,7 @@
                     </label>
                     <select id="unit_id" name="unit_id"
                         class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                        <option value="">All Units</option>
+                        <option value="">All Flats/Shops</option>
                         @foreach($units as $unit)
                             <option value="{{ $unit->id }}" {{ ($filters['unit_id'] ?? '') == $unit->id ? 'selected' : '' }}>
                                 {{ $unit->unit_number }} ({{ ucfirst($unit->type) }})
@@ -210,7 +210,7 @@
                                 <tr>
                                     <th class="px-4 py-3">#</th>
                                     <th class="px-4 py-3">Month</th>
-                                    <th class="px-4 py-3">Unit</th>
+                                    <th class="px-4 py-3">Flat/Shop</th>
                                     <th class="px-4 py-3">Tenant</th>
                                     <th class="px-4 py-3">Type</th>
                                     <th class="px-4 py-3">Description</th>
@@ -226,7 +226,7 @@
                                     <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                         <td class="px-4 py-3 text-gray-400 text-xs">{{ $i + 1 }}</td>
 
-                                        <td class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        <td data-order="{{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->toDateString() : '' }}" class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-300">
                                             {{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->format('M Y') : '—' }}
                                         </td>
 
@@ -261,15 +261,15 @@
                                             {{ $entry['description'] }}
                                         </td>
 
-                                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
+                                        <td data-order="{{ $entry['amount_due'] }}" class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
                                             Rs. {{ number_format($entry['amount_due']) }}
                                         </td>
 
-                                        <td class="px-4 py-3 font-medium text-green-600">
+                                        <td data-order="{{ $entry['amount_paid'] }}" class="px-4 py-3 font-medium text-green-600">
                                             Rs. {{ number_format($entry['amount_paid']) }}
                                         </td>
 
-                                        <td class="px-4 py-3 font-semibold {{ $entry['balance'] > 0 ? 'text-red-500' : 'text-green-600' }}">
+                                        <td data-order="{{ $entry['balance'] }}" class="px-4 py-3 font-semibold {{ $entry['balance'] > 0 ? 'text-red-500' : 'text-green-600' }}">
                                             Rs. {{ number_format($entry['balance']) }}
                                         </td>
 
@@ -286,7 +286,7 @@
                                             </span>
                                         </td>
 
-                                        <td class="px-4 py-3 text-xs text-gray-500">
+                                        <td data-order="{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->toDateString() : '0000-00-00' }}" class="px-4 py-3 text-xs text-gray-500">
                                             {{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->format('d M Y') : '—' }}
                                         </td>
                                     </tr>
@@ -331,6 +331,157 @@
 
 @push('scripts')
 <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.tailwindcss.min.css">
+<style>
+    /* DataTables Tailwind Custom Theme Integration */
+    .dt-container {
+        padding: 1.25rem 0 !important;
+        background-color: transparent;
+    }
+    .dt-layout-row {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+    }
+    @media (min-width: 640px) {
+        .dt-layout-row {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+    }
+    .dt-search {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .dt-search label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #667085;
+    }
+    .dark .dt-search label {
+        color: #98a2b3;
+    }
+    .dt-search input {
+        border-radius: 0.5rem !important;
+        border: 1px solid #d0d5dd !important;
+        background-color: #ffffff !important;
+        padding: 0.5rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        color: #1d2939 !important;
+        outline: none !important;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .dark .dt-search input {
+        border-color: #344054 !important;
+        background-color: #0c111d !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    .dt-search input:focus {
+        border-color: #465fff !important;
+        box-shadow: 0 0 0 1px #465fff !important;
+    }
+    .dt-length select {
+        border-radius: 0.5rem !important;
+        border: 1px solid #d0d5dd !important;
+        background-color: #ffffff !important;
+        padding: 0.5rem 2rem 0.5rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        color: #1d2939 !important;
+        outline: none !important;
+        margin-right: 0.5rem !important;
+    }
+    .dark .dt-length select {
+        border-color: #344054 !important;
+        background-color: #0c111d !important;
+        color: rgba(255, 255, 255, 0.9) !important;
+    }
+    .dt-length select:focus {
+        border-color: #465fff !important;
+        box-shadow: 0 0 0 1px #465fff !important;
+    }
+    .dt-length label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #667085;
+    }
+    .dark .dt-length label {
+        color: #98a2b3;
+    }
+    .dt-info {
+        font-size: 0.875rem !important;
+        color: #667085 !important;
+    }
+    .dark .dt-info {
+        color: #98a2b3 !important;
+    }
+    .dt-paging {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.5rem;
+    }
+    @media (min-width: 640px) {
+        .dt-paging {
+            margin-top: 0;
+        }
+    }
+    .dt-paging-button {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 0.5rem !important;
+        border: 1px solid #e4e7ec !important;
+        background-color: #ffffff !important;
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.875rem !important;
+        font-weight: 500 !important;
+        color: #344054 !important;
+        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        cursor: pointer;
+    }
+    .dark .dt-paging-button {
+        border-color: #1d2939 !important;
+        background-color: #0c111d !important;
+        color: #d0d5dd !important;
+    }
+    .dt-paging-button:hover:not(.disabled) {
+        background-color: #f9fafb !important;
+        color: #111827 !important;
+    }
+    .dark .dt-paging-button:hover:not(.disabled) {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: #ffffff !important;
+    }
+    .dt-paging-button.current {
+        background-color: #465fff !important;
+        border-color: #465fff !important;
+        color: #ffffff !important;
+    }
+    .dark .dt-paging-button.current {
+        background-color: #465fff !important;
+        border-color: #465fff !important;
+        color: #ffffff !important;
+    }
+    .dt-paging-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    /* Sorting active headers */
+    table.dataTable thead th.dt-orderable-asc:hover,
+    table.dataTable thead th.dt-orderable-desc:hover {
+        background-color: #f2f4f7;
+    }
+    .dark table.dataTable thead th.dt-orderable-asc:hover,
+    .dark table.dataTable thead th.dt-orderable-desc:hover {
+        background-color: #1d2939;
+    }
+</style>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.tailwindcss.min.js"></script>
 <script>
@@ -359,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const table = document.getElementById('reportTable');
     if (table) {
         new DataTable('#reportTable', {
-            pageLength: 25,
+            pageLength: 100,
             lengthMenu: [10, 25, 50, 100, 200],
             order: [[1, 'asc']],
             columnDefs: [{ orderable: false, targets: [0] }],

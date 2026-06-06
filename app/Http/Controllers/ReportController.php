@@ -6,7 +6,6 @@ use App\Exports\ReportExport;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\Unit;
-use App\Models\UtilityReading;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -109,72 +108,40 @@ class ReportController extends Controller
         $tenantId   = $request->tenant_id;
         $status     = $request->status;
 
-        $payments   = collect();
-        $utilities  = collect();
+        $query = Payment::with(['tenant', 'unit'])
+            ->when($unitId,   fn($q) => $q->where('unit_id',   $unitId))
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->when($from,     fn($q) => $q->where('month', '>=', $from))
+            ->when($to,       fn($q) => $q->where('month', '<=', $to))
+            ->when($status,   fn($q) => $q->where('status', $status));
 
-        // ── Payments (rent / fines / all) ─────────────────────────────────
-        if (in_array($reportType, ['rent', 'fines', 'all'])) {
-            $query = Payment::with(['tenant', 'unit'])
-                ->when($unitId,   fn($q) => $q->where('unit_id',   $unitId))
-                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-                ->when($from,     fn($q) => $q->where('month', '>=', $from))
-                ->when($to,       fn($q) => $q->where('month', '<=', $to))
-                ->when($status,   fn($q) => $q->where('status', $status));
-
-            // Scope to specific payment type(s)
-            if ($reportType === 'rent') {
-                $query->where('type', 'rent');
-            } elseif ($reportType === 'fines') {
-                $query->where('type', 'fine');
-            } else {
-                // 'all' — include rent + fine + maintenance + other
-                $query->whereIn('type', ['rent', 'fine', 'maintenance', 'other']);
-            }
-
-            $payments = $query->get()->map(fn($p) => [
-                'month'       => $p->month,
-                'date'        => $p->due_date,
-                'unit'        => $p->unit?->unit_number ?? '—',
-                'tenant'      => $p->tenant?->name ?? '—',
-                'category'    => 'payment',
-                'type'        => $p->type,
-                'description' => ucfirst($p->type) . ' — ' . $p->month?->format('F Y'),
-                'amount_due'  => (float) $p->amount,
-                'amount_paid' => (float) $p->amount_paid,
-                'status'      => $p->status,
-                'paid_at'     => $p->paid_at,
-            ]);
+        if ($reportType === 'rent') {
+            $query->where('type', 'rent');
+        } elseif ($reportType === 'fines') {
+            $query->where('type', 'fine');
+        } elseif ($reportType === 'utilities') {
+            $query->whereIn('type', ['electricity', 'water', 'gas']);
+        } else {
+            $query->whereIn('type', ['rent', 'fine', 'maintenance', 'electricity', 'water', 'gas', 'other']);
         }
 
-        // ── Utility readings ────────────────────────────────────────────────
-        if (in_array($reportType, ['utilities', 'all'])) {
-            $utilities = UtilityReading::with(['tenant', 'unit'])
-                ->when($unitId,   fn($q) => $q->where('unit_id',   $unitId))
-                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
-                ->when($from,     fn($q) => $q->where('month', '>=', $from))
-                ->when($to,       fn($q) => $q->where('month', '<=', $to))
-                ->when($status,   fn($q) => $q->where('status', $status))
-                ->get()
-                ->map(fn($u) => [
-                    'month'       => $u->month,
-                    'date'        => $u->due_date,
-                    'unit'        => $u->unit?->unit_number ?? '—',
-                    'tenant'      => $u->tenant?->name ?? '—',
-                    'category'    => 'utility',
-                    'type'        => $u->type,
-                    'description' => ucfirst($u->type) . ' — ' . $u->month?->format('F Y'),
-                    'amount_due'  => (float) $u->bill_amount,
-                    'amount_paid' => $u->isPaid() ? (float) $u->bill_amount : 0.0,
-                    'status'      => $u->status,
-                    'paid_at'     => $u->paid_at,
-                ]);
-        }
+        $entries = $query->get()->map(fn($p) => [
+            'month'       => $p->month,
+            'date'        => $p->due_date,
+            'unit'        => $p->unit?->unit_number ?? '—',
+            'tenant'      => $p->tenant?->name ?? '—',
+            'category'    => in_array($p->type, ['electricity', 'water', 'gas']) ? 'utility' : 'payment',
+            'type'        => $p->type,
+            'description' => $p->type_label . ' — ' . $p->month?->format('F Y'),
+            'amount_due'  => (float) $p->amount,
+            'amount_paid' => (float) $p->amount_paid,
+            'status'      => $p->status,
+            'paid_at'     => $p->paid_at,
+        ]);
 
-        // ── Merge & sort by date ───────────────────────────────────────────
         $balance = 0;
 
-        return $payments
-            ->concat($utilities)
+        return $entries
             ->sortBy('date')
             ->values()
             ->map(function ($entry) use (&$balance) {

@@ -149,7 +149,7 @@
         </div>
         @if(!empty($filters['unit_id']))
             <div class="meta-box">
-                <div class="label">Unit Filter</div>
+                <div class="label">Flat/Shop Filter</div>
                 <div class="value">Applied</div>
             </div>
         @endif
@@ -206,7 +206,7 @@
                 <th>#</th>
                 <th>Month</th>
                 <th>Date</th>
-                <th>Unit</th>
+                <th>Flat/Shop</th>
                 <th>Tenant</th>
                 <th>Type</th>
                 <th>Description</th>

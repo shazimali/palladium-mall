@@ -29,8 +29,8 @@
     </div>
 </div>
 
-{{-- Floor + Block + Area --}}
-<div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+{{-- Floor + Block + Area + Landlord --}}
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-4">
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Floor</label>
         <select name="floor_id" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
@@ -72,6 +72,24 @@
             @endforeach
         </select>
         @error('area_id')
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+        @enderror
+    </div>
+
+    <div>
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Landlord <span class="text-red-500">*</span>
+        </label>
+        <select name="landlord_id" required class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90
+                {{ $errors->has('landlord_id') ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : '' }}">
+            <option value="">Select Landlord</option>
+            @foreach($landlords as $landlord)
+                <option value="{{ $landlord->id }}" {{ old('landlord_id', $unit->landlord_id ?? '') == $landlord->id ? 'selected' : '' }}>
+                    {{ $landlord->name }}
+                </option>
+            @endforeach
+        </select>
+        @error('landlord_id')
             <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
         @enderror
     </div>

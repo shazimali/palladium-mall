@@ -28,6 +28,7 @@ class StoreUnitRequest extends FormRequest
             'floor_id' => ['required', 'exists:floors,id'],
             'block_id' => ['required', 'exists:blocks,id'],
             'area_id' => ['required', 'exists:areas,id'],
+            'landlord_id' => ['required', 'exists:landlords,id'],
             'type' => ['required', 'in:flat,shop,office'],
             'status' => ['required', 'in:vacant,occupied,sold'],
             'area_sqft' => ['nullable', 'numeric', 'min:0'],

@@ -31,9 +31,9 @@ class Meter extends Model
         return $this->belongsTo(Unit::class);
     }
 
-    public function utilityReadings(): HasMany
+    public function payments(): HasMany
     {
-        return $this->hasMany(UtilityReading::class);
+        return $this->hasMany(Payment::class);
     }
 
     public function getStatusLabelAttribute(): string

@@ -28,7 +28,12 @@ class Payment extends Model
         'due_date',
         'paid_at',
         'notes',
-        'maintenance_charge'
+        'maintenance_charge',
+        'meter_id',
+        'previous_reading',
+        'current_reading',
+        'units_consumed',
+        'rate_per_unit',
     ];
 
     protected $casts = [
@@ -37,6 +42,10 @@ class Payment extends Model
         'paid_at' => 'datetime',
         'amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',
+        'previous_reading' => 'decimal:2',
+        'current_reading' => 'decimal:2',
+        'units_consumed' => 'decimal:2',
+        'rate_per_unit' => 'decimal:2',
     ];
 
     // -----------------------------------------------------------------------
@@ -56,6 +65,11 @@ class Payment extends Model
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);
+    }
+
+    public function meter(): BelongsTo
+    {
+        return $this->belongsTo(Meter::class);
     }
 
     // -----------------------------------------------------------------------
@@ -148,8 +162,38 @@ class Payment extends Model
             'rent' => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
             'maintenance' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
             'fine' => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+            'electricity' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+            'water' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
+            'gas' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
             'other' => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
             default => 'bg-gray-100 text-gray-600',
+        };
+    }
+
+    public function getTypeIconAttribute(): string
+    {
+        return match ($this->type) {
+            'rent' => '🏠',
+            'maintenance' => '🛠️',
+            'fine' => '⚠️',
+            'electricity' => '⚡',
+            'water' => '💧',
+            'gas' => '🔥',
+            default => '💵',
+        };
+    }
+
+    public function getTypeLabelAttribute(): string
+    {
+        return match ($this->type) {
+            'rent' => 'Rent',
+            'maintenance' => 'Maintenance',
+            'fine' => 'Fine',
+            'electricity' => 'Electricity',
+            'water' => 'Water',
+            'gas' => 'Gas',
+            'other' => 'Other',
+            default => ucfirst($this->type),
         };
     }
 

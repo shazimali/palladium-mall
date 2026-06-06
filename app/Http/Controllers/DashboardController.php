@@ -6,7 +6,6 @@ use App\Models\Agreement;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\Unit;
-use App\Models\UtilityReading;
 use Illuminate\View\View;
 use Carbon\Carbon;
 
@@ -71,9 +70,10 @@ class DashboardController extends Controller
             ->get();
 
         // ── Utility summary this month ────────────────────────────────
-        $utilitiesDue = UtilityReading::where('month', $currentMonth)
-            ->where('status', 'unpaid')
-            ->sum('bill_amount');
+        $utilitiesDue = Payment::where('month', $currentMonth)
+            ->whereIn('type', ['electricity', 'water', 'gas'])
+            ->whereIn('status', ['unpaid', 'partial'])
+            ->sum(\DB::raw('amount - amount_paid'));
 
         return view('dashboard.index', [
             'title' => 'Dashboard',

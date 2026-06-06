@@ -245,4 +245,123 @@ class PaymentController extends Controller
             ],
         ]);
     }
+
+    public function createUtilityReading(): View
+    {
+        $units = Unit::where('status', 'occupied')
+            ->orderBy('unit_number')
+            ->get();
+
+        return view('payments.create_utility', [
+            'title' => 'Record Utility Reading',
+            'units' => $units,
+        ]);
+    }
+
+    public function storeUtilityReading(Request $request): RedirectResponse
+    {
+        if ($request->has('previous_reading')) {
+            $request->merge(['previous_reading' => (float) $request->input('previous_reading')]);
+        }
+        if ($request->has('current_reading')) {
+            $request->merge(['current_reading' => (float) $request->input('current_reading')]);
+        }
+        if ($request->has('rate_per_unit')) {
+            $request->merge(['rate_per_unit' => (float) $request->input('rate_per_unit')]);
+        }
+
+        $data = $request->validate([
+            'unit_id' => ['required', 'exists:units,id'],
+            'type' => ['required', 'in:electricity,water,gas'],
+            'month' => ['required', 'date'],
+            'previous_reading' => ['required', 'numeric', 'min:0'],
+            'current_reading' => ['required', 'numeric', 'gte:previous_reading'],
+            'rate_per_unit' => ['required', 'numeric', 'min:0'],
+            'due_date' => ['required', 'date'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $unit = Unit::findOrFail($data['unit_id']);
+        $tenant = $unit->tenant;
+
+        if (!$tenant) {
+            return redirect()->back()
+                ->withErrors(['unit_id' => 'Selected unit does not have an active tenant.'])
+                ->withInput();
+        }
+
+        $month = Carbon::parse($data['month'])->startOfMonth()->toDateString();
+
+        $exists = Payment::where('tenant_id', $tenant->id)
+            ->where('type', $data['type'])
+            ->where('month', $month)
+            ->exists();
+
+        if ($exists) {
+            return redirect()->back()
+                ->withErrors(['month' => 'A reading for this unit, type, and month already exists.'])
+                ->withInput();
+        }
+
+        $unitsConsumed = (float) ($data['current_reading'] - $data['previous_reading']);
+        $amount = $unitsConsumed * (float) $data['rate_per_unit'];
+
+        $meterId = $unit->meters()->where('type', $data['type'])->value('id');
+
+        Payment::create([
+            'tenant_id' => $tenant->id,
+            'unit_id' => $unit->id,
+            'agreement_id' => $tenant->activeAgreement?->id ?? 1,
+            'type' => $data['type'],
+            'month' => $month,
+            'amount' => $amount,
+            'amount_paid' => 0.00,
+            'status' => 'unpaid',
+            'due_date' => $data['due_date'],
+            'meter_id' => $meterId,
+            'previous_reading' => $data['previous_reading'],
+            'current_reading' => $data['current_reading'],
+            'units_consumed' => $unitsConsumed,
+            'rate_per_unit' => $data['rate_per_unit'],
+            'notes' => $data['notes'],
+        ]);
+
+        return redirect()->route('payments.index')
+            ->with('success', 'Utility reading recorded and bill payment generated successfully.');
+    }
+
+    public function getPreviousReading(Request $request): JsonResponse
+    {
+        $unitId = $request->query('unit_id');
+        $type = $request->query('type');
+
+        $lastReading = Payment::where('unit_id', $unitId)
+            ->where('type', $type)
+            ->latest('month')
+            ->value('current_reading') ?? 0;
+
+        return response()->json([
+            'previous_reading' => (float) $lastReading
+        ]);
+    }
+
+    public function getTenantByUnit(Request $request): JsonResponse
+    {
+        $unit = Unit::with('tenant')->find($request->unit_id);
+        return response()->json([
+            'tenant' => $unit?->tenant ? [
+                'id' => $unit->tenant->id,
+                'name' => $unit->tenant->name,
+            ] : null
+        ]);
+    }
+
+    public function print(Payment $payment): View
+    {
+        $payment->load(['tenant', 'unit', 'agreement']);
+        return view('payments.print', [
+            'title' => 'Print Receipt — ' . ($payment->tenant->name ?? 'N/A'),
+            'payment' => $payment,
+        ]);
+    }
 }

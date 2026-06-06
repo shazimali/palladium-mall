@@ -151,6 +151,7 @@
                         <th class="px-4 py-3">Floor</th>
                         <th class="px-4 py-3">Block</th>
                         <th class="px-4 py-3">Area / Zone</th>
+                        <th class="px-4 py-3">Landlord</th>
                         <th class="px-4 py-3">Type</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3 text-right">Actions</th>
@@ -166,6 +167,15 @@
                                     <td class="px-4 py-3">{{ $unit->floor->name ?? '—' }}</td>
                                     <td class="px-4 py-3">{{ $unit->block->name ?? '—' }}</td>
                                     <td class="px-4 py-3">{{ $unit->area->name ?? '—' }}</td>
+                                    <td class="px-4 py-3">
+                                        @if($unit->landlord_id)
+                                            <a href="{{ route('landlords.show', $unit->landlord_id) }}" class="text-brand-500 hover:underline">
+                                                {{ $unit->landlord->name }}
+                                            </a>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
                                                                                                                                                                     {{ $unit->type === 'flat'

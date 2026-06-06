@@ -103,35 +103,21 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('utilities.view')) {
+        if (auth()->check() && $user->can('landlords.view')) {
             $mainItems[] = [
-                'icon' => 'authentication',
-                'name' => 'Utilities',
-                'path' => '/utilities',
+                'icon' => 'user-profile',
+                'name' => 'Landlords',
+                'path' => '/landlords',
             ];
         }
+
+
 
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [
                 'icon' => 'ecommerce',
                 'name' => 'Payments',
                 'path' => '/payments',
-            ];
-        }
-
-        if (auth()->check() && $user->can('ledger.view')) {
-            $mainItems[] = [
-                'icon' => 'task',
-                'name' => 'Ledger',
-                'path' => '/ledger',
-            ];
-        }
-
-        if (auth()->check() && $user->can('invoices.view')) {
-            $mainItems[] = [
-                'icon' => 'ui-elements',
-                'name' => 'Invoices',
-                'path' => '/invoices',
             ];
         }
 

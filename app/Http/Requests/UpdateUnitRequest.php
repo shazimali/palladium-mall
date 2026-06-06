@@ -35,6 +35,7 @@ class UpdateUnitRequest extends FormRequest
             'floor_id' => ['nullable', 'exists:floors,id'],
             'block_id' => ['nullable', 'exists:blocks,id'],
             'area_id' => ['nullable', 'exists:areas,id'],
+            'landlord_id' => ['required', 'exists:landlords,id'],
             'type' => ['required', 'in:flat,shop,office'],
             'status' => ['required', 'in:vacant,occupied,sold'],
             'area_sqft' => ['nullable', 'numeric', 'min:0'],

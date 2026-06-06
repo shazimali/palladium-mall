@@ -36,7 +36,7 @@ class ReportExport implements
         return $this->entries->map(fn($e) => [
             'Month'       => $e['month']?->format('M Y')    ?? '—',
             'Date'        => $e['date']?->format('d M Y')   ?? '—',
-            'Unit'        => $e['unit']                     ?? '—',
+            'Flat/Shop'   => $e['unit']                     ?? '—',
             'Tenant'      => $e['tenant']                   ?? '—',
             'Category'    => ucfirst($e['category']         ?? ''),
             'Type'        => ucfirst($e['type']             ?? ''),
@@ -58,7 +58,7 @@ class ReportExport implements
         return [
             'Month',
             'Date',
-            'Unit',
+            'Flat/Shop',
             'Tenant',
             'Category',
             'Type',
@@ -121,7 +121,7 @@ class ReportExport implements
         return [
             'A' => 12,  // Month
             'B' => 14,  // Date
-            'C' => 12,  // Unit
+            'C' => 14,  // Flat/Shop
             'D' => 22,  // Tenant
             'E' => 12,  // Category
             'F' => 14,  // Type
