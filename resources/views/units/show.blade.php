@@ -66,9 +66,9 @@
                 class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
                 Agreements ({{ $agreements_count }})
             </button>
-            <button @click="activeTab = 'ledger'" :class="activeTab === 'ledger' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+            <button @click="activeTab = 'payments'" :class="activeTab === 'payments' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
                 class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
-                Ledger & Payments
+                Payments History
             </button>
         </div>
 
@@ -290,9 +290,9 @@
             </x-common.component-card>
         </div>
 
-        {{-- ── LEDGER TAB ────────────────────────────────────────────────── --}}
-        <div x-show="activeTab === 'ledger'">
-            <x-common.component-card title="Financial Ledger" desc="Ledger history of payments and billings">
+        {{-- ── PAYMENTS TAB ────────────────────────────────────────────────── --}}
+        <div x-show="activeTab === 'payments'">
+            <x-common.component-card title="Payments History" desc="History of payments and billings for this unit">
                 @if($unit->payments->isEmpty())
                     <div class="py-12 text-center text-gray-400">
                         <span class="text-3xl">💰</span>

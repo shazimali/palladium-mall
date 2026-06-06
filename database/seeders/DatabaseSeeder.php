@@ -21,7 +21,6 @@ class DatabaseSeeder extends Seeder
             AgreementPermissionSeeder::class,
             InvoicePermissionSeeder::class,
             PaymentPermissionSeeder::class,
-            LedgerPermissionSeeder::class,
             UtilityReadingPermissionSeeder::class,
             LandlordPermissionSeeder::class,
             PaymentAccountPermissionSeeder::class,

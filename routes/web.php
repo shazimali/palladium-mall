@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AgreementController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\MoveOutController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PermissionController;
@@ -131,11 +130,7 @@ Route::middleware('auth')->group(function () {
     Route::get('ajax/agreement-by-tenant', [PaymentController::class, 'getAgreementByTenant'])
         ->name('ajax.agreement-by-tenant');
 
-    Route::middleware('permission:ledger.view')->group(function () {
-        Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
-        Route::get('ledger/export/excel', [LedgerController::class, 'exportExcel'])->name('ledger.excel');
-        Route::get('ledger/export/pdf', [LedgerController::class, 'exportPdf'])->name('ledger.pdf');
-    });
+
 
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

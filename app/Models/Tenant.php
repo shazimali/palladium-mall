@@ -170,42 +170,4 @@ class Tenant extends Model
             : null;
     }
 
-    public function ledgerEntries(
-        ?string $from = null,
-        ?string $to = null,
-        ?string $type = null,
-        ?string $status = null
-    ): Collection {
-        $payments = $this->payments()
-            ->when($from, fn($q) => $q->where('month', '>=', $from))
-            ->when($to, fn($q) => $q->where('month', '<=', $to))
-            ->when($type, fn($q) => $q->where('type', $type))
-            ->when($status, fn($q) => $q->where('status', $status))
-            ->get()
-            ->map(fn($p) => [
-                'date'        => $p->due_date,
-                'month'       => $p->month,
-                'description' => $p->type_label . ' — ' . $p->month->format('F Y'),
-                'category'    => in_array($p->type, ['electricity', 'water', 'gas']) ? 'utility' : 'payment',
-                'type'        => $p->type,
-                'amount_due'  => (float) $p->amount,
-                'amount_paid' => (float) $p->amount_paid,
-                'status'      => $p->status,
-                'method'      => $p->payment_method,
-                'reference'   => $p->reference,
-                'paid_at'     => $p->paid_at,
-                'source_id'   => $p->id,
-                'source_type' => 'payment',
-            ])
-            ->sortBy('date')
-            ->values();
-
-        $runningBalance = 0;
-
-        return $payments->map(function ($entry) use (&$runningBalance) {
-            $runningBalance += $entry['amount_due'] - $entry['amount_paid'];
-            $entry['balance'] = $runningBalance;
-            return $entry;
-        });
-    }
 }
