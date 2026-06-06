@@ -22,11 +22,7 @@
 
     {{-- Donut Chart --}}
     <div class="relative flex items-center justify-center px-5 py-6">
-        <div id="pmmsOccupancyChart" class="h-[190px] w-full"></div>
-        <div class="absolute pointer-events-none text-center">
-            <span class="block text-2xl font-extrabold text-gray-800 dark:text-white/90">{{ $occupancyRate }}%</span>
-            <span class="block text-xs font-medium text-gray-400 dark:text-gray-500 mt-0.5">Occupancy</span>
-        </div>
+        <div id="pmmsOccupancyChart" class="h-[280px] w-full"></div>
     </div>
 
     {{-- Legend / Stats --}}

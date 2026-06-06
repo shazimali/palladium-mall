@@ -6,6 +6,8 @@ use App\Models\Agreement;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Models\Unit;
+use App\Models\Landlord;
+use App\Models\ActivityLog;
 use Illuminate\View\View;
 use Carbon\Carbon;
 
@@ -75,6 +77,33 @@ class DashboardController extends Controller
             ->whereIn('status', ['unpaid', 'partial'])
             ->sum(\DB::raw('amount - amount_paid'));
 
+        // ── Landlord portfolios ───────────────────────────────────────
+        $landlords = Landlord::with('units')
+            ->withCount('units')
+            ->get()
+            ->map(function ($landlord) {
+                $unitIds = $landlord->units->pluck('id')->toArray();
+                $earnings = Payment::whereIn('unit_id', $unitIds)
+                    ->whereIn('status', ['paid', 'partial'])
+                    ->sum('amount_paid');
+                
+                return [
+                    'id' => $landlord->id,
+                    'name' => $landlord->name,
+                    'units_count' => $landlord->units_count,
+                    'earnings' => (float) $earnings,
+                ];
+            })
+            ->sortByDesc('units_count')
+            ->take(5)
+            ->values();
+
+        // ── Recent activity logs ──────────────────────────────────────
+        $recentActivities = ActivityLog::with('user')
+            ->latest()
+            ->take(5)
+            ->get();
+
         return view('dashboard.index', [
             'title' => 'Dashboard',
             // Stat cards
@@ -95,6 +124,8 @@ class DashboardController extends Controller
             'recentPayments' => $recentPayments,
             'expiringAgreements' => $expiringAgreements,
             'overduePayments' => $overduePayments,
+            'landlords' => $landlords,
+            'recentActivities' => $recentActivities,
             // Occupancy rate
             'occupancyRate' => $totalUnits > 0
                 ? round(($occupiedUnits / $totalUnits) * 100, 1)

@@ -54,6 +54,16 @@
         :agreements="$expiringAgreements"
       />
 
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <x-pmms.landlords-summary
+          :landlords="$landlords"
+        />
+
+        <x-pmms.recent-activities
+          :activities="$recentActivities"
+        />
+      </div>
+
     </div>
 
   </div>
@@ -124,7 +134,7 @@
         new ApexCharts(donutEl, {
           chart: {
             type: 'donut',
-            height: 190,
+            height: 280,
             background: bgColor,
             toolbar: { show: false },
             fontFamily: 'Outfit, sans-serif',
@@ -140,8 +150,35 @@
           plotOptions: {
             pie: {
               donut: {
-                size: '74%',
-                labels: { show: false },
+                size: '76%',
+                labels: {
+                  show: true,
+                  name: {
+                    show: true,
+                    fontSize: '12px',
+                    fontFamily: 'Outfit, sans-serif',
+                    color: textColor,
+                    offsetY: -10
+                  },
+                  value: {
+                    show: true,
+                    fontSize: '32px',
+                    fontFamily: 'Outfit, sans-serif',
+                    fontWeight: '800',
+                    color: isDark ? '#ffffff' : '#1e293b',
+                    offsetY: 10,
+                    formatter: (val) => val + ' Units'
+                  },
+                  total: {
+                    show: true,
+                    label: 'Occupancy',
+                    color: textColor,
+                    fontSize: '12px',
+                    fontFamily: 'Outfit, sans-serif',
+                    fontWeight: '600',
+                    formatter: () => '{{ $occupancyRate }}%'
+                  }
+                }
               },
             },
           },
