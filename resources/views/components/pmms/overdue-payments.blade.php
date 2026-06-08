@@ -32,10 +32,10 @@
                     </div>
                     <div>
                         <p class="text-sm font-bold text-gray-800 dark:text-white/90 leading-tight">
-                            {{ $payment->tenant->name }}
+                            {{ $payment->tenant?->name ?? '—' }}
                         </p>
                         <span class="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                            {{ $payment->unit->unit_number }} · {{ ucfirst($payment->type) }}
+                            {{ $payment->unit?->unit_number ?? '—' }} · {{ ucfirst($payment->type) }}
                         </span>
                     </div>
                 </div>

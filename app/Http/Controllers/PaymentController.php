@@ -250,7 +250,7 @@ class PaymentController extends Controller
                 'monthly_rent' => $agreement->monthly_rent,
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
                 'unit_id' => $tenant->unit_id,
-                'unit_number' => $tenant->unit->unit_number,
+                'unit_number' => $tenant->unit?->unit_number ?? '—',
             ],
         ]);
     }

@@ -57,17 +57,17 @@ class Payment extends Model
 
     public function tenant(): BelongsTo
     {
-        return $this->belongsTo(Tenant::class);
+        return $this->belongsTo(Tenant::class)->withTrashed();
     }
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(Unit::class);
+        return $this->belongsTo(Unit::class)->withTrashed();
     }
 
     public function agreement(): BelongsTo
     {
-        return $this->belongsTo(Agreement::class);
+        return $this->belongsTo(Agreement::class)->withTrashed();
     }
 
     public function meter(): BelongsTo

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Payment — {{ $payment->tenant->name }}" />
+    <x-common.page-breadcrumb pageTitle="Payment — {{ $payment->tenant?->name ?? 'Deleted Tenant' }}" />
 
     @if(session('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
@@ -14,13 +14,13 @@
     @endif
 
     <x-common.component-card
-        title="{{ $payment->tenant->name }}"
-        desc="{{ ucfirst($payment->type) }} — {{ $payment->month->format('F Y') }} — Unit {{ $payment->unit->unit_number }}">
+        title="{{ $payment->tenant?->name ?? 'Deleted Tenant' }}"
+        desc="{{ ucfirst($payment->type) }} — {{ $payment->month->format('F Y') }} — Unit {{ $payment->unit?->unit_number ?? 'Deleted Unit' }}">
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach([
-                ['Tenant',          $payment->tenant->name],
-                ['Unit',            $payment->unit->unit_number],
+                ['Tenant',          $payment->tenant?->name ?? 'Deleted Tenant'],
+                ['Unit',            $payment->unit?->unit_number ?? 'Deleted Unit'],
                 ['Type',            ucfirst($payment->type)],
                 ['Month',           $payment->month->format('F Y')],
                 ['Amount Due',      'Rs. '.number_format($payment->amount)],

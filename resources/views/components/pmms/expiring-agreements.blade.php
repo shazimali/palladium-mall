@@ -34,10 +34,10 @@
                     </div>
                     <div>
                         <p class="text-sm font-bold text-gray-800 dark:text-white/90 leading-tight">
-                            {{ $agreement->tenant->name }}
+                            {{ $agreement->tenant?->name ?? '—' }}
                         </p>
                         <span class="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                            {{ $agreement->unit->unit_number }}
+                            {{ $agreement->unit?->unit_number ?? '—' }}
                         </span>
                     </div>
                 </div>

@@ -41,10 +41,10 @@
                     <tr class="group hover:bg-gray-50/70 dark:hover:bg-white/[0.02] transition-colors">
                         <td class="px-6 py-3.5 whitespace-nowrap">
                             <p class="text-sm font-bold text-gray-800 dark:text-white/90">
-                                {{ $payment->tenant->name }}
+                                {{ $payment->tenant?->name ?? '—' }}
                             </p>
                             <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">
-                                {{ $payment->unit->unit_number }}
+                                {{ $payment->unit?->unit_number ?? '—' }}
                             </span>
                         </td>
                         <td class="px-4 py-3.5 whitespace-nowrap">

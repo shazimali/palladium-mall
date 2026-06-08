@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Agreement — {{ $agreement->tenant->name }}" />
+    <x-common.page-breadcrumb pageTitle="Agreement — {{ $agreement->tenant?->name ?? 'Deleted Tenant' }}" />
 
     <x-common.component-card
-        title="{{ $agreement->tenant->name }}"
-        desc="Unit {{ $agreement->unit->unit_number }} · {{ $agreement->start_date->format('d M Y') }} to {{ $agreement->end_date->format('d M Y') }}">
+        title="{{ $agreement->tenant?->name ?? 'Deleted Tenant' }}"
+        desc="Unit {{ $agreement->unit?->unit_number ?? 'Deleted Unit' }} · {{ $agreement->start_date->format('d M Y') }} to {{ $agreement->end_date->format('d M Y') }}">
 
         {{-- Status banner --}}
         @if($agreement->isExpiringSoon())
@@ -20,8 +20,8 @@
         {{-- Details grid --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach([
-                ['Tenant',           $agreement->tenant->name],
-                ['Unit',             $agreement->unit->unit_number],
+                ['Tenant',           $agreement->tenant?->name ?? 'Deleted Tenant'],
+                ['Unit',             $agreement->unit?->unit_number ?? 'Deleted Unit'],
                 ['Start Date',       $agreement->start_date->format('d M Y')],
                 ['End Date',         $agreement->end_date->format('d M Y')],
                 ['Duration',         $agreement->durationInMonths().' months'],
