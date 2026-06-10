@@ -13,6 +13,19 @@ class UpdatePaymentRequest extends FormRequest
             || $this->user()->isSuperAdmin();
     }
 
+    protected function prepareForValidation()
+    {
+        if ($this->has('month') && !empty($this->month)) {
+            try {
+                $this->merge([
+                    'month' => \Carbon\Carbon::parse($this->month)->startOfMonth()->toDateString(),
+                ]);
+            } catch (\Exception $e) {
+                // Ignore parsing errors, standard date validator will catch them
+            }
+        }
+    }
+
     public function rules(): array
     {
         $payment = $this->route('payment');
