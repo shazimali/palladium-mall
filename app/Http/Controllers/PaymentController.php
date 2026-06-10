@@ -21,11 +21,20 @@ class PaymentController extends Controller
 {
     public function index(Request $request): View
     {
+        $month = null;
+        if ($request->filled('month')) {
+            try {
+                $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
+            } catch (\Exception $e) {
+                // Ignore invalid date formats
+            }
+        }
+
         $payments = Payment::with(['tenant', 'unit', 'agreement', 'paymentAccount'])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->type, fn($q) => $q->ofType($request->type))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->month, fn($q) => $q->forMonth($request->month))
+            ->when($month, fn($q) => $q->forMonth($month))
             ->latest('month')
             ->paginate(20)
             ->withQueryString();

@@ -47,6 +47,12 @@
             </div>
 
             <div class="flex items-center gap-2">
+                @if(request()->anyFilled(['search', 'status', 'type', 'month']))
+                    <a href="{{ route('payments.index') }}"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
+                        Clear
+                    </a>
+                @endif
                 {{-- Bulk Generate button --}}
                 @if(auth()->user()->hasPermission('payments.create') || auth()->user()->isSuperAdmin())
                     <button type="button" x-data @click="$dispatch('open-bulk-generate')"
@@ -77,8 +83,62 @@
             </div>
         </div>
 
-        <div class="overflow-hidden">
-            <table id="paymentsTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+        <!-- Filters & Search -->
+        <div
+            class="my-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+            <form action="{{ route('payments.index') }}" method="GET" class="flex flex-col gap-4 sm:flex-row sm:items-center">
+
+                <!-- Search Input -->
+                <div class="relative flex-1 max-w-md">
+                    <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2">
+                        <svg class="fill-gray-500 dark:fill-gray-400" width="18" height="18" viewBox="0 0 20 20"
+                            fill="none">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
+                        </svg>
+                    </span>
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search tenant, unit, ref..."
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+                </div>
+
+                <!-- Status Filter -->
+                <div class="relative">
+                    <select name="status" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Statuses</option>
+                        <option value="unpaid" {{ request('status') === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
+                        <option value="partial" {{ request('status') === 'partial' ? 'selected' : '' }}>Partial</option>
+                        <option value="paid" {{ request('status') === 'paid' ? 'selected' : '' }}>Paid</option>
+                    </select>
+                </div>
+
+                <!-- Type Filter -->
+                <div class="relative">
+                    <select name="type" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Types</option>
+                        <option value="rent" {{ request('type') === 'rent' ? 'selected' : '' }}>Rent</option>
+                        <option value="maintenance" {{ request('type') === 'maintenance' ? 'selected' : '' }}>Maintenance</option>
+                        <option value="fine" {{ request('type') === 'fine' ? 'selected' : '' }}>Fine</option>
+                        <option value="electricity" {{ request('type') === 'electricity' ? 'selected' : '' }}>Electricity</option>
+                        <option value="water" {{ request('type') === 'water' ? 'selected' : '' }}>Water</option>
+                        <option value="gas" {{ request('type') === 'gas' ? 'selected' : '' }}>Gas</option>
+                        <option value="other" {{ request('type') === 'other' ? 'selected' : '' }}>Other</option>
+                    </select>
+                </div>
+
+                <!-- Month Filter -->
+                <div class="relative max-w-[180px]">
+                    <input type="text" id="filter_month" name="month" value="{{ request('month') }}" placeholder="All Months" autocomplete="off"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+                </div>
+
+                <button type="submit" class="hidden">Submit</button>
+            </form>
+        </div>
+
+        <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
+            <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                     <tr>
                         <th class="px-4 py-3">#</th>
@@ -220,6 +280,12 @@
                 </tbody>
             </table>
         </div>
+
+        @if($payments->hasPages())
+            <div class="mt-4 border-t border-gray-100 p-4 dark:border-gray-800">
+                {{ $payments->links() }}
+            </div>
+        @endif
     </x-common.component-card>
 
     {{-- Record Payment Modal --}}
@@ -381,22 +447,18 @@
 @endsection
 
 @push('scripts')
-    <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.tailwindcss.min.css">
-    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.tailwindcss.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            new DataTable('#paymentsTable', {
-                pageLength: 20,
-                lengthMenu: [10, 20, 50, 100],
-                order: [[4, 'desc']],
-                columnDefs: [{ orderable: false, targets: [0, 9] }],
-                language: {
-                    search: '',
-                    searchPlaceholder: 'Search payments...',
-                    lengthMenu: 'Show _MENU_ per page',
-                    info: 'Showing _START_ to _END_ of _TOTAL_ payments',
-                },
+            flatpickr('#filter_month', {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'F Y',
+                allowInput: false,
+                disableMobile: true,
+                disable: [function (date) { return date.getDate() !== 1; }],
+                onChange: function(selectedDates, dateStr, instance) {
+                    instance.element.form.submit();
+                }
             });
 
             flatpickr('#bulk_month', {
