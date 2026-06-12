@@ -1,7 +1,7 @@
 @props([
-    'occupiedUnits' => 0,
+    'rentedUnits' => 0,
     'vacantUnits'   => 0,
-    'soldUnits'     => 0,
+    'selfUnits'     => 0,
     'occupancyRate' => 0,
 ])
 
@@ -29,8 +29,8 @@
     <div class="grid grid-cols-3 divide-x divide-gray-100 dark:divide-gray-800 border-t border-gray-100 dark:border-gray-800">
         <div class="py-4 text-center">
             <div class="mx-auto mb-1.5 h-2 w-8 rounded-full" style="background: #12b76a;"></div>
-            <p class="text-xs text-gray-400 dark:text-gray-500">Occupied</p>
-            <p class="mt-0.5 text-lg font-extrabold" style="color: #12b76a;">{{ $occupiedUnits }}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500">Rented</p>
+            <p class="mt-0.5 text-lg font-extrabold" style="color: #12b76a;">{{ $rentedUnits }}</p>
         </div>
         <div class="py-4 text-center">
             <div class="mx-auto mb-1.5 h-2 w-8 rounded-full" style="background: #f79009;"></div>
@@ -39,8 +39,8 @@
         </div>
         <div class="py-4 text-center">
             <div class="mx-auto mb-1.5 h-2 w-8 rounded-full" style="background: #94a3b8;"></div>
-            <p class="text-xs text-gray-400 dark:text-gray-500">Sold</p>
-            <p class="mt-0.5 text-lg font-extrabold text-gray-500 dark:text-gray-400">{{ $soldUnits }}</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500">Self</p>
+            <p class="mt-0.5 text-lg font-extrabold text-gray-500 dark:text-gray-400">{{ $selfUnits }}</p>
         </div>
     </div>
 </div>

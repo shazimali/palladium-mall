@@ -243,11 +243,11 @@ class TenantController extends Controller
             'terms' => 'nullable|string',
         ]);
 
-        // Mark unit as occupied
+        // Mark unit as rented
         if ($tenant->unit_id && $tenant->unit_id !== (int) $data['unit_id']) {
             Unit::find($tenant->unit_id)?->update(['status' => 'vacant']);
         }
-        Unit::find($data['unit_id'])->update(['status' => 'occupied']);
+        Unit::find($data['unit_id'])->update(['status' => 'rented']);
         $tenant->update(['unit_id' => $data['unit_id']]);
 
         // Expire any previous active agreements

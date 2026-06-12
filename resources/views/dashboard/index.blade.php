@@ -19,7 +19,7 @@
     {{-- ── Row 1: Stat Cards ──────────────────────────────────────────── --}}
     <x-pmms.stat-cards
       :totalUnits="$totalUnits"
-      :occupiedUnits="$occupiedUnits"
+      :rentedUnits="$rentedUnits"
       :vacantUnits="$vacantUnits"
       :rentDue="$rentDue"
       :utilitiesDue="$utilitiesDue"
@@ -36,9 +36,9 @@
       />
 
       <x-pmms.occupancy-chart
-        :occupiedUnits="$occupiedUnits"
+        :rentedUnits="$rentedUnits"
         :vacantUnits="$vacantUnits"
-        :soldUnits="$soldUnits"
+        :selfUnits="$selfUnits"
         :occupancyRate="$occupancyRate"
       />
 
@@ -141,11 +141,11 @@
             animations: { enabled: true, easing: 'easeinout', speed: 600 },
           },
           series: [
-            {{ $occupiedUnits }},
+            {{ $rentedUnits }},
             {{ $vacantUnits }},
-            {{ $soldUnits }},
+            {{ $selfUnits }},
           ],
-          labels: ['Occupied', 'Vacant', 'Sold'],
+          labels: ['Rented', 'Vacant', 'Self'],
           colors: ['#12b76a', '#f79009', '#94a3b8'],
           plotOptions: {
             pie: {

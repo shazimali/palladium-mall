@@ -46,37 +46,27 @@ class UnitController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        return view('units.create', [
-            'title' => 'Add New Unit',
-            'floors' => Floor::orderBy('name')->get(),
-            'blocks' => Block::orderBy('name')->get(),
-            'areas' => Area::orderBy('name')->get(),
-            'landlords' => \App\Models\Landlord::orderBy('name')->get(),
-        ]);
+        return redirect()->route('landlords.index')
+            ->with('info', 'Units are created and managed through the Landlord form. Select a landlord and use the Units panel.');
     }
 
-    public function store(StoreUnitRequest $request): RedirectResponse
+    public function store(): RedirectResponse
     {
-        $data = $request->validated();
-        if (empty($data['date'])) {
-            $data['date'] = now()->toDateString();
-        }
-        Unit::create($data);
-
-        return redirect()
-            ->route('units.index')
-            ->with('success', 'Flat/Shop created successfully.');
+        return redirect()->route('landlords.index')
+            ->with('info', 'Units are created through the Landlord form.');
     }
 
     public function show(Unit $unit): View
     {
         $unit->load([
             'floor', 'block', 'area', 'meters', 'landlord',
+            'ownerships.landlord',
+            'currentOwnership.landlord',
             'agreements.tenant',
             'payments.tenant',
-            'payments.paymentAccount'
+            'payments.paymentAccount',
         ]);
 
         $agreements = $unit->agreements;
@@ -152,46 +142,59 @@ class UnitController extends Controller
             ]);
         }
 
+        // Inject ownership events into timeline
+        foreach ($unit->ownerships as $ownership) {
+            $timeline->push([
+                'type'         => $ownership->is_current ? 'ownership_current' : 'ownership_transfer',
+                'date'         => $ownership->start_date ?? $ownership->created_at,
+                'title'        => $ownership->is_current ? 'Unit Ownership (Current)' : 'Ownership Transferred',
+                'subtitle'     => 'Landlord: ' . ($ownership->landlord->name ?? '—'),
+                'details'      => 'Total: Rs. ' . number_format((float)$ownership->total_amount)
+                                . ' | Received: Rs. ' . number_format((float)$ownership->received_amount)
+                                . ' | Credit: Rs. ' . number_format((float)$ownership->credit_amount)
+                                . ($ownership->file_no ? ' | File: ' . $ownership->file_no : ''),
+                'status'       => $ownership->is_current ? 'active' : 'transferred',
+                'status_badge' => $ownership->is_current
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                'icon'         => '🏢',
+                'url'          => route('landlords.show', $ownership->landlord_id),
+            ]);
+        }
+
         // Sort chronological timeline by date descending
         $timeline = $timeline->sortByDesc('date')->values();
 
         return view('units.show', [
-            'title' => 'Unit — ' . $unit->unit_number,
-            'unit' => $unit,
-            'meters' => $unit->meters->keyBy('type'),
-            'total_earnings' => $total_earnings,
+            'title'             => 'Unit — ' . $unit->unit_number,
+            'unit'              => $unit,
+            'meters'            => $unit->meters->keyBy('type'),
+            'ownerships'        => $unit->ownerships,
+            'total_earnings'    => $total_earnings,
             'total_outstanding' => $total_outstanding,
-            'agreements_count' => $agreements_count,
-            'timeline' => $timeline,
+            'agreements_count'  => $agreements_count,
+            'timeline'          => $timeline,
         ]);
     }
 
     public function edit(Unit $unit): View
     {
-        $unit->load(['meters', 'landlord']);
+        $unit->load(['meters', 'landlord', 'currentOwnership']);
 
         return view('units.edit', [
-            'title' => 'Edit Unit — ' . $unit->unit_number,
-            'unit' => $unit,
-            'floors' => Floor::orderBy('name')->get(),
-            'blocks' => Block::orderBy('name')->get(),
-            'areas' => Area::orderBy('name')->get(),
-            'landlords' => \App\Models\Landlord::orderBy('name')->get(),
+            'title'          => 'Billing Update — ' . $unit->unit_number,
+            'unit'           => $unit,
             'existingMeters' => $unit->meters->keyBy('type'),
         ]);
     }
 
     public function update(UpdateUnitRequest $request, Unit $unit): RedirectResponse
     {
-        $data = $request->validated();
-        if (empty($data['date'])) {
-            $data['date'] = now()->toDateString();
-        }
-        $unit->update($data);
+        $unit->update($request->only(['notes']));
 
         return redirect()
-            ->route('units.index')
-            ->with('success', 'Flat/Shop updated successfully.');
+            ->route('units.show', $unit)
+            ->with('success', 'Billing notes updated successfully.');
     }
 
     public function destroy(Unit $unit): RedirectResponse
@@ -286,7 +289,7 @@ class UnitController extends Controller
                 'Usman',
                 'Double',
                 'shop',
-                'occupied',
+                'rented',
                 'Mian Mansha',
                 '850',
                 '2026-06-01',
@@ -392,8 +395,8 @@ class UnitController extends Controller
                 $rowErrors[] = "Status is required.";
             } else {
                 $status = strtolower($rowData['status']);
-                if (!in_array($status, ['vacant', 'occupied', 'sold'])) {
-                    $rowErrors[] = "Status '{$rowData['status']}' is invalid. Allowed: vacant, occupied, sold.";
+                if (!in_array($status, ['vacant', 'rented', 'self'])) {
+                    $rowErrors[] = "Status '{$rowData['status']}' is invalid. Allowed: vacant, rented, self.";
                 } else {
                     $rowData['status'] = $status;
                 }
@@ -472,6 +475,15 @@ class UnitController extends Controller
                     'area_sqft' => !empty($rowData['area_sqft']) ? (float) $rowData['area_sqft'] : null,
                     'notes' => !empty($rowData['notes']) ? $rowData['notes'] : null,
                     'date' => $date,
+                ]);
+
+                // Create the initial ownership record
+                \App\Models\UnitOwnership::create([
+                    'unit_id'     => $unit->id,
+                    'landlord_id' => $landlord->id,
+                    'is_current'  => true,
+                    'start_date'  => $date,
+                    'notes'       => 'Imported via CSV',
                 ]);
 
                 // Create meters if specified

@@ -87,6 +87,14 @@ class MenuHelper
 
         $mainItems = self::getMainNavItems();
 
+        if (auth()->check() && $user->can('landlords.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Landlords',
+                'path' => '/landlords',
+            ];
+        }
+
         if (auth()->check() && $user->can('units.view')) {
             $mainItems[] = [
                 'icon' => 'tables',
@@ -103,16 +111,6 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('landlords.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Landlords',
-                'path' => '/landlords',
-            ];
-        }
-
-
-
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [
                 'icon' => 'ecommerce',
@@ -120,7 +118,7 @@ class MenuHelper
                 'path' => '/payments',
             ];
         }
- 
+
         if (auth()->check() && $user->can('payment_accounts.view')) {
             $mainItems[] = [
                 'icon' => 'task',

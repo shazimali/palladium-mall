@@ -1,9 +1,9 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Edit Unit — {{ $unit->unit_number }}" />
+    <x-common.page-breadcrumb pageTitle="Update Utility Billing & Notes — {{ $unit->unit_number }}" />
 
-    <x-common.component-card title="Edit Unit — {{ $unit->unit_number }}" desc="Update the details for this unit">
+    <x-common.component-card title="Update Utility Billing & Notes — {{ $unit->unit_number }}" desc="Update utility meter details and billing notes for this unit">
         <form action="{{ route('units.update', $unit) }}" method="POST">
             @csrf
             @method('PUT')
@@ -15,9 +15,9 @@
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    Update Unit
+                    Update Billing & Notes
                 </button>
-                <a href="{{ route('units.index') }}"
+                <a href="{{ route('units.show', $unit) }}"
                     class="inline-flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
                     Cancel
                 </a>

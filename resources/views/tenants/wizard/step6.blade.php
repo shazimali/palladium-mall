@@ -199,7 +199,7 @@
         <div class="rounded-2xl border border-brand-200 bg-brand-50 dark:border-brand-900/50 dark:bg-brand-900/10 p-6">
             <h3 class="text-base font-semibold text-brand-700 dark:text-brand-400 mb-1">Ready to Confirm?</h3>
             <p class="text-sm text-brand-600 dark:text-brand-500 mb-4">
-                Clicking "Confirm & Save" will activate this tenant, activate the agreement, and mark the unit as occupied.
+                Clicking "Confirm & Save" will activate this tenant, activate the agreement, and mark the unit as rented.
             </p>
             <div class="flex items-center gap-3">
                 <a href="{{ route('tenants.showStep', [$tenant, 5]) }}"

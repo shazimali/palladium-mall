@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\UnitOwnership;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
@@ -44,9 +45,14 @@ class Unit extends Model
         return $query->where('status', 'vacant');
     }
 
-    public function scopeOccupied(Builder $query): Builder
+    public function scopeRented(Builder $query): Builder
     {
-        return $query->where('status', 'occupied');
+        return $query->where('status', 'rented');
+    }
+
+    public function scopeSelf(Builder $query): Builder
+    {
+        return $query->where('status', 'self');
     }
 
     public function scopeOfType(Builder $query, string $type): Builder
@@ -73,17 +79,22 @@ class Unit extends Model
         return $this->status === 'vacant';
     }
 
-    public function isOccupied(): bool
+    public function isRented(): bool
     {
-        return $this->status === 'occupied';
+        return $this->status === 'rented';
+    }
+
+    public function isSelf(): bool
+    {
+        return $this->status === 'self';
     }
 
     public function getStatusBadgeClassAttribute(): string
     {
         return match ($this->status) {
-            'occupied' => 'badge-success',
+            'rented' => 'badge-success',
             'vacant' => 'badge-warning',
-            'sold' => 'badge-secondary',
+            'self' => 'badge-secondary',
             default => 'badge-secondary',
         };
     }
@@ -131,6 +142,22 @@ class Unit extends Model
     public function meters(): HasMany
     {
         return $this->hasMany(Meter::class);
+    }
+
+    /**
+     * All ownership records for this unit (history, newest first).
+     */
+    public function ownerships(): HasMany
+    {
+        return $this->hasMany(UnitOwnership::class)->orderBy('start_date', 'desc');
+    }
+
+    /**
+     * The currently active ownership record.
+     */
+    public function currentOwnership(): HasOne
+    {
+        return $this->hasOne(UnitOwnership::class)->where('is_current', true);
     }
 
     public function electricityMeter(): HasOne

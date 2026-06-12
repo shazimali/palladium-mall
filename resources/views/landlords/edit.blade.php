@@ -3,8 +3,9 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Edit Landlord — {{ $landlord->name }}" />
 
-    <x-common.component-card title="Edit Landlord — {{ $landlord->name }}" desc="Update landlord/unit owner profile details">
-        <form action="{{ route('landlords.update', $landlord) }}" method="POST">
+    <x-common.component-card title="Edit Landlord — {{ $landlord->name }}"
+        desc="Update landlord/flat/shops owner profile details">
+        <form action="{{ route('landlords.update', $landlord) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
             @include('landlords._form')

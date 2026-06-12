@@ -12,6 +12,7 @@ use App\Http\Controllers\MeterController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LandlordController;
+use App\Http\Controllers\AjaxUnitController;
 use App\Http\Controllers\PaymentAccountController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
@@ -113,6 +114,13 @@ Route::middleware('auth')->group(function () {
     Route::post('ajax/meters', [MeterController::class, 'store'])->name('ajax.meters.store');
     Route::put('ajax/meters/{meter}', [MeterController::class, 'update'])->name('ajax.meters.update');
     Route::delete('ajax/meters/{meter}', [MeterController::class, 'destroy'])->name('ajax.meters.destroy');
+
+    // Unit AJAX routes — managed from Landlord form
+    Route::get(   'ajax/landlord-units/{landlord}',              [AjaxUnitController::class, 'byLandlord'])->name('ajax.landlord-units.by-landlord');
+    Route::post(  'ajax/landlord-units',                         [AjaxUnitController::class, 'store'])     ->name('ajax.landlord-units.store');
+    Route::put(   'ajax/landlord-units/{unit}',                  [AjaxUnitController::class, 'update'])    ->name('ajax.landlord-units.update');
+    Route::delete('ajax/landlord-units/{unit}',                  [AjaxUnitController::class, 'destroy'])   ->name('ajax.landlord-units.destroy');
+    Route::post(  'ajax/landlord-units/{unit}/transfer',         [AjaxUnitController::class, 'transfer'])  ->name('ajax.landlord-units.transfer');
 
     Route::middleware('permission:payments.view')->group(function () {
         Route::get('payments/utilities/create', [PaymentController::class, 'createUtilityReading'])

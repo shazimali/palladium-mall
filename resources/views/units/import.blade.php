@@ -159,7 +159,7 @@
 
                     <div class="text-xs border-b border-gray-100 dark:border-gray-800 pb-2">
                         <span class="font-bold text-gray-800 dark:text-gray-200">status <span class="text-red-500">*</span></span>
-                        <p class="mt-0.5 text-gray-600 dark:text-gray-400">Allowed values: <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-brand-500">vacant</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-brand-500">occupied</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-brand-500">sold</code>.</p>
+                        <p class="mt-0.5 text-gray-600 dark:text-gray-400">Allowed values: <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-brand-500">vacant</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-brand-500">rented</code>, <code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-brand-500">self</code>.</p>
                     </div>
 
                     <div class="text-xs border-b border-gray-100 dark:border-gray-800 pb-2">

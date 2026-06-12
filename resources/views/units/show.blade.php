@@ -58,6 +58,11 @@
                 class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
                 Overview & Details
             </button>
+            <button @click="activeTab = 'ownership'" :class="activeTab === 'ownership' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+                class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
+                🏢 Ownership History
+                <span class="ml-1 inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $ownerships->count() }}</span>
+            </button>
             <button @click="activeTab = 'timeline'" :class="activeTab === 'timeline' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
                 class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
                 Timeline History
@@ -189,6 +194,79 @@
                     @endif
                 </x-common.component-card>
             </div>
+        </div>
+
+        {{-- ── OWNERSHIP HISTORY TAB ──────────────────────────────── --}}
+        <div x-show="activeTab === 'ownership'">
+            <x-common.component-card title="Ownership History" desc="Full record of every landlord who has owned this unit from day one">
+                @if($ownerships->isEmpty())
+                    <div class="py-12 text-center text-gray-400">
+                        <span class="text-3xl">🏗️</span>
+                        <p class="text-sm font-medium mt-2">No ownership records found for this unit.</p>
+                        <p class="text-xs mt-1 text-gray-400">Assign a landlord via the Landlord form to start tracking.</p>
+                    </div>
+                @else
+                    <div class="relative pl-6 border-l-2 border-brand-200 dark:border-brand-800 ml-4 space-y-6 py-2">
+                        @foreach($ownerships as $ownership)
+                            <div class="relative">
+                                {{-- Timeline dot --}}
+                                <span class="absolute -left-[37px] top-1 flex h-7 w-7 items-center justify-center rounded-full {{ $ownership->is_current ? 'bg-green-500 text-white' : 'bg-white border-2 border-gray-300 dark:bg-gray-900 dark:border-gray-700' }} text-xs shadow-sm">
+                                    {{ $ownership->is_current ? '✓' : '↩' }}
+                                </span>
+
+                                <div class="rounded-xl border {{ $ownership->is_current ? 'border-green-200 bg-green-50/30 dark:border-green-900/40 dark:bg-green-900/10' : 'border-gray-100 bg-white dark:border-gray-800 dark:bg-white/[0.02]' }} p-4 shadow-sm">
+                                    {{-- Header row --}}
+                                    <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
+                                        <div>
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold {{ $ownership->is_current ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' }}">
+                                                {{ $ownership->is_current ? 'CURRENT OWNER' : 'TRANSFERRED' }}
+                                            </span>
+                                            <a href="{{ route('landlords.show', $ownership->landlord_id) }}"
+                                               class="ml-2 text-sm font-bold text-brand-500 hover:underline">
+                                                {{ $ownership->landlord?->name ?? '—' }}
+                                            </a>
+                                        </div>
+                                        <span class="text-xs text-gray-400 font-medium">{{ $ownership->period }}</span>
+                                    </div>
+
+                                    {{-- Nominee --}}
+                                    @if($ownership->nominee_name)
+                                        <div class="mb-3 rounded-lg bg-blue-50/50 px-3 py-2 dark:bg-blue-900/10">
+                                            <p class="text-xs font-semibold uppercase tracking-wide text-blue-400 mb-1">Nominee</p>
+                                            <p class="text-sm text-gray-700 dark:text-gray-200 font-medium">{{ $ownership->nominee_full_line }}</p>
+                                        </div>
+                                    @endif
+
+                                    {{-- Financial + Office --}}
+                                    <div class="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 text-xs">
+                                        @foreach([
+                                            ['Total Amount',   $ownership->total_amount    ? 'Rs. '.number_format($ownership->total_amount)    : '—'],
+                                            ['Received',       $ownership->received_amount ? 'Rs. '.number_format($ownership->received_amount) : '—'],
+                                            ['Credit / Bal.',  $ownership->credit_amount   ? 'Rs. '.number_format($ownership->credit_amount)   : '—'],
+                                            ['Received From',  $ownership->received_from ?? '—'],
+                                            ['File No.',       $ownership->file_no ?? '—'],
+                                            ['Approved By',    $ownership->approved_by ?? '—'],
+                                            ['Received By',    $ownership->received_by ?? '—'],
+                                            ['Approved Date',  $ownership->approved_date ? $ownership->approved_date->format('d M Y') : '—'],
+                                        ] as [$lbl, $val])
+                                            <div>
+                                                <p class="text-gray-400 dark:text-gray-500">{{ $lbl }}</p>
+                                                <p class="font-medium text-gray-700 dark:text-gray-200">{{ $val }}</p>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    @if($ownership->notes)
+                                        <div class="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:bg-white/[0.03] dark:text-gray-300">
+                                            {{ $ownership->notes }}
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+            </x-common.component-card>
         </div>
 
         {{-- ── TIMELINE TAB ─────────────────────────────────────────────── --}}

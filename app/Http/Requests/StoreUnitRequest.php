@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreUnitRequest extends FormRequest
 {
@@ -24,13 +25,13 @@ class StoreUnitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'unit_number' => ['required', 'string', 'max:20', 'unique:units,unit_number'],
+            'unit_number' => ['required', 'string', 'max:20', Rule::unique('units', 'unit_number')],
             'floor_id' => ['required', 'exists:floors,id'],
             'block_id' => ['required', 'exists:blocks,id'],
             'area_id' => ['required', 'exists:areas,id'],
             'landlord_id' => ['required', 'exists:landlords,id'],
             'type' => ['required', 'in:flat,shop,office'],
-            'status' => ['required', 'in:vacant,occupied,sold'],
+            'status' => ['required', 'in:vacant,rented,self'],
             'area_sqft' => ['nullable', 'numeric', 'min:0'],
             'elec_meter_id' => ['nullable', 'string', 'max:50'],
             'water_meter_id' => ['nullable', 'string', 'max:50'],

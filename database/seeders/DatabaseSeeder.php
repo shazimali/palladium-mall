@@ -25,7 +25,8 @@ class DatabaseSeeder extends Seeder
             PaymentAccountPermissionSeeder::class,
             RoleSeeder::class,
             AdminUserSeeder::class,
-            DemoDataSeeder::class,
+            FloorBlockAreaSeeder::class,
+            // DemoDataSeeder::class,
         ]);
     }
 }

@@ -16,9 +16,6 @@ class UpdateLandlordRequest extends FormRequest
             || $this->user()->isSuperAdmin();
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     */
     public function rules(): array
     {
         return [
@@ -29,10 +26,28 @@ class UpdateLandlordRequest extends FormRequest
                 'max:255',
                 Rule::unique('landlords', 'email')->ignore($this->route('landlord'))
             ],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'cnic' => ['nullable', 'string', 'max:50'],
+            'phone' => ['required', 'string', 'max:50'],
+            'cnic'  => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('landlords', 'cnic')->ignore($this->route('landlord')),
+                'regex:/^\d{5}-\d{7}-\d{1}$/'
+            ],
             'address' => ['nullable', 'string', 'max:1000'],
-            'notes' => ['nullable', 'string', 'max:1000'],
+            'notes'   => ['nullable', 'string', 'max:1000'],
+            'photo'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        ];
+    }
+
+    /**
+     * Custom validation messages.
+     */
+    public function messages(): array
+    {
+        return [
+            'cnic.regex' => 'CNIC format must be: 35201-1234567-1',
+            'cnic.unique' => 'This CNIC is already registered to another landlord.',
         ];
     }
 }

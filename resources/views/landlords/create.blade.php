@@ -4,7 +4,7 @@
     <x-common.page-breadcrumb pageTitle="Add New Landlord" />
 
     <x-common.component-card title="Add New Landlord" desc="Register a new unit owner in the system">
-        <form action="{{ route('landlords.store') }}" method="POST">
+        <form action="{{ route('landlords.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             @include('landlords._form')
 

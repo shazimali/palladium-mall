@@ -25,7 +25,8 @@
                 @php
                     $total = $units->total();
                     $vacant = $units->getCollection()->where('status', 'vacant')->count();
-                    $occupied = $units->getCollection()->where('status', 'occupied')->count();
+                    $rented = $units->getCollection()->where('status', 'rented')->count();
+                    $self = $units->getCollection()->where('status', 'self')->count();
                 @endphp
                 <span
                     class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -33,7 +34,11 @@
                 </span>
                 <span
                     class="inline-flex items-center rounded-lg bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    Occupied: {{ $occupied }}
+                    Rented: {{ $rented }}
+                </span>
+                <span
+                    class="inline-flex items-center rounded-lg bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                    Self: {{ $self }}
                 </span>
                 <span
                     class="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
@@ -89,7 +94,8 @@
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="">All Statuses</option>
                         <option value="vacant" {{ request('status') === 'vacant' ? 'selected' : '' }}>Vacant</option>
-                        <option value="occupied" {{ request('status') === 'occupied' ? 'selected' : '' }}>Occupied</option>
+                        <option value="rented" {{ request('status') === 'rented' ? 'selected' : '' }}>Rented</option>
+                        <option value="self" {{ request('status') === 'self' ? 'selected' : '' }}>Self</option>
                     </select>
                 </div>
 
@@ -191,11 +197,11 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
-                                                                                                                                                                    {{ $unit->status === 'occupied'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : ($unit->status === 'vacant'
-                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400') }}">
+                                            {{ $unit->status === 'rented'
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : ($unit->status === 'vacant'
+                                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                    : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400') }}">
                                             {{ ucfirst($unit->status) }}
                                         </span>
                                     </td>

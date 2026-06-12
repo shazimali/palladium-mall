@@ -22,7 +22,7 @@
                             </label>
                             <select id="unit_id" name="unit_id" required
                                 class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('unit_id') ? 'border-red-400' : '' }}">
-                                <option value="">Select occupied unit</option>
+                                <option value="">Select rented unit</option>
                                 @foreach($units as $unit)
                                     <option value="{{ $unit->id }}" {{ old('unit_id') == $unit->id ? 'selected' : '' }}>
                                         {{ $unit->unit_number }} ({{ ucfirst($unit->type) }})

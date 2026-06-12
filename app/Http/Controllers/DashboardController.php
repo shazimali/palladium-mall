@@ -20,7 +20,7 @@ class DashboardController extends Controller
 
         // ── Stat cards ────────────────────────────────────────────────
         $totalUnits = Unit::count();
-        $occupiedUnits = Unit::where('status', 'occupied')->count();
+        $rentedUnits = Unit::where('status', 'rented')->count();
         $vacantUnits = Unit::where('status', 'vacant')->count();
         $rentDue = Payment::where('month', $currentMonth)
             ->where('type', 'rent')
@@ -47,7 +47,7 @@ class DashboardController extends Controller
         }
 
         // ── Occupancy donut ───────────────────────────────────────────
-        $soldUnits = Unit::where('status', 'sold')->count();
+        $selfUnits = Unit::where('status', 'self')->count();
 
         // ── Recent payments ───────────────────────────────────────────
         $recentPayments = Payment::with(['tenant', 'unit'])
@@ -108,7 +108,7 @@ class DashboardController extends Controller
             'title' => 'Dashboard',
             // Stat cards
             'totalUnits' => $totalUnits,
-            'occupiedUnits' => $occupiedUnits,
+            'rentedUnits' => $rentedUnits,
             'vacantUnits' => $vacantUnits,
             'rentDue' => $rentDue,
             'utilitiesDue' => $utilitiesDue,
@@ -117,9 +117,9 @@ class DashboardController extends Controller
             'chartDue' => $chartDue,
             'chartPaid' => $chartPaid,
             // Donut
-            'occupiedUnits' => $occupiedUnits,
+            'rentedUnits' => $rentedUnits,
             'vacantUnits' => $vacantUnits,
-            'soldUnits' => $soldUnits,
+            'selfUnits' => $selfUnits,
             // Tables
             'recentPayments' => $recentPayments,
             'expiringAgreements' => $expiringAgreements,
@@ -128,7 +128,7 @@ class DashboardController extends Controller
             'recentActivities' => $recentActivities,
             // Occupancy rate
             'occupancyRate' => $totalUnits > 0
-                ? round(($occupiedUnits / $totalUnits) * 100, 1)
+                ? round(($rentedUnits / $totalUnits) * 100, 1)
                 : 0,
         ]);
     }

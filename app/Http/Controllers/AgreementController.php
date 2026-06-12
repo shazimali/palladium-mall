@@ -38,7 +38,7 @@ class AgreementController extends Controller
             ->orderBy('name')
             ->get();
 
-        $units = Unit::where('status', 'occupied')
+        $units = Unit::where('status', 'rented')
             ->orWhere('status', 'vacant')
             ->orderBy('unit_number')
             ->get();

@@ -266,7 +266,7 @@ class PaymentController extends Controller
 
     public function createUtilityReading(): View
     {
-        $units = Unit::where('status', 'occupied')
+        $units = Unit::where('status', 'rented')
             ->orderBy('unit_number')
             ->get();
 
