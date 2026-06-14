@@ -868,6 +868,14 @@ class TenantController extends Controller
                 'checklist' => $checklist,
                 'agreement' => $agreement,
             ]);
+        } elseif ($step === 6) {
+            return view('tenants.print.all', [
+                'tenant' => $tenant,
+                'agreement' => $agreement,
+                'guarantors' => $tenant->guarantors,
+                'checklist' => $tenant->documentChecklist,
+                'moveInChecklist' => $tenant->moveInChecklists()->where('type', 'move_in')->first(),
+            ]);
         }
 
         abort(404);
