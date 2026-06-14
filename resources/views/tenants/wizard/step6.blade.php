@@ -26,6 +26,12 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+            {{ session('error') }}
+        </div>
+    @endif
+
     @include('tenants.wizard._progress', ['currentStep' => $step, 'tenantId' => $tenant->id])
     @include('tenants.wizard._tenant_banner')
 
@@ -294,6 +300,13 @@
             <p class="text-sm text-brand-600 dark:text-brand-500 mb-4">
                 Clicking "Confirm & Save" will activate this tenant, activate the agreement, and mark the unit as rented.
             </p>
+
+            @if(!$agreement || empty($agreement->govt_document))
+                <div class="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+                    <strong>⚠️ Government Document Required:</strong> You cannot confirm this agreement because the Government Document (Image/PDF) has not been uploaded in Step 3. Please return to Step 3 and upload it first.
+                </div>
+            @endif
+
             <div class="flex items-center gap-3">
                 <a href="{{ route('tenants.showStep', [$tenant, 5]) }}"
                    class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -302,16 +315,31 @@
                     </svg>
                     Back
                 </a>
-                <form method="POST" action="{{ route('tenants.confirm', $tenant) }}">
-                    @csrf
-                    <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition-colors">
+                
+                @if($agreement && !empty($agreement->govt_document))
+                    <form method="POST" action="{{ route('tenants.confirm', $tenant) }}">
+                        @csrf
+                        <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700 transition-colors">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Confirm & Save
+                        </button>
+                    </form>
+                @else
+                    <button type="button" disabled
+                        class="inline-flex items-center gap-2 rounded-lg bg-gray-300 px-6 py-2.5 text-sm font-semibold text-gray-500 shadow-sm cursor-not-allowed dark:bg-gray-800 dark:text-gray-600">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                         </svg>
-                        Confirm & Save
+                        Confirm & Save (Govt. Document Required)
                     </button>
-                </form>
+                    <a href="{{ route('tenants.showStep', [$tenant, 3]) }}"
+                       class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-600 transition-colors">
+                        Go to Step 3
+                    </a>
+                @endif
             </div>
         </div>
 

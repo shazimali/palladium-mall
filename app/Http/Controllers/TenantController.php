@@ -823,6 +823,13 @@ class TenantController extends Controller
 
     public function confirm(Request $request, Tenant $tenant): RedirectResponse
     {
+        $agreement = $tenant->agreements()->latest()->first();
+
+        if (!$agreement || empty($agreement->govt_document)) {
+            return redirect()->route('tenants.showStep', [$tenant, 6])
+                ->with('error', 'Agreement cannot be confirmed. Please upload the Government Document in Step 3 first.');
+        }
+
         // Activate tenant
         $tenant->update(['status' => 'active']);
 

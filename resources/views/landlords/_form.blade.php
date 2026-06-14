@@ -751,6 +751,7 @@ Landlord Contact Info Card
                                 if (idx !== -1) this.units[idx] = d.unit;
                             } else {
                                 this.units.push(d.unit);
+                                alert("Flat/shop is added.");
                             }
 
                             this.showToast(d.message, 'success');
