@@ -102,11 +102,11 @@
             </dl>
         </div>
 
-        {{-- Guarantor --}}
+        {{-- Guarantors --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
             <div class="flex items-center justify-between mb-3">
-                <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Guarantor</h3>
-                @if($tenant->guarantor)
+                <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Guarantors</h3>
+                @if($tenant->guarantors->isNotEmpty())
                     <a href="{{ route('tenants.printStep', [$tenant, 2]) }}" target="_blank"
                        class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -116,16 +116,46 @@
                     </a>
                 @endif
             </div>
-            @if($tenant->guarantor)
-                <dl class="space-y-2 text-sm">
-                    <div class="flex justify-between"><dt class="text-gray-500">Name</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ $tenant->guarantor->name }}</dd></div>
-                    <div class="flex justify-between"><dt class="text-gray-500">CNIC</dt><dd class="font-mono text-xs text-gray-800 dark:text-gray-200">{{ $tenant->guarantor->cnic }}</dd></div>
-                    <div class="flex justify-between"><dt class="text-gray-500">Relation</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ ucfirst($tenant->guarantor->relation) }}</dd></div>
-                    <div class="flex justify-between"><dt class="text-gray-500">Phone</dt><dd class="font-medium text-gray-800 dark:text-gray-200">{{ $tenant->guarantor->phone }}</dd></div>
-                </dl>
-            @else
+            @forelse($tenant->guarantors as $index => $g)
+                <div class="mb-4 last:mb-0 pb-4 last:pb-0 border-b border-gray-100 last:border-0 dark:border-gray-800">
+                    <div class="flex gap-3 items-start">
+                        @if($g->photo)
+                            <img src="{{ $g->photo_url }}" class="h-9 w-9 rounded-full object-cover border border-gray-200 flex-shrink-0">
+                        @else
+                            <div class="h-9 w-9 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+                                <span class="text-xs font-bold text-brand-600">{{ strtoupper(substr($g->name, 0, 1)) }}</span>
+                            </div>
+                        @endif
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800 dark:text-gray-200">#{{ $index + 1 }}: {{ $g->name }}</div>
+                            <div class="text-gray-500 text-xs mt-1 space-y-0.5">
+                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">CNIC:</span> {{ $g->cnic }}</div>
+                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">Phone:</span> {{ $g->phone }}</div>
+                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">Relation:</span> {{ ucfirst($g->relation) }}</div>
+                                @if($g->occupation) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Occupation:</span> {{ $g->occupation }}</div> @endif
+                                @if($g->shop_name) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Shop Name:</span> {{ $g->shop_name }}</div> @endif
+                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">Address:</span> {{ $g->address }}</div>
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                                @if($g->photo)
+                                    <a href="{{ $g->photo_url }}" target="_blank" class="text-brand-500 hover:underline">Portrait Photo</a>
+                                @endif
+                                @if($g->cnic_front)
+                                    <a href="{{ $g->cnic_front_url }}" target="_blank" class="text-brand-500 hover:underline">Front CNIC</a>
+                                @endif
+                                @if($g->cnic_back)
+                                    <a href="{{ $g->cnic_back_url }}" target="_blank" class="text-brand-500 hover:underline">Back CNIC</a>
+                                @endif
+                                @if($g->visiting_card)
+                                    <a href="{{ $g->visiting_card_url }}" target="_blank" class="text-brand-500 hover:underline">Visiting Card</a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
                 <p class="text-sm text-gray-400">Not added yet</p>
-            @endif
+            @endforelse
         </div>
 
         {{-- Emergency Contacts --}}
@@ -140,6 +170,47 @@
                 <p class="text-sm text-gray-400">Not added yet</p>
             @endforelse
         </div>
+
+        {{-- Partners / Co-Tenants --}}
+        @if($tenant->partners->isNotEmpty())
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
+            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Partners / Co-Tenants</h3>
+            @foreach($tenant->partners as $index => $partner)
+                <div class="mb-4 last:mb-0 pb-4 last:pb-0 border-b border-gray-100 last:border-0 dark:border-gray-800">
+                    <div class="flex gap-3 items-start">
+                        @if($partner->passport_photo)
+                            <img src="{{ $partner->passport_photo_url }}" class="h-9 w-9 rounded-full object-cover border border-gray-200 flex-shrink-0">
+                        @else
+                            <div class="h-9 w-9 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+                                <span class="text-xs font-bold text-brand-600">{{ strtoupper(substr($partner->name, 0, 1)) }}</span>
+                            </div>
+                        @endif
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-800 dark:text-gray-200">#{{ $index + 1 }}: {{ $partner->name }}</div>
+                            <div class="text-gray-500 text-xs mt-1 space-y-0.5">
+                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">CNIC:</span> {{ $partner->cnic }}</div>
+                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">Phone:</span> {{ $partner->phone }}</div>
+                                @if($partner->father_name) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Father:</span> {{ $partner->father_name }}</div> @endif
+                                @if($partner->whatsapp_number) <div><span class="font-semibold text-gray-700 dark:text-gray-300">WhatsApp:</span> {{ $partner->whatsapp_number }}</div> @endif
+                                @if($partner->email) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Email:</span> {{ $partner->email }}</div> @endif
+                                @if($partner->occupation) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Occupation:</span> {{ $partner->occupation }}</div> @endif
+                                @if($partner->monthly_income) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Income:</span> PKR {{ number_format($partner->monthly_income) }}</div> @endif
+                                @if($partner->address) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Address:</span> {{ $partner->address }}</div> @endif
+                            </div>
+                            <div class="mt-2 flex gap-2 text-xs">
+                                @if($partner->cnic_front_image)
+                                    <a href="{{ $partner->cnic_front_url }}" target="_blank" class="text-brand-500 hover:underline">Front CNIC</a>
+                                @endif
+                                @if($partner->cnic_back_image)
+                                    <a href="{{ $partner->cnic_back_url }}" target="_blank" class="text-brand-500 hover:underline">Back CNIC</a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+        @endif
 
     </div>
 

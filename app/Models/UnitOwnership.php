@@ -26,7 +26,6 @@ class UnitOwnership extends Model
         'credit_amount',
         'received_from',
         // Office
-        'file_no',
         'approved_by',
         'received_by',
         'approved_date',

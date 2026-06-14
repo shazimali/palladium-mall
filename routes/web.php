@@ -78,9 +78,10 @@ Route::middleware('auth')->group(function () {
         // Standard resource (except create/store — handled above)
         Route::resource('tenants', TenantController::class)->except(['create', 'store']);
         // Move-out
-        Route::get('tenants/{tenant}/move-out',       [MoveOutController::class, 'create'])->name('tenants.moveOut.create');
-        Route::post('tenants/{tenant}/move-out',      [MoveOutController::class, 'store'])->name('tenants.moveOut.store');
-        Route::get('tenants/{tenant}/print-move-out', [MoveOutController::class, 'printMoveOut'])->name('tenants.printMoveOut');
+        Route::get('tenants/{tenant}/move-out',         [MoveOutController::class, 'create'])->name('tenants.moveOut.create');
+        Route::post('tenants/{tenant}/move-out',        [MoveOutController::class, 'store'])->name('tenants.moveOut.store');
+        Route::get('tenants/{tenant}/print-move-out',   [MoveOutController::class, 'printMoveOut'])->name('tenants.printMoveOut');
+        Route::get('tenants/{tenant}/clearance-form',   [MoveOutController::class, 'clearanceForm'])->name('tenants.clearanceForm');
     });
 
     Route::middleware('permission:landlords.view')->group(function () {

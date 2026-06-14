@@ -61,7 +61,11 @@ class UnitController extends Controller
     public function show(Unit $unit): View
     {
         $unit->load([
-            'floor', 'block', 'area', 'meters', 'landlord',
+            'floor',
+            'block',
+            'area',
+            'meters',
+            'landlord',
             'ownerships.landlord',
             'currentOwnership.landlord',
             'agreements.tenant',
@@ -92,7 +96,7 @@ class UnitController extends Controller
                 'icon' => '📄',
                 'url' => route('agreements.show', $agreement->id),
             ]);
-            
+
             if ($agreement->status === 'terminated') {
                 $timeline->push([
                     'type' => 'agreement_terminated',
@@ -116,7 +120,7 @@ class UnitController extends Controller
             } elseif (in_array($payment->type, ['electricity', 'water', 'gas'])) {
                 $icon = '⚡';
             }
-            
+
             if ($payment->status === 'unpaid') {
                 $title = $payment->type_label . ' Billed';
             }
@@ -145,20 +149,20 @@ class UnitController extends Controller
         // Inject ownership events into timeline
         foreach ($unit->ownerships as $ownership) {
             $timeline->push([
-                'type'         => $ownership->is_current ? 'ownership_current' : 'ownership_transfer',
-                'date'         => $ownership->start_date ?? $ownership->created_at,
-                'title'        => $ownership->is_current ? 'Unit Ownership (Current)' : 'Ownership Transferred',
-                'subtitle'     => 'Landlord: ' . ($ownership->landlord->name ?? '—'),
-                'details'      => 'Total: Rs. ' . number_format((float)$ownership->total_amount)
-                                . ' | Received: Rs. ' . number_format((float)$ownership->received_amount)
-                                . ' | Credit: Rs. ' . number_format((float)$ownership->credit_amount)
-                                . ($ownership->file_no ? ' | File: ' . $ownership->file_no : ''),
-                'status'       => $ownership->is_current ? 'active' : 'transferred',
+                'type' => $ownership->is_current ? 'ownership_current' : 'ownership_transfer',
+                'date' => $ownership->start_date ?? $ownership->created_at,
+                'title' => $ownership->is_current ? 'Flat/Shop Ownership (Current)' : 'Ownership Transferred',
+                'subtitle' => 'Landlord: ' . ($ownership->landlord->name ?? '—'),
+                'details' => 'Total: Rs. ' . number_format((float) $ownership->total_amount)
+                    . ' | Received: Rs. ' . number_format((float) $ownership->received_amount)
+                    . ' | Credit: Rs. ' . number_format((float) $ownership->credit_amount)
+                    . ($unit->file_no ? ' | File: ' . $unit->file_no : ''),
+                'status' => $ownership->is_current ? 'active' : 'transferred',
                 'status_badge' => $ownership->is_current
-                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-                'icon'         => '🏢',
-                'url'          => route('landlords.show', $ownership->landlord_id),
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                'icon' => '🏢',
+                'url' => route('landlords.show', $ownership->landlord_id),
             ]);
         }
 
@@ -166,14 +170,14 @@ class UnitController extends Controller
         $timeline = $timeline->sortByDesc('date')->values();
 
         return view('units.show', [
-            'title'             => 'Unit — ' . $unit->unit_number,
-            'unit'              => $unit,
-            'meters'            => $unit->meters->keyBy('type'),
-            'ownerships'        => $unit->ownerships,
-            'total_earnings'    => $total_earnings,
+            'title' => 'Unit — ' . $unit->unit_number,
+            'unit' => $unit,
+            'meters' => $unit->meters->keyBy('type'),
+            'ownerships' => $unit->ownerships,
+            'total_earnings' => $total_earnings,
             'total_outstanding' => $total_outstanding,
-            'agreements_count'  => $agreements_count,
-            'timeline'          => $timeline,
+            'agreements_count' => $agreements_count,
+            'timeline' => $timeline,
         ]);
     }
 
@@ -182,8 +186,8 @@ class UnitController extends Controller
         $unit->load(['meters', 'landlord', 'currentOwnership']);
 
         return view('units.edit', [
-            'title'          => 'Billing Update — ' . $unit->unit_number,
-            'unit'           => $unit,
+            'title' => 'Billing Update — ' . $unit->unit_number,
+            'unit' => $unit,
             'existingMeters' => $unit->meters->keyBy('type'),
         ]);
     }
@@ -264,7 +268,7 @@ class UnitController extends Controller
         $callback = function () use ($columns) {
             $file = fopen('php://output', 'w');
             fputcsv($file, $columns);
-            
+
             // Example Row 1
             fputcsv($file, [
                 'A-101',
@@ -479,11 +483,11 @@ class UnitController extends Controller
 
                 // Create the initial ownership record
                 \App\Models\UnitOwnership::create([
-                    'unit_id'     => $unit->id,
+                    'unit_id' => $unit->id,
                     'landlord_id' => $landlord->id,
-                    'is_current'  => true,
-                    'start_date'  => $date,
-                    'notes'       => 'Imported via CSV',
+                    'is_current' => true,
+                    'start_date' => $date,
+                    'notes' => 'Imported via CSV',
                 ]);
 
                 // Create meters if specified

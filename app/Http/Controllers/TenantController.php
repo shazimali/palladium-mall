@@ -45,11 +45,12 @@ class TenantController extends Controller
     {
         return view('tenants.create', [
             'title' => 'Add New Tenant',
-            'step' => 1,
+            'step'  => 1,
+            'units' => Unit::orderBy('unit_number')->get(),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
         if ($request->has('phone')) {
             $request->merge(['phone' => preg_replace('/[^\d+]/', '', $request->input('phone'))]);
@@ -59,46 +60,253 @@ class TenantController extends Controller
         }
 
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'father_name' => 'nullable|string|max:255',
-            'cnic' => 'required|string|max:15',
-            'date_of_birth' => 'nullable|date',
-            'gender' => 'nullable|in:male,female,other',
-            'marital_status' => 'nullable|in:single,married,divorced,widowed',
-            'phone' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
-            'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^\d+$/'],
-            'email' => 'nullable|email|max:255',
-            'address' => 'required|string|max:500',
-            'occupation' => 'nullable|string|max:255',
-            'monthly_income' => 'nullable|numeric|min:0',
-            'tenancy_type' => 'nullable|in:residential,commercial,student',
-            'adults_count' => 'nullable|integer|min:1',
-            'children_count' => 'nullable|integer|min:0',
-            'passport_photo' => 'nullable|image|max:2048',
+            'name'             => 'required|string|max:255',
+            'father_name'      => 'nullable|string|max:255',
+            'cnic'             => 'required|string|max:15',
+            'gender'           => 'nullable|in:male,female,other',
+            'marital_status'   => 'nullable|in:single,married,divorced,widowed',
+            'phone'            => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
+            'whatsapp_number'  => ['nullable', 'string', 'max:20', 'regex:/^\d+$/'],
+            'email'            => 'nullable|email|max:255',
+            'address'          => 'required|string|max:500',
+            'occupation'       => 'nullable|string|max:255',
+            'monthly_income'   => 'nullable|numeric|min:0',
+            'tenancy_type'     => 'nullable|in:residential,commercial,student',
+            'adults_count'     => 'nullable|integer|min:1',
+            'children_count'   => 'nullable|integer|min:0',
+            'passport_photo'   => 'nullable|image|max:2048',
+            'cnic_front_image' => 'nullable|image|max:2048',
+            'cnic_back_image'  => 'nullable|image|max:2048',
+            'delete_passport_photo'       => 'nullable|boolean',
+            'delete_cnic_front_image'     => 'nullable|boolean',
+            'delete_cnic_back_image'      => 'nullable|boolean',
+            'unit_id'          => 'required|exists:units,id',
+            // Emergency contact (one mandatory)
+            'ec_name'          => 'required|string|max:255',
+            'ec_relation'      => 'required|in:father,mother,brother,sister,wife,husband,son,daughter,other',
+            'ec_phone'         => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
+            // Partners
+            'rented_by_multiple' => 'required|boolean',
+            'partners'         => 'required_if:rented_by_multiple,1|array|min:1',
+            'partners.*.name'  => 'required_with:partners|string|max:255',
+            'partners.*.father_name' => 'nullable|string|max:255',
+            'partners.*.cnic'  => ['required_with:partners', 'string', 'max:15', 'regex:/^\d{5}-\d{7}-\d{1}$/'],
+            'partners.*.gender' => 'nullable|in:male,female,other',
+            'partners.*.marital_status' => 'nullable|in:single,married,divorced,widowed',
+            'partners.*.phone' => ['required_with:partners', 'string', 'max:20'],
+            'partners.*.whatsapp_number' => 'nullable|string|max:20',
+            'partners.*.email' => 'nullable|email|max:255',
+            'partners.*.address' => 'required_with:partners|string|max:500',
+            'partners.*.occupation' => 'nullable|string|max:255',
+            'partners.*.monthly_income' => 'nullable|numeric|min:0',
+            'partners.*.passport_photo' => 'nullable|image|max:2048',
+            'partners.*.cnic_front_image' => 'nullable|image|max:2048',
+            'partners.*.cnic_back_image' => 'nullable|image|max:2048',
+            'partners.*.delete_passport_photo'   => 'nullable|boolean',
+            'partners.*.delete_cnic_front_image' => 'nullable|boolean',
+            'partners.*.delete_cnic_back_image'  => 'nullable|boolean',
         ], [
-            'phone.regex' => 'Phone format must be digits only (e.g. 03001234567)',
+            'unit_id.required'  => 'Please select a flat or shop.',
+            'phone.regex'       => 'Phone format must be digits only (e.g. 03001234567)',
             'whatsapp_number.regex' => 'WhatsApp format must be digits only (e.g. 03001234567)',
+            'ec_phone.regex'    => 'Emergency contact phone must be digits only',
+            'partners.required_if' => 'At least one partner/co-tenant is required when rented by multiple persons.',
+            'partners.min'      => 'At least one partner/co-tenant is required when rented by multiple persons.',
+            'partners.*.name.required_with' => 'Partner name is required.',
+            'partners.*.cnic.required_with' => 'Partner CNIC is required.',
+            'partners.*.cnic.regex' => 'Partner CNIC format must be XXXXX-XXXXXXX-X',
+            'partners.*.phone.required_with' => 'Partner phone is required.',
+            'partners.*.address.required_with' => 'Partner address is required.',
         ]);
 
         $data['status'] = 'draft';
 
-        // Check if tenant with this CNIC already exists to enforce uniqueness
+        // Check if tenant with this CNIC already exists
         $existingTenant = Tenant::where('cnic', $data['cnic'])->first();
 
-        if ($request->hasFile('passport_photo')) {
+        $tenantData = collect($data)->except([
+            'ec_name', 'ec_relation', 'ec_phone', 'partners', 'rented_by_multiple',
+            'passport_photo', 'cnic_front_image', 'cnic_back_image'
+        ])->toArray();
+
+        if ($request->boolean('delete_passport_photo')) {
             if ($existingTenant && $existingTenant->passport_photo) {
                 Storage::disk('public')->delete($existingTenant->passport_photo);
             }
-            $data['passport_photo'] = $request->file('passport_photo')->store('tenants/photos', 'public');
+            $tenantData['passport_photo'] = null;
+        } elseif ($request->hasFile('passport_photo')) {
+            if ($existingTenant && $existingTenant->passport_photo) {
+                Storage::disk('public')->delete($existingTenant->passport_photo);
+            }
+            $tenantData['passport_photo'] = $request->file('passport_photo')->store('tenants/photos', 'public');
+        }
+
+        if ($request->boolean('delete_cnic_front_image')) {
+            if ($existingTenant && $existingTenant->cnic_front_image) {
+                Storage::disk('public')->delete($existingTenant->cnic_front_image);
+            }
+            $tenantData['cnic_front_image'] = null;
+        } elseif ($request->hasFile('cnic_front_image')) {
+            if ($existingTenant && $existingTenant->cnic_front_image) {
+                Storage::disk('public')->delete($existingTenant->cnic_front_image);
+            }
+            $tenantData['cnic_front_image'] = $request->file('cnic_front_image')->store('tenants/documents', 'public');
+        }
+
+        if ($request->boolean('delete_cnic_back_image')) {
+            if ($existingTenant && $existingTenant->cnic_back_image) {
+                Storage::disk('public')->delete($existingTenant->cnic_back_image);
+            }
+            $tenantData['cnic_back_image'] = null;
+        } elseif ($request->hasFile('cnic_back_image')) {
+            if ($existingTenant && $existingTenant->cnic_back_image) {
+                Storage::disk('public')->delete($existingTenant->cnic_back_image);
+            }
+            $tenantData['cnic_back_image'] = $request->file('cnic_back_image')->store('tenants/documents', 'public');
         }
 
         if ($existingTenant) {
-            $existingTenant->update($data);
+            $existingTenant->update($tenantData);
             $tenant = $existingTenant;
             $msg = 'Existing tenant profile loaded and updated. Continue with guarantor details.';
         } else {
-            $tenant = Tenant::create($data);
+            $tenant = Tenant::create($tenantData);
             $msg = 'Step 1 saved. Continue with guarantor details.';
+        }
+
+        // Save emergency contact (replace existing)
+        $tenant->emergencyContacts()->delete();
+        $tenant->emergencyContacts()->create([
+            'name'     => $data['ec_name'],
+            'relation' => $data['ec_relation'],
+            'phone'    => preg_replace('/[^\d+]/', '', $data['ec_phone']),
+            'address'  => null,
+        ]);
+
+        // Keep track of old partners to preserve or delete their files
+        $oldPartners = $tenant->partners()->get();
+        $oldPartnersMap = $oldPartners->keyBy('cnic');
+        $reusedFiles = [];
+
+        // Save partners
+        $newPartnersData = [];
+        if ($request->input('rented_by_multiple') == 1 && $request->has('partners') && is_array($request->partners)) {
+            foreach ($request->partners as $i => $partnerData) {
+                if (!empty($partnerData['name'])) {
+                    $oldPartner = $oldPartnersMap->get($partnerData['cnic']);
+                    
+                    $passportPhotoPath = $oldPartner?->passport_photo;
+                    if (!empty($partnerData['delete_passport_photo'])) {
+                        if ($oldPartner?->passport_photo) {
+                            Storage::disk('public')->delete($oldPartner->passport_photo);
+                        }
+                        $passportPhotoPath = null;
+                    } elseif ($request->hasFile("partners.{$i}.passport_photo")) {
+                        if ($oldPartner?->passport_photo) {
+                            Storage::disk('public')->delete($oldPartner->passport_photo);
+                        }
+                        $passportPhotoPath = $request->file("partners.{$i}.passport_photo")->store('tenants/photos', 'public');
+                    }
+                    if ($passportPhotoPath) {
+                        $reusedFiles[] = $passportPhotoPath;
+                    }
+
+                    $cnicFrontPath = $oldPartner?->cnic_front_image;
+                    if (!empty($partnerData['delete_cnic_front_image'])) {
+                        if ($oldPartner?->cnic_front_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                        }
+                        $cnicFrontPath = null;
+                    } elseif ($request->hasFile("partners.{$i}.cnic_front_image")) {
+                        if ($oldPartner?->cnic_front_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                        }
+                        $cnicFrontPath = $request->file("partners.{$i}.cnic_front_image")->store('tenants/documents', 'public');
+                    }
+                    if ($cnicFrontPath) {
+                        $reusedFiles[] = $cnicFrontPath;
+                    }
+
+                    $cnicBackPath = $oldPartner?->cnic_back_image;
+                    if (!empty($partnerData['delete_cnic_back_image'])) {
+                        if ($oldPartner?->cnic_back_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                        }
+                        $cnicBackPath = null;
+                    } elseif ($request->hasFile("partners.{$i}.cnic_back_image")) {
+                        if ($oldPartner?->cnic_back_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                        }
+                        $cnicBackPath = $request->file("partners.{$i}.cnic_back_image")->store('tenants/documents', 'public');
+                    }
+                    if ($cnicBackPath) {
+                        $reusedFiles[] = $cnicBackPath;
+                    }
+
+                    $newPartnersData[] = [
+                        'name' => $partnerData['name'],
+                        'father_name' => $partnerData['father_name'] ?? null,
+                        'cnic' => $partnerData['cnic'],
+                        'gender' => $partnerData['gender'] ?? null,
+                        'marital_status' => $partnerData['marital_status'] ?? null,
+                        'phone' => preg_replace('/[^\d+]/', '', $partnerData['phone']),
+                        'whatsapp_number' => isset($partnerData['whatsapp_number']) ? preg_replace('/[^\d+]/', '', $partnerData['whatsapp_number']) : null,
+                        'email' => $partnerData['email'] ?? null,
+                        'address' => $partnerData['address'] ?? null,
+                        'occupation' => $partnerData['occupation'] ?? null,
+                        'monthly_income' => $partnerData['monthly_income'] ?? null,
+                        'passport_photo' => $passportPhotoPath,
+                        'cnic_front_image' => $cnicFrontPath,
+                        'cnic_back_image' => $cnicBackPath,
+                    ];
+                }
+            }
+        }
+
+        // Delete any old partner files that are not reused
+        foreach ($oldPartners as $oldP) {
+            if ($oldP->passport_photo && !in_array($oldP->passport_photo, $reusedFiles)) {
+                Storage::disk('public')->delete($oldP->passport_photo);
+            }
+            if ($oldP->cnic_front_image && !in_array($oldP->cnic_front_image, $reusedFiles)) {
+                Storage::disk('public')->delete($oldP->cnic_front_image);
+            }
+            if ($oldP->cnic_back_image && !in_array($oldP->cnic_back_image, $reusedFiles)) {
+                Storage::disk('public')->delete($oldP->cnic_back_image);
+            }
+        }
+
+        $tenant->partners()->delete();
+        foreach ($newPartnersData as $np) {
+            $tenant->partners()->create($np);
+        }
+
+        if ($request->expectsJson()) {
+            $redirectUrl = $request->input('save_only')
+                ? route('tenants.showStep', [$tenant, 1])
+                : route('tenants.showStep', [$tenant, 2]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $request->input('save_only') ? 'Step 1 saved successfully.' : 'Step 1 saved. Proceeding...',
+                'tenant'  => [
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                    'cnic' => $tenant->cnic,
+                    'passport_photo_url' => $tenant->passport_photo_url,
+                    'unit' => $tenant->unit ? [
+                        'unit_number' => $tenant->unit->unit_number,
+                        'floor_name'  => $tenant->unit->floor?->name,
+                        'block_name'  => $tenant->unit->block?->name,
+                    ] : null,
+                ],
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
+
+        if ($request->input('save_only')) {
+            return redirect()->route('tenants.showStep', [$tenant, 1])
+                ->with('success', 'Step 1 saved.');
         }
 
         return redirect()->route('tenants.showStep', [$tenant, 2])
@@ -114,14 +322,33 @@ class TenantController extends Controller
         $data = ['title' => 'Add Tenant — Step ' . $step, 'tenant' => $tenant, 'step' => $step];
 
         return match ($step) {
-            1 => view('tenants.wizard.step1', array_merge($data, [])),
+            1 => view('tenants.wizard.step1', array_merge($data, [
+                'units' => Unit::orderBy('unit_number')->get(),
+                'partners' => $tenant->partners()->get()->map(fn($p) => [
+                    'id'                 => $p->id,
+                    'name'               => $p->name,
+                    'father_name'        => $p->father_name,
+                    'cnic'               => $p->cnic,
+                    'gender'             => $p->gender,
+                    'marital_status'     => $p->marital_status,
+                    'phone'              => $p->phone,
+                    'whatsapp_number'    => $p->whatsapp_number,
+                    'email'              => $p->email,
+                    'address'            => $p->address,
+                    'occupation'         => $p->occupation,
+                    'monthly_income'     => $p->monthly_income,
+                    'passport_photo_url' => $p->passport_photo_url,
+                    'cnic_front_url'     => $p->cnic_front_url,
+                    'cnic_back_url'      => $p->cnic_back_url,
+                ]),
+            ])),
             2 => view('tenants.wizard.step2', array_merge($data, [
-                'guarantor' => $tenant->guarantor,
+                'guarantors'        => $tenant->guarantors()->get(),
                 'emergencyContacts' => $tenant->emergencyContacts,
             ])),
             3 => view('tenants.wizard.step3', array_merge($data, [
                 'agreement' => $tenant->agreements()->latest()->first(),
-                'units' => Unit::where('status', 'vacant')
+                'units'     => Unit::where('status', 'vacant')
                     ->orWhere('id', $tenant->unit_id)
                     ->orderBy('unit_number')
                     ->get(),
@@ -134,11 +361,13 @@ class TenantController extends Controller
                 'agreement' => $tenant->agreements()->latest()->first(),
             ])),
             6 => view('tenants.wizard.step6', array_merge($data, [
-                'guarantor' => $tenant->guarantor,
+                'partners'         => $tenant->partners()->get(),
+                'guarantors'       => $tenant->guarantors()->get(),
+                'guarantor'        => $tenant->guarantors()->first(),
                 'emergencyContacts' => $tenant->emergencyContacts,
-                'agreement' => $tenant->agreements()->latest()->first(),
-                'docChecklist' => $tenant->documentChecklist,
-                'moveInChecklist' => $tenant->moveInChecklists()->where('type', 'move_in')->first(),
+                'agreement'        => $tenant->agreements()->latest()->first(),
+                'docChecklist'     => $tenant->documentChecklist,
+                'moveInChecklist'  => $tenant->moveInChecklists()->where('type', 'move_in')->first(),
             ])),
             default => redirect()->route('tenants.showStep', [$tenant, 1]),
         };
@@ -161,62 +390,162 @@ class TenantController extends Controller
 
     private function saveStep2(Request $request, Tenant $tenant): RedirectResponse
     {
-        if ($request->has('guarantor_phone')) {
-            $request->merge(['guarantor_phone' => preg_replace('/[^\d+]/', '', $request->input('guarantor_phone'))]);
+        $data = $request->validate([
+            // Multiple guarantors array
+            'guarantors'                => 'required|array|min:1',
+            'guarantors.*.name'         => 'required|string|max:255',
+            'guarantors.*.cnic'         => ['required', 'string', 'max:20', 'regex:/^\d{5}-\d{7}-\d{1}$/'],
+            'guarantors.*.relation'     => 'required|in:dealer,friend,relative,employer,other',
+            'guarantors.*.phone'        => ['required', 'string', 'max:20'],
+            'guarantors.*.address'      => 'required|string|max:500',
+            'guarantors.*.occupation'   => 'nullable|string|max:255',
+            'guarantors.*.shop_name'    => 'nullable|string|max:255',
+            'guarantors.*.cnic_front'    => 'nullable|image|max:2048',
+            'guarantors.*.cnic_back'     => 'nullable|image|max:2048',
+            'guarantors.*.photo'         => 'nullable|image|max:2048',
+            'guarantors.*.visiting_card' => 'nullable|image|max:2048',
+            'guarantors.*.delete_cnic_front'    => 'nullable|boolean',
+            'guarantors.*.delete_cnic_back'     => 'nullable|boolean',
+            'guarantors.*.delete_photo'         => 'nullable|boolean',
+            'guarantors.*.delete_visiting_card' => 'nullable|boolean',
+        ]);
+
+        // Normalize phones
+        foreach ($data['guarantors'] as $i => $g) {
+            $data['guarantors'][$i]['phone'] = preg_replace('/[^\d+]/', '', $g['phone']);
         }
-        if ($request->has('contacts')) {
-            $contacts = $request->input('contacts');
-            if (is_array($contacts)) {
-                foreach ($contacts as $index => $contact) {
-                    if (isset($contact['phone'])) {
-                        $contacts[$index]['phone'] = preg_replace('/[^\d+]/', '', $contact['phone']);
+
+        // Keep track of old guarantors to preserve or delete their files
+        $oldGuarantors = $tenant->guarantors()->get();
+        $oldGuarantorsMap = $oldGuarantors->keyBy('cnic');
+        $reusedFiles = [];
+
+        // Save guarantors
+        $newGuarantorsData = [];
+        if ($request->has('guarantors') && is_array($request->guarantors)) {
+            foreach ($request->guarantors as $i => $gData) {
+                $oldG = $oldGuarantorsMap->get($gData['cnic']);
+                
+                // cnic_front
+                $cnicFrontPath = $oldG?->cnic_front;
+                if (!empty($gData['delete_cnic_front'])) {
+                    if ($oldG?->cnic_front) {
+                        Storage::disk('public')->delete($oldG->cnic_front);
                     }
+                    $cnicFrontPath = null;
+                } elseif ($request->hasFile("guarantors.{$i}.cnic_front")) {
+                    if ($oldG?->cnic_front) {
+                        Storage::disk('public')->delete($oldG->cnic_front);
+                    }
+                    $cnicFrontPath = $request->file("guarantors.{$i}.cnic_front")->store('tenants/guarantors', 'public');
                 }
-                $request->merge(['contacts' => $contacts]);
+                if ($cnicFrontPath) {
+                    $reusedFiles[] = $cnicFrontPath;
+                }
+
+                // cnic_back
+                $cnicBackPath = $oldG?->cnic_back;
+                if (!empty($gData['delete_cnic_back'])) {
+                    if ($oldG?->cnic_back) {
+                        Storage::disk('public')->delete($oldG->cnic_back);
+                    }
+                    $cnicBackPath = null;
+                } elseif ($request->hasFile("guarantors.{$i}.cnic_back")) {
+                    if ($oldG?->cnic_back) {
+                        Storage::disk('public')->delete($oldG->cnic_back);
+                    }
+                    $cnicBackPath = $request->file("guarantors.{$i}.cnic_back")->store('tenants/guarantors', 'public');
+                }
+                if ($cnicBackPath) {
+                    $reusedFiles[] = $cnicBackPath;
+                }
+
+                // photo
+                $photoPath = $oldG?->photo;
+                if (!empty($gData['delete_photo'])) {
+                    if ($oldG?->photo) {
+                        Storage::disk('public')->delete($oldG->photo);
+                    }
+                    $photoPath = null;
+                } elseif ($request->hasFile("guarantors.{$i}.photo")) {
+                    if ($oldG?->photo) {
+                        Storage::disk('public')->delete($oldG->photo);
+                    }
+                    $photoPath = $request->file("guarantors.{$i}.photo")->store('tenants/guarantors', 'public');
+                }
+                if ($photoPath) {
+                    $reusedFiles[] = $photoPath;
+                }
+
+                // visiting_card
+                $visitingCardPath = $oldG?->visiting_card;
+                if (!empty($gData['delete_visiting_card'])) {
+                    if ($oldG?->visiting_card) {
+                        Storage::disk('public')->delete($oldG->visiting_card);
+                    }
+                    $visitingCardPath = null;
+                } elseif ($request->hasFile("guarantors.{$i}.visiting_card")) {
+                    if ($oldG?->visiting_card) {
+                        Storage::disk('public')->delete($oldG->visiting_card);
+                    }
+                    $visitingCardPath = $request->file("guarantors.{$i}.visiting_card")->store('tenants/guarantors', 'public');
+                }
+                if ($visitingCardPath) {
+                    $reusedFiles[] = $visitingCardPath;
+                }
+
+                // Fallbacks for older columns
+                $visitingCardPhotoPath = $oldG?->visiting_card_photo ?: $visitingCardPath;
+                $cnicImagePath = $oldG?->cnic_image ?: $cnicFrontPath;
+
+                $newGuarantorsData[] = [
+                    'name' => $gData['name'],
+                    'cnic' => $gData['cnic'],
+                    'relation' => $gData['relation'],
+                    'phone' => preg_replace('/[^\d+]/', '', $gData['phone']),
+                    'address' => $gData['address'],
+                    'occupation' => $gData['occupation'] ?? null,
+                    'shop_name' => $gData['shop_name'] ?? null,
+                    'cnic_front' => $cnicFrontPath,
+                    'cnic_back' => $cnicBackPath,
+                    'photo' => $photoPath,
+                    'visiting_card' => $visitingCardPath,
+                    'visiting_card_photo' => $visitingCardPhotoPath,
+                    'cnic_image' => $cnicImagePath,
+                ];
             }
         }
 
-        $data = $request->validate([
-            // Guarantor
-            'guarantor_name' => 'required|string|max:255',
-            'guarantor_cnic' => [
-                'required',
-                'string',
-                'max:20',
-                'regex:/^\d{5}-\d{7}-\d{1}$/'
-            ],
-            'guarantor_relation' => 'required|in:dealer,friend,relative,employer,other',
-            'guarantor_phone' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
-            'guarantor_address' => 'required|string|max:500',
-            'guarantor_occupation' => 'nullable|string|max:255',
-            // Emergency contacts (min 2)
-            'contacts' => 'required|array|min:2',
-            'contacts.*.name' => 'required|string|max:255',
-            'contacts.*.relation' => 'required|in:father,mother,brother,sister,wife,husband,son,daughter,other',
-            'contacts.*.phone' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
-            'contacts.*.address' => 'nullable|string|max:500',
-        ], [
-            'guarantor_phone.regex' => 'Guarantor phone must be digits only (e.g. 03001234567)',
-            'contacts.*.phone.regex' => 'Emergency contact phone must be digits only (e.g. 03001234567)',
-        ]);
+        // Delete any old guarantor files that are not reused
+        foreach ($oldGuarantors as $oldG) {
+            if ($oldG->cnic_front && !in_array($oldG->cnic_front, $reusedFiles)) {
+                Storage::disk('public')->delete($oldG->cnic_front);
+            }
+            if ($oldG->cnic_back && !in_array($oldG->cnic_back, $reusedFiles)) {
+                Storage::disk('public')->delete($oldG->cnic_back);
+            }
+            if ($oldG->photo && !in_array($oldG->photo, $reusedFiles)) {
+                Storage::disk('public')->delete($oldG->photo);
+            }
+            if ($oldG->visiting_card && !in_array($oldG->visiting_card, $reusedFiles)) {
+                Storage::disk('public')->delete($oldG->visiting_card);
+            }
+            if ($oldG->visiting_card_photo && !in_array($oldG->visiting_card_photo, $reusedFiles)) {
+                Storage::disk('public')->delete($oldG->visiting_card_photo);
+            }
+            if ($oldG->cnic_image && !in_array($oldG->cnic_image, $reusedFiles)) {
+                Storage::disk('public')->delete($oldG->cnic_image);
+            }
+        }
 
-        // Upsert guarantor
-        $tenant->guarantor()->updateOrCreate(
-            ['tenant_id' => $tenant->id],
-            [
-                'name' => $data['guarantor_name'],
-                'cnic' => $data['guarantor_cnic'],
-                'relation' => $data['guarantor_relation'],
-                'phone' => $data['guarantor_phone'],
-                'address' => $data['guarantor_address'],
-                'occupation' => $data['guarantor_occupation'] ?? null,
-            ]
-        );
+        $tenant->guarantors()->delete();
+        foreach ($newGuarantorsData as $ng) {
+            $tenant->guarantors()->create($ng);
+        }
 
-        // Replace emergency contacts
-        $tenant->emergencyContacts()->delete();
-        foreach ($data['contacts'] as $contact) {
-            $tenant->emergencyContacts()->create($contact);
+        if ($request->input('save_only')) {
+            return redirect()->route('tenants.showStep', [$tenant, 2])
+                ->with('success', 'Step 2 saved.');
         }
 
         return redirect()->route('tenants.showStep', [$tenant, 3])
@@ -230,25 +559,52 @@ class TenantController extends Controller
     private function saveStep3(Request $request, Tenant $tenant): RedirectResponse
     {
         $data = $request->validate([
-            'unit_id' => 'required|exists:units,id',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'monthly_rent' => 'required|numeric|min:0',
-            'maintenance_charge' => 'nullable|numeric|min:0',
-            'security_deposit' => 'required|numeric|min:0',
-            'payment_due_day' => 'required|integer|min:1|max:31',
-            'grace_period_days' => 'nullable|integer|min:0',
+            'unit_id'              => 'nullable|exists:units,id',
+            'start_date'           => 'required|date',
+            'end_date'             => 'required|date|after:start_date',
+            'monthly_rent'         => 'required|numeric|min:0',
+            'maintenance_charge'   => 'nullable|numeric|min:0',
+            'security_deposit'     => 'required|numeric|min:0',
+            'payment_due_day'      => 'required|integer|min:1|max:31',
+            'grace_period_days'    => 'nullable|integer|min:0',
             'notice_period_months' => 'nullable|integer|min:0',
-            'fine_per_day' => 'nullable|numeric|min:0',
-            'terms' => 'nullable|string',
+            'fine_per_day'         => 'required|numeric|min:0',
+            'terms'                => 'nullable|string',
+            'govt_document'        => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
         ]);
 
-        // Mark unit as rented
-        if ($tenant->unit_id && $tenant->unit_id !== (int) $data['unit_id']) {
-            Unit::find($tenant->unit_id)?->update(['status' => 'vacant']);
+        // Handle govt_document upload
+        if ($request->hasFile('govt_document')) {
+            $existing = $tenant->agreements()->latest()->first();
+            if ($existing?->govt_document) {
+                Storage::disk('public')->delete($existing->govt_document);
+            }
+            $data['govt_document'] = $request->file('govt_document')->store('tenants/documents', 'public');
         }
-        Unit::find($data['unit_id'])->update(['status' => 'rented']);
-        $tenant->update(['unit_id' => $data['unit_id']]);
+
+        // Use unit from tenant (set in Step 1), or override if provided
+        $unitId = $data['unit_id'] ?? $tenant->unit_id;
+        unset($data['unit_id']);
+
+        if ($unitId) {
+            // Mark previous unit as vacant if changed
+            if ($tenant->unit_id && $tenant->unit_id !== (int) $unitId) {
+                Unit::find($tenant->unit_id)?->update(['status' => 'vacant']);
+            }
+            
+            // Flat status should only be 'rented' if govt_document is uploaded (either in this request or previously)
+            $latestAgreement = $tenant->agreements()->latest()->first();
+            $hasGovtDocument = isset($data['govt_document']) || ($latestAgreement && !empty($latestAgreement->govt_document));
+
+            if ($hasGovtDocument) {
+                Unit::find($unitId)?->update(['status' => 'rented']);
+            } else {
+                Unit::find($unitId)?->update(['status' => 'vacant']);
+            }
+            
+            $tenant->update(['unit_id' => $unitId]);
+            $data['unit_id'] = $unitId;
+        }
 
         // Expire any previous active agreements
         $tenant->agreements()->where('status', 'active')->update(['status' => 'expired']);
@@ -258,6 +614,11 @@ class TenantController extends Controller
             ['tenant_id' => $tenant->id, 'status' => 'draft'],
             array_merge($data, ['status' => 'draft'])
         );
+
+        if ($request->input('save_only')) {
+            return redirect()->route('tenants.showStep', [$tenant, 3])
+                ->with('success', 'Step 3 saved.');
+        }
 
         return redirect()->route('tenants.showStep', [$tenant, 4])
             ->with('success', 'Step 3 saved.');
@@ -377,6 +738,11 @@ class TenantController extends Controller
         $checklist->tenant_id = $tenant->id;
         $checklist->save();
 
+        if ($request->input('save_only')) {
+            return redirect()->route('tenants.showStep', [$tenant, 4])
+                ->with('success', 'Step 4 saved.');
+        }
+
         return redirect()->route('tenants.showStep', [$tenant, 5])
             ->with('success', 'Step 4 saved.');
     }
@@ -442,6 +808,11 @@ class TenantController extends Controller
                 $data
             );
 
+        if ($request->input('save_only')) {
+            return redirect()->route('tenants.showStep', [$tenant, 5])
+                ->with('success', 'Step 5 saved.');
+        }
+
         return redirect()->route('tenants.showStep', [$tenant, 6])
             ->with('success', 'Step 5 saved.');
     }
@@ -468,7 +839,7 @@ class TenantController extends Controller
 
     public function printStep(Tenant $tenant, int $step)
     {
-        $tenant->load(['guarantor', 'emergencyContacts', 'activeAgreement', 'unit']);
+        $tenant->load(['guarantors', 'emergencyContacts', 'activeAgreement', 'unit']);
         $agreement = $tenant->agreements()->latest()->first();
 
         if ($step === 1) {
@@ -476,7 +847,8 @@ class TenantController extends Controller
         } elseif ($step === 2) {
             return view('tenants.print.step2', [
                 'tenant' => $tenant,
-                'guarantor' => $tenant->guarantor,
+                'guarantors' => $tenant->guarantors,
+                'guarantor' => $tenant->guarantors->first(),
                 'emergencyContacts' => $tenant->emergencyContacts,
             ]);
         } elseif ($step === 3) {
@@ -484,11 +856,22 @@ class TenantController extends Controller
                 'tenant' => $tenant,
                 'agreement' => $agreement,
             ]);
+        } elseif ($step === 4) {
+            return view('tenants.print.step4', [
+                'tenant' => $tenant,
+                'checklist' => $tenant->documentChecklist,
+            ]);
+        } elseif ($step === 5) {
+            $checklist = $tenant->moveInChecklists()->where('type', 'move_in')->first();
+            return view('tenants.print.step5', [
+                'tenant' => $tenant,
+                'checklist' => $checklist,
+                'agreement' => $agreement,
+            ]);
         }
 
         abort(404);
     }
-
     // -----------------------------------------------------------------------
     // Show — Tenant Profile
     // -----------------------------------------------------------------------
@@ -497,7 +880,8 @@ class TenantController extends Controller
     {
         $tenant->load([
             'unit',
-            'guarantor',
+            'guarantors',
+            'partners',
             'emergencyContacts',
             'activeAgreement',
             'agreements',
@@ -520,7 +904,7 @@ class TenantController extends Controller
         return redirect()->route('tenants.showStep', [$tenant, 1]);
     }
 
-    public function update(Request $request, Tenant $tenant): RedirectResponse
+    public function update(Request $request, Tenant $tenant): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
         if ($request->has('phone')) {
             $request->merge(['phone' => preg_replace('/[^\d+]/', '', $request->input('phone'))]);
@@ -529,37 +913,243 @@ class TenantController extends Controller
             $request->merge(['whatsapp_number' => preg_replace('/[^\d+]/', '', $request->input('whatsapp_number'))]);
         }
 
-        // Step 1 edit update
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'father_name' => 'nullable|string|max:255',
-            'cnic' => 'required|string|max:15',
-            'date_of_birth' => 'nullable|date',
-            'gender' => 'nullable|in:male,female,other',
-            'marital_status' => 'nullable|in:single,married,divorced,widowed',
-            'phone' => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
-            'whatsapp_number' => ['nullable', 'string', 'max:20', 'regex:/^\d+$/'],
-            'email' => 'nullable|email|max:255',
-            'address' => 'required|string|max:500',
-            'occupation' => 'nullable|string|max:255',
-            'monthly_income' => 'nullable|numeric|min:0',
-            'tenancy_type' => 'nullable|in:residential,commercial,student',
-            'adults_count' => 'nullable|integer|min:1',
-            'children_count' => 'nullable|integer|min:0',
-            'passport_photo' => 'nullable|image|max:2048',
+            'name'             => 'required|string|max:255',
+            'father_name'      => 'nullable|string|max:255',
+            'cnic'             => 'required|string|max:15',
+            'gender'           => 'nullable|in:male,female,other',
+            'marital_status'   => 'nullable|in:single,married,divorced,widowed',
+            'phone'            => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
+            'whatsapp_number'  => ['nullable', 'string', 'max:20', 'regex:/^\d+$/'],
+            'email'            => 'nullable|email|max:255',
+            'address'          => 'required|string|max:500',
+            'occupation'       => 'nullable|string|max:255',
+            'monthly_income'   => 'nullable|numeric|min:0',
+            'tenancy_type'     => 'nullable|in:residential,commercial,student',
+            'adults_count'     => 'nullable|integer|min:1',
+            'children_count'   => 'nullable|integer|min:0',
+            'passport_photo'   => 'nullable|image|max:2048',
+            'cnic_front_image' => 'nullable|image|max:2048',
+            'cnic_back_image'  => 'nullable|image|max:2048',
+            'delete_passport_photo'       => 'nullable|boolean',
+            'delete_cnic_front_image'     => 'nullable|boolean',
+            'delete_cnic_back_image'      => 'nullable|boolean',
+            'unit_id'          => 'required|exists:units,id',
+            // Emergency contact (one mandatory)
+            'ec_name'          => 'required|string|max:255',
+            'ec_relation'      => 'required|in:father,mother,brother,sister,wife,husband,son,daughter,other',
+            'ec_phone'         => ['required', 'string', 'max:20', 'regex:/^\d+$/'],
+            // Partners
+            'rented_by_multiple' => 'required|boolean',
+            'partners'         => 'required_if:rented_by_multiple,1|array|min:1',
+            'partners.*.name'  => 'required_with:partners|string|max:255',
+            'partners.*.father_name' => 'nullable|string|max:255',
+            'partners.*.cnic'  => ['required_with:partners', 'string', 'max:15', 'regex:/^\d{5}-\d{7}-\d{1}$/'],
+            'partners.*.gender' => 'nullable|in:male,female,other',
+            'partners.*.marital_status' => 'nullable|in:single,married,divorced,widowed',
+            'partners.*.phone' => ['required_with:partners', 'string', 'max:20'],
+            'partners.*.whatsapp_number' => 'nullable|string|max:20',
+            'partners.*.email' => 'nullable|email|max:255',
+            'partners.*.address' => 'required_with:partners|string|max:500',
+            'partners.*.occupation' => 'nullable|string|max:255',
+            'partners.*.monthly_income' => 'nullable|numeric|min:0',
+            'partners.*.passport_photo' => 'nullable|image|max:2048',
+            'partners.*.cnic_front_image' => 'nullable|image|max:2048',
+            'partners.*.cnic_back_image' => 'nullable|image|max:2048',
+            'partners.*.delete_passport_photo'   => 'nullable|boolean',
+            'partners.*.delete_cnic_front_image' => 'nullable|boolean',
+            'partners.*.delete_cnic_back_image'  => 'nullable|boolean',
         ], [
-            'phone.regex' => 'Phone format must be digits only (e.g. 03001234567)',
+            'unit_id.required'  => 'Please select a flat or shop.',
+            'phone.regex'       => 'Phone format must be digits only (e.g. 03001234567)',
             'whatsapp_number.regex' => 'WhatsApp format must be digits only (e.g. 03001234567)',
+            'ec_phone.regex'    => 'Emergency contact phone must be digits only',
+            'partners.required_if' => 'At least one partner/co-tenant is required when rented by multiple persons.',
+            'partners.min'      => 'At least one partner/co-tenant is required when rented by multiple persons.',
+            'partners.*.name.required_with' => 'Partner name is required.',
+            'partners.*.cnic.required_with' => 'Partner CNIC is required.',
+            'partners.*.cnic.regex' => 'Partner CNIC format must be XXXXX-XXXXXXX-X',
+            'partners.*.phone.required_with' => 'Partner phone is required.',
+            'partners.*.address.required_with' => 'Partner address is required.',
         ]);
 
-        if ($request->hasFile('passport_photo')) {
+        $tenantData = collect($data)->except([
+            'ec_name', 'ec_relation', 'ec_phone', 'partners', 'rented_by_multiple',
+            'passport_photo', 'cnic_front_image', 'cnic_back_image'
+        ])->toArray();
+
+        if ($request->boolean('delete_passport_photo')) {
             if ($tenant->passport_photo) {
                 Storage::disk('public')->delete($tenant->passport_photo);
             }
-            $data['passport_photo'] = $request->file('passport_photo')->store('tenants/photos', 'public');
+            $tenantData['passport_photo'] = null;
+        } elseif ($request->hasFile('passport_photo')) {
+            if ($tenant->passport_photo) {
+                Storage::disk('public')->delete($tenant->passport_photo);
+            }
+            $tenantData['passport_photo'] = $request->file('passport_photo')->store('tenants/photos', 'public');
         }
 
-        $tenant->update($data);
+        if ($request->boolean('delete_cnic_front_image')) {
+            if ($tenant->cnic_front_image) {
+                Storage::disk('public')->delete($tenant->cnic_front_image);
+            }
+            $tenantData['cnic_front_image'] = null;
+        } elseif ($request->hasFile('cnic_front_image')) {
+            if ($tenant->cnic_front_image) {
+                Storage::disk('public')->delete($tenant->cnic_front_image);
+            }
+            $tenantData['cnic_front_image'] = $request->file('cnic_front_image')->store('tenants/documents', 'public');
+        }
+
+        if ($request->boolean('delete_cnic_back_image')) {
+            if ($tenant->cnic_back_image) {
+                Storage::disk('public')->delete($tenant->cnic_back_image);
+            }
+            $tenantData['cnic_back_image'] = null;
+        } elseif ($request->hasFile('cnic_back_image')) {
+            if ($tenant->cnic_back_image) {
+                Storage::disk('public')->delete($tenant->cnic_back_image);
+            }
+            $tenantData['cnic_back_image'] = $request->file('cnic_back_image')->store('tenants/documents', 'public');
+        }
+
+        $tenant->update($tenantData);
+
+        // Save emergency contact (replace first one)
+        $tenant->emergencyContacts()->delete();
+        $tenant->emergencyContacts()->create([
+            'name'     => $data['ec_name'],
+            'relation' => $data['ec_relation'],
+            'phone'    => preg_replace('/[^\d+]/', '', $data['ec_phone']),
+            'address'  => null,
+        ]);
+
+        // Keep track of old partners to preserve or delete their files
+        $oldPartners = $tenant->partners()->get();
+        $oldPartnersMap = $oldPartners->keyBy('cnic');
+        $reusedFiles = [];
+
+        // Save partners
+        $newPartnersData = [];
+        if ($request->input('rented_by_multiple') == 1 && $request->has('partners') && is_array($request->partners)) {
+            foreach ($request->partners as $i => $partnerData) {
+                if (!empty($partnerData['name'])) {
+                    $oldPartner = $oldPartnersMap->get($partnerData['cnic']);
+                    
+                    $passportPhotoPath = $oldPartner?->passport_photo;
+                    if (!empty($partnerData['delete_passport_photo'])) {
+                        if ($oldPartner?->passport_photo) {
+                            Storage::disk('public')->delete($oldPartner->passport_photo);
+                        }
+                        $passportPhotoPath = null;
+                    } elseif ($request->hasFile("partners.{$i}.passport_photo")) {
+                        if ($oldPartner?->passport_photo) {
+                            Storage::disk('public')->delete($oldPartner->passport_photo);
+                        }
+                        $passportPhotoPath = $request->file("partners.{$i}.passport_photo")->store('tenants/photos', 'public');
+                    }
+                    if ($passportPhotoPath) {
+                        $reusedFiles[] = $passportPhotoPath;
+                    }
+
+                    $cnicFrontPath = $oldPartner?->cnic_front_image;
+                    if (!empty($partnerData['delete_cnic_front_image'])) {
+                        if ($oldPartner?->cnic_front_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                        }
+                        $cnicFrontPath = null;
+                    } elseif ($request->hasFile("partners.{$i}.cnic_front_image")) {
+                        if ($oldPartner?->cnic_front_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                        }
+                        $cnicFrontPath = $request->file("partners.{$i}.cnic_front_image")->store('tenants/documents', 'public');
+                    }
+                    if ($cnicFrontPath) {
+                        $reusedFiles[] = $cnicFrontPath;
+                    }
+
+                    $cnicBackPath = $oldPartner?->cnic_back_image;
+                    if (!empty($partnerData['delete_cnic_back_image'])) {
+                        if ($oldPartner?->cnic_back_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                        }
+                        $cnicBackPath = null;
+                    } elseif ($request->hasFile("partners.{$i}.cnic_back_image")) {
+                        if ($oldPartner?->cnic_back_image) {
+                            Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                        }
+                        $cnicBackPath = $request->file("partners.{$i}.cnic_back_image")->store('tenants/documents', 'public');
+                    }
+                    if ($cnicBackPath) {
+                        $reusedFiles[] = $cnicBackPath;
+                    }
+
+                    $newPartnersData[] = [
+                        'name' => $partnerData['name'],
+                        'father_name' => $partnerData['father_name'] ?? null,
+                        'cnic' => $partnerData['cnic'],
+                        'gender' => $partnerData['gender'] ?? null,
+                        'marital_status' => $partnerData['marital_status'] ?? null,
+                        'phone' => preg_replace('/[^\d+]/', '', $partnerData['phone']),
+                        'whatsapp_number' => isset($partnerData['whatsapp_number']) ? preg_replace('/[^\d+]/', '', $partnerData['whatsapp_number']) : null,
+                        'email' => $partnerData['email'] ?? null,
+                        'address' => $partnerData['address'] ?? null,
+                        'occupation' => $partnerData['occupation'] ?? null,
+                        'monthly_income' => $partnerData['monthly_income'] ?? null,
+                        'passport_photo' => $passportPhotoPath,
+                        'cnic_front_image' => $cnicFrontPath,
+                        'cnic_back_image' => $cnicBackPath,
+                    ];
+                }
+            }
+        }
+
+        // Delete any old partner files that are not reused
+        foreach ($oldPartners as $oldP) {
+            if ($oldP->passport_photo && !in_array($oldP->passport_photo, $reusedFiles)) {
+                Storage::disk('public')->delete($oldP->passport_photo);
+            }
+            if ($oldP->cnic_front_image && !in_array($oldP->cnic_front_image, $reusedFiles)) {
+                Storage::disk('public')->delete($oldP->cnic_front_image);
+            }
+            if ($oldP->cnic_back_image && !in_array($oldP->cnic_back_image, $reusedFiles)) {
+                Storage::disk('public')->delete($oldP->cnic_back_image);
+            }
+        }
+
+        $tenant->partners()->delete();
+        foreach ($newPartnersData as $np) {
+            $tenant->partners()->create($np);
+        }
+
+        if ($request->expectsJson()) {
+            $redirectUrl = $request->input('save_only')
+                ? route('tenants.showStep', [$tenant, 1])
+                : route('tenants.showStep', [$tenant, 2]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $request->input('save_only') ? 'Step 1 saved successfully.' : 'Step 1 saved. Proceeding...',
+                'tenant'  => [
+                    'id' => $tenant->id,
+                    'name' => $tenant->name,
+                    'cnic' => $tenant->cnic,
+                    'passport_photo_url' => $tenant->passport_photo_url,
+                    'unit' => $tenant->unit ? [
+                        'unit_number' => $tenant->unit->unit_number,
+                        'floor_name'  => $tenant->unit->floor?->name,
+                        'block_name'  => $tenant->unit->block?->name,
+                    ] : null,
+                ],
+                'redirect_url' => $redirectUrl,
+            ]);
+        }
+
+        if ($request->input('save_only')) {
+            return redirect()->route('tenants.showStep', [$tenant, 1])
+                ->with('success', 'Personal details saved.');
+        }
 
         return redirect()->route('tenants.showStep', [$tenant, 2])
             ->with('success', 'Personal details updated.');

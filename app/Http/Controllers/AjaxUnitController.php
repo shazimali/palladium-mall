@@ -17,7 +17,7 @@ class AjaxUnitController extends Controller
     // ──────────────────────────────────────────────────────────────
     // Shared validation rules for ownership fields
     // ──────────────────────────────────────────────────────────────
-    private function ownershipRules($ownershipId = null): array
+    private function ownershipRules(): array
     {
         return [
             'nominee_name'          => ['nullable', 'string', 'max:255'],
@@ -26,14 +26,6 @@ class AjaxUnitController extends Controller
             'total_amount'          => ['nullable', 'numeric', 'min:0'],
             'received_amount'       => ['nullable', 'numeric', 'min:0'],
             'received_from'         => ['nullable', 'string', 'max:255'],
-            'file_no'               => [
-                'nullable',
-                'string',
-                'max:100',
-                $ownershipId
-                    ? Rule::unique('unit_ownerships', 'file_no')->ignore($ownershipId)->whereNull('deleted_at')
-                    : Rule::unique('unit_ownerships', 'file_no')->whereNull('deleted_at')
-            ],
             'approved_by'           => ['nullable', 'string', 'max:255'],
             'received_by'           => ['nullable', 'string', 'max:255'],
             'approved_date'         => ['nullable', 'date'],
@@ -77,6 +69,7 @@ class AjaxUnitController extends Controller
             'block_id'    => ['required', 'exists:blocks,id'],
             'area_id'     => ['nullable', 'exists:areas,id'],
             'area_sqft'   => ['nullable', 'numeric', 'min:0'],
+            'file_no'     => ['nullable', 'string', 'max:100', Rule::unique('units', 'file_no')],
             'date'        => ['nullable', 'date'],
         ], $this->ownershipRules()));
 
@@ -88,6 +81,7 @@ class AjaxUnitController extends Controller
             'block_id'    => $data['block_id'] ?? null,
             'area_id'     => $data['area_id'] ?? null,
             'area_sqft'   => $data['area_sqft'] ?? null,
+            'file_no'     => $data['file_no'] ?? null,
             'date'        => $data['date'] ?? now()->toDateString(),
             'status'      => 'vacant',
             'landlord_id' => $data['landlord_id'],
@@ -105,7 +99,6 @@ class AjaxUnitController extends Controller
             'total_amount'          => $data['total_amount'] ?? null,
             'received_amount'       => $data['received_amount'] ?? null,
             'received_from'         => $data['received_from'] ?? null,
-            'file_no'               => $data['file_no'] ?? null,
             'approved_by'           => $data['approved_by'] ?? null,
             'received_by'           => $data['received_by'] ?? null,
             'approved_date'         => $data['approved_date'] ?? null,
@@ -140,8 +133,9 @@ class AjaxUnitController extends Controller
             'block_id'    => ['required', 'exists:blocks,id'],
             'area_id'     => ['nullable', 'exists:areas,id'],
             'area_sqft'   => ['nullable', 'numeric', 'min:0'],
+            'file_no'     => ['nullable', 'string', 'max:100', Rule::unique('units', 'file_no')->ignore($unit->id)],
             'date'        => ['nullable', 'date'],
-        ], $this->ownershipRules($ownershipId)));
+        ], $this->ownershipRules()));
 
         // Update structural unit fields
         $unit->update([
@@ -151,6 +145,7 @@ class AjaxUnitController extends Controller
             'block_id'    => $data['block_id'] ?? null,
             'area_id'     => $data['area_id'] ?? null,
             'area_sqft'   => $data['area_sqft'] ?? null,
+            'file_no'     => $data['file_no'] ?? null,
             'date'        => $data['date'] ?? $unit->date,
         ]);
 
@@ -165,7 +160,6 @@ class AjaxUnitController extends Controller
                 'total_amount'          => $data['total_amount'] ?? null,
                 'received_amount'       => $data['received_amount'] ?? null,
                 'received_from'         => $data['received_from'] ?? null,
-                'file_no'               => $data['file_no'] ?? null,
                 'approved_by'           => $data['approved_by'] ?? null,
                 'received_by'           => $data['received_by'] ?? null,
                 'approved_date'         => $data['approved_date'] ?? null,
@@ -275,7 +269,7 @@ class AjaxUnitController extends Controller
             'received_amount'       => $o?->received_amount,
             'credit_amount'         => $o?->credit_amount,
             'received_from'         => $o?->received_from,
-            'file_no'               => $o?->file_no,
+            'file_no'               => $unit->file_no,
             'approved_by'           => $o?->approved_by,
             'received_by'           => $o?->received_by,
             'approved_date'         => $o?->approved_date?->toDateString(),

@@ -26,6 +26,107 @@
         </div>
     </div>
 
+    {{-- Payment History & Clearance Form --}}
+    <div class="mb-6 rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 overflow-hidden">
+        <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white/90">Ledger & Payment History</h2>
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Review outstanding payments for the current active agreement.</p>
+            </div>
+            <div>
+                <a href="{{ route('tenants.clearanceForm', $tenant) }}" target="_blank"
+                   class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 transition-colors">
+                    <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    Print Clearance Form
+                </a>
+            </div>
+        </div>
+
+        <div class="px-6 py-5 bg-gray-50 dark:bg-white/[0.01] border-b border-gray-100 dark:border-gray-800">
+            @php
+                $totalBilled = $payments->sum('amount');
+                $totalPaid = $payments->sum('amount_paid');
+                $outstanding = max(0, $totalBilled - $totalPaid);
+            @endphp
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="bg-white dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Billed</span>
+                    <span class="block mt-1 text-2xl font-bold text-gray-800 dark:text-white">{{ number_format($totalBilled) }} PKR</span>
+                </div>
+                <div class="bg-white dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Paid</span>
+                    <span class="block mt-1 text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($totalPaid) }} PKR</span>
+                </div>
+                <div class="bg-white dark:bg-gray-800/40 p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Net Outstanding Dues</span>
+                    <span class="block mt-1 text-2xl font-bold {{ $outstanding > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-800 dark:text-white' }}">{{ number_format($outstanding) }} PKR</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="bg-gray-50/70 border-b border-gray-100 dark:bg-gray-800/40 dark:border-gray-800">
+                        <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-400">Month</th>
+                        <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-400">Type</th>
+                        <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-400">Billed</th>
+                        <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-400">Paid</th>
+                        <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-400">Balance</th>
+                        <th class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-400">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    @forelse($payments as $payment)
+                        <tr class="hover:bg-gray-50/40 dark:hover:bg-white/[0.01]">
+                            <td class="px-6 py-3.5 font-medium text-gray-900 dark:text-white">
+                                {{ \Carbon\Carbon::parse($payment->month . '-01')->format('M Y') }}
+                            </td>
+                            <td class="px-6 py-3.5 text-gray-600 dark:text-gray-300">
+                                {{ ucfirst(str_replace('_', ' ', $payment->type)) }}
+                                @if($payment->type === 'meter' && $payment->meter)
+                                    <span class="text-xs text-gray-400 block">({{ ucfirst($payment->meter->type) }} - {{ $payment->units_consumed ?? 0 }} units)</span>
+                                @endif
+                            </td>
+                            <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">
+                                {{ number_format($payment->amount) }} PKR
+                            </td>
+                            <td class="px-6 py-3.5 text-gray-700 dark:text-gray-300">
+                                {{ number_format($payment->amount_paid) }} PKR
+                            </td>
+                            <td class="px-6 py-3.5 font-semibold text-gray-900 dark:text-white">
+                                {{ number_format(max(0, $payment->amount - $payment->amount_paid)) }} PKR
+                            </td>
+                            <td class="px-6 py-3.5">
+                                @if($payment->status === 'paid')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400">
+                                        Paid
+                                    </span>
+                                @elseif($payment->status === 'partial')
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                                        Partial
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-900/20 dark:text-rose-400">
+                                        Unpaid
+                                    </span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="6" class="px-6 py-10 text-center text-gray-500 dark:text-gray-400">
+                                No payments recorded under the current active agreement.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800">
             <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Move-Out Inspection — {{ $tenant->name }}</h1>

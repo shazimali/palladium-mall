@@ -32,6 +32,7 @@ class Agreement extends Model
         'terms',
         'status',
         'document',
+        'govt_document',
     ];
 
     protected $casts = [
@@ -134,6 +135,13 @@ class Agreement extends Model
     {
         return $this->document
             ? Storage::temporaryUrl($this->document, now()->addMinutes(30))
+            : null;
+    }
+
+    public function getGovtDocumentUrlAttribute(): ?string
+    {
+        return $this->govt_document
+            ? Storage::disk('public')->url($this->govt_document)
             : null;
     }
 

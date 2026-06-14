@@ -87,6 +87,7 @@
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         @foreach([
                             ['Unit Number',   $unit->unit_number, null],
+                            ['File No.',      $unit->file_no ?? '—', null],
                             ['Type',          ucfirst($unit->type), null],
                             ['Floor',         $unit->floor->name ?? '—', null],
                             ['Block',         $unit->block->name ?? '—', null],
@@ -244,7 +245,6 @@
                                             ['Received',       $ownership->received_amount ? 'Rs. '.number_format($ownership->received_amount) : '—'],
                                             ['Credit / Bal.',  $ownership->credit_amount   ? 'Rs. '.number_format($ownership->credit_amount)   : '—'],
                                             ['Received From',  $ownership->received_from ?? '—'],
-                                            ['File No.',       $ownership->file_no ?? '—'],
                                             ['Approved By',    $ownership->approved_by ?? '—'],
                                             ['Received By',    $ownership->received_by ?? '—'],
                                             ['Approved Date',  $ownership->approved_date ? $ownership->approved_date->format('d M Y') : '—'],

@@ -18,7 +18,7 @@
                         </div>
                     @endif
                     <h3 class="mt-4 text-lg font-bold text-gray-950 dark:text-white">{{ $landlord->name }}</h3>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">Unit Owner / Landlord</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">Landlord</p>
                 </div>
 
                 <div class="mt-6 space-y-4 border-t border-gray-100 pt-6 dark:border-gray-800">
@@ -120,7 +120,7 @@
                                             @php $o = $unit->currentOwnership; @endphp
                                             @if($o)
                                                 <div class="text-xs">
-                                                    <p class="font-medium text-gray-800 dark:text-white">File: <span class="font-bold text-brand-600 dark:text-brand-400">{{ $o->file_no ?? '—' }}</span></p>
+                                                    <p class="font-medium text-gray-800 dark:text-white">File: <span class="font-bold text-brand-600 dark:text-brand-400">{{ $unit->file_no ?? '—' }}</span></p>
                                                     @if($o->nominee_name)
                                                         <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5" title="Relation: {{ $o->relation_label }} {{ $o->nominee_relation_name }}">
                                                             Nominee: {{ $o->nominee_name }} ({{ $o->relation_label }})
@@ -206,7 +206,7 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             <div class="text-xs">
-                                                <p class="font-medium text-gray-800 dark:text-white">File: <span class="font-bold text-brand-600 dark:text-brand-400">{{ $ownership->file_no ?? '—' }}</span></p>
+                                                <p class="font-medium text-gray-800 dark:text-white">File: <span class="font-bold text-brand-600 dark:text-brand-400">{{ $ownership->unit->file_no ?? '—' }}</span></p>
                                                 @if($ownership->nominee_name)
                                                     <p class="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5" title="Relation: {{ $ownership->relation_label }} {{ $ownership->nominee_relation_name }}">
                                                         Nominee: {{ $ownership->nominee_name }} ({{ $ownership->relation_label }})

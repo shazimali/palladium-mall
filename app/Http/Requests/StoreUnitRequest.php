@@ -32,6 +32,7 @@ class StoreUnitRequest extends FormRequest
             'landlord_id' => ['required', 'exists:landlords,id'],
             'type' => ['required', 'in:flat,shop,office'],
             'status' => ['required', 'in:vacant,rented,self'],
+            'file_no' => ['nullable', 'string', 'max:100', Rule::unique('units', 'file_no')],
             'area_sqft' => ['nullable', 'numeric', 'min:0'],
             'elec_meter_id' => ['nullable', 'string', 'max:50'],
             'water_meter_id' => ['nullable', 'string', 'max:50'],

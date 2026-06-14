@@ -626,7 +626,7 @@ Landlord Contact Info Card
                         received_amount: o?.received_amount ?? '',
                         credit_amount: o?.credit_amount ?? '',
                         received_from: o?.received_from ?? '',
-                        file_no: o?.file_no ?? '',
+                        file_no: u.file_no ?? '',
                         approved_by: o?.approved_by ?? '',
                         received_by: o?.received_by ?? '',
                         approved_date: o?.approved_date ? (typeof o.approved_date === 'string' ? o.approved_date.split('T')[0] : o.approved_date) : '',

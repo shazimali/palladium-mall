@@ -1,19 +1,23 @@
 {{-- ══════════════════════════════════════════════════════════════
-     Unit Edit: Billing-Only Form
-     Structural fields are managed through the Landlord form.
+Unit Edit: Billing-Only Form
+Structural fields are managed through the Landlord form.
 ═══════════════════════════════════════════════════════════════ --}}
 
 {{-- Read-Only Unit Header Banner --}}
-<div class="mb-5 flex items-center gap-4 rounded-xl border border-brand-100 bg-brand-50/50 px-5 py-4 dark:border-brand-900/30 dark:bg-brand-900/10">
+<div
+    class="mb-5 flex items-center gap-4 rounded-xl border border-brand-100 bg-brand-50/50 px-5 py-4 dark:border-brand-900/30 dark:bg-brand-900/10">
     <div class="flex-shrink-0 text-2xl">🏢</div>
     <div class="flex-1 min-w-0">
-        <p class="text-xs font-semibold uppercase tracking-wide text-brand-400 mb-0.5">Unit Overview (Read-only)</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-brand-400 mb-0.5">Flat/Shop Overview
+        </p>
         <p class="text-sm font-bold text-gray-800 dark:text-white">
             {{ $unit->unit_number }}
-            <span class="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium capitalize text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $unit->type }}</span>
+            <span
+                class="ml-2 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium capitalize text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $unit->type }}</span>
         </p>
         <p class="text-xs text-gray-500 mt-0.5 dark:text-gray-400">
-            {{ $unit->floor?->name ?? '—' }} &nbsp;·&nbsp; {{ $unit->block?->name ?? '—' }} &nbsp;·&nbsp; {{ $unit->area?->name ?? '—' }}
+            {{ $unit->floor?->name ?? '—' }} &nbsp;·&nbsp; {{ $unit->block?->name ?? '—' }} &nbsp;·&nbsp;
+            {{ $unit->area?->name ?? '—' }}
         </p>
     </div>
     <div class="flex-shrink-0 text-right">
@@ -29,7 +33,7 @@
         </p>
         @if($unit->landlord)
             <a href="{{ route('landlords.edit', $unit->landlord_id) }}"
-               class="text-xs text-gray-400 hover:text-brand-500 underline dark:text-gray-500">
+                class="text-xs text-gray-400 hover:text-brand-500 underline dark:text-gray-500">
                 Edit structural fields →
             </a>
         @endif

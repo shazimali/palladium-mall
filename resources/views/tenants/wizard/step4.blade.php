@@ -16,11 +16,23 @@
     @endif
 
     @include('tenants.wizard._progress', ['currentStep' => $step, 'tenantId' => $tenant->id])
+    @include('tenants.wizard._tenant_banner')
 
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800">
-            <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Step 4 — Documents Checklist</h1>
-            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Upload documents to verify checklist items. Checkboxes are checked automatically when a file is uploaded.</p>
+        <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Step 4 — Documents Checklist</h1>
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Upload documents to verify checklist items. Checkboxes are checked automatically when a file is uploaded.</p>
+            </div>
+            <div>
+                <a href="{{ route('tenants.printStep', [$tenant, 4]) }}" target="_blank"
+                   class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                    </svg>
+                    Print Checklist for Client
+                </a>
+            </div>
         </div>
 
         <form method="POST" action="{{ route('tenants.saveStep', [$tenant, 4]) }}" enctype="multipart/form-data" class="px-6 py-6 space-y-6">
@@ -170,13 +182,23 @@
                     </svg>
                     Back
                 </a>
-                <button type="submit"
-                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors">
-                    Continue — Step 5
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </button>
+                <div class="flex items-center gap-3">
+                    {{-- Save Only --}}
+                    <button type="submit" name="save_only" value="1"
+                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save Only
+                    </button>
+                    <button type="submit"
+                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors">
+                        Continue — Step 5
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
         </form>

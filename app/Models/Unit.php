@@ -25,6 +25,7 @@ class Unit extends Model
         'area_id',
         'type',
         'status',
+        'file_no',
         'area_sqft',
         'notes',
         'landlord_id',

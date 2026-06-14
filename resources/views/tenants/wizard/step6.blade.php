@@ -16,6 +16,7 @@
     @endif
 
     @include('tenants.wizard._progress', ['currentStep' => $step, 'tenantId' => $tenant->id])
+    @include('tenants.wizard._tenant_banner')
 
     {{-- Review Card --}}
     <div class="space-y-4">
@@ -57,13 +58,61 @@
             </div>
         </div>
 
+        {{-- Partners / Co-Tenants (if shared tenancy) --}}
+        @if($partners->isNotEmpty())
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-6">
+                <div class="flex items-center justify-between mb-3 border-b border-gray-100 dark:border-gray-800 pb-2">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Partners / Co-Tenants</h3>
+                    <a href="{{ route('tenants.showStep', [$tenant, 1]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                </div>
+                <div class="space-y-4">
+                    @foreach($partners as $index => $partner)
+                        <div class="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01]">
+                            <div class="flex items-start gap-4">
+                                @if($partner->passport_photo)
+                                    <img src="{{ $partner->passport_photo_url }}" class="h-12 w-12 rounded-full object-cover border border-gray-200 flex-shrink-0">
+                                @else
+                                    <div class="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+                                        <span class="text-sm font-bold text-brand-600">{{ strtoupper(substr($partner->name, 0, 1)) }}</span>
+                                    </div>
+                                @endif
+                                <div class="flex-1">
+                                    <div class="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                        Partner #{{ $index + 1 }}: {{ $partner->name }}
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+                                        <div><span class="font-medium">CNIC:</span> {{ $partner->cnic }}</div>
+                                        <div><span class="font-medium">Phone:</span> {{ $partner->phone }}</div>
+                                        @if($partner->father_name) <div><span class="font-medium">Father:</span> {{ $partner->father_name }}</div> @endif
+                                        @if($partner->whatsapp_number) <div><span class="font-medium">WhatsApp:</span> {{ $partner->whatsapp_number }}</div> @endif
+                                        @if($partner->email) <div><span class="font-medium">Email:</span> {{ $partner->email }}</div> @endif
+                                        @if($partner->occupation) <div><span class="font-medium">Occupation:</span> {{ $partner->occupation }}</div> @endif
+                                        @if($partner->monthly_income) <div><span class="font-medium">Income:</span> PKR {{ number_format($partner->monthly_income) }}</div> @endif
+                                        @if($partner->address) <div class="md:col-span-2"><span class="font-medium">Address:</span> {{ $partner->address }}</div> @endif
+                                    </div>
+                                    <div class="mt-2 flex gap-3 text-xs">
+                                        @if($partner->cnic_front_image)
+                                            <a href="{{ $partner->cnic_front_url }}" target="_blank" class="text-brand-500 hover:underline">Front CNIC</a>
+                                        @endif
+                                        @if($partner->cnic_back_image)
+                                            <a href="{{ $partner->cnic_back_url }}" target="_blank" class="text-brand-500 hover:underline">Back CNIC</a>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         {{-- Guarantor + Emergency Contacts --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Guarantor</h3>
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Guarantors</h3>
                     <div class="flex items-center gap-3">
-                        @if($guarantor)
+                        @if($guarantors->isNotEmpty())
                             <a href="{{ route('tenants.printStep', [$tenant, 2]) }}" target="_blank"
                                class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
                                 <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -76,15 +125,48 @@
                         <a href="{{ route('tenants.showStep', [$tenant, 2]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
                     </div>
                 </div>
-                @if($guarantor)
-                    <div class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                        <div class="font-medium text-gray-900 dark:text-white/90">{{ $guarantor->name }}</div>
-                        <div>{{ $guarantor->cnic }}</div>
-                        <div>{{ ucfirst($guarantor->relation) }} · {{ $guarantor->phone }}</div>
+                @forelse($guarantors as $index => $g)
+                    <div class="p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.01] mb-3 last:mb-0">
+                        <div class="flex items-start gap-4">
+                            @if($g->photo)
+                                <img src="{{ $g->photo_url }}" class="h-12 w-12 rounded-full object-cover border border-gray-200 flex-shrink-0">
+                            @else
+                                <div class="h-12 w-12 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-sm font-bold text-brand-600">{{ strtoupper(substr($g->name, 0, 1)) }}</span>
+                                </div>
+                            @endif
+                            <div class="flex-1">
+                                <div class="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                                    Guarantor #{{ $index + 1 }}: {{ $g->name }}
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+                                    <div><span class="font-medium">CNIC:</span> {{ $g->cnic }}</div>
+                                    <div><span class="font-medium">Phone:</span> {{ $g->phone }}</div>
+                                    <div><span class="font-medium">Relation:</span> {{ ucfirst($g->relation) }}</div>
+                                    @if($g->occupation) <div><span class="font-medium">Occupation:</span> {{ $g->occupation }}</div> @endif
+                                    @if($g->shop_name) <div><span class="font-medium">Shop Name:</span> {{ $g->shop_name }}</div> @endif
+                                    <div class="md:col-span-2"><span class="font-medium">Address:</span> {{ $g->address }}</div>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-3 text-xs">
+                                    @if($g->photo)
+                                        <a href="{{ $g->photo_url }}" target="_blank" class="text-brand-500 hover:underline">Portrait Photo</a>
+                                    @endif
+                                    @if($g->cnic_front)
+                                        <a href="{{ $g->cnic_front_url }}" target="_blank" class="text-brand-500 hover:underline">Front CNIC</a>
+                                    @endif
+                                    @if($g->cnic_back)
+                                        <a href="{{ $g->cnic_back_url }}" target="_blank" class="text-brand-500 hover:underline">Back CNIC</a>
+                                    @endif
+                                    @if($g->visiting_card)
+                                        <a href="{{ $g->visiting_card_url }}" target="_blank" class="text-brand-500 hover:underline">Visiting Card</a>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                @else
-                    <p class="text-sm text-red-400">⚠ Not yet added</p>
-                @endif
+                @empty
+                    <p class="text-sm text-red-400">⚠ No guarantors added</p>
+                @endforelse
             </div>
 
             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">

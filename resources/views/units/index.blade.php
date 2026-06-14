@@ -53,20 +53,6 @@
                         Clear
                     </a>
                 @endif
-                @if(auth()->user()->hasPermission('units.create') || auth()->user()->isSuperAdmin())
-                    <a href="{{ route('units.import.form') }}"
-                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
-                        <span>📤</span>
-                        Import CSV
-                    </a>
-                    <a href="{{ route('units.create') }}"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Flat/Shop
-                    </a>
-                @endif
             </div>
         </div>
 
@@ -180,7 +166,8 @@
                                     <td class="px-4 py-3">{{ $unit->area->name ?? '—' }}</td>
                                     <td class="px-4 py-3">
                                         @if($unit->landlord_id)
-                                            <a href="{{ route('landlords.show', $unit->landlord_id) }}" class="text-brand-500 hover:underline">
+                                            <a href="{{ route('landlords.show', $unit->landlord_id) }}"
+                                                class="text-brand-500 hover:underline">
                                                 {{ $unit->landlord->name }}
                                             </a>
                                         @else
@@ -189,7 +176,7 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
-                                                                                                                                                                    {{ $unit->type === 'flat'
+                                                                                                                                                                                                    {{ $unit->type === 'flat'
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
                         : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' }}">
                                             {{ ucfirst($unit->type) }}
@@ -197,11 +184,11 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
-                                            {{ $unit->status === 'rented'
-                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                                : ($unit->status === 'vacant'
-                                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                                                    : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400') }}">
+                                                                            {{ $unit->status === 'rented'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : ($unit->status === 'vacant'
+                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400') }}">
                                             {{ ucfirst($unit->status) }}
                                         </span>
                                     </td>

@@ -60,14 +60,27 @@ class Tenant extends Model
         return $this->belongsTo(Unit::class);
     }
 
-    public function guarantor(): HasOne
+    public function guarantors(): HasMany
     {
-        return $this->hasOne(Guarantor::class);
+        return $this->hasMany(Guarantor::class);
+    }
+
+    /**
+     * Backward-compat: returns first guarantor (or null)
+     */
+    public function getGuarantorAttribute(): ?Guarantor
+    {
+        return $this->guarantors->first();
     }
 
     public function emergencyContacts(): HasMany
     {
         return $this->hasMany(EmergencyContact::class);
+    }
+
+    public function partners(): HasMany
+    {
+        return $this->hasMany(TenantPartner::class);
     }
 
     public function documentChecklist(): HasOne
@@ -142,7 +155,7 @@ class Tenant extends Model
     public function wizardStep(): int
     {
         if (!$this->name) return 1;
-        if (!$this->guarantor()->exists()) return 2;
+        if (!$this->guarantors()->exists()) return 2;
         if (!$this->agreements()->exists()) return 3;
         if (!$this->documentChecklist()->exists()) return 4;
         if (!$this->moveInChecklists()->exists()) return 5;
