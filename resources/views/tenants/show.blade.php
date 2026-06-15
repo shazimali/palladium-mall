@@ -55,6 +55,23 @@
                 </div>
             </div>
 
+            {{-- Agreement Selector --}}
+            @if($tenant->agreements->isNotEmpty())
+            <div class="flex-shrink-0">
+                <form action="{{ route('tenants.show', $tenant) }}" method="GET" id="agreementSelectorForm">
+                    <label for="agreement_id" class="block text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">Agreement Context</label>
+                    <select name="agreement_id" id="agreement_id" onchange="document.getElementById('agreementSelectorForm').submit()" 
+                            class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 transition-colors">
+                        @foreach($tenant->agreements as $ag)
+                            <option value="{{ $ag->id }}" {{ $selectedAgreement && $selectedAgreement->id === $ag->id ? 'selected' : '' }}>
+                                {{ $ag->unit ? 'Unit ' . $ag->unit->unit_number : 'Unit Not Assigned' }} ({{ $ag->start_date ? $ag->start_date->format('M Y') : 'Draft' }} - {{ $ag->end_date ? $ag->end_date->format('M Y') : 'Draft' }}) [{{ ucfirst($ag->status) }}]
+                            </option>
+                        @endforeach
+                    </select>
+                </form>
+            </div>
+            @endif
+
             {{-- Actions --}}
             <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
                 <a href="{{ route('tenants.showStep', [$tenant, 1]) }}"
@@ -84,7 +101,7 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Personal</h3>
-                <a href="{{ route('tenants.printStep', [$tenant, 1]) }}" target="_blank"
+                <a href="{{ route('tenants.printStep', [$tenant, 1]) . ($selectedAgreement ? '?agreement_id=' . $selectedAgreement->id : '') }}" target="_blank"
                    class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -106,8 +123,8 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Guarantors</h3>
-                @if($tenant->guarantors->isNotEmpty())
-                    <a href="{{ route('tenants.printStep', [$tenant, 2]) }}" target="_blank"
+                @if($guarantors->isNotEmpty())
+                    <a href="{{ route('tenants.printStep', [$tenant, 2]) . ($selectedAgreement ? '?agreement_id=' . $selectedAgreement->id : '') }}" target="_blank"
                        class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
                         <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -116,7 +133,7 @@
                     </a>
                 @endif
             </div>
-            @forelse($tenant->guarantors as $index => $g)
+            @forelse($guarantors as $index => $g)
                 <div class="mb-4 last:mb-0 pb-4 last:pb-0 border-b border-gray-100 last:border-0 dark:border-gray-800">
                     <div class="flex gap-3 items-start">
                         @if($g->photo)
@@ -161,7 +178,7 @@
         {{-- Emergency Contacts --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
             <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Emergency Contacts</h3>
-            @forelse($tenant->emergencyContacts as $contact)
+            @forelse($emergencyContacts as $contact)
                 <div class="mb-2 text-sm">
                     <div class="font-medium text-gray-800 dark:text-gray-200">{{ $contact->name }}</div>
                     <div class="text-gray-500 text-xs">{{ ucfirst($contact->relation) }} · {{ $contact->phone }}</div>
@@ -172,69 +189,73 @@
         </div>
 
         {{-- Partners / Co-Tenants --}}
-        @if($tenant->partners->isNotEmpty())
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
+        @if($partners->isNotEmpty())
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5 col-span-1 sm:col-span-2 lg:col-span-3">
             <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Partners / Co-Tenants</h3>
-            @foreach($tenant->partners as $index => $partner)
-                <div class="mb-4 last:mb-0 pb-4 last:pb-0 border-b border-gray-100 last:border-0 dark:border-gray-800">
-                    <div class="flex gap-3 items-start">
-                        @if($partner->passport_photo)
-                            <img src="{{ $partner->passport_photo_url }}" class="h-9 w-9 rounded-full object-cover border border-gray-200 flex-shrink-0">
-                        @else
-                            <div class="h-9 w-9 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
-                                <span class="text-xs font-bold text-brand-600">{{ strtoupper(substr($partner->name, 0, 1)) }}</span>
-                            </div>
-                        @endif
-                        <div class="flex-1">
-                            <div class="font-medium text-gray-800 dark:text-gray-200">#{{ $index + 1 }}: {{ $partner->name }}</div>
-                            <div class="text-gray-500 text-xs mt-1 space-y-0.5">
-                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">CNIC:</span> {{ $partner->cnic }}</div>
-                                <div><span class="font-semibold text-gray-700 dark:text-gray-300">Phone:</span> {{ $partner->phone }}</div>
-                                @if($partner->father_name) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Father:</span> {{ $partner->father_name }}</div> @endif
-                                @if($partner->whatsapp_number) <div><span class="font-semibold text-gray-700 dark:text-gray-300">WhatsApp:</span> {{ $partner->whatsapp_number }}</div> @endif
-                                @if($partner->email) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Email:</span> {{ $partner->email }}</div> @endif
-                                @if($partner->occupation) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Occupation:</span> {{ $partner->occupation }}</div> @endif
-                                @if($partner->monthly_income) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Income:</span> PKR {{ number_format($partner->monthly_income) }}</div> @endif
-                                @if($partner->address) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Address:</span> {{ $partner->address }}</div> @endif
-                            </div>
-                            <div class="mt-2 flex gap-2 text-xs">
-                                @if($partner->cnic_front_image)
-                                    <a href="{{ $partner->cnic_front_url }}" target="_blank" class="text-brand-500 hover:underline">Front CNIC</a>
-                                @endif
-                                @if($partner->cnic_back_image)
-                                    <a href="{{ $partner->cnic_back_url }}" target="_blank" class="text-brand-500 hover:underline">Back CNIC</a>
-                                @endif
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @foreach($partners as $index => $partner)
+                    <div class="pb-4 border-b border-gray-100 last:border-0 dark:border-gray-800">
+                        <div class="flex gap-3 items-start">
+                            @if($partner->passport_photo)
+                                <img src="{{ $partner->passport_photo_url }}" class="h-9 w-9 rounded-full object-cover border border-gray-200 flex-shrink-0">
+                            @else
+                                <div class="h-9 w-9 rounded-full bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-xs font-bold text-brand-600">{{ strtoupper(substr($partner->name, 0, 1)) }}</span>
+                                </div>
+                            @endif
+                            <div class="flex-1">
+                                <div class="font-medium text-gray-800 dark:text-gray-200">#{{ $index + 1 }}: {{ $partner->name }}</div>
+                                <div class="text-gray-500 text-xs mt-1 space-y-0.5">
+                                    <div><span class="font-semibold text-gray-700 dark:text-gray-300">CNIC:</span> {{ $partner->cnic }}</div>
+                                    <div><span class="font-semibold text-gray-700 dark:text-gray-300">Phone:</span> {{ $partner->phone }}</div>
+                                    @if($partner->father_name) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Father:</span> {{ $partner->father_name }}</div> @endif
+                                    @if($partner->whatsapp_number) <div><span class="font-semibold text-gray-700 dark:text-gray-300">WhatsApp:</span> {{ $partner->whatsapp_number }}</div> @endif
+                                    @if($partner->email) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Email:</span> {{ $partner->email }}</div> @endif
+                                    @if($partner->occupation) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Occupation:</span> {{ $partner->occupation }}</div> @endif
+                                    @if($partner->monthly_income) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Income:</span> PKR {{ number_format($partner->monthly_income) }}</div> @endif
+                                    @if($partner->address) <div><span class="font-semibold text-gray-700 dark:text-gray-300">Address:</span> {{ $partner->address }}</div> @endif
+                                </div>
+                                <div class="mt-2 flex gap-2 text-xs">
+                                    @if($partner->cnic_front_image)
+                                        <a href="{{ $partner->cnic_front_url }}" target="_blank" class="text-brand-500 hover:underline">Front CNIC</a>
+                                    @endif
+                                    @if($partner->cnic_back_image)
+                                        <a href="{{ $partner->cnic_back_url }}" target="_blank" class="text-brand-500 hover:underline">Back CNIC</a>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            @endforeach
+                @endforeach
+            </div>
         </div>
         @endif
 
     </div>
 
-    {{-- ── Active Agreement ─────────────────────────────────────────────── --}}
-    @if($tenant->activeAgreement)
-    @php $ag = $tenant->activeAgreement; @endphp
+    {{-- ── Selected Agreement Terms ────────────────────────────────────── --}}
+    @if($selectedAgreement)
+    @php $ag = $selectedAgreement; @endphp
     <div class="mb-6 rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Active Agreement</h3>
+            <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">{{ ucfirst($ag->status) }} Agreement</h3>
             <div class="flex items-center gap-3">
-                <a href="{{ route('tenants.printStep', [$tenant, 3]) }}" target="_blank"
+                <a href="{{ route('tenants.printStep', [$tenant, 3]) . '?agreement_id=' . $ag->id }}" target="_blank"
                    class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
                     Print
                 </a>
+                @if($ag->status === 'draft')
                 <span class="text-gray-300 dark:text-gray-700">|</span>
                 <a href="{{ route('tenants.showStep', [$tenant, 3]) }}" class="text-xs text-brand-500 hover:underline">Edit Terms</a>
+                @endif
             </div>
         </div>
         <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
-            <div><div class="text-gray-400 text-xs">Start Date</div><div class="font-medium text-gray-800 dark:text-gray-200">{{ $ag->start_date->format('d M Y') }}</div></div>
-            <div><div class="text-gray-400 text-xs">End Date</div><div class="font-medium text-gray-800 dark:text-gray-200">{{ $ag->end_date->format('d M Y') }}</div></div>
+            <div><div class="text-gray-400 text-xs">Start Date</div><div class="font-medium text-gray-800 dark:text-gray-200">{{ $ag->start_date ? $ag->start_date->format('d M Y') : 'N/A' }}</div></div>
+            <div><div class="text-gray-400 text-xs">End Date</div><div class="font-medium text-gray-800 dark:text-gray-200">{{ $ag->end_date ? $ag->end_date->format('d M Y') : 'N/A' }}</div></div>
             <div><div class="text-gray-400 text-xs">Monthly Rent</div><div class="font-medium text-gray-800 dark:text-gray-200">PKR {{ number_format($ag->monthly_rent) }}</div></div>
             @if($ag->maintenance_charge)
             <div><div class="text-gray-400 text-xs">Maintenance</div><div class="font-medium text-gray-800 dark:text-gray-200">PKR {{ number_format($ag->maintenance_charge) }}</div></div>
@@ -251,7 +272,7 @@
 
     {{-- ── Documents + Move-In Checklist Progress ───────────────────────── --}}
     @php
-        $moc = $tenant->moveInChecklists->where('type', 'move_out')->first();
+        $moc = $moveOutChecklist;
         $gridCols = $moc ? 'sm:grid-cols-2 lg:grid-cols-3' : 'sm:grid-cols-2';
     @endphp
     <div class="mb-6 grid grid-cols-1 gap-4 {{ $gridCols }}">
@@ -260,10 +281,12 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Documents</h3>
+                @if($selectedAgreement && $selectedAgreement->status === 'draft')
                 <a href="{{ route('tenants.showStep', [$tenant, 4]) }}" class="text-xs text-brand-500 hover:underline">Update</a>
+                @endif
             </div>
-            @if($tenant->documentChecklist)
-                @php $checked = $tenant->documentChecklist->countChecked(); $total = $tenant->documentChecklist->countTotal(); @endphp
+            @if($documentChecklist)
+                @php $checked = $documentChecklist->countChecked(); $total = $documentChecklist->countTotal(); @endphp
                 <div class="mb-2 flex items-center gap-3">
                     <div class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
                         <div class="h-2 rounded-full bg-brand-500 transition-all" style="width: {{ $total > 0 ? round($checked / $total * 100) : 0 }}%"></div>
@@ -280,9 +303,11 @@
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
             <div class="flex items-center justify-between mb-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Move-in Inspection</h3>
+                @if($selectedAgreement && $selectedAgreement->status === 'draft')
                 <a href="{{ route('tenants.showStep', [$tenant, 5]) }}" class="text-xs text-brand-500 hover:underline">Update</a>
+                @endif
             </div>
-            @php $mic = $tenant->moveInChecklists->where('type','move_in')->first(); @endphp
+            @php $mic = $moveInChecklist; @endphp
             @if($mic)
                 @php $checked = $mic->countChecked(); $total = $mic->countTotal(); @endphp
                 <div class="mb-2 flex items-center gap-3">
@@ -350,8 +375,12 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @foreach($tenant->agreements as $ag)
-                    <tr>
-                        <td class="py-2 pr-4 text-gray-800 dark:text-gray-200">{{ $ag->start_date->format('d M Y') }} → {{ $ag->end_date->format('d M Y') }}</td>
+                    <tr class="{{ $selectedAgreement && $selectedAgreement->id === $ag->id ? 'bg-brand-50/50 dark:bg-brand-950/20 font-medium' : '' }}">
+                        <td class="py-2 pr-4 text-gray-800 dark:text-gray-200">
+                            <a href="{{ route('tenants.show', [$tenant, 'agreement_id' => $ag->id]) }}" class="text-brand-500 hover:text-brand-600 hover:underline">
+                                {{ $ag->start_date ? $ag->start_date->format('d M Y') : 'Draft' }} → {{ $ag->end_date ? $ag->end_date->format('d M Y') : 'Draft' }}
+                            </a>
+                        </td>
                         <td class="py-2 pr-4">PKR {{ number_format($ag->monthly_rent) }}</td>
                         <td class="py-2 pr-4">PKR {{ number_format($ag->security_deposit) }}</td>
                         <td class="py-2">

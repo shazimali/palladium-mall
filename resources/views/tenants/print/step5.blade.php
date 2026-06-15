@@ -46,7 +46,7 @@
 
     <div class="info-grid">
         <div class="info-item"><span class="info-label">Tenant Name:</span><span class="info-value">{{ $tenant->name }}</span></div>
-        <div class="info-item"><span class="info-label">Unit / Shop Number:</span><span class="info-value">{{ $tenant->unit ? $tenant->unit->unit_number : 'N/A' }}</span></div>
+        <div class="info-item"><span class="info-label">Unit / Shop Number:</span><span class="info-value">{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</span></div>
         <div class="info-item"><span class="info-label">Inspection Date:</span><span class="info-value">{{ optional($checklist?->checklist_date)->format('d M Y') ?? now()->format('d M Y') }}</span></div>
         <div class="info-item"><span class="info-label">Inspector Name:</span><span class="info-value">{{ $checklist?->inspection_member ?? 'N/A' }}</span></div>
         <div class="info-item"><span class="info-label">Flat Condition:</span><span class="info-value"><strong>{{ $checklist?->flat_condition ? ucfirst($checklist->flat_condition) : 'N/A' }}</strong></span></div>

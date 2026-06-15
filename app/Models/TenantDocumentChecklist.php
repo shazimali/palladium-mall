@@ -12,6 +12,7 @@ class TenantDocumentChecklist extends Model
 
     protected $fillable = [
         'tenant_id',
+        'agreement_id',
         // Basic Identity
         'cnic_copy_tenant_front', 'cnic_copy_tenant_back', 'cnic_copy_father', 'cnic_copy_guarantor',
         'passport_photo', 'nikah_nama', 'frc_form_b', 'police_verification',
@@ -35,38 +36,43 @@ class TenantDocumentChecklist extends Model
         'property_advisor_card_file', 'old_tenant_verification_file',
         'business_license_file', 'utility_bills_clearance_file',
         'notes',
-    ];
+     ];
 
-    protected $casts = [
-        'cnic_copy_tenant_front'   => 'boolean',
-        'cnic_copy_tenant_back'    => 'boolean',
-        'cnic_copy_father'         => 'boolean',
-        'cnic_copy_guarantor'      => 'boolean',
-        'passport_photo'           => 'boolean',
-        'nikah_nama'               => 'boolean',
-        'frc_form_b'               => 'boolean',
-        'police_verification'      => 'boolean',
-        'tenant_application_form'  => 'boolean',
-        'tenancy_agreement_copy'   => 'boolean',
-        'rules_acknowledgment'     => 'boolean',
-        'inspection_report'        => 'boolean',
-        'property_handover_form'   => 'boolean',
-        'security_deposit_receipt' => 'boolean',
-        'meter_picture'            => 'boolean',
-        'emergency_contacts_added' => 'boolean',
-        'guarantor_info_added'     => 'boolean',
-        'guarantor_business_card'  => 'boolean',
-        'tenant_business_card'     => 'boolean',
-        'property_advisor_card'    => 'boolean',
-        'old_tenant_verification'  => 'boolean',
-        'business_license'         => 'boolean',
-        'utility_bills_clearance'  => 'boolean',
-    ];
+     protected $casts = [
+         'cnic_copy_tenant_front'   => 'boolean',
+         'cnic_copy_tenant_back'    => 'boolean',
+         'cnic_copy_father'         => 'boolean',
+         'cnic_copy_guarantor'      => 'boolean',
+         'passport_photo'           => 'boolean',
+         'nikah_nama'               => 'boolean',
+         'frc_form_b'               => 'boolean',
+         'police_verification'      => 'boolean',
+         'tenant_application_form'  => 'boolean',
+         'tenancy_agreement_copy'   => 'boolean',
+         'rules_acknowledgment'     => 'boolean',
+         'inspection_report'        => 'boolean',
+         'property_handover_form'   => 'boolean',
+         'security_deposit_receipt' => 'boolean',
+         'meter_picture'            => 'boolean',
+         'emergency_contacts_added' => 'boolean',
+         'guarantor_info_added'     => 'boolean',
+         'guarantor_business_card'  => 'boolean',
+         'tenant_business_card'     => 'boolean',
+         'property_advisor_card'    => 'boolean',
+         'old_tenant_verification'  => 'boolean',
+         'business_license'         => 'boolean',
+         'utility_bills_clearance'  => 'boolean',
+     ];
 
-    public function tenant(): BelongsTo
-    {
-        return $this->belongsTo(Tenant::class);
-    }
+     public function tenant(): BelongsTo
+     {
+         return $this->belongsTo(Tenant::class);
+     }
+
+     public function agreement(): BelongsTo
+     {
+         return $this->belongsTo(Agreement::class);
+     }
 
     /**
      * Count how many boolean checklist items are ticked.

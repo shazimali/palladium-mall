@@ -9,6 +9,7 @@ class EmergencyContact extends Model
 {
     protected $fillable = [
         'tenant_id',
+        'agreement_id',
         'name',
         'relation',
         'phone',
@@ -18,5 +19,10 @@ class EmergencyContact extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function agreement(): BelongsTo
+    {
+        return $this->belongsTo(Agreement::class);
     }
 }

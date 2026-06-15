@@ -214,20 +214,33 @@
         <div>Tenant Code: <span>PM-T-{{ str_pad($tenant->id, 4, '0', STR_PAD_LEFT) }}</span></div>
     </div>
 
-    <div class="section-title">Tenant & Unit Information</div>
+    <div class="section-title">Tenant Information</div>
     <div class="grid">
         <div class="item"><span class="label">Tenant Name:</span><span class="value">{{ $tenant->name }}</span></div>
         <div class="item"><span class="label">Father's Name:</span><span class="value">{{ $tenant->father_name ?? 'N/A' }}</span></div>
         <div class="item"><span class="label">CNIC Number:</span><span class="value">{{ $tenant->cnic }}</span></div>
         <div class="item"><span class="label">Phone / WhatsApp:</span><span class="value">{{ $tenant->phone }} {{ $tenant->whatsapp_number ? '/ ' . $tenant->whatsapp_number : '' }}</span></div>
-        <div class="item"><span class="label">Unit Assigned:</span><span class="value">{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</span></div>
+    </div>
+
+    <div class="section-title">Assigned Flat / Shop Details</div>
+    <div class="grid">
+        <div class="item"><span class="label">Flat/Shop Number:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : 'Not Assigned' }}</strong></span></div>
+        <div class="item"><span class="label">Type:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->type) : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Floor:</span><span class="value">{{ $tenant->unit?->floor?->name ?? 'N/A' }}</span></div>
+        <div class="item"><span class="label">Block:</span><span class="value">{{ $tenant->unit?->block?->name ?? 'N/A' }}</span></div>
+        @if($tenant->unit?->area)
+            <div class="item"><span class="label">Area / Zone:</span><span class="value">{{ $tenant->unit->area->name }}</span></div>
+        @endif
+        @if($tenant->unit?->area_sqft)
+            <div class="item"><span class="label">Size (sqft):</span><span class="value">{{ number_format($tenant->unit->area_sqft, 2) }}</span></div>
+        @endif
         <div class="item"><span class="label">Unit Status:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->status) : 'N/A' }}</span></div>
     </div>
 
-    @if($tenant->partners->isNotEmpty())
+    @if(($partners ?? $tenant->partners)->isNotEmpty())
     <div class="section-title">Partners / Co-Tenants</div>
     <div class="grid">
-        @foreach($tenant->partners as $index => $partner)
+        @foreach(($partners ?? $tenant->partners) as $index => $partner)
             <div class="item" style="grid-column: span 2; display: flex; border-bottom: 1px dashed #e5e7eb; padding-bottom: 4px;">
                 <span class="label" style="width: 120px;">Partner #{{ $index + 1 }}:</span>
                 <span class="value">{{ $partner->name }} &nbsp;&nbsp;|&nbsp;&nbsp; CNIC: {{ $partner->cnic }} &nbsp;&nbsp;|&nbsp;&nbsp; Phone: {{ $partner->phone }}</span>
@@ -313,16 +326,21 @@
     </div>
 
     @if($agreement && $agreement->security_deposit)
+    @php
+        $damageDeduction = $tenant->moveInChecklists->where('type', 'move_out')->first()?->deposit_deduction ?? 0;
+        $netRefund = max(0, $agreement->security_deposit - $outstanding - $damageDeduction);
+    @endphp
     <div class="section-title">Security Deposit Refund Estimate</div>
     <div class="grid" style="margin-bottom: 30px;">
         <div class="item"><span class="label">Initial Security Deposit:</span><span class="value">{{ number_format($agreement->security_deposit) }} PKR</span></div>
         <div class="item"><span class="label">Outstanding Dues Deducted:</span><span class="value" style="color: #dc2626;">- {{ number_format($outstanding) }} PKR</span></div>
-        <div class="item" style="grid-column: span 2; font-size: 15px; border-bottom: 2px solid #111; padding-bottom: 8px;"><span class="label">Estimated Net Refundable:</span><span class="value font-bold" style="color: #059669;">{{ number_format(max(0, $agreement->security_deposit - $outstanding)) }} PKR</span></div>
+        <div class="item"><span class="label">Damage / Repair Deductions:</span><span class="value" style="color: #dc2626;">- {{ number_format($damageDeduction) }} PKR</span></div>
+        <div class="item" style="grid-column: span 2; font-size: 15px; border-bottom: 2px solid #111; padding-bottom: 8px;"><span class="label">Estimated Net Refundable:</span><span class="value font-bold" style="color: #059669;">{{ number_format($netRefund) }} PKR</span></div>
     </div>
     @endif
 
     <div class="declaration">
-        <strong>Declaration:</strong> I, the undersigned tenant, hereby declare that I am vacating Unit {{ $tenant->unit ? $tenant->unit->unit_number : '' }} at Palladium Mall. I confirm that I have cleared all utilities, gas, water, maintenance, and rent dues as listed above, and that the unit's inventory has been handed back to the management. The security deposit refund calculations are agreed upon, and no further claims remain pending against either party.
+        <strong>Declaration:</strong> I, the undersigned tenant, hereby declare that I am vacating Unit {{ $tenant->unit ? $tenant->unit->unit_number : '' }} at Palladium Mall. I confirm that I have cleared all utilities, gas, water, maintenance, and rent dues as listed above, and that the unit's inventory has been handed back to the management. The security deposit refund calculations (Initial Deposit: {{ number_format($agreement->security_deposit) }} PKR, Dues Deducted: {{ number_format($outstanding) }} PKR, Damages Deducted: {{ number_format($damageDeduction ?? 0) }} PKR, Net Refund: {{ number_format($netRefund ?? max(0, $agreement->security_deposit - $outstanding)) }} PKR) are agreed upon, and no further claims remain pending against either party.
     </div>
 
     <div class="signature-area">

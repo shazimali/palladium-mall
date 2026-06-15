@@ -73,9 +73,27 @@ class Tenant extends Model
         return $this->guarantors->first();
     }
 
+    public function getGuarantorsAttribute(): Collection
+    {
+        $agreement = $this->activeAgreement ?: $this->agreements()->latest()->first();
+        if ($agreement) {
+            return $agreement->guarantors()->get();
+        }
+        return $this->guarantors()->get();
+    }
+
     public function emergencyContacts(): HasMany
     {
         return $this->hasMany(EmergencyContact::class);
+    }
+
+    public function getEmergencyContactsAttribute(): Collection
+    {
+        $agreement = $this->activeAgreement ?: $this->agreements()->latest()->first();
+        if ($agreement) {
+            return $agreement->emergencyContacts()->get();
+        }
+        return $this->emergencyContacts()->get();
     }
 
     public function partners(): HasMany
@@ -83,9 +101,27 @@ class Tenant extends Model
         return $this->hasMany(TenantPartner::class);
     }
 
+    public function getPartnersAttribute(): Collection
+    {
+        $agreement = $this->activeAgreement ?: $this->agreements()->latest()->first();
+        if ($agreement) {
+            return $agreement->partners()->get();
+        }
+        return $this->partners()->get();
+    }
+
     public function documentChecklist(): HasOne
     {
         return $this->hasOne(TenantDocumentChecklist::class);
+    }
+
+    public function getDocumentChecklistAttribute(): ?TenantDocumentChecklist
+    {
+        $agreement = $this->activeAgreement ?: $this->agreements()->latest()->first();
+        if ($agreement) {
+            return $agreement->documentChecklist;
+        }
+        return $this->documentChecklist;
     }
 
     public function moveInChecklists(): HasMany
@@ -155,10 +191,20 @@ class Tenant extends Model
     public function wizardStep(): int
     {
         if (!$this->name) return 1;
-        if (!$this->guarantors()->exists()) return 2;
-        if (!$this->agreements()->exists()) return 3;
-        if (!$this->documentChecklist()->exists()) return 4;
-        if (!$this->moveInChecklists()->exists()) return 5;
+
+        $draft = $this->agreements()->where('status', 'draft')->latest()->first();
+        if (!$draft) {
+            if (!$this->guarantors()->exists()) return 2;
+            if (!$this->agreements()->exists()) return 3;
+            if (!$this->documentChecklist()->exists()) return 4;
+            if (!$this->moveInChecklists()->exists()) return 5;
+            return 6;
+        }
+
+        if (!$draft->guarantors()->exists()) return 2;
+        if (!$draft->start_date) return 3;
+        if (!$draft->documentChecklist()->exists()) return 4;
+        if (!$draft->moveInChecklist()->exists()) return 5;
         return 6;
     }
 

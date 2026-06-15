@@ -71,6 +71,20 @@
         <div class="item"><span class="label">Children in Family:</span><span class="value">{{ $tenant->children_count ?? 0 }}</span></div>
     </div>
 
+    <div class="section-title">Assigned Flat / Shop Details</div>
+    <div class="grid">
+        <div class="item"><span class="label">Flat/Shop Number:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : 'Not Assigned' }}</strong></span></div>
+        <div class="item"><span class="label">Type:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->type) : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Floor:</span><span class="value">{{ $tenant->unit?->floor?->name ?? 'N/A' }}</span></div>
+        <div class="item"><span class="label">Block:</span><span class="value">{{ $tenant->unit?->block?->name ?? 'N/A' }}</span></div>
+        @if($tenant->unit?->area)
+            <div class="item"><span class="label">Area / Zone:</span><span class="value">{{ $tenant->unit->area->name }}</span></div>
+        @endif
+        @if($tenant->unit?->area_sqft)
+            <div class="item"><span class="label">Size (sqft):</span><span class="value">{{ number_format($tenant->unit->area_sqft, 2) }}</span></div>
+        @endif
+    </div>
+
     <div class="section-title">Tenant CNIC Documents</div>
     <div class="cnic-container">
         <div class="cnic-box">
@@ -91,8 +105,8 @@
         </div>
     </div>
 
-    @if($tenant->partners && $tenant->partners->isNotEmpty())
-        @foreach($tenant->partners as $index => $partner)
+    @if(($partners ?? $tenant->partners) && ($partners ?? $tenant->partners)->isNotEmpty())
+        @foreach(($partners ?? $tenant->partners) as $index => $partner)
             <div class="section-title">Partner #{{ $index + 1 }} Details</div>
             <div class="grid">
                 <div class="item"><span class="label">Full Name:</span><span class="value">{{ $partner->name }}</span></div>
@@ -130,7 +144,7 @@
     @endif
 
     <div class="section-title">Emergency Contacts</div>
-    @if($tenant->emergencyContacts && $tenant->emergencyContacts->isNotEmpty())
+    @if(($emergencyContacts ?? $tenant->emergencyContacts) && ($emergencyContacts ?? $tenant->emergencyContacts)->isNotEmpty())
         <table>
             <thead>
                 <tr>
@@ -142,7 +156,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($tenant->emergencyContacts as $index => $contact)
+                @foreach(($emergencyContacts ?? $tenant->emergencyContacts) as $index => $contact)
                     <tr>
                         <td>{{ $index + 1 }}</td>
                         <td>{{ $contact->name }}</td>

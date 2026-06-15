@@ -210,7 +210,7 @@
 
                                         <a href="{{ route('payments.print', $payment) }}" target="_blank"
                                             class="inline-flex items-center rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                                            title="Print Receipt">
+                                            title="{{ $payment->type === 'rent' ? 'Print Rent Bill' : (in_array($payment->type, ['maintenance', 'electricity', 'water', 'gas']) ? 'Print Maintenance Bill' : 'Print Receipt') }}">
                                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
                                             </svg>
@@ -301,7 +301,7 @@
                     });
                 }
             }" x-show="show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900" @click.outside="show = false">
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900" @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
             <h3 class="mb-4 text-base font-semibold text-gray-800 dark:text-white">Record Payment</h3>
             <form :action="action" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -386,7 +386,7 @@
                     window.addEventListener('open-bulk-generate', () => { this.show = true; });
                 }
             }" x-show="show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900" @click.outside="show = false">
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900" @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
             <h3 class="mb-1 text-base font-semibold text-gray-800 dark:text-white">Bulk Generate Payments</h3>
             <p class="mb-4 text-sm text-gray-500">Creates payment records for all active tenants with active agreements.</p>
             <form action="{{ route('payments.bulk-generate') }}" method="POST">
@@ -462,18 +462,27 @@
             });
 
             flatpickr('#bulk_month', {
-                dateFormat: 'Y-m-d',
+                dateFormat: 'Y-m-01',
                 altInput: true,
                 altFormat: 'F Y',
                 allowInput: false,
                 disableMobile: true,
-                disable: [function (date) { return date.getDate() !== 1; }],
+                static: true,
+                plugins: [
+                    new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    })
+                ],
             });
 
             flatpickr('#bulk_due_date', {
                 dateFormat: 'Y-m-d',
                 allowInput: true,
                 disableMobile: true,
+                static: true,
             });
         });
     </script>

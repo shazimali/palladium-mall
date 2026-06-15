@@ -30,7 +30,7 @@
     <div class="header">
         <div class="header-info">
             <h1>Required Documents Checklist</h1>
-            <p>Tenant: <strong>{{ $tenant->name }}</strong> | Unit: <strong>{{ $tenant->unit?->unit_number ?? 'N/A' }}</strong></p>
+            <p>Tenant: <strong>{{ $tenant->name }}</strong> | Unit: <strong>{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</strong></p>
         </div>
         <div style="text-align: right; font-size: 12px; color: #666;">
             Date: {{ now()->format('d M Y') }}

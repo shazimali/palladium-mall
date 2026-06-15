@@ -10,6 +10,7 @@ class Guarantor extends Model
 {
     protected $fillable = [
         'tenant_id',
+        'agreement_id',
         'name',
         'cnic',
         'phone',
@@ -28,6 +29,11 @@ class Guarantor extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function agreement(): BelongsTo
+    {
+        return $this->belongsTo(Agreement::class);
     }
 
     public function getVisitingCardPhotoUrlAttribute(): ?string

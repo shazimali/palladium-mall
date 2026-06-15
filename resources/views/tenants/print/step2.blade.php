@@ -46,6 +46,14 @@
         @endif
     </div>
 
+    <div class="section-title">Assigned Flat / Shop Details</div>
+    <div class="grid" style="margin-bottom: 15px;">
+        <div class="item"><span class="label">Flat/Shop Number:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : 'Not Assigned' }}</strong></span></div>
+        <div class="item"><span class="label">Type:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->type) : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Floor:</span><span class="value">{{ $tenant->unit?->floor?->name ?? 'N/A' }}</span></div>
+        <div class="item"><span class="label">Block:</span><span class="value">{{ $tenant->unit?->block?->name ?? 'N/A' }}</span></div>
+    </div>
+
     <div class="section-title">Guarantors Information</div>
     @forelse($guarantors as $index => $g)
         <div class="guarantor-card">

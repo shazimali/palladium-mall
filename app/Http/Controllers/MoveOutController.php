@@ -93,9 +93,16 @@ class MoveOutController extends Controller
 
     public function clearanceForm(Tenant $tenant): View
     {
-        $tenant->load(['unit', 'guarantors', 'partners', 'emergencyContacts']);
+        $tenant->load(['unit', 'moveInChecklists' => function($q) {
+            $q->where('type', 'move_out');
+        }]);
 
         $agreement = $tenant->agreements()->latest()->first();
+
+        $partners = $agreement ? $agreement->partners : collect();
+        $guarantors = $agreement ? $agreement->guarantors : collect();
+        $emergencyContacts = $agreement ? $agreement->emergencyContacts : collect();
+
         $payments  = $agreement
             ? $agreement->payments()->with('meter')->orderBy('month')->get()
             : collect();
@@ -105,12 +112,15 @@ class MoveOutController extends Controller
         $outstanding = max(0, $totalBilled - $totalPaid);
 
         return view('tenants.print.clearance_form', [
-            'tenant'      => $tenant,
-            'agreement'   => $agreement,
-            'payments'    => $payments,
-            'totalBilled' => $totalBilled,
-            'totalPaid'   => $totalPaid,
-            'outstanding' => $outstanding,
+            'tenant'            => $tenant,
+            'agreement'         => $agreement,
+            'partners'          => $partners,
+            'guarantors'        => $guarantors,
+            'emergencyContacts' => $emergencyContacts,
+            'payments'          => $payments,
+            'totalBilled'       => $totalBilled,
+            'totalPaid'         => $totalPaid,
+            'outstanding'       => $outstanding,
         ]);
     }
 }

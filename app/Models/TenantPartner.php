@@ -12,6 +12,7 @@ class TenantPartner extends Model
 
     protected $fillable = [
         'tenant_id',
+        'agreement_id',
         'name',
         'father_name',
         'cnic',
@@ -35,6 +36,11 @@ class TenantPartner extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function agreement(): BelongsTo
+    {
+        return $this->belongsTo(Agreement::class);
     }
 
     public function getPassportPhotoUrlAttribute(): ?string

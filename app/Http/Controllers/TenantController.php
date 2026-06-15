@@ -22,7 +22,7 @@ class TenantController extends Controller
 
     public function index(Request $request): View
     {
-        $tenants = Tenant::with(['unit', 'activeAgreement'])
+        $tenants = Tenant::with(['unit', 'activeAgreement', 'agreements'])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->status === 'active', fn($q) => $q->active())
             ->when($request->status === 'inactive', fn($q) => $q->inactive())
@@ -174,17 +174,24 @@ class TenantController extends Controller
             $msg = 'Step 1 saved. Continue with guarantor details.';
         }
 
-        // Save emergency contact (replace existing)
-        $tenant->emergencyContacts()->delete();
-        $tenant->emergencyContacts()->create([
-            'name'     => $data['ec_name'],
-            'relation' => $data['ec_relation'],
-            'phone'    => preg_replace('/[^\d+]/', '', $data['ec_phone']),
-            'address'  => null,
+        // Initialize draft agreement immediately in Step 1
+        $agreement = $tenant->agreements()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'status' => 'draft'],
+            ['unit_id' => $tenant->unit_id]
+        );
+
+        // Save emergency contact (replace existing for this agreement)
+        $agreement->emergencyContacts()->delete();
+        $agreement->emergencyContacts()->create([
+            'tenant_id' => $tenant->id, // fallback
+            'name'      => $data['ec_name'],
+            'relation'  => $data['ec_relation'],
+            'phone'     => preg_replace('/[^\d+]/', '', $data['ec_phone']),
+            'address'   => null,
         ]);
 
         // Keep track of old partners to preserve or delete their files
-        $oldPartners = $tenant->partners()->get();
+        $oldPartners = $agreement->partners()->get();
         $oldPartnersMap = $oldPartners->keyBy('cnic');
         $reusedFiles = [];
 
@@ -244,6 +251,7 @@ class TenantController extends Controller
                     }
 
                     $newPartnersData[] = [
+                        'tenant_id' => $tenant->id, // fallback
                         'name' => $partnerData['name'],
                         'father_name' => $partnerData['father_name'] ?? null,
                         'cnic' => $partnerData['cnic'],
@@ -276,15 +284,17 @@ class TenantController extends Controller
             }
         }
 
-        $tenant->partners()->delete();
+        $agreement->partners()->delete();
         foreach ($newPartnersData as $np) {
-            $tenant->partners()->create($np);
+            $agreement->partners()->create($np);
         }
 
         if ($request->expectsJson()) {
             $redirectUrl = $request->input('save_only')
                 ? route('tenants.showStep', [$tenant, 1])
                 : route('tenants.showStep', [$tenant, 2]);
+
+            session()->flash('success', $request->input('save_only') ? 'Step 1 saved successfully.' : 'Step 1 saved.');
 
             return response()->json([
                 'success' => true,
@@ -320,11 +330,12 @@ class TenantController extends Controller
     public function showStep(Tenant $tenant, int $step): View
     {
         $data = ['title' => 'Add Tenant — Step ' . $step, 'tenant' => $tenant, 'step' => $step];
+        $draftAgreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
 
         return match ($step) {
             1 => view('tenants.wizard.step1', array_merge($data, [
                 'units' => Unit::orderBy('unit_number')->get(),
-                'partners' => $tenant->partners()->get()->map(fn($p) => [
+                'partners' => ($draftAgreement ? $draftAgreement->partners()->get() : collect())->map(fn($p) => [
                     'id'                 => $p->id,
                     'name'               => $p->name,
                     'father_name'        => $p->father_name,
@@ -343,31 +354,31 @@ class TenantController extends Controller
                 ]),
             ])),
             2 => view('tenants.wizard.step2', array_merge($data, [
-                'guarantors'        => $tenant->guarantors()->get(),
-                'emergencyContacts' => $tenant->emergencyContacts,
+                'guarantors'        => $draftAgreement ? $draftAgreement->guarantors()->get() : collect(),
+                'emergencyContacts' => $draftAgreement ? $draftAgreement->emergencyContacts : collect(),
             ])),
             3 => view('tenants.wizard.step3', array_merge($data, [
-                'agreement' => $tenant->agreements()->latest()->first(),
+                'agreement' => $draftAgreement,
                 'units'     => Unit::where('status', 'vacant')
                     ->orWhere('id', $tenant->unit_id)
                     ->orderBy('unit_number')
                     ->get(),
             ])),
             4 => view('tenants.wizard.step4', array_merge($data, [
-                'checklist' => $tenant->documentChecklist,
+                'checklist' => $draftAgreement ? $draftAgreement->documentChecklist : null,
             ])),
             5 => view('tenants.wizard.step5', array_merge($data, [
-                'checklist' => $tenant->moveInChecklists()->where('type', 'move_in')->first(),
-                'agreement' => $tenant->agreements()->latest()->first(),
+                'checklist' => $draftAgreement ? $draftAgreement->moveInChecklist : null,
+                'agreement' => $draftAgreement,
             ])),
             6 => view('tenants.wizard.step6', array_merge($data, [
-                'partners'         => $tenant->partners()->get(),
-                'guarantors'       => $tenant->guarantors()->get(),
-                'guarantor'        => $tenant->guarantors()->first(),
-                'emergencyContacts' => $tenant->emergencyContacts,
-                'agreement'        => $tenant->agreements()->latest()->first(),
-                'docChecklist'     => $tenant->documentChecklist,
-                'moveInChecklist'  => $tenant->moveInChecklists()->where('type', 'move_in')->first(),
+                'partners'          => $draftAgreement ? $draftAgreement->partners()->get() : collect(),
+                'guarantors'        => $draftAgreement ? $draftAgreement->guarantors()->get() : collect(),
+                'guarantor'         => $draftAgreement ? $draftAgreement->guarantors()->first() : null,
+                'emergencyContacts' => $draftAgreement ? $draftAgreement->emergencyContacts : collect(),
+                'agreement'         => $draftAgreement,
+                'docChecklist'      => $draftAgreement ? $draftAgreement->documentChecklist : null,
+                'moveInChecklist'   => $draftAgreement ? $draftAgreement->moveInChecklist : null,
             ])),
             default => redirect()->route('tenants.showStep', [$tenant, 1]),
         };
@@ -416,7 +427,8 @@ class TenantController extends Controller
         }
 
         // Keep track of old guarantors to preserve or delete their files
-        $oldGuarantors = $tenant->guarantors()->get();
+        $agreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
+        $oldGuarantors = $agreement ? $agreement->guarantors()->get() : collect();
         $oldGuarantorsMap = $oldGuarantors->keyBy('cnic');
         $reusedFiles = [];
 
@@ -499,6 +511,7 @@ class TenantController extends Controller
                 $cnicImagePath = $oldG?->cnic_image ?: $cnicFrontPath;
 
                 $newGuarantorsData[] = [
+                    'tenant_id' => $tenant->id, // fallback
                     'name' => $gData['name'],
                     'cnic' => $gData['cnic'],
                     'relation' => $gData['relation'],
@@ -538,9 +551,11 @@ class TenantController extends Controller
             }
         }
 
-        $tenant->guarantors()->delete();
-        foreach ($newGuarantorsData as $ng) {
-            $tenant->guarantors()->create($ng);
+        if ($agreement) {
+            $agreement->guarantors()->delete();
+            foreach ($newGuarantorsData as $ng) {
+                $agreement->guarantors()->create($ng);
+            }
         }
 
         if ($request->input('save_only')) {
@@ -662,7 +677,13 @@ class TenantController extends Controller
         }
         $data['notes'] = $request->input('notes');
 
-        $checklist = $tenant->documentChecklist()->firstOrNew(['tenant_id' => $tenant->id]);
+        $agreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
+        if (!$agreement) {
+            return redirect()->route('tenants.showStep', [$tenant, 3])
+                ->with('error', 'Agreement not found. Please complete Step 3 first.');
+        }
+
+        $checklist = $agreement->documentChecklist ?: new \App\Models\TenantDocumentChecklist();
 
         // Handle file uploads
         $fileFields = [
@@ -735,7 +756,8 @@ class TenantController extends Controller
         }
 
         $checklist->fill($data);
-        $checklist->tenant_id = $tenant->id;
+        $checklist->tenant_id = $tenant->id; // fallback
+        $checklist->agreement_id = $agreement->id;
         $checklist->save();
 
         if ($request->input('save_only')) {
@@ -798,13 +820,18 @@ class TenantController extends Controller
         }
         $data['type'] = 'move_in';
 
-        $agreement = $tenant->agreements()->latest()->first();
-        $data['agreement_id'] = $agreement?->id;
+        $agreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
+        if (!$agreement) {
+            return redirect()->route('tenants.showStep', [$tenant, 3])
+                ->with('error', 'Agreement not found. Please complete Step 3 first.');
+        }
+        $data['agreement_id'] = $agreement->id;
+        $data['tenant_id'] = $tenant->id; // fallback
 
-        $tenant->moveInChecklists()
+        $agreement->checklists()
             ->where('type', 'move_in')
             ->updateOrCreate(
-                ['tenant_id' => $tenant->id, 'type' => 'move_in'],
+                ['agreement_id' => $agreement->id, 'type' => 'move_in'],
                 $data
             );
 
@@ -844,19 +871,33 @@ class TenantController extends Controller
     // Print Step Data (Steps 1, 2, 3)
     // -----------------------------------------------------------------------
 
-    public function printStep(Tenant $tenant, int $step)
+    public function printStep(Request $request, Tenant $tenant, int $step)
     {
-        $tenant->load(['guarantors', 'emergencyContacts', 'activeAgreement', 'unit']);
-        $agreement = $tenant->agreements()->latest()->first();
+        $selectedAgreementId = $request->input('agreement_id');
+        if ($selectedAgreementId) {
+            $agreement = $tenant->agreements()->find($selectedAgreementId);
+        } else {
+            $agreement = $tenant->activeAgreement ?: $tenant->agreements()->latest()->first();
+        }
+
+        $partners = $agreement ? $agreement->partners()->get() : collect();
+        $guarantors = $agreement ? $agreement->guarantors()->get() : collect();
+        $emergencyContacts = $agreement ? $agreement->emergencyContacts()->get() : collect();
+        $checklist = $agreement ? $agreement->documentChecklist : null;
+        $moveInChecklist = $agreement ? $agreement->moveInChecklist : null;
 
         if ($step === 1) {
-            return view('tenants.print.step1', compact('tenant'));
+            return view('tenants.print.step1', [
+                'tenant' => $tenant,
+                'agreement' => $agreement,
+                'partners' => $partners,
+            ]);
         } elseif ($step === 2) {
             return view('tenants.print.step2', [
                 'tenant' => $tenant,
-                'guarantors' => $tenant->guarantors,
-                'guarantor' => $tenant->guarantors->first(),
-                'emergencyContacts' => $tenant->emergencyContacts,
+                'guarantors' => $guarantors,
+                'guarantor' => $guarantors->first(),
+                'emergencyContacts' => $emergencyContacts,
             ]);
         } elseif ($step === 3) {
             return view('tenants.print.step3', [
@@ -866,22 +907,21 @@ class TenantController extends Controller
         } elseif ($step === 4) {
             return view('tenants.print.step4', [
                 'tenant' => $tenant,
-                'checklist' => $tenant->documentChecklist,
+                'checklist' => $checklist,
             ]);
         } elseif ($step === 5) {
-            $checklist = $tenant->moveInChecklists()->where('type', 'move_in')->first();
             return view('tenants.print.step5', [
                 'tenant' => $tenant,
-                'checklist' => $checklist,
+                'checklist' => $moveInChecklist,
                 'agreement' => $agreement,
             ]);
         } elseif ($step === 6) {
             return view('tenants.print.all', [
                 'tenant' => $tenant,
                 'agreement' => $agreement,
-                'guarantors' => $tenant->guarantors,
-                'checklist' => $tenant->documentChecklist,
-                'moveInChecklist' => $tenant->moveInChecklists()->where('type', 'move_in')->first(),
+                'guarantors' => $guarantors,
+                'checklist' => $checklist,
+                'moveInChecklist' => $moveInChecklist,
             ]);
         }
 
@@ -891,22 +931,38 @@ class TenantController extends Controller
     // Show — Tenant Profile
     // -----------------------------------------------------------------------
 
-    public function show(Tenant $tenant): View
+    public function show(Tenant $tenant, Request $request): View
     {
         $tenant->load([
             'unit',
-            'guarantors',
-            'partners',
-            'emergencyContacts',
-            'activeAgreement',
-            'agreements',
-            'documentChecklist',
-            'moveInChecklists',
+            'agreements.unit',
         ]);
 
+        $selectedAgreementId = $request->input('agreement_id');
+        if ($selectedAgreementId) {
+            $selectedAgreement = $tenant->agreements()->find($selectedAgreementId);
+        } else {
+            $selectedAgreement = $tenant->activeAgreement ?: $tenant->agreements()->latest()->first();
+        }
+
+        // Load metadata specific to the selected agreement
+        $partners = $selectedAgreement ? $selectedAgreement->partners : collect();
+        $guarantors = $selectedAgreement ? $selectedAgreement->guarantors : collect();
+        $emergencyContacts = $selectedAgreement ? $selectedAgreement->emergencyContacts : collect();
+        $documentChecklist = $selectedAgreement ? $selectedAgreement->documentChecklist : null;
+        $moveInChecklist = $selectedAgreement ? $selectedAgreement->moveInChecklist : null;
+        $moveOutChecklist = $selectedAgreement ? $selectedAgreement->moveOutChecklist : null;
+
         return view('tenants.show', [
-            'title' => 'Tenant — ' . $tenant->name,
-            'tenant' => $tenant,
+            'title'             => 'Tenant — ' . $tenant->name,
+            'tenant'            => $tenant,
+            'selectedAgreement' => $selectedAgreement,
+            'partners'          => $partners,
+            'guarantors'        => $guarantors,
+            'emergencyContacts' => $emergencyContacts,
+            'documentChecklist' => $documentChecklist,
+            'moveInChecklist'   => $moveInChecklist,
+            'moveOutChecklist'  => $moveOutChecklist,
         ]);
     }
 

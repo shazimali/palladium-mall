@@ -38,7 +38,7 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        Add Tenant
+                        Create Tenant & Agreement 
                     </a>
                 @endif
             </div>
@@ -86,7 +86,7 @@
                         <th class="px-4 py-3">CNIC</th>
                         <th class="px-4 py-3">Phone</th>
                         <th class="px-4 py-3">Unit</th>
-                        <th class="px-4 py-3">Dependents</th>
+                        <th class="px-4 py-3">Agreement Period</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -114,7 +114,19 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-3 text-xs">
-                                        {{ $tenant->dependents ?? '—' }}
+                                        @php
+                                            $agreement = $tenant->activeAgreement ?? $tenant->agreements->sortByDesc('id')->first();
+                                        @endphp
+                                        @if($agreement)
+                                            <div class="font-medium text-gray-800 dark:text-white/90">
+                                                {{ $agreement->start_date->format('d M Y') }}
+                                            </div>
+                                            <div class="text-[10px] text-gray-400">
+                                                to {{ $agreement->end_date->format('d M Y') }}
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400 text-xs">—</span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3">
                                         @if($tenant->status === 'draft')

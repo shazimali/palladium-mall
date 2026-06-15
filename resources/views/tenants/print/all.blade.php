@@ -91,6 +91,20 @@
         <div class="item"><span class="label">Children in Family:</span><span class="value">{{ $tenant->children_count ?? 0 }}</span></div>
     </div>
 
+    <div class="section-title">Assigned Flat / Shop Details</div>
+    <div class="grid">
+        <div class="item"><span class="label">Flat/Shop Number:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : 'Not Assigned' }}</strong></span></div>
+        <div class="item"><span class="label">Type:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->type) : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Floor:</span><span class="value">{{ $tenant->unit?->floor?->name ?? 'N/A' }}</span></div>
+        <div class="item"><span class="label">Block:</span><span class="value">{{ $tenant->unit?->block?->name ?? 'N/A' }}</span></div>
+        @if($tenant->unit?->area)
+            <div class="item"><span class="label">Area / Zone:</span><span class="value">{{ $tenant->unit->area->name }}</span></div>
+        @endif
+        @if($tenant->unit?->area_sqft)
+            <div class="item"><span class="label">Size (sqft):</span><span class="value">{{ number_format($tenant->unit->area_sqft, 2) }}</span></div>
+        @endif
+    </div>
+
     <div class="section-title">Tenant CNIC Documents</div>
     <div class="cnic-container">
         <div class="cnic-box">
@@ -111,8 +125,8 @@
         </div>
     </div>
 
-    @if($tenant->partners && $tenant->partners->isNotEmpty())
-        @foreach($tenant->partners as $index => $partner)
+    @if(($partners ?? $tenant->partners) && ($partners ?? $tenant->partners)->isNotEmpty())
+        @foreach(($partners ?? $tenant->partners) as $index => $partner)
             <div class="page-break"></div>
             <div class="header">
                 <div class="header-info {{ $partner->passport_photo ? '' : 'centered' }}">
@@ -159,7 +173,7 @@
     @endif
 
     <div class="section-title">Emergency Contacts</div>
-    @if($tenant->emergencyContacts && $tenant->emergencyContacts->isNotEmpty())
+    @if(($emergencyContacts ?? $tenant->emergencyContacts) && ($emergencyContacts ?? $tenant->emergencyContacts)->isNotEmpty())
         <table>
             <thead>
                 <tr>
@@ -171,7 +185,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($tenant->emergencyContacts as $index => $contact)
+                @foreach(($emergencyContacts ?? $tenant->emergencyContacts) as $index => $contact)
                     <tr>
                         <td>{{ $index + 1 }}</td>
                         <td>{{ $contact->name }}</td>
@@ -206,6 +220,14 @@
         @if($tenant->passport_photo)
             <img src="{{ $tenant->passport_photo_url }}" class="tenant-photo" alt="Tenant Photo">
         @endif
+    </div>
+
+    <div class="section-title">Assigned Flat / Shop Details</div>
+    <div class="grid" style="margin-bottom: 15px;">
+        <div class="item"><span class="label">Flat/Shop Number:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : 'Not Assigned' }}</strong></span></div>
+        <div class="item"><span class="label">Type:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->type) : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Floor:</span><span class="value">{{ $tenant->unit?->floor?->name ?? 'N/A' }}</span></div>
+        <div class="item"><span class="label">Block:</span><span class="value">{{ $tenant->unit?->block?->name ?? 'N/A' }}</span></div>
     </div>
 
     <div class="section-title">Guarantors Details</div>
@@ -292,8 +314,10 @@
     <div class="grid">
         <div class="item"><span class="label">Tenant Name:</span><span class="value">{{ $tenant->name }}</span></div>
         <div class="item"><span class="label">CNIC Number:</span><span class="value">{{ $tenant->cnic }}</span></div>
-        <div class="item"><span class="label">Assigned Unit:</span><span class="value">{{ $tenant->unit ? $tenant->unit->unit_number : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Assigned Unit:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : 'N/A' }}</strong></span></div>
         <div class="item"><span class="label">Unit Type:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->type) : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Floor:</span><span class="value">{{ $tenant->unit?->floor?->name ?? 'N/A' }}</span></div>
+        <div class="item"><span class="label">Block:</span><span class="value">{{ $tenant->unit?->block?->name ?? 'N/A' }}</span></div>
     </div>
 
     @if($agreement)
@@ -338,7 +362,7 @@
     <div class="header">
         <div class="header-info">
             <h1>Required Documents Checklist</h1>
-            <p>Tenant: <strong>{{ $tenant->name }}</strong> | Unit: <strong>{{ $tenant->unit?->unit_number ?? 'N/A' }}</strong></p>
+            <p>Tenant: <strong>{{ $tenant->name }}</strong> | Unit: <strong>{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</strong></p>
         </div>
         <div style="text-align: right; font-size: 12px; color: #666;">
             Date: {{ now()->format('d M Y') }}
@@ -459,7 +483,7 @@
 
     <div class="info-grid">
         <div class="info-item"><span class="info-label">Tenant Name:</span><span class="info-value">{{ $tenant->name }}</span></div>
-        <div class="info-item"><span class="info-label">Unit / Shop Number:</span><span class="info-value">{{ $tenant->unit ? $tenant->unit->unit_number : 'N/A' }}</span></div>
+        <div class="info-item"><span class="info-label">Unit / Shop Number:</span><span class="info-value">{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</span></div>
         <div class="info-item"><span class="info-label">Inspection Date:</span><span class="info-value">{{ optional($moveInChecklist?->checklist_date)->format('d M Y') ?? now()->format('d M Y') }}</span></div>
         <div class="info-item"><span class="info-label">Inspector Name:</span><span class="info-value">{{ $moveInChecklist?->inspection_member ?? 'N/A' }}</span></div>
         <div class="info-item"><span class="info-label">Flat Condition:</span><span class="info-value"><strong>{{ $moveInChecklist?->flat_condition ? ucfirst($moveInChecklist->flat_condition) : 'N/A' }}</strong></span></div>

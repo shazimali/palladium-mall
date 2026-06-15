@@ -159,4 +159,39 @@ class Agreement extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function partners(): HasMany
+    {
+        return $this->hasMany(TenantPartner::class);
+    }
+
+    public function guarantors(): HasMany
+    {
+        return $this->hasMany(Guarantor::class);
+    }
+
+    public function emergencyContacts(): HasMany
+    {
+        return $this->hasMany(EmergencyContact::class);
+    }
+
+    public function documentChecklist(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(TenantDocumentChecklist::class);
+    }
+
+    public function checklists(): HasMany
+    {
+        return $this->hasMany(MoveInChecklist::class);
+    }
+
+    public function moveInChecklist(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(MoveInChecklist::class)->where('type', 'move_in');
+    }
+
+    public function moveOutChecklist(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(MoveInChecklist::class)->where('type', 'move_out');
+    }
 }

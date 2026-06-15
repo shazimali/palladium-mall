@@ -45,10 +45,24 @@
     <div class="grid">
         <div class="item"><span class="label">Tenant Name:</span><span class="value">{{ $tenant->name }}</span></div>
         <div class="item"><span class="label">CNIC Number:</span><span class="value">{{ $tenant->cnic }}</span></div>
-        <div class="item"><span class="label">Assigned Unit:</span><span class="value">{{ $tenant->unit ? $tenant->unit->unit_number : ($agreement?->unit?->unit_number ?? 'N/A') }}</span></div>
+        <div class="item"><span class="label">Assigned Unit:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : ($agreement?->unit?->unit_number ?? 'N/A') }}</strong></span></div>
+        @php
+            $u = $tenant->unit ?? $agreement?->unit;
+        @endphp
+        @if($u)
+            <div class="item"><span class="label">Unit Type:</span><span class="value">{{ ucfirst($u->type) }}</span></div>
+            <div class="item"><span class="label">Floor:</span><span class="value">{{ $u->floor?->name ?? 'N/A' }}</span></div>
+            <div class="item"><span class="label">Block:</span><span class="value">{{ $u->block?->name ?? 'N/A' }}</span></div>
+            @if($u->area)
+                <div class="item"><span class="label">Area / Zone:</span><span class="value">{{ $u->area->name }}</span></div>
+            @endif
+            @if($u->area_sqft)
+                <div class="item"><span class="label">Size (sqft):</span><span class="value">{{ number_format($u->area_sqft, 2) }}</span></div>
+            @endif
+        @endif
         <div class="item"><span class="label">Inspection Date:</span><span class="value">{{ optional($moveOut->checklist_date)->format('d M Y') ?? 'N/A' }}</span></div>
         <div class="item"><span class="label">Inspection Member:</span><span class="value">{{ $moveOut->inspection_member }}</span></div>
-        <div class="item"><span class="label">Agreement Period:</span><span class="value">{{ optional($agreement?->start_date)->format('d M Y') }} → {{ optional($agreement?->end_date)->format('d M Y') }}</span></div>
+        <div class="item" style="grid-column: span 2;"><span class="label">Agreement Period:</span><span class="value">{{ optional($agreement?->start_date)->format('d M Y') }} → {{ optional($agreement?->end_date)->format('d M Y') }}</span></div>
     </div>
 
     <div class="section-title">Inspection Checklist</div>
@@ -111,7 +125,20 @@
     <div class="section-title">Final Clearance Assessment</div>
     <div class="grid">
         <div class="item"><span class="label">Property Handover Condition:</span><span class="value" style="font-weight: bold; color: {{ $moveOut->flat_condition === 'good' ? '#16a34a' : '#ea580c' }}">{{ ucfirst($moveOut->flat_condition ?? 'N/A') }}</span></div>
-        <div class="item"><span class="label">Deposit Deduction (PKR):</span><span class="value" style="font-weight: bold;">{{ number_format($moveOut->deposit_deduction ?? 0) }} PKR</span></div>
+        <div class="item"><span class="label">Initial Security Deposit:</span><span class="value">{{ number_format($agreement?->security_deposit ?? 0) }} PKR</span></div>
+
+        @php
+            $payments = $agreement ? $agreement->payments()->orderBy('month')->get() : collect();
+            $totalBilled = $payments->sum('amount');
+            $totalPaid = $payments->sum('amount_paid');
+            $outstanding = max(0, $totalBilled - $totalPaid);
+            $damageDeduction = $moveOut->deposit_deduction ?? 0;
+            $netRefund = max(0, ($agreement?->security_deposit ?? 0) - $outstanding - $damageDeduction);
+        @endphp
+
+        <div class="item"><span class="label">Outstanding Dues Deducted:</span><span class="value" style="color: #dc2626;">- {{ number_format($outstanding) }} PKR</span></div>
+        <div class="item"><span class="label">Damage / Repair Deductions:</span><span class="value" style="color: #dc2626;">- {{ number_format($damageDeduction) }} PKR</span></div>
+        <div class="item" style="grid-column: span 2; font-size: 14px; border-bottom: 2px double #333; padding-bottom: 5px;"><span class="label">Estimated Net Refund:</span><span class="value" style="font-weight: bold; color: #16a34a;">{{ number_format($netRefund) }} PKR</span></div>
         @if($moveOut->final_remarks)
             <div class="item" style="grid-column: span 2;"><span class="label">Final Remarks:</span><span class="value">{{ $moveOut->final_remarks }}</span></div>
         @endif

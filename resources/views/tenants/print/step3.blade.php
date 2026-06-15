@@ -40,8 +40,10 @@
     <div class="grid">
         <div class="item"><span class="label">Tenant Name:</span><span class="value">{{ $tenant->name }}</span></div>
         <div class="item"><span class="label">CNIC Number:</span><span class="value">{{ $tenant->cnic }}</span></div>
-        <div class="item"><span class="label">Assigned Unit:</span><span class="value">{{ $tenant->unit ? $tenant->unit->unit_number : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Assigned Unit:</span><span class="value"><strong>{{ $tenant->unit ? $tenant->unit->unit_number : 'N/A' }}</strong></span></div>
         <div class="item"><span class="label">Unit Type:</span><span class="value">{{ $tenant->unit ? ucfirst($tenant->unit->type) : 'N/A' }}</span></div>
+        <div class="item"><span class="label">Floor:</span><span class="value">{{ $tenant->unit?->floor?->name ?? 'N/A' }}</span></div>
+        <div class="item"><span class="label">Block:</span><span class="value">{{ $tenant->unit?->block?->name ?? 'N/A' }}</span></div>
     </div>
 
     @if($agreement)

@@ -270,6 +270,29 @@
                         <p class="mt-1 text-xs text-gray-400">Amount to deduct from security deposit for damages</p>
                     </div>
                     <div class="sm:col-span-2">
+                        <div class="rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-white/[0.01]">
+                            <h5 class="text-sm font-semibold text-gray-800 dark:text-white mb-3">Security Deposit Settlement Summary</h5>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Initial Security Deposit</span>
+                                    <span class="block mt-1 font-semibold text-gray-800 dark:text-white" id="initial_deposit_val">{{ number_format($agreement?->security_deposit ?? 0) }} PKR</span>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unpaid Dues (Auto-Deducted)</span>
+                                    <span class="block mt-1 font-semibold text-rose-600 dark:text-rose-400" id="outstanding_val">- {{ number_format($outstanding) }} PKR</span>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Damage Deductions</span>
+                                    <span class="block mt-1 font-semibold text-rose-600 dark:text-rose-400" id="damage_deduction_val">- 0 PKR</span>
+                                </div>
+                                <div>
+                                    <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Net Refund Estimate</span>
+                                    <span class="block mt-1 font-bold text-emerald-600 dark:text-emerald-400" id="net_refund_val">{{ number_format(max(0, ($agreement?->security_deposit ?? 0) - $outstanding)) }} PKR</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2">
                         <label class="{{ $label }}">Final Remarks</label>
                         <textarea name="final_remarks" rows="2" placeholder="Final remarks by inspector..."
                             class="{{ $input }}">{{ old('final_remarks') }}</textarea>
@@ -309,6 +332,27 @@ document.addEventListener('DOMContentLoaded', function () {
             disableMobile: true,
             allowInput: false,
         });
+    }
+
+    // Real-time security deposit refund calculation
+    const depositDeductionInput = document.getElementsByName('deposit_deduction')[0];
+    const initialDeposit = {{ $agreement?->security_deposit ?? 0 }};
+    const outstanding = {{ $outstanding }};
+    
+    if (depositDeductionInput) {
+        const updateRefund = () => {
+            const damageDeduction = parseFloat(depositDeductionInput.value) || 0;
+            const netRefund = Math.max(0, initialDeposit - outstanding - damageDeduction);
+            
+            // Format to currency style
+            document.getElementById('damage_deduction_val').textContent = '- ' + damageDeduction.toLocaleString() + ' PKR';
+            document.getElementById('net_refund_val').textContent = netRefund.toLocaleString() + ' PKR';
+        };
+        
+        depositDeductionInput.addEventListener('input', updateRefund);
+        depositDeductionInput.addEventListener('change', updateRefund);
+        // Run once on load
+        updateRefund();
     }
 });
 </script>
