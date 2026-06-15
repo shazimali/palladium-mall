@@ -21,27 +21,38 @@ done
 
 echo "✅ Database ready"
 
-if [ -z "$APP_KEY" ]; then
-    echo "🗝️ Generating APP_KEY..."
-    php artisan key:generate --force
+if [ "${CONTAINER_ROLE:-app}" = "app" ]; then
+    if [ -z "$APP_KEY" ]; then
+        echo "🗝️ Generating APP_KEY..."
+        php artisan key:generate --force
+    else
+        echo "✅ APP_KEY already set"
+    fi
+
+    echo "🔁 Running migrations..."
+    php artisan migrate --force
+
+    echo "🔗 Fixing storage link..."
+    mkdir -p /var/www/palladium_mall/storage/framework/views
+    mkdir -p /var/www/palladium_mall/storage/framework/cache
+    mkdir -p /var/www/palladium_mall/storage/framework/sessions
+    php artisan storage:link --force || true
+
+    echo "🚀 Running optimizations..."
+    php artisan config:cache || true
+    php artisan route:cache || true
+    php artisan view:cache || true
+    php artisan event:cache || true
+
+    echo "✅ Starting Apache..."
+    exec apache2-foreground
+elif [ "$CONTAINER_ROLE" = "queue" ]; then
+    echo "🚀 Starting queue worker..."
+    exec php artisan queue:work --verbose --tries=3 --timeout=90
+elif [ "$CONTAINER_ROLE" = "scheduler" ]; then
+    echo "🚀 Starting scheduler..."
+    exec php artisan schedule:work
 else
-    echo "✅ APP_KEY already set"
+    echo "❌ Unknown CONTAINER_ROLE: $CONTAINER_ROLE"
+    exit 1
 fi
-
-echo "🔁 Running migrations..."
-php artisan migrate --force
-
-echo "🔗 Fixing storage link..."
-mkdir -p /var/www/palladium_mall/storage/framework/views
-mkdir -p /var/www/palladium_mall/storage/framework/cache
-mkdir -p /var/www/palladium_mall/storage/framework/sessions
-php artisan storage:link --force || true
-
-echo "🚀 Running optimizations..."
-php artisan config:cache || true
-php artisan route:cache || true
-php artisan view:cache || true
-php artisan event:cache || true
-
-echo "✅ Starting Apache..."
-exec apache2-foreground

@@ -105,10 +105,9 @@
                                                 Keep me logged in
                                             </label>
                                         </div>
-                                        {{-- Placeholder for future password reset --}}
-                                        <span class="text-brand-500 dark:text-brand-400 text-sm cursor-not-allowed opacity-60">
+                                        <a href="{{ route('password.request') }}" class="text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300 text-sm font-medium">
                                             Forgot password?
-                                        </span>
+                                        </a>
                                     </div>
 
                                     <!-- Submit Button -->

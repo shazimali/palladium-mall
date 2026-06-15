@@ -31,6 +31,11 @@ Route::middleware('guest')->group(function () {
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
     Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
 
+    // Password Reset Routes
+    Route::get('/forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'store'])->name('password.email');
+    Route::get('/reset-password/{token}', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'store'])->name('password.update');
 });
 
 Route::get('bills/{hash}', [PaymentController::class, 'publicPrint'])->name('payments.public-print');
@@ -55,6 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:users.view')->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
         Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+        Route::post('users/{user}/send-reset-link', [UserController::class, 'sendResetLink'])->name('users.send-reset-link');
     });
 
     Route::middleware('permission:roles.view')->group(function () {
@@ -184,6 +190,18 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
     });
 
+    Route::middleware('permission:reports.daybook')->group(function () {
+        Route::get('reports/day-book', [\App\Http\Controllers\DayBookController::class, 'index'])->name('reports.day-book');
+    });
+
+    Route::middleware('permission:expense_heads.view')->group(function () {
+        Route::resource('expense-heads', \App\Http\Controllers\ExpenseHeadController::class)->except(['show']);
+    });
+
+    Route::middleware('permission:expenses.view')->group(function () {
+        Route::resource('expenses', \App\Http\Controllers\ExpenseController::class);
+    });
+
     // AJAX
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -205,9 +223,9 @@ Route::middleware('auth')->group(function () {
     })->name('calendar');
 
     // Profile
-    Route::get('/profile', function () {
-        return view('pages.profile', ['title' => 'Profile']);
-    })->name('profile');
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'show'])->name('profile');
+    Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Form pages
     Route::get('/form-elements', function () {

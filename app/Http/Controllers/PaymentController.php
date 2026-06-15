@@ -212,8 +212,9 @@ class PaymentController extends Controller
                 }
 
                 foreach ($request->types as $type) {
-                    // Skip if already exists
+                    // Skip if already exists for this tenant, active agreement, type, and month
                     $exists = Payment::where('tenant_id', $tenant->id)
+                        ->where('agreement_id', $agreement->id)
                         ->where('type', $type)
                         ->where('month', $month)
                         ->exists();

@@ -127,6 +127,21 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('expense_heads.view')) {
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Expense Heads',
+                'path' => '/expense-heads',
+            ];
+        }
+
+        if (auth()->check() && $user->can('expenses.view')) {
+            $mainItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Expenses Ledger',
+                'path' => '/expenses',
+            ];
+        }
 
         if (auth()->check() && $user->can('inspection_persons.view')) {
             $mainItems[] = [
@@ -141,6 +156,14 @@ class MenuHelper
                 'icon' => 'charts',
                 'name' => 'Reports',
                 'path' => '/reports',
+            ];
+        }
+
+        if (auth()->check() && $user->can('reports.daybook')) {
+            $mainItems[] = [
+                'icon' => 'charts',
+                'name' => 'Day Book',
+                'path' => '/reports/day-book',
             ];
         }
 

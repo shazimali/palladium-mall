@@ -155,6 +155,19 @@
                                 <td class="px-5 py-4 text-right sm:px-6">
                                     <div class="flex justify-end gap-2">
                                         @can('users.edit')
+                                             <form action="{{ route('users.send-reset-link', $user) }}" method="POST"
+                                                 onsubmit="return confirm('Are you sure you want to send a password reset email to {{ $user->name }}?')" class="inline">
+                                                 @csrf
+                                                 <button type="submit" title="Send Password Reset Email"
+                                                     class="text-gray-500 hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400">
+                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                             d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-2.25-1.5a2 2 0 00-2.22 0l-2.25 1.5">
+                                                         </path>
+                                                     </svg>
+                                                 </button>
+                                             </form>
+
                                             <a href="{{ route('users.edit', $user) }}"
                                                 class="text-gray-500 hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400">
                                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

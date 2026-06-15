@@ -110,4 +110,19 @@ class UserController extends Controller
         return redirect()->route('users.index')
             ->with('success', "User {$status} successfully.");
     }
+
+    public function sendResetLink(User $user): \Illuminate\Http\RedirectResponse
+    {
+        $status = \Illuminate\Support\Facades\Password::broker()->sendResetLink(
+            ['email' => $user->email]
+        );
+
+        if ($status === \Illuminate\Support\Facades\Password::RESET_LINK_SENT) {
+            return redirect()->route('users.index')
+                ->with('success', 'Password reset link sent to ' . $user->name . ' successfully.');
+        }
+
+        return redirect()->route('users.index')
+            ->with('error', 'Failed to send password reset link: ' . __($status));
+    }
 }
