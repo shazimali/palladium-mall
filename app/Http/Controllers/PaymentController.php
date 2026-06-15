@@ -194,10 +194,22 @@ class PaymentController extends Controller
 
         $created = 0;
         $skipped = 0;
+        $outsideRange = 0;
 
-        DB::transaction(function () use ($tenants, $month, $dueDate, $request, &$created, &$skipped) {
+        DB::transaction(function () use ($tenants, $month, $dueDate, $request, &$created, &$skipped, &$outsideRange) {
+            $billingMonth = Carbon::parse($month)->startOfMonth();
+
             foreach ($tenants as $tenant) {
                 $agreement = $tenant->activeAgreement;
+
+                // Validate if billing month falls within active agreement start and end dates (inclusive of month bounds)
+                $agreementStart = $agreement->start_date->copy()->startOfMonth();
+                $agreementEnd = $agreement->end_date->copy()->startOfMonth();
+
+                if ($billingMonth->lt($agreementStart) || $billingMonth->gt($agreementEnd)) {
+                    $outsideRange += count($request->types);
+                    continue;
+                }
 
                 foreach ($request->types as $type) {
                     // Skip if already exists
@@ -236,7 +248,7 @@ class PaymentController extends Controller
 
         return redirect()
             ->route('payments.index')
-            ->with('success', "{$created} payment records generated. {$skipped} already existed and were skipped.");
+            ->with('success', "{$created} payment records generated. {$skipped} already existed. {$outsideRange} fell outside agreement terms and were skipped.");
     }
 
     // -----------------------------------------------------------------------

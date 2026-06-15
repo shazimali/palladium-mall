@@ -14,6 +14,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\LandlordController;
 use App\Http\Controllers\AjaxUnitController;
 use App\Http\Controllers\PaymentAccountController;
+use App\Http\Controllers\InspectionPersonController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -90,6 +91,10 @@ Route::middleware('auth')->group(function () {
  
     Route::middleware('permission:payment_accounts.view')->group(function () {
         Route::resource('payment-accounts', PaymentAccountController::class);
+    });
+
+    Route::middleware('permission:inspection_persons.view')->group(function () {
+        Route::resource('inspection-persons', InspectionPersonController::class);
     });
 
     Route::middleware('permission:agreements.view')->group(function () {

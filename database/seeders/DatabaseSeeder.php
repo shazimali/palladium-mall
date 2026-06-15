@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             UtilityReadingPermissionSeeder::class,
             LandlordPermissionSeeder::class,
             PaymentAccountPermissionSeeder::class,
+            InspectionPersonPermissionSeeder::class,
             RoleSeeder::class,
             AdminUserSeeder::class,
             FloorBlockAreaSeeder::class,

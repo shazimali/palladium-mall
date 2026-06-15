@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MoveInChecklist extends Model
 {
     protected $fillable = [
-        'tenant_id', 'agreement_id',
+        'tenant_id', 'agreement_id', 'inspection_person_id',
         'inspection_member', 'checklist_date', 'type',
         // 1. General Cleanliness
         'rooms_cleaned', 'kitchen_cleaned', 'bathrooms_cleaned', 'no_garbage',
@@ -71,6 +71,11 @@ class MoveInChecklist extends Model
     public function agreement(): BelongsTo
     {
         return $this->belongsTo(Agreement::class);
+    }
+
+    public function inspectionPerson(): BelongsTo
+    {
+        return $this->belongsTo(InspectionPerson::class, 'inspection_person_id');
     }
 
     public function countChecked(): int

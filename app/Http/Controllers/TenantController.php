@@ -370,6 +370,7 @@ class TenantController extends Controller
             5 => view('tenants.wizard.step5', array_merge($data, [
                 'checklist' => $draftAgreement ? $draftAgreement->moveInChecklist : null,
                 'agreement' => $draftAgreement,
+                'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
             ])),
             6 => view('tenants.wizard.step6', array_merge($data, [
                 'partners'          => $draftAgreement ? $draftAgreement->partners()->get() : collect(),
@@ -776,7 +777,7 @@ class TenantController extends Controller
     private function saveStep5(Request $request, Tenant $tenant): RedirectResponse
     {
         $data = $request->validate([
-            'inspection_member' => 'required|string|max:255',
+            'inspection_person_id' => 'required|exists:inspection_persons,id',
             'checklist_date' => 'required|date',
             'damage_notes' => 'nullable|string',
             'inventory_notes' => 'nullable|string',
@@ -784,6 +785,9 @@ class TenantController extends Controller
             'deposit_deduction' => 'nullable|numeric|min:0',
             'final_remarks' => 'nullable|string',
         ]);
+
+        $inspector = \App\Models\InspectionPerson::findOrFail($request->inspection_person_id);
+        $data['inspection_member'] = $inspector->name;
 
         $booleans = [
             'rooms_cleaned',

@@ -166,9 +166,15 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">Inspection Team Member <span class="text-red-500">*</span></label>
-                        <input type="text" name="inspection_member" value="{{ old('inspection_member') }}"
-                               placeholder="Name of the inspector" class="{{ $input }} {{ $errors->has('inspection_member') ? 'border-red-400' : '' }}">
-                        @error('inspection_member') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                        <select name="inspection_person_id" class="{{ $input }} {{ $errors->has('inspection_person_id') ? 'border-red-400' : '' }}" required>
+                            <option value="">Select Inspector</option>
+                            @foreach($inspectionPersons as $person)
+                                <option value="{{ $person->id }}" {{ old('inspection_person_id') == $person->id ? 'selected' : '' }}>
+                                    {{ $person->name }} ({{ $person->designation ?? 'N/A' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('inspection_person_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
                 </div>
             </div>

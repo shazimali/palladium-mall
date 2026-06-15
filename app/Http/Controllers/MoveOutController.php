@@ -26,13 +26,14 @@ class MoveOutController extends Controller
             'tenant'    => $tenant,
             'agreement' => $agreement,
             'payments'  => $payments,
+            'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
     public function store(Request $request, Tenant $tenant): RedirectResponse
     {
         $data = $request->validate([
-            'inspection_member' => 'required|string|max:255',
+            'inspection_person_id' => 'required|exists:inspection_persons,id',
             'checklist_date'    => 'required|date',
             'damage_notes'      => 'nullable|string',
             'inventory_notes'   => 'nullable|string',
@@ -40,6 +41,9 @@ class MoveOutController extends Controller
             'deposit_deduction' => 'nullable|numeric|min:0',
             'final_remarks'     => 'nullable|string',
         ]);
+
+        $inspector = \App\Models\InspectionPerson::findOrFail($request->inspection_person_id);
+        $data['inspection_member'] = $inspector->name;
 
         $booleans = [
             'rooms_cleaned', 'kitchen_cleaned', 'bathrooms_cleaned', 'no_garbage',
