@@ -7,6 +7,34 @@ services:
     restart: always
     ports:
       - "8084:80"
+    environment:
+      - CONTAINER_ROLE=app
+    networks:
+      - global_network
+    volumes:
+      - palladium_mall_storage:/var/www/palladium_mall/storage
+      - palladium_mall_cache:/var/www/palladium_mall/bootstrap/cache
+      - /var/www/palladium_mall/.env:/var/www/palladium_mall/.env:ro
+
+  palladium_mall_queue:
+    image: ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG:-latest}
+    container_name: palladium_mall_queue
+    restart: always
+    environment:
+      - CONTAINER_ROLE=queue
+    networks:
+      - global_network
+    volumes:
+      - palladium_mall_storage:/var/www/palladium_mall/storage
+      - palladium_mall_cache:/var/www/palladium_mall/bootstrap/cache
+      - /var/www/palladium_mall/.env:/var/www/palladium_mall/.env:ro
+
+  palladium_mall_scheduler:
+    image: ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG:-latest}
+    container_name: palladium_mall_scheduler
+    restart: always
+    environment:
+      - CONTAINER_ROLE=scheduler
     networks:
       - global_network
     volumes:
