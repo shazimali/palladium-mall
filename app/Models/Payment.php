@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 use App\Traits\LogsActivity;
 
@@ -37,6 +38,7 @@ class Payment extends Model
         'units_consumed',
         'rate_per_unit',
         'payment_account_id',
+        'hash',
     ];
 
     protected $casts = [
@@ -227,5 +229,17 @@ class Payment extends Model
         }
 
         return 'partial';
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function ($payment) {
+            $payment->hash = (string) Str::uuid();
+        });
+    }
+
+    public function getPublicUrlAttribute(): string
+    {
+        return route('payments.public-print', $this->hash);
     }
 }

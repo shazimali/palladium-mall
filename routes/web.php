@@ -33,17 +33,22 @@ Route::middleware('guest')->group(function () {
 
 });
 
+Route::get('bills/{hash}', [PaymentController::class, 'publicPrint'])->name('payments.public-print');
+
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
     // Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Units — admin + super-admin only
     Route::middleware('permission:units.view')->group(function () {
+        Route::resource('units', UnitController::class)->except(['show']);
+        Route::get('units/{unit}', [UnitController::class, 'show'])->name('units.show');
+    });
+
+    Route::middleware('permission:units.import')->group(function () {
         Route::get('units/import', [UnitController::class, 'importForm'])->name('units.import.form');
         Route::post('units/import', [UnitController::class, 'importSubmit'])->name('units.import.submit');
         Route::get('units/import/template', [UnitController::class, 'downloadTemplate'])->name('units.import.template');
-        Route::resource('units', UnitController::class)->except(['show']);
-        Route::get('units/{unit}', [UnitController::class, 'show'])->name('units.show');
     });
 
     // Users — admin + super-admin only
@@ -69,18 +74,24 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:tenants.view')->group(function () {
-        // Wizard steps
+        Route::resource('tenants', TenantController::class)->except(['create', 'store']);
+    });
+
+    Route::middleware('permission:tenants.wizard')->group(function () {
         Route::get('tenants/create',                [TenantController::class, 'create'])->name('tenants.create');
         Route::post('tenants',                      [TenantController::class, 'store'])->name('tenants.store');
         Route::get('tenants/{tenant}/step/{step}',  [TenantController::class, 'showStep'])->name('tenants.showStep');
         Route::post('tenants/{tenant}/step/{step}', [TenantController::class, 'saveStep'])->name('tenants.saveStep');
         Route::post('tenants/{tenant}/confirm',     [TenantController::class, 'confirm'])->name('tenants.confirm');
-        Route::get('tenants/{tenant}/print/{step}', [TenantController::class, 'printStep'])->name('tenants.printStep');
-        // Standard resource (except create/store — handled above)
-        Route::resource('tenants', TenantController::class)->except(['create', 'store']);
-        // Move-out
+    });
+
+    Route::middleware('permission:tenants.move-out')->group(function () {
         Route::get('tenants/{tenant}/move-out',         [MoveOutController::class, 'create'])->name('tenants.moveOut.create');
         Route::post('tenants/{tenant}/move-out',        [MoveOutController::class, 'store'])->name('tenants.moveOut.store');
+    });
+
+    Route::middleware('permission:tenants.print')->group(function () {
+        Route::get('tenants/{tenant}/print/{step}', [TenantController::class, 'printStep'])->name('tenants.printStep');
         Route::get('tenants/{tenant}/print-move-out',   [MoveOutController::class, 'printMoveOut'])->name('tenants.printMoveOut');
         Route::get('tenants/{tenant}/clearance-form',   [MoveOutController::class, 'clearanceForm'])->name('tenants.clearanceForm');
     });
@@ -102,8 +113,11 @@ Route::middleware('auth')->group(function () {
         Route::resource('agreements', AgreementController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
     });
 
-    Route::middleware('permission:units.view')->group(function () {
+    Route::middleware('permission:units.vacate')->group(function () {
         Route::post('units/{unit}/vacate',      [UnitController::class, 'vacate'])->name('units.vacate');
+    });
+
+    Route::middleware('permission:units.add-tenant')->group(function () {
         Route::get('units/{unit}/add-tenant',   [UnitController::class, 'addTenant'])->name('units.addTenant');
     });
 
@@ -117,30 +131,45 @@ Route::middleware('auth')->group(function () {
 
     // Meter AJAX routes (embedded in Unit create/edit)
     Route::get('ajax/meters/{unit}', [MeterController::class, 'byUnit'])->name('ajax.meters.by-unit');
-    Route::post('ajax/meters', [MeterController::class, 'store'])->name('ajax.meters.store');
-    Route::put('ajax/meters/{meter}', [MeterController::class, 'update'])->name('ajax.meters.update');
-    Route::delete('ajax/meters/{meter}', [MeterController::class, 'destroy'])->name('ajax.meters.destroy');
+    Route::middleware('permission:meters.edit')->group(function () {
+        Route::post('ajax/meters', [MeterController::class, 'store'])->name('ajax.meters.store');
+        Route::put('ajax/meters/{meter}', [MeterController::class, 'update'])->name('ajax.meters.update');
+        Route::delete('ajax/meters/{meter}', [MeterController::class, 'destroy'])->name('ajax.meters.destroy');
+    });
 
     // Unit AJAX routes — managed from Landlord form
     Route::get(   'ajax/landlord-units/{landlord}',              [AjaxUnitController::class, 'byLandlord'])->name('ajax.landlord-units.by-landlord');
-    Route::post(  'ajax/landlord-units',                         [AjaxUnitController::class, 'store'])     ->name('ajax.landlord-units.store');
-    Route::put(   'ajax/landlord-units/{unit}',                  [AjaxUnitController::class, 'update'])    ->name('ajax.landlord-units.update');
-    Route::delete('ajax/landlord-units/{unit}',                  [AjaxUnitController::class, 'destroy'])   ->name('ajax.landlord-units.destroy');
-    Route::post(  'ajax/landlord-units/{unit}/transfer',         [AjaxUnitController::class, 'transfer'])  ->name('ajax.landlord-units.transfer');
+    Route::middleware('permission:landlords.edit-units')->group(function () {
+        Route::post(  'ajax/landlord-units',                         [AjaxUnitController::class, 'store'])     ->name('ajax.landlord-units.store');
+        Route::put(   'ajax/landlord-units/{unit}',                  [AjaxUnitController::class, 'update'])    ->name('ajax.landlord-units.update');
+        Route::delete('ajax/landlord-units/{unit}',                  [AjaxUnitController::class, 'destroy'])   ->name('ajax.landlord-units.destroy');
+        Route::post(  'ajax/landlord-units/{unit}/transfer',         [AjaxUnitController::class, 'transfer'])  ->name('ajax.landlord-units.transfer');
+    });
 
     Route::middleware('permission:payments.view')->group(function () {
+        Route::resource('payments', PaymentController::class);
+    });
+
+    Route::middleware('permission:payments.record')->group(function () {
+        Route::post('payments/{payment}/record', [PaymentController::class, 'recordPayment'])
+            ->name('payments.record');
+    });
+
+    Route::middleware('permission:payments.bulk-generate')->group(function () {
+        Route::post('payments/bulk-generate', [PaymentController::class, 'bulkGenerate'])
+            ->name('payments.bulk-generate');
+    });
+
+    Route::middleware('permission:payments.print')->group(function () {
+        Route::get('payments/{payment}/print', [PaymentController::class, 'print'])
+            ->name('payments.print');
+    });
+
+    Route::middleware('permission:utilities.record')->group(function () {
         Route::get('payments/utilities/create', [PaymentController::class, 'createUtilityReading'])
             ->name('payments.utilities.create');
         Route::post('payments/utilities', [PaymentController::class, 'storeUtilityReading'])
             ->name('payments.utilities.store');
-        Route::get('payments/{payment}/print', [PaymentController::class, 'print'])
-            ->name('payments.print');
-
-        Route::resource('payments', PaymentController::class);
-        Route::post('payments/{payment}/record', [PaymentController::class, 'recordPayment'])
-            ->name('payments.record');
-        Route::post('payments/bulk-generate', [PaymentController::class, 'bulkGenerate'])
-            ->name('payments.bulk-generate');
     });
 
     // AJAX

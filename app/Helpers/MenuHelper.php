@@ -95,14 +95,6 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('inspection_persons.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Inspection Persons',
-                'path' => '/inspection-persons',
-            ];
-        }
-
         if (auth()->check() && $user->can('units.view')) {
             $mainItems[] = [
                 'icon' => 'tables',
@@ -132,6 +124,15 @@ class MenuHelper
                 'icon' => 'task',
                 'name' => 'Payment Accounts',
                 'path' => '/payment-accounts',
+            ];
+        }
+
+
+        if (auth()->check() && $user->can('inspection_persons.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Inspection Persons',
+                'path' => '/inspection-persons',
             ];
         }
 

@@ -409,4 +409,30 @@ class PaymentController extends Controller
             'payment' => $payment,
         ]);
     }
+
+    public function publicPrint(string $hash): View
+    {
+        $payment = Payment::where('hash', $hash)->firstOrFail();
+        
+        $payment->load(['tenant', 'unit', 'agreement']);
+
+        if (in_array($payment->type, ['maintenance', 'electricity', 'water', 'gas'])) {
+            $groupedPayments = Payment::with(['tenant', 'unit', 'agreement', 'meter'])
+                ->where('tenant_id', $payment->tenant_id)
+                ->where('month', $payment->month->toDateString())
+                ->whereIn('type', ['maintenance', 'electricity', 'water', 'gas'])
+                ->get();
+
+            return view('payments.print_maintenance', [
+                'title' => 'Print Maintenance Bill — ' . ($payment->tenant->name ?? 'N/A'),
+                'payment' => $payment,
+                'groupedPayments' => $groupedPayments,
+            ]);
+        }
+
+        return view('payments.print', [
+            'title' => 'Print Receipt — ' . ($payment->tenant->name ?? 'N/A'),
+            'payment' => $payment,
+        ]);
+    }
 }
