@@ -39,16 +39,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
     // Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Units — admin + super-admin only
-    Route::middleware('permission:units.view')->group(function () {
-        Route::resource('units', UnitController::class)->except(['show']);
-        Route::get('units/{unit}', [UnitController::class, 'show'])->name('units.show');
-    });
-
     Route::middleware('permission:units.import')->group(function () {
         Route::get('units/import', [UnitController::class, 'importForm'])->name('units.import.form');
         Route::post('units/import', [UnitController::class, 'importSubmit'])->name('units.import.submit');
         Route::get('units/import/template', [UnitController::class, 'downloadTemplate'])->name('units.import.template');
+    });
+
+    // Units — admin + super-admin only
+    Route::middleware('permission:units.view')->group(function () {
+        Route::resource('units', UnitController::class)->except(['show']);
+        Route::get('units/{unit}', [UnitController::class, 'show'])->name('units.show');
     });
 
     // Users — admin + super-admin only
@@ -73,16 +73,16 @@ Route::middleware('auth')->group(function () {
         Route::resource('units', UnitController::class)->except(['show']);
     });
 
-    Route::middleware('permission:tenants.view')->group(function () {
-        Route::resource('tenants', TenantController::class)->except(['create', 'store']);
-    });
-
     Route::middleware('permission:tenants.wizard')->group(function () {
         Route::get('tenants/create',                [TenantController::class, 'create'])->name('tenants.create');
         Route::post('tenants',                      [TenantController::class, 'store'])->name('tenants.store');
         Route::get('tenants/{tenant}/step/{step}',  [TenantController::class, 'showStep'])->name('tenants.showStep');
         Route::post('tenants/{tenant}/step/{step}', [TenantController::class, 'saveStep'])->name('tenants.saveStep');
         Route::post('tenants/{tenant}/confirm',     [TenantController::class, 'confirm'])->name('tenants.confirm');
+    });
+
+    Route::middleware('permission:tenants.view')->group(function () {
+        Route::resource('tenants', TenantController::class)->except(['create', 'store']);
     });
 
     Route::middleware('permission:tenants.move-out')->group(function () {
