@@ -165,7 +165,7 @@
                                     <td class="px-4 py-3">{{ $unit->block->name ?? '—' }}</td>
                                     <td class="px-4 py-3">{{ $unit->area->name ?? '—' }}</td>
                                     <td class="px-4 py-3">
-                                        @if($unit->landlord_id)
+                                        @if($unit->landlord)
                                             <a href="{{ route('landlords.show', $unit->landlord_id) }}"
                                                 class="text-brand-500 hover:underline">
                                                 {{ $unit->landlord->name }}
