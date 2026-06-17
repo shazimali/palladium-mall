@@ -78,7 +78,7 @@
                         <th class="px-4 py-3">Phone</th>
                         <th class="px-4 py-3">Email</th>
                         <th class="px-4 py-3">CNIC</th>
-                        <th class="px-4 py-3">Units Owned</th>
+                        <th class="px-4 py-3">Assigned Flats & Status</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -93,9 +93,28 @@
                             <td class="px-4 py-3">{{ $landlord->email ?? '—' }}</td>
                             <td class="px-4 py-3">{{ $landlord->cnic ?? '—' }}</td>
                             <td class="px-4 py-3">
-                                <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                                    {{ $landlord->units_count }} Properties
-                                </span>
+                                <div class="flex flex-col gap-1">
+                                    <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 w-fit">
+                                        {{ $landlord->units_count }} {{ Str::plural('Property', $landlord->units_count) }}
+                                    </span>
+                                    @if($landlord->units->isNotEmpty())
+                                        <div class="mt-1 flex flex-wrap gap-1 max-w-xs">
+                                            @foreach($landlord->units as $unit)
+                                                @php
+                                                    $badgeColor = match($unit->status) {
+                                                        'rented' => 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800',
+                                                        'vacant' => 'bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800',
+                                                        'self' => 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700',
+                                                        default => 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800/50 dark:text-gray-400 dark:border-gray-700',
+                                                    };
+                                                @endphp
+                                                <span class="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium {{ $badgeColor }}">
+                                                    {{ $unit->unit_number }} ({{ ucfirst($unit->status) }})
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-end gap-2">

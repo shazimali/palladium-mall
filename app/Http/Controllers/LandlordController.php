@@ -18,6 +18,7 @@ class LandlordController extends Controller
     public function index(Request $request): View
     {
         $landlords = Landlord::query()
+            ->with(['units'])
             ->withCount('units')
             ->when($request->search, function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
