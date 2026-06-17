@@ -134,11 +134,22 @@
                                     <td class="px-4 py-3">{{ $tenant->phone }}</td>
                                     <td class="px-4 py-3 text-xs">
                                         @php
-                                            $agreement = $tenant->activeAgreement ?? $tenant->agreements->sortByDesc('id')->first();
+                                            $showAgreements = $tenant->agreements->whereIn('status', ['active', 'expired', 'terminated'])->sortByDesc('id');
                                         @endphp
-                                        @if($agreement && $agreement->start_date && $agreement->end_date)
-                                            <div class="font-medium text-gray-800 dark:text-white/90">
-                                                {{ $agreement->start_date->format('d M Y') }}
+                                        @if($showAgreements->isNotEmpty())
+                                            <div class="flex flex-col gap-2">
+                                                @foreach($showAgreements as $agreement)
+                                                    @if($agreement->start_date && $agreement->end_date)
+                                                        <div class="flex flex-col gap-0.5 rounded-md border border-gray-100 bg-gray-50/50 p-1.5 dark:border-gray-800 dark:bg-white/[0.02]">
+                                                            <span class="font-medium text-gray-800 dark:text-white/90 whitespace-nowrap">
+                                                                {{ $agreement->start_date->format('d M Y') }} - {{ $agreement->end_date->format('d M Y') }}
+                                                            </span>
+                                                            <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-medium w-fit {{ $agreement->status_badge_class }}">
+                                                                {{ ucfirst($agreement->status) }}
+                                                            </span>
+                                                        </div>
+                                                    @endif
+                                                @endforeach
                                             </div>
                                         @else
                                             <span class="text-gray-400 text-xs">—</span>

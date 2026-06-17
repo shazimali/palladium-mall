@@ -88,6 +88,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:tenants.view')->group(function () {
+        Route::get('tenants/pending-documents', [TenantController::class, 'pendingDocuments'])->name('tenants.pending-documents');
         Route::resource('tenants', TenantController::class)->except(['create', 'store']);
     });
 

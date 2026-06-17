@@ -88,4 +88,11 @@ class MoveInChecklist extends Model
     {
         return count(array_filter($this->casts, fn($t) => $t === 'boolean'));
     }
+
+    public function isComplete(): bool
+    {
+        return !empty($this->flat_condition) && 
+               !empty($this->inspection_person_id) && 
+               !empty($this->checklist_date);
+    }
 }

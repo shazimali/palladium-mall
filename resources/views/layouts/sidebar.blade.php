@@ -47,6 +47,13 @@
         },
         isActive(path) {
             const current = window.location.pathname;
+            // Exclude sub-paths that represent distinct top-level sidebar items
+            if (path === '/tenants' && current.startsWith('/tenants/pending-documents')) {
+                return false;
+            }
+            if (path === '/reports' && current.startsWith('/reports/day-book')) {
+                return false;
+            }
             // Active if exact match OR current path starts with path + '/'
             return current === path || current.startsWith(path + '/');
         }

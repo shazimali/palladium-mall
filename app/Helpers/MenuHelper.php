@@ -109,6 +109,11 @@ class MenuHelper
                 'name' => 'Tenants and Agreements',
                 'path' => '/tenants',
             ];
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Pending Documents',
+                'path' => '/tenants/pending-documents',
+            ];
         }
 
         if (auth()->check() && $user->can('payments.view')) {

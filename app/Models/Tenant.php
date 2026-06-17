@@ -44,10 +44,10 @@ class Tenant extends Model
     ];
 
     protected $casts = [
-        'dependents'     => 'integer',
-        'adults_count'   => 'integer',
+        'dependents' => 'integer',
+        'adults_count' => 'integer',
         'children_count' => 'integer',
-        'date_of_birth'  => 'date',
+        'date_of_birth' => 'date',
         'monthly_income' => 'decimal:2',
     ];
 
@@ -136,7 +136,7 @@ class Tenant extends Model
 
     public function activeAgreement(): HasOne
     {
-        return $this->hasOne(Agreement::class)->where('status', 'active')->latestOfMany();
+        return $this->hasOne(Agreement::class)->where('status', 'active');
     }
 
     public function payments(): HasMany
@@ -190,21 +190,30 @@ class Tenant extends Model
 
     public function wizardStep(): int
     {
-        if (!$this->name) return 1;
+        if (!$this->name)
+            return 1;
 
         $draft = $this->agreements()->where('status', 'draft')->latest()->first();
         if (!$draft) {
-            if (!$this->guarantors()->exists()) return 2;
-            if (!$this->agreements()->exists()) return 3;
-            if (!$this->documentChecklist()->exists()) return 4;
-            if (!$this->moveInChecklists()->exists()) return 5;
+            if (!$this->guarantors()->exists())
+                return 2;
+            if (!$this->agreements()->exists())
+                return 3;
+            if (!$this->documentChecklist()->exists())
+                return 4;
+            if (!$this->moveInChecklists()->exists())
+                return 5;
             return 6;
         }
 
-        if (!$draft->guarantors()->exists()) return 2;
-        if (!$draft->start_date) return 3;
-        if (!$draft->documentChecklist()->exists()) return 4;
-        if (!$draft->moveInChecklist()->exists()) return 5;
+        if (!$draft->guarantors()->exists())
+            return 2;
+        if (!$draft->start_date)
+            return 3;
+        if (!$draft->documentChecklist()->exists())
+            return 4;
+        if (!$draft->moveInChecklist()->exists())
+            return 5;
         return 6;
     }
 

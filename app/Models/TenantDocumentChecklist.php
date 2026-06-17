@@ -88,6 +88,48 @@ class TenantDocumentChecklist extends Model
         return count(array_filter($this->casts, fn($t) => $t === 'boolean'));
     }
 
+    public function allDocumentsUploaded(): bool
+    {
+        $fields = [
+            'cnic_copy_tenant_front',
+            'cnic_copy_tenant_back',
+            'cnic_copy_father',
+            'cnic_copy_guarantor',
+            'passport_photo',
+            'nikah_nama',
+            'frc_form_b',
+            'police_verification',
+            'tenant_application_form',
+            'tenancy_agreement_copy',
+            'rules_acknowledgment',
+            'inspection_report',
+            'property_handover_form',
+            'security_deposit_receipt',
+            'meter_picture',
+            'emergency_contacts_added',
+            'guarantor_info_added',
+            'guarantor_business_card',
+            'tenant_business_card',
+            'property_advisor_card',
+            'old_tenant_verification',
+        ];
+
+        // Add commercial-only fields if the unit is commercial
+        $isCommercial = $this->agreement?->unit?->type === 'commercial';
+        if ($isCommercial) {
+            $fields[] = 'business_license';
+            $fields[] = 'utility_bills_clearance';
+        }
+
+        foreach ($fields as $field) {
+            if (!(bool) $this->{$field}) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /**
      * Get the file URL for a given file attribute.
      */

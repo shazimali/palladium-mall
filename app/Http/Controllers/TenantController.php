@@ -55,6 +55,26 @@ class TenantController extends Controller
         ]);
     }
 
+    public function pendingDocuments(Request $request): View
+    {
+        $tenants = Tenant::whereHas('activeAgreement')
+            ->with([
+                'activeAgreement.documentChecklist.agreement.unit',
+                'activeAgreement.moveInChecklist',
+                'activeAgreement.unit',
+                'unit'
+            ])
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->orderBy('name')
+            ->paginate(50)
+            ->withQueryString();
+
+        return view('tenants.pending_documents', [
+            'title' => 'Pending Documents Check',
+            'tenants' => $tenants,
+        ]);
+    }
+
     // -----------------------------------------------------------------------
     // Wizard Step 1 — Create tenant (GET + POST)
     // -----------------------------------------------------------------------
