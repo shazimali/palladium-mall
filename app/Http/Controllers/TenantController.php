@@ -22,8 +22,22 @@ class TenantController extends Controller
 
     public function index(Request $request): View
     {
-        $tenants = Tenant::with(['unit', 'activeAgreement', 'agreements'])
+        $query = Tenant::with(['unit', 'activeAgreement', 'agreements'])
             ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($request->landlord_id, function($q) use ($request) {
+                $q->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+            });
+
+        // Calculate counts based on current filters (excluding status)
+        $counts = [
+            'total' => (clone $query)->count(),
+            'active' => (clone $query)->active()->count(),
+            'inactive' => (clone $query)->inactive()->count(),
+            'draft' => (clone $query)->draft()->count(),
+        ];
+
+        // Apply status filter for main paginated list
+        $tenants = $query
             ->when($request->status === 'active', fn($q) => $q->active())
             ->when($request->status === 'inactive', fn($q) => $q->inactive())
             ->when($request->status === 'draft', fn($q) => $q->draft())
@@ -31,9 +45,13 @@ class TenantController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $landlords = \App\Models\Landlord::orderBy('name')->get();
+
         return view('tenants.index', [
             'title' => 'Tenants',
             'tenants' => $tenants,
+            'counts' => $counts,
+            'landlords' => $landlords,
         ]);
     }
 
@@ -332,6 +350,60 @@ class TenantController extends Controller
         $data = ['title' => 'Add Tenant — Step ' . $step, 'tenant' => $tenant, 'step' => $step];
         $draftAgreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
 
+        // If no draft agreement exists, but there is an active/latest agreement, clone it to draft so editing works seamlessly
+        if (!$draftAgreement) {
+            $activeAgreement = $tenant->agreements()->where('status', 'active')->latest()->first()
+                ?: $tenant->agreements()->latest()->first();
+
+            if ($activeAgreement) {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($tenant, $activeAgreement, &$draftAgreement) {
+                    $draftAgreement = $activeAgreement->replicate();
+                    $draftAgreement->status = 'draft';
+                    $draftAgreement->save();
+
+                    // Clone partners
+                    foreach ($activeAgreement->partners as $partner) {
+                        $newPartner = $partner->replicate();
+                        $newPartner->agreement_id = $draftAgreement->id;
+                        $newPartner->save();
+                    }
+
+                    // Clone guarantors
+                    foreach ($activeAgreement->guarantors as $guarantor) {
+                        $newGuarantor = $guarantor->replicate();
+                        $newGuarantor->agreement_id = $draftAgreement->id;
+                        $newGuarantor->save();
+                    }
+
+                    // Clone emergency contacts
+                    foreach ($activeAgreement->emergencyContacts as $contact) {
+                        $newContact = $contact->replicate();
+                        $newContact->agreement_id = $draftAgreement->id;
+                        $newContact->save();
+                    }
+
+                    // Clone document checklist
+                    if ($activeAgreement->documentChecklist) {
+                        $newChecklist = $activeAgreement->documentChecklist->replicate();
+                        $newChecklist->agreement_id = $draftAgreement->id;
+                        $newChecklist->save();
+                    }
+
+                    // Clone checklists
+                    if ($activeAgreement->moveInChecklist) {
+                        $newMoveIn = $activeAgreement->moveInChecklist->replicate();
+                        $newMoveIn->agreement_id = $draftAgreement->id;
+                        $newMoveIn->save();
+                    }
+                    if ($activeAgreement->moveOutChecklist) {
+                        $newMoveOut = $activeAgreement->moveOutChecklist->replicate();
+                        $newMoveOut->agreement_id = $draftAgreement->id;
+                        $newMoveOut->save();
+                    }
+                });
+            }
+        }
+
         return match ($step) {
             1 => view('tenants.wizard.step1', array_merge($data, [
                 'units' => Unit::orderBy('unit_number')->get(),
@@ -622,9 +694,6 @@ class TenantController extends Controller
             $data['unit_id'] = $unitId;
         }
 
-        // Expire any previous active agreements
-        $tenant->agreements()->where('status', 'active')->update(['status' => 'expired']);
-
         // Upsert agreement
         $tenant->agreements()->updateOrCreate(
             ['tenant_id' => $tenant->id, 'status' => 'draft'],
@@ -854,21 +923,26 @@ class TenantController extends Controller
 
     public function confirm(Request $request, Tenant $tenant): RedirectResponse
     {
-        $agreement = $tenant->agreements()->latest()->first();
+        $agreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
 
         if (!$agreement || empty($agreement->govt_document)) {
             return redirect()->route('tenants.showStep', [$tenant, 6])
                 ->with('error', 'Agreement cannot be confirmed. Please upload the Government Document in Step 3 first.');
         }
 
-        // Activate tenant
-        $tenant->update(['status' => 'active']);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($tenant, $agreement) {
+            // Activate tenant
+            $tenant->update(['status' => 'active']);
 
-        // Activate agreement
-        $tenant->agreements()->where('status', 'draft')->update(['status' => 'active']);
+            // Expire any previous active agreements
+            $tenant->agreements()->where('status', 'active')->where('id', '!=', $agreement->id)->update(['status' => 'expired']);
+
+            // Activate agreement
+            $agreement->update(['status' => 'active']);
+        });
 
         return redirect()->route('tenants.show', $tenant)
-            ->with('success', 'Tenant ' . $tenant->name . ' has been added successfully.');
+            ->with('success', 'Tenant ' . $tenant->name . ' has been updated/added successfully.');
     }
 
     // -----------------------------------------------------------------------
@@ -1091,17 +1165,26 @@ class TenantController extends Controller
 
         $tenant->update($tenantData);
 
-        // Save emergency contact (replace first one)
-        $tenant->emergencyContacts()->delete();
-        $tenant->emergencyContacts()->create([
-            'name'     => $data['ec_name'],
-            'relation' => $data['ec_relation'],
-            'phone'    => preg_replace('/[^\d+]/', '', $data['ec_phone']),
-            'address'  => null,
-        ]);
+        // Initialize/update draft agreement immediately in Step 1 update
+        $draftAgreement = $tenant->agreements()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'status' => 'draft'],
+            ['unit_id' => $tenant->unit_id]
+        );
 
-        // Keep track of old partners to preserve or delete their files
-        $oldPartners = $tenant->partners()->get();
+        // Save emergency contact (replace for this draft agreement)
+        if ($draftAgreement) {
+            $draftAgreement->emergencyContacts()->delete();
+            $draftAgreement->emergencyContacts()->create([
+                'tenant_id' => $tenant->id, // fallback
+                'name'      => $data['ec_name'],
+                'relation'  => $data['ec_relation'],
+                'phone'     => preg_replace('/[^\d+]/', '', $data['ec_phone']),
+                'address'   => null,
+            ]);
+        }
+
+        // Keep track of old partners to preserve or delete their files (from draft agreement)
+        $oldPartners = $draftAgreement ? $draftAgreement->partners()->get() : collect();
         $oldPartnersMap = $oldPartners->keyBy('cnic');
         $reusedFiles = [];
 
@@ -1161,6 +1244,7 @@ class TenantController extends Controller
                     }
 
                     $newPartnersData[] = [
+                        'tenant_id' => $tenant->id, // fallback
                         'name' => $partnerData['name'],
                         'father_name' => $partnerData['father_name'] ?? null,
                         'cnic' => $partnerData['cnic'],
@@ -1193,9 +1277,11 @@ class TenantController extends Controller
             }
         }
 
-        $tenant->partners()->delete();
-        foreach ($newPartnersData as $np) {
-            $tenant->partners()->create($np);
+        if ($draftAgreement) {
+            $draftAgreement->partners()->delete();
+            foreach ($newPartnersData as $np) {
+                $draftAgreement->partners()->create($np);
+            }
         }
 
         if ($request->expectsJson()) {

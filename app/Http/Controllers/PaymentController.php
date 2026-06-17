@@ -186,34 +186,28 @@ class PaymentController extends Controller
         $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
         $dueDate = $request->due_date;
 
-        // Get all active tenants with active agreements
-        $tenants = Tenant::where('status', 'active')
-            ->with(['activeAgreement', 'unit'])
-            ->get()
-            ->filter(fn($t) => $t->activeAgreement !== null);
+        $billingMonth = Carbon::parse($month)->startOfMonth();
+
+        // Get all active or expired agreements that overlap with the selected month
+        $agreements = Agreement::where('start_date', '<=', $billingMonth->copy()->endOfMonth())
+            ->where('end_date', '>=', $billingMonth->copy()->startOfMonth())
+            ->whereIn('status', ['active', 'expired'])
+            ->with(['tenant', 'unit'])
+            ->get();
 
         $created = 0;
         $skipped = 0;
-        $outsideRange = 0;
 
-        DB::transaction(function () use ($tenants, $month, $dueDate, $request, &$created, &$skipped, &$outsideRange) {
-            $billingMonth = Carbon::parse($month)->startOfMonth();
-
-            foreach ($tenants as $tenant) {
-                $agreement = $tenant->activeAgreement;
-
-                // Validate if billing month falls within active agreement start and end dates (inclusive of month bounds)
-                $agreementStart = $agreement->start_date->copy()->startOfMonth();
-                $agreementEnd = $agreement->end_date->copy()->startOfMonth();
-
-                if ($billingMonth->lt($agreementStart) || $billingMonth->gt($agreementEnd)) {
-                    $outsideRange += count($request->types);
+        DB::transaction(function () use ($agreements, $month, $dueDate, $request, &$created, &$skipped) {
+            foreach ($agreements as $agreement) {
+                // Ensure a tenant is attached to the agreement
+                if (!$agreement->tenant_id) {
                     continue;
                 }
 
                 foreach ($request->types as $type) {
-                    // Skip if already exists for this tenant, active agreement, type, and month
-                    $exists = Payment::where('tenant_id', $tenant->id)
+                    // Skip if already exists for this tenant, agreement, type, and month
+                    $exists = Payment::where('tenant_id', $agreement->tenant_id)
                         ->where('agreement_id', $agreement->id)
                         ->where('type', $type)
                         ->where('month', $month)
@@ -231,8 +225,8 @@ class PaymentController extends Controller
                     };
 
                     Payment::create([
-                        'tenant_id' => $tenant->id,
-                        'unit_id' => $tenant->unit_id,
+                        'tenant_id' => $agreement->tenant_id,
+                        'unit_id' => $agreement->unit_id,
                         'agreement_id' => $agreement->id,
                         'type' => $type,
                         'month' => $month,
@@ -249,7 +243,7 @@ class PaymentController extends Controller
 
         return redirect()
             ->route('payments.index')
-            ->with('success', "{$created} payment records generated. {$skipped} already existed. {$outsideRange} fell outside agreement terms and were skipped.");
+            ->with('success', "{$created} payment records generated. {$skipped} already existed.");
     }
 
     // -----------------------------------------------------------------------
@@ -258,7 +252,7 @@ class PaymentController extends Controller
 
     public function getAgreementByTenant(Request $request): JsonResponse
     {
-        $tenant = Tenant::with('activeAgreement')->find($request->tenant_id);
+        $tenant = Tenant::with(['activeAgreement.unit', 'unit'])->find($request->tenant_id);
 
         if (!$tenant || !$tenant->activeAgreement) {
             return response()->json(['agreement' => null]);
@@ -271,8 +265,8 @@ class PaymentController extends Controller
                 'id' => $agreement->id,
                 'monthly_rent' => $agreement->monthly_rent,
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
-                'unit_id' => $tenant->unit_id,
-                'unit_number' => $tenant->unit?->unit_number ?? '—',
+                'unit_id' => $agreement->unit_id,
+                'unit_number' => $agreement->unit?->unit_number ?? '—',
             ],
         ]);
     }

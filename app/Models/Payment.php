@@ -39,6 +39,7 @@ class Payment extends Model
         'rate_per_unit',
         'payment_account_id',
         'hash',
+        'receipt_no',
     ];
 
     protected $casts = [
@@ -235,6 +236,13 @@ class Payment extends Model
     {
         static::creating(function ($payment) {
             $payment->hash = (string) Str::uuid();
+        });
+
+        static::created(function ($payment) {
+            if (empty($payment->receipt_no)) {
+                $payment->receipt_no = 'PM-PAY-' . str_pad($payment->id, 5, '0', STR_PAD_LEFT);
+                $payment->saveQuietly();
+            }
         });
     }
 

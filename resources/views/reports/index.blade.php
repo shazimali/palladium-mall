@@ -8,10 +8,11 @@
         @php
             $activeType = $filters['report_type'] ?? '';
             $tabs = [
-                ''           => ['label' => 'All Data',        'icon' => '📊'],
-                'rent'       => ['label' => 'Rent Collected',  'icon' => '🏠'],
-                'utilities'  => ['label' => 'Utilities Paid',  'icon' => '⚡'],
-                'fines'      => ['label' => 'Fines',           'icon' => '⚠️'],
+                ''               => ['label' => 'All Data',        'icon' => '📊'],
+                'rent'           => ['label' => 'Rent Collected',  'icon' => '🏠'],
+                'utilities'      => ['label' => 'Utilities Paid',  'icon' => '⚡'],
+                'fines'          => ['label' => 'Fines',           'icon' => '⚠️'],
+                'monthly_matrix' => ['label' => 'Monthly Matrix',  'icon' => '📅'],
             ];
         @endphp
         @foreach($tabs as $typeKey => $tab)
@@ -40,17 +41,17 @@
                 {{-- Date From --}}
                 <div>
                     <label for="date_from" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Date From
+                        {{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Report Month' : 'Date From' }}
                     </label>
                     <input type="text" id="date_from" name="date_from"
                         value="{{ $filters['date_from'] ?? '' }}"
-                        placeholder="Start date"
+                        placeholder="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Select Month' : 'Start date' }}"
                         autocomplete="off"
                         class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600">
                 </div>
 
                 {{-- Date To --}}
-                <div>
+                <div class="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'hidden' : '' }}">
                     <label for="date_to" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Date To
                     </label>
@@ -195,41 +196,64 @@
 
     {{-- ── Results ──────────────────────────────────────────────────────────── --}}
     @if($hasQuery)
+        @php
+            $selectedMonth = ($filters['date_from'] ?? false)
+                ? \Carbon\Carbon::parse($filters['date_from'])->format('F Y')
+                : \Carbon\Carbon::now()->format('F Y');
+        @endphp
+
+        @if(($filters['report_type'] ?? '') === 'monthly_matrix')
+            <div class="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 dark:border-brand-900/20 dark:bg-brand-950/10">
+                <div class="flex items-center gap-3">
+                    <span class="text-xl">📅</span>
+                    <div>
+                        <h4 class="text-sm font-semibold text-brand-900 dark:text-brand-200">Monthly Matrix Report</h4>
+                        <p class="text-xs text-brand-600 dark:text-brand-400">Showing flat status and collections breakdown for the billing month of <strong class="font-bold text-brand-700 dark:text-brand-300">{{ $selectedMonth }}</strong></p>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         {{-- Summary Cards --}}
         @if($summary)
-            <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            @php
+                $isMatrix = ($filters['report_type'] ?? '') === 'monthly_matrix';
+                $totalDue = $isMatrix ? ($summary['total_amount'] ?? 0) : ($summary['total_due'] ?? 0);
+                $totalPaid = $isMatrix ? ($summary['total_received'] ?? 0) : ($summary['total_paid'] ?? 0);
+                $outstanding = $isMatrix ? ($summary['total_pending'] ?? 0) : ($summary['outstanding'] ?? 0);
+            @endphp
+            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">Records Found</p>
-                    <p class="mt-1 text-2xl font-bold text-gray-800 dark:text-white">{{ number_format($summary['count']) }}</p>
+                    <p class="text-xs text-gray-400">{{ $isMatrix ? 'Report Month' : 'Records Found' }}</p>
+                    <p class="mt-1 text-base font-bold text-gray-800 dark:text-white leading-tight">{{ $isMatrix ? $selectedMonth : number_format($summary['count']) }}</p>
                 </div>
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
                     <p class="text-xs text-gray-400">Total Due</p>
-                    <p class="mt-1 text-lg font-bold text-orange-500">Rs. {{ number_format($summary['total_due']) }}</p>
+                    <p class="mt-1 text-lg font-bold text-orange-500">Rs. {{ number_format($totalDue) }}</p>
                 </div>
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">Total Collected</p>
-                    <p class="mt-1 text-lg font-bold text-green-600">Rs. {{ number_format($summary['total_paid']) }}</p>
+                    <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Received' : 'Total Collected' }}</p>
+                    <p class="mt-1 text-lg font-bold text-green-600">Rs. {{ number_format($totalPaid) }}</p>
                 </div>
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">Outstanding</p>
-                    <p class="mt-1 text-lg font-bold {{ $summary['outstanding'] > 0 ? 'text-red-500' : 'text-green-600' }}">
-                        Rs. {{ number_format($summary['outstanding']) }}
+                    <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Pending' : 'Outstanding' }}</p>
+                    <p class="mt-1 text-lg font-bold {{ $outstanding > 0 ? 'text-red-500' : 'text-green-600' }}">
+                        Rs. {{ number_format($outstanding) }}
                     </p>
                 </div>
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">🏠 Rent Collected</p>
-                    <p class="mt-1 text-lg font-bold text-blue-600">Rs. {{ number_format($summary['rent_collected']) }}</p>
+                    <p class="text-xs text-gray-400">{{ $isMatrix ? '🏠 Rent Due' : '🏠 Rent Collected' }}</p>
+                    <p class="mt-1 text-lg font-bold text-blue-600">Rs. {{ number_format($isMatrix ? ($summary['total_rent'] ?? 0) : ($summary['rent_collected'] ?? 0)) }}</p>
                 </div>
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">⚡ Utilities Paid</p>
-                    <p class="mt-1 text-lg font-bold text-purple-600">Rs. {{ number_format($summary['utilities_paid']) }}</p>
+                    <p class="text-xs text-gray-400">{{ $isMatrix ? '🛠️ Services Due' : '⚡ Utilities Paid' }}</p>
+                    <p class="mt-1 text-lg font-bold text-purple-600">Rs. {{ number_format($isMatrix ? ($summary['total_serv'] ?? 0) : ($summary['utilities_paid'] ?? 0)) }}</p>
                 </div>
 
             </div>
@@ -238,8 +262,8 @@
         {{-- Data Table --}}
         <div class="mt-4">
             <x-common.component-card
-                title="Report Results"
-                desc="{{ $summary['count'] }} {{ Str::plural('record', $summary['count']) }} found">
+                title="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix - ' . $selectedMonth : 'Report Results' }}"
+                desc="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Grid matrix for flat status and collections' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found' }}">
 
                 @if($entries->isEmpty())
                     <div class="py-12 text-center text-gray-400">
@@ -250,123 +274,127 @@
                         <p class="mt-1 text-xs text-gray-300 dark:text-gray-600">Try adjusting the date range or removing filters.</p>
                     </div>
                 @else
-                    <div class="overflow-x-auto">
-                        <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                            <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
-                                <tr>
-                                    <th class="px-4 py-3">#</th>
-                                    <th class="px-4 py-3">Month</th>
-                                    <th class="px-4 py-3">Flat/Shop</th>
-                                    <th class="px-4 py-3">Tenant</th>
-                                    <th class="px-4 py-3">Landlord</th>
-                                    <th class="px-4 py-3">Type</th>
-                                    <th class="px-4 py-3">Payment Method</th>
-                                    <th class="px-4 py-3">Payment Account</th>
-                                    <th class="px-4 py-3">Amount Due</th>
-                                    <th class="px-4 py-3">Amount Paid</th>
-                                    <th class="px-4 py-3">Balance</th>
-                                    <th class="px-4 py-3">Status</th>
-                                    <th class="px-4 py-3">Paid At</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                @foreach($entries as $i => $entry)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                        <td class="px-4 py-3 text-gray-400 text-xs">{{ $i + 1 }}</td>
-
-                                        <td data-order="{{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->toDateString() : '' }}" class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-300">
-                                            {{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->format('M Y') : '—' }}
-                                        </td>
-
-                                        <td class="px-4 py-3">
-                                            <span class="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
-                                                {{ $entry['unit'] }}
-                                            </span>
-                                        </td>
-
-                                        <td class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
-                                            {{ $entry['tenant'] }}
-                                        </td>
-
-                                        <td class="px-4 py-3 text-gray-700 dark:text-white/80">
-                                            {{ $entry['landlord'] }}
-                                        </td>
-
-                                        <td class="px-4 py-3">
-                                            @php
-                                                $typeClass = match($entry['type']) {
-                                                    'rent'        => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                                                    'fine'        => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-                                                    'electricity' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                                    'water'       => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-                                                    'gas'         => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-                                                    'maintenance' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-                                                    default       => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-                                                };
-                                            @endphp
-                                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $typeClass }}">
-                                                {{ ucfirst($entry['type']) }}
-                                            </span>
-                                        </td>
-
-                                        <td class="px-4 py-3 text-gray-700 dark:text-white/80">
-                                            {{ $entry['payment_method'] }}
-                                        </td>
-
-                                        <td class="px-4 py-3 text-gray-700 dark:text-white/80">
-                                            {{ $entry['payment_account'] }}
-                                        </td>
-
-                                        <td data-order="{{ $entry['amount_due'] }}" class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
-                                            Rs. {{ number_format($entry['amount_due']) }}
-                                        </td>
-
-                                        <td data-order="{{ $entry['amount_paid'] }}" class="px-4 py-3 font-medium text-green-600">
-                                            Rs. {{ number_format($entry['amount_paid']) }}
-                                        </td>
-
-                                        <td data-order="{{ $entry['balance'] }}" class="px-4 py-3 font-semibold {{ $entry['balance'] > 0 ? 'text-red-500' : 'text-green-600' }}">
-                                            Rs. {{ number_format($entry['balance']) }}
-                                        </td>
-
-                                        <td class="px-4 py-3">
-                                            @php
-                                                $statusClass = match($entry['status']) {
-                                                    'paid'    => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                                    'partial' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                                    default   => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-                                                };
-                                            @endphp
-                                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $statusClass }}">
-                                                {{ ucfirst($entry['status']) }}
-                                            </span>
-                                        </td>
-
-                                        <td data-order="{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->toDateString() : '0000-00-00' }}" class="px-4 py-3 text-xs text-gray-500">
-                                            {{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->format('d M Y') : '—' }}
-                                        </td>
+                    @if(($filters['report_type'] ?? '') === 'monthly_matrix')
+                        @include('reports.partials.matrix_table')
+                    @else
+                        <div class="overflow-x-auto">
+                            <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+                                <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
+                                    <tr>
+                                        <th class="px-4 py-3">#</th>
+                                        <th class="px-4 py-3">Month</th>
+                                        <th class="px-4 py-3">Flat/Shop</th>
+                                        <th class="px-4 py-3">Tenant</th>
+                                        <th class="px-4 py-3">Landlord</th>
+                                        <th class="px-4 py-3">Type</th>
+                                        <th class="px-4 py-3">Payment Method</th>
+                                        <th class="px-4 py-3">Payment Account</th>
+                                        <th class="px-4 py-3">Amount Due</th>
+                                        <th class="px-4 py-3">Amount Paid</th>
+                                        <th class="px-4 py-3">Balance</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3">Paid At</th>
                                     </tr>
-                                @endforeach
-                            </tbody>
-                            <tfoot>
-                                <tr class="bg-gray-50 dark:bg-gray-800 font-semibold text-sm">
-                                    <td colspan="8" class="px-4 py-3 text-gray-700 dark:text-gray-300">
-                                        Totals ({{ $summary['count'] }} records)
-                                    </td>
-                                    <td class="px-4 py-3 text-gray-800 dark:text-white">
-                                        Rs. {{ number_format($summary['total_due']) }}
-                                    </td>
-                                    <td class="px-4 py-3 text-green-600">
-                                        Rs. {{ number_format($summary['total_paid']) }}
-                                    </td>
-                                    <td class="px-4 py-3 {{ $summary['outstanding'] > 0 ? 'text-red-500' : 'text-green-600' }}">
-                                        Rs. {{ number_format($summary['outstanding']) }}
-                                    </td>
-                                    <td colspan="2"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach($entries as $i => $entry)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                            <td class="px-4 py-3 text-gray-400 text-xs">{{ $i + 1 }}</td>
+
+                                            <td data-order="{{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->toDateString() : '' }}" class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-300">
+                                                {{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->format('M Y') : '—' }}
+                                            </td>
+
+                                            <td class="px-4 py-3">
+                                                <span class="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                                    {{ $entry['unit'] }}
+                                                </span>
+                                            </td>
+
+                                            <td class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
+                                                {{ $entry['tenant'] }}
+                                            </td>
+
+                                            <td class="px-4 py-3 text-gray-700 dark:text-white/80">
+                                                {{ $entry['landlord'] }}
+                                            </td>
+
+                                            <td class="px-4 py-3">
+                                                @php
+                                                    $typeClass = match($entry['type']) {
+                                                        'rent'        => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                                                        'fine'        => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                                                        'electricity' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                                                        'water'       => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+                                                        'gas'         => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+                                                        'maintenance' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                                                        default       => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                                                    };
+                                                @endphp
+                                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $typeClass }}">
+                                                    {{ ucfirst($entry['type']) }}
+                                                </span>
+                                            </td>
+
+                                            <td class="px-4 py-3 text-gray-700 dark:text-white/80">
+                                                {{ $entry['payment_method'] }}
+                                            </td>
+
+                                            <td class="px-4 py-3 text-gray-700 dark:text-white/80">
+                                                {{ $entry['payment_account'] }}
+                                            </td>
+
+                                            <td data-order="{{ $entry['amount_due'] }}" class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
+                                                Rs. {{ number_format($entry['amount_due']) }}
+                                            </td>
+
+                                            <td data-order="{{ $entry['amount_paid'] }}" class="px-4 py-3 font-medium text-green-600">
+                                                Rs. {{ number_format($entry['amount_paid']) }}
+                                            </td>
+
+                                            <td data-order="{{ $entry['balance'] }}" class="px-4 py-3 font-semibold {{ $entry['balance'] > 0 ? 'text-red-500' : 'text-green-600' }}">
+                                                Rs. {{ number_format($entry['balance']) }}
+                                            </td>
+
+                                            <td class="px-4 py-3">
+                                                @php
+                                                    $statusClass = match($entry['status']) {
+                                                        'paid'    => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                                        'partial' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                                                        default   => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                                                    };
+                                                @endphp
+                                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $statusClass }}">
+                                                    {{ ucfirst($entry['status']) }}
+                                                </span>
+                                            </td>
+
+                                            <td data-order="{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->toDateString() : '0000-00-00' }}" class="px-4 py-3 text-xs text-gray-500">
+                                                {{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->format('d M Y') : '—' }}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-gray-50 dark:bg-gray-800 font-semibold text-sm">
+                                        <td colspan="8" class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                            Totals ({{ $summary['count'] }} records)
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-800 dark:text-white">
+                                            Rs. {{ number_format($summary['total_due']) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-green-600">
+                                            Rs. {{ number_format($summary['total_paid']) }}
+                                        </td>
+                                        <td class="px-4 py-3 {{ $summary['outstanding'] > 0 ? 'text-red-500' : 'text-green-600' }}">
+                                            Rs. {{ number_format($summary['outstanding']) }}
+                                        </td>
+                                        <td colspan="2"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    @endif
                 @endif
 
             </x-common.component-card>
@@ -551,13 +579,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Date pickers
     if (typeof flatpickr !== 'undefined') {
-        flatpickr('#date_from', {
-            dateFormat: 'Y-m-d',
-            altInput: true,
-            altFormat: 'd M Y',
-            allowInput: true,
-            disableMobile: true,
-        });
+        @if(($filters['report_type'] ?? '') === 'monthly_matrix')
+            flatpickr('#date_from', {
+                dateFormat: 'Y-m-01',
+                altInput: true,
+                altFormat: 'F Y',
+                disableMobile: true,
+                plugins: [
+                    new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    })
+                ],
+            });
+        @else
+            flatpickr('#date_from', {
+                dateFormat: 'Y-m-d',
+                altInput: true,
+                altFormat: 'd M Y',
+                allowInput: true,
+                disableMobile: true,
+            });
+        @endif
 
         flatpickr('#date_to', {
             dateFormat: 'Y-m-d',

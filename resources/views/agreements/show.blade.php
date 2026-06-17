@@ -5,7 +5,7 @@
 
     <x-common.component-card
         title="{{ $agreement->tenant?->name ?? 'Deleted Tenant' }}"
-        desc="Unit {{ $agreement->unit?->unit_number ?? 'Deleted Unit' }} · {{ $agreement->start_date->format('d M Y') }} to {{ $agreement->end_date->format('d M Y') }}">
+        desc="Unit {{ $agreement->unit?->unit_number ?? 'Deleted Unit' }} · {{ $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft' }} to {{ $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft' }}">
 
         {{-- Status banner --}}
         @if($agreement->isExpiringSoon())
@@ -19,17 +19,17 @@
 
         {{-- Details grid --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            @foreach([
+             @foreach([
                 ['Tenant',           $agreement->tenant?->name ?? 'Deleted Tenant'],
                 ['Unit',             $agreement->unit?->unit_number ?? 'Deleted Unit'],
-                ['Start Date',       $agreement->start_date->format('d M Y')],
-                ['End Date',         $agreement->end_date->format('d M Y')],
+                ['Start Date',       $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft'],
+                ['End Date',         $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft'],
                 ['Duration',         $agreement->durationInMonths().' months'],
                 ['Days Remaining',   $agreement->isActive() ? $agreement->daysRemaining().' days' : '—'],
-                ['Monthly Rent',     'Rs. '.number_format($agreement->monthly_rent)],
+                ['Monthly Rent',     $agreement->monthly_rent ? 'Rs. '.number_format($agreement->monthly_rent) : '—'],
                 ['Security Deposit', $agreement->security_deposit ? 'Rs. '.number_format($agreement->security_deposit) : '—'],
                 ['Grace Period',     $agreement->grace_period_days.' days'],
-                ['Fine Per Day',     'Rs. '.number_format($agreement->fine_per_day)],
+                ['Fine Per Day',     $agreement->fine_per_day ? 'Rs. '.number_format($agreement->fine_per_day) : '—'],
                 ['Status',           ucfirst($agreement->status)],
             ] as [$label, $value])
                 <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03]">

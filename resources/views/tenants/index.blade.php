@@ -18,15 +18,27 @@
     <x-common.component-card title="All Tenants and Agreements" desc="Manage tenant profiles and unit assignments">
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex flex-wrap gap-2">
-                <span
-                    class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    Total: {{ $tenants->total() }}
-                </span>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('tenants.index', ['search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ !request('status') ? 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800' }}">
+                    Total: {{ $counts['total'] }}
+                </a>
+                <a href="{{ route('tenants.index', ['status' => 'active', 'search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'active' ? 'bg-green-600 text-white dark:bg-green-700' : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:text-green-400 dark:hover:bg-green-950/40' }}">
+                    Active: {{ $counts['active'] }}
+                </a>
+                <a href="{{ route('tenants.index', ['status' => 'inactive', 'search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'inactive' ? 'bg-red-600 text-white dark:bg-red-700' : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40' }}">
+                    Inactive: {{ $counts['inactive'] }}
+                </a>
+                <a href="{{ route('tenants.index', ['status' => 'draft', 'search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'draft' ? 'bg-yellow-500 text-white dark:bg-yellow-600' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-950/20 dark:text-yellow-400 dark:hover:bg-yellow-950/40' }}">
+                    Drafts: {{ $counts['draft'] }}
+                </a>
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'status']))
+                @if(request()->anyFilled(['search', 'status', 'landlord_id']))
                     <a href="{{ route('tenants.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
                         Clear
@@ -72,6 +84,19 @@
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
                     </select>
                 </div>
+
+                <!-- Landlord Filter -->
+                <div class="relative">
+                    <select name="landlord_id" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Landlords</option>
+                        @foreach($landlords as $landlord)
+                            <option value="{{ $landlord->id }}" {{ request('landlord_id') == $landlord->id ? 'selected' : '' }}>
+                                {{ $landlord->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 
                 <button type="submit" class="hidden">Submit</button>
             </form>
@@ -82,11 +107,10 @@
                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                     <tr>
                         <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Flat/Shop</th>
                         <th class="px-4 py-3">Name</th>
-                        <th class="px-4 py-3">CNIC</th>
                         <th class="px-4 py-3">Phone</th>
-                        <th class="px-4 py-3">Unit</th>
-                        <th class="px-4 py-3">Agreement Period</th>
+                        <th class="px-4 py-3">Agreement</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -96,33 +120,25 @@
                                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                     <td class="px-4 py-3 text-gray-400">{{ $tenants->firstItem() + $index }}</td>
                                     <td class="px-4 py-3">
-                                        <div class="font-semibold text-gray-800 dark:text-white/90">{{ $tenant->name }}</div>
-                                        @if($tenant->email)
-                                            <div class="text-xs text-gray-400">{{ $tenant->email }}</div>
-                                        @endif
-                                    </td>
-                                    <td class="px-4 py-3 font-mono text-xs">{{ $tenant->cnic }}</td>
-                                    <td class="px-4 py-3">{{ $tenant->phone }}</td>
-                                    <td class="px-4 py-3">
                                         @if($tenant->unit)
-                                        <span
-                                            class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                                        <span class="font-bold text-gray-900 dark:text-white text-sm">
                                             {{ $tenant->unit->unit_number }}
                                         </span>
                                         @else
                                         <span class="text-gray-400 text-xs">—</span>
                                         @endif
                                     </td>
+                                    <td class="px-4 py-3">
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">{{ $tenant->name }}</div>
+                                    </td>
+                                    <td class="px-4 py-3">{{ $tenant->phone }}</td>
                                     <td class="px-4 py-3 text-xs">
                                         @php
                                             $agreement = $tenant->activeAgreement ?? $tenant->agreements->sortByDesc('id')->first();
                                         @endphp
-                                        @if($agreement)
+                                        @if($agreement && $agreement->start_date && $agreement->end_date)
                                             <div class="font-medium text-gray-800 dark:text-white/90">
                                                 {{ $agreement->start_date->format('d M Y') }}
-                                            </div>
-                                            <div class="text-[10px] text-gray-400">
-                                                to {{ $agreement->end_date->format('d M Y') }}
                                             </div>
                                         @else
                                             <span class="text-gray-400 text-xs">—</span>

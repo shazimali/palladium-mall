@@ -345,10 +345,14 @@
                                         <td class="px-4 py-3 font-medium text-gray-800 dark:text-white">
                                             {{ $agreement->tenant->name ?? '—' }}
                                         </td>
-                                        <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">Rs. {{ number_format($agreement->monthly_rent) }}</td>
-                                        <td class="px-4 py-3">Rs. {{ number_format($agreement->security_deposit) }}</td>
-                                        <td class="px-4 py-3">{{ $agreement->start_date->format('d M Y') }}</td>
-                                        <td class="px-4 py-3">{{ $agreement->end_date->format('d M Y') }}</td>
+                                        <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
+                                            {{ $agreement->monthly_rent ? 'Rs. ' . number_format($agreement->monthly_rent) : '—' }}
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            {{ $agreement->security_deposit ? 'Rs. ' . number_format($agreement->security_deposit) : '—' }}
+                                        </td>
+                                        <td class="px-4 py-3">{{ $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft' }}</td>
+                                        <td class="px-4 py-3">{{ $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft' }}</td>
                                         <td class="px-4 py-3">
                                             <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $agreement->status_badge_class }}">
                                                 {{ ucfirst($agreement->status) }}

@@ -77,7 +77,7 @@
             
             <div class="text-left md:text-right">
                 <div class="inline-block rounded-xl px-4 py-2 bg-gray-50 text-gray-800 text-xs font-semibold print-border mb-3">
-                    Receipt ID: PM-PAY-{{ str_pad($payment->id, 5, '0', STR_PAD_LEFT) }}
+                    Receipt ID: {{ $payment->receipt_no ?? ('PM-PAY-' . str_pad($payment->id, 5, '0', STR_PAD_LEFT)) }}
                 </div>
                 <div class="space-y-1 text-xs">
                     <p><span class="text-gray-400">Date Generated:</span> {{ now()->format('d M Y') }}</p>

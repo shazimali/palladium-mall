@@ -106,6 +106,7 @@
         .badge-paid    { background: #D1FAE5; color: #059669; }
         .badge-unpaid  { background: #FEE2E2; color: #DC2626; }
         .badge-partial { background: #FEF3C7; color: #DC7609; }
+        .badge-pending { background: #DBEAFE; color: #1D4ED8; }
 
         .type-rent        { background: #DBEAFE; color: #1D4ED8; }
         .type-fine        { background: #FEE2E2; color: #DC2626; }
@@ -172,101 +173,244 @@
     </div>
 
     {{-- Summary boxes --}}
-    <div class="summary">
-        <div class="s-box total-due">
-            <div class="s-label">Total Due</div>
-            <div class="s-value" style="color:#DC2626;">Rs. {{ number_format($summary['total_due'], 2) }}</div>
+    @if($reportType === 'monthly_matrix')
+        <div class="summary">
+            <div class="s-box total-due">
+                <div class="s-label">Total Amount Due</div>
+                <div class="s-value" style="color:#DC2626;">Rs. {{ number_format($summary['total_amount'], 2) }}</div>
+            </div>
+            <div class="s-box total-paid">
+                <div class="s-label">Total Received</div>
+                <div class="s-value" style="color:#059669;">Rs. {{ number_format($summary['total_received'], 2) }}</div>
+            </div>
+            <div class="s-box outstanding">
+                <div class="s-label">Total Pending</div>
+                <div class="s-value" style="color:#1A56DB;">Rs. {{ number_format($summary['total_pending'], 2) }}</div>
+            </div>
+            <div class="s-box rent">
+                <div class="s-label">🏠 Rent Due</div>
+                <div class="s-value" style="color:#3730A3;">Rs. {{ number_format($summary['total_rent'], 2) }}</div>
+            </div>
+            <div class="s-box utilities">
+                <div class="s-label">🛠️ Services Due</div>
+                <div class="s-value" style="color:#92400E;">Rs. {{ number_format($summary['total_serv'], 2) }}</div>
+            </div>
+            <div class="s-box fines">
+                <div class="s-label">⚠️ Extra Charges Due</div>
+                <div class="s-value" style="color:#9D174D;">Rs. {{ number_format($summary['total_extra'], 2) }}</div>
+            </div>
         </div>
-        <div class="s-box total-paid">
-            <div class="s-label">Total Collected</div>
-            <div class="s-value" style="color:#059669;">Rs. {{ number_format($summary['total_paid'], 2) }}</div>
+
+        {{-- Payment Accounts Summary boxes --}}
+        @if(!empty($summary['accounts_total']))
+            <div style="font-size: 8px; font-weight: bold; color: #64748B; margin-bottom: 4px; text-transform: uppercase;">Received in Payment Accounts</div>
+            <div class="summary" style="margin-bottom: 12px;">
+                @foreach($summary['accounts_total'] as $accName => $accPaid)
+                    @if($accPaid > 0)
+                        <div class="s-box" style="background: #ECFDF5; border: 1px solid #A7F3D0;">
+                            <div class="s-label" style="color:#065F46;">💰 {{ $accName }}</div>
+                            <div class="s-value" style="color:#047857; font-size: 11px;">Rs. {{ number_format($accPaid, 2) }}</div>
+                        </div>
+                    @endif
+                @endforeach
+            </div>
+        @endif
+    @else
+        <div class="summary">
+            <div class="s-box total-due">
+                <div class="s-label">Total Due</div>
+                <div class="s-value" style="color:#DC2626;">Rs. {{ number_format($summary['total_due'], 2) }}</div>
+            </div>
+            <div class="s-box total-paid">
+                <div class="s-label">Total Collected</div>
+                <div class="s-value" style="color:#059669;">Rs. {{ number_format($summary['total_paid'], 2) }}</div>
+            </div>
+            <div class="s-box outstanding">
+                <div class="s-label">Outstanding</div>
+                <div class="s-value" style="color:#1A56DB;">Rs. {{ number_format($summary['outstanding'], 2) }}</div>
+            </div>
+            <div class="s-box rent">
+                <div class="s-label">🏠 Rent Collected</div>
+                <div class="s-value" style="color:#3730A3;">Rs. {{ number_format($summary['rent_collected'], 2) }}</div>
+            </div>
+            <div class="s-box utilities">
+                <div class="s-label">⚡ Utilities Paid</div>
+                <div class="s-value" style="color:#92400E;">Rs. {{ number_format($summary['utilities_paid'], 2) }}</div>
+            </div>
+            <div class="s-box fines">
+                <div class="s-label">⚠️ Fines Collected</div>
+                <div class="s-value" style="color:#9D174D;">Rs. {{ number_format($summary['fines_collected'], 2) }}</div>
+            </div>
         </div>
-        <div class="s-box outstanding">
-            <div class="s-label">Outstanding</div>
-            <div class="s-value" style="color:#1A56DB;">Rs. {{ number_format($summary['outstanding'], 2) }}</div>
-        </div>
-        <div class="s-box rent">
-            <div class="s-label">🏠 Rent Collected</div>
-            <div class="s-value" style="color:#3730A3;">Rs. {{ number_format($summary['rent_collected'], 2) }}</div>
-        </div>
-        <div class="s-box utilities">
-            <div class="s-label">⚡ Utilities Paid</div>
-            <div class="s-value" style="color:#92400E;">Rs. {{ number_format($summary['utilities_paid'], 2) }}</div>
-        </div>
-        <div class="s-box fines">
-            <div class="s-label">⚠️ Fines Collected</div>
-            <div class="s-value" style="color:#9D174D;">Rs. {{ number_format($summary['fines_collected'], 2) }}</div>
-        </div>
-    </div>
+
+        {{-- Payment Accounts Summary boxes --}}
+        @if(!empty($summary['accounts_summary']))
+            <div style="font-size: 8px; font-weight: bold; color: #64748B; margin-bottom: 4px; text-transform: uppercase;">Collected in Payment Accounts</div>
+            <div class="summary" style="margin-bottom: 12px;">
+                @foreach($summary['accounts_summary'] as $accName => $accPaid)
+                    <div class="s-box" style="background: #ECFDF5; border: 1px solid #A7F3D0;">
+                        <div class="s-label" style="color:#065F46;">💰 {{ $accName }}</div>
+                        <div class="s-value" style="color:#047857; font-size: 11px;">Rs. {{ number_format($accPaid, 2) }}</div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    @endif
 
     {{-- Data Table --}}
-    <table>
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Month</th>
-                <th>Date</th>
-                <th>Flat/Shop</th>
-                <th>Tenant</th>
-                <th>Landlord</th>
-                <th>Type</th>
-                <th>Payment Method</th>
-                <th>Payment Account</th>
-                <th>Amount Due</th>
-                <th>Amount Paid</th>
-                <th>Balance</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($entries as $i => $entry)
+    @if($reportType === 'monthly_matrix')
+        <table>
+            <thead>
                 <tr>
-                    <td style="color:#94A3B8;">{{ $i + 1 }}</td>
-                    <td style="font-weight:600;">{{ $entry['month']?->format('M Y') ?? '—' }}</td>
-                    <td>{{ $entry['date']?->format('d M Y') ?? '—' }}</td>
-                    <td style="font-weight:600;">{{ $entry['unit'] ?? '—' }}</td>
-                    <td>{{ $entry['tenant'] ?? '—' }}</td>
-                    <td>{{ $entry['landlord'] ?? '—' }}</td>
-                    <td>
-                        <span class="badge type-{{ $entry['type'] ?? 'other' }}">
-                            {{ ucfirst($entry['type'] ?? '') }}
-                        </span>
-                    </td>
-                    <td>{{ $entry['payment_method'] ?? '—' }}</td>
-                    <td>{{ $entry['payment_account'] ?? '—' }}</td>
-                    <td style="font-weight:600;">Rs. {{ number_format($entry['amount_due'], 2) }}</td>
-                    <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['amount_paid'], 2) }}</td>
-                    <td style="font-weight:700;color:{{ $entry['balance'] > 0 ? '#DC2626' : '#059669' }};">
-                        Rs. {{ number_format($entry['balance'], 2) }}
-                    </td>
-                    <td>
-                        <span class="badge badge-{{ $entry['status'] ?? 'unpaid' }}">
-                            {{ ucfirst($entry['status'] ?? '') }}
-                        </span>
+                    <th style="text-align:center;">SR</th>
+                    <th>Date</th>
+                    <th>RSV</th>
+                    <th>Flat No</th>
+                    <th>Owner</th>
+                    <th>Status</th>
+                    <th>Serv</th>
+                    <th>Extra</th>
+                    <th>Rent</th>
+                    <th>Total Amount</th>
+                    <th>Received</th>
+                    @foreach($paymentAccounts as $account)
+                        <th>{{ $account->name }}</th>
+                    @endforeach
+                    <th>Total</th>
+                    <th>Pending</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($entries as $entry)
+                    @php
+                        $isVacant = $entry['status'] === 'VACANT';
+                        $isPending = $entry['pending'] > 0;
+                    @endphp
+                    <tr style="{{ $isVacant ? 'background-color: #F8FAFF; color: #94A3B8; font-style: italic;' : '' }}">
+                        <td style="text-align:center;">{{ $entry['sr'] }}</td>
+                        <td>{{ $entry['date'] ?: '—' }}</td>
+                        <td>{{ $entry['rsv'] ?: '—' }}</td>
+                        <td style="font-weight:600;">{{ $entry['flat_no'] }}</td>
+                        <td>{{ $entry['owner'] }}</td>
+                        <td>
+                            <span class="badge {{ $entry['status'] === 'RENTED' ? 'badge-paid' : ($entry['status'] === 'VACANT' ? 'badge-unpaid' : 'badge-pending') }}">
+                                {{ $entry['status'] }}
+                            </span>
+                        </td>
+                        <td>Rs. {{ number_format($entry['serv'], 2) }}</td>
+                        <td>Rs. {{ number_format($entry['extra'], 2) }}</td>
+                        <td>Rs. {{ number_format($entry['rent'], 2) }}</td>
+                        <td style="font-weight:600;">Rs. {{ number_format($entry['total_amount'], 2) }}</td>
+                        <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['received'], 2) }}</td>
+                        @foreach($paymentAccounts as $account)
+                            <td>
+                                @if(($entry['payment_accounts'][$account->name] ?? 0) > 0)
+                                    Rs. {{ number_format($entry['payment_accounts'][$account->name], 2) }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+                        @endforeach
+                        <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['received'], 2) }}</td>
+                        <td style="font-weight:700;color:{{ $isPending ? '#DC2626' : '#059669' }};">
+                            Rs. {{ number_format($entry['pending'], 2) }}
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="{{ 13 + count($paymentAccounts) }}" style="text-align:center;padding:16px;color:#94A3B8;">
+                            No records found.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="6" style="color:#1D3461;text-align:right;">Totals</td>
+                    <td style="color:#1D3461;">Rs. {{ number_format($summary['total_serv'], 2) }}</td>
+                    <td style="color:#1D3461;">Rs. {{ number_format($summary['total_extra'], 2) }}</td>
+                    <td style="color:#1D3461;">Rs. {{ number_format($summary['total_rent'], 2) }}</td>
+                    <td style="color:#1D3461;">Rs. {{ number_format($summary['total_amount'], 2) }}</td>
+                    <td style="color:#059669;">Rs. {{ number_format($summary['total_received'], 2) }}</td>
+                    @foreach($paymentAccounts as $account)
+                        <td style="color:#1D3461;">Rs. {{ number_format($summary['accounts_total'][$account->name] ?? 0, 2) }}</td>
+                    @endforeach
+                    <td style="color:#059669;">Rs. {{ number_format($summary['total_received'], 2) }}</td>
+                    <td style="color:{{ $summary['total_pending'] > 0 ? '#DC2626' : '#059669' }};">
+                        Rs. {{ number_format($summary['total_pending'], 2) }}
                     </td>
                 </tr>
-            @empty
+            </tfoot>
+        </table>
+    @else
+        <table>
+            <thead>
                 <tr>
-                    <td colspan="13" style="text-align:center;padding:16px;color:#94A3B8;">
-                        No records found for the selected filters.
-                    </td>
+                    <th>#</th>
+                    <th>Created Date</th>
+                    <th>Voucher #</th>
+                    <th>Flat/Shop</th>
+                    <th>Type</th>
+                    <th>Landlord</th>
+                    <th>Tenant</th>
+                    <th>Amount Due</th>
+                    <th>Amount Paid</th>
+                    <th>Balance</th>
+                    <th>Payment Status</th>
+                    <th>Paid At</th>
+                    <th>Payment Account</th>
                 </tr>
-            @endforelse
-        </tbody>
-        <tfoot>
-            <tr>
-                <td colspan="9" style="color:#1D3461;">
-                    Totals — {{ number_format($summary['count']) }} records
-                </td>
-                <td style="color:#1D3461;">Rs. {{ number_format($summary['total_due'], 2) }}</td>
-                <td style="color:#059669;">Rs. {{ number_format($summary['total_paid'], 2) }}</td>
-                <td style="color:{{ $summary['outstanding'] > 0 ? '#DC2626' : '#059669' }};">
-                    Rs. {{ number_format($summary['outstanding'], 2) }}
-                </td>
-                <td></td>
-            </tr>
-        </tfoot>
-    </table>
+            </thead>
+            <tbody>
+                @forelse($entries as $i => $entry)
+                    <tr style="{{ $entry['status'] === 'pending' ? 'background-color: #F0F9FF; color: #64748B; font-style: italic;' : '' }}">
+                        <td style="color:#94A3B8;">{{ $i + 1 }}</td>
+                        <td>{{ $entry['created_date'] instanceof \Carbon\Carbon ? $entry['created_date']->format('d M Y') : '—' }}</td>
+                        <td style="font-weight:600;">{{ $entry['voucher_number'] }}</td>
+                        <td style="font-weight:600;">{{ $entry['unit'] ?? '—' }}</td>
+                        <td>
+                            <span class="badge type-{{ $entry['type'] ?? 'other' }}">
+                                {{ ucfirst($entry['type'] ?? '') }}
+                            </span>
+                        </td>
+                        <td>{{ $entry['landlord'] ?? '—' }}</td>
+                        <td>{{ $entry['tenant'] ?? '—' }}</td>
+                        <td style="font-weight:600;">Rs. {{ number_format($entry['amount_due'], 2) }}</td>
+                        <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['amount_paid'], 2) }}</td>
+                        <td style="font-weight:700;color:{{ $entry['balance'] > 0 ? '#DC2626' : '#059669' }};">
+                            Rs. {{ number_format($entry['balance'], 2) }}
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ $entry['status'] ?? 'unpaid' }}">
+                                {{ ucfirst($entry['status'] ?? '') }}
+                            </span>
+                        </td>
+                        <td>{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->format('d M Y') : '—' }}</td>
+                        <td>{{ $entry['payment_account'] ?? '—' }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="13" style="text-align:center;padding:16px;color:#94A3B8;">
+                            No records found for the selected filters.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" style="color:#1D3461;">
+                        Totals — {{ number_format($summary['count']) }} records
+                    </td>
+                    <td style="color:#1D3461;">Rs. {{ number_format($summary['total_due'], 2) }}</td>
+                    <td style="color:#059669;">Rs. {{ number_format($summary['total_paid'], 2) }}</td>
+                    <td style="color:{{ $summary['outstanding'] > 0 ? '#DC2626' : '#059669' }};">
+                        Rs. {{ number_format($summary['outstanding'], 2) }}
+                    </td>
+                    <td colspan="3"></td>
+                </tr>
+            </tfoot>
+        </table>
+    @endif
 
     <div class="footer">
         Palladium Mall Management System &bull; {{ $label }} Report &bull;

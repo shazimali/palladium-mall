@@ -114,12 +114,15 @@ class Agreement extends Model
 
     public function durationInMonths(): int
     {
+        if (!$this->start_date || !$this->end_date) {
+            return 0;
+        }
         return (int) $this->start_date->diffInMonths($this->end_date);
     }
 
     public function daysRemaining(): int
     {
-        if (!$this->isActive()) {
+        if (!$this->isActive() || !$this->end_date) {
             return 0;
         }
 

@@ -25,6 +25,7 @@ class ReportExport implements
         protected Collection $entries,
         protected string     $label,
         protected array      $summary,
+        protected string     $reportType = 'all',
     ) {}
 
     // -------------------------------------------------------------------------
@@ -33,21 +34,46 @@ class ReportExport implements
 
     public function collection(): Collection
     {
+        if ($this->reportType === 'monthly_matrix') {
+            return $this->entries->map(function($e) {
+                $row = [
+                    'SR'           => $e['sr'],
+                    'Date'         => $e['date'],
+                    'RSV'          => $e['rsv'],
+                    'Flat No'      => $e['flat_no'],
+                    'Owner'        => $e['owner'],
+                    'Status'       => $e['status'],
+                    'Serv'         => number_format((float) $e['serv'], 2),
+                    'Extra'        => number_format((float) $e['extra'], 2),
+                    'Rent'         => number_format((float) $e['rent'], 2),
+                    'Total Amount' => number_format((float) $e['total_amount'], 2),
+                    'Received'     => number_format((float) $e['received'], 2),
+                ];
+                
+                foreach ($e['payment_accounts'] as $accName => $amount) {
+                    $row[$accName] = number_format((float) $amount, 2);
+                }
+                
+                $row['Total'] = number_format((float) $e['received'], 2);
+                $row['Pending'] = number_format((float) $e['pending'], 2);
+                
+                return $row;
+            });
+        }
+
         return $this->entries->map(fn($e) => [
-            'Month'           => $e['month']?->format('M Y')    ?? '—',
-            'Date'            => $e['date']?->format('d M Y')   ?? '—',
-            'Flat/Shop'       => $e['unit']                     ?? '—',
-            'Tenant'          => $e['tenant']                   ?? '—',
-            'Landlord'        => $e['landlord']                 ?? '—',
-            'Category'        => ucfirst($e['category']         ?? ''),
-            'Type'            => ucfirst($e['type']             ?? ''),
-            'Payment Method'  => $e['payment_method']           ?? '—',
-            'Payment Account' => $e['payment_account']          ?? '—',
+            'Created Date'    => $e['created_date']?->format('d M Y') ?? '—',
+            'Voucher #'       => $e['voucher_number']                 ?? '—',
+            'Flat/Shop'       => $e['unit']                           ?? '—',
+            'Type'            => ucfirst($e['type']                   ?? ''),
+            'Landlord'        => $e['landlord']                       ?? '—',
+            'Tenant'          => $e['tenant']                         ?? '—',
             'Amount Due'      => number_format((float) $e['amount_due'],  2),
             'Amount Paid'     => number_format((float) $e['amount_paid'], 2),
             'Balance'         => number_format((float) $e['balance'],     2),
-            'Status'          => ucfirst($e['status']           ?? ''),
+            'Payment Status'  => ucfirst($e['status']                 ?? ''),
             'Paid At'         => $e['paid_at'] ? $e['paid_at']->format('d M Y') : '—',
+            'Payment Account' => $e['payment_account']                ?? '—',
         ]);
     }
 
@@ -57,21 +83,45 @@ class ReportExport implements
 
     public function headings(): array
     {
+        if ($this->reportType === 'monthly_matrix') {
+            $headers = [
+                'SR',
+                'Date',
+                'RSV',
+                'Flat No',
+                'Owner',
+                'Status',
+                'Serv (Rs.)',
+                'Extra (Rs.)',
+                'Rent (Rs.)',
+                'Total Amount (Rs.)',
+                'Received (Rs.)',
+            ];
+            
+            $paymentAccounts = \App\Models\PaymentAccount::orderBy('name')->pluck('name')->toArray();
+            foreach ($paymentAccounts as $accName) {
+                $headers[] = $accName . ' (Rs.)';
+            }
+            
+            $headers[] = 'Total (Rs.)';
+            $headers[] = 'Pending (Rs.)';
+            
+            return $headers;
+        }
+
         return [
-            'Month',
-            'Date',
+            'Created Date',
+            'Voucher #',
             'Flat/Shop',
-            'Tenant',
-            'Landlord',
-            'Category',
             'Type',
-            'Payment Method',
-            'Payment Account',
+            'Landlord',
+            'Tenant',
             'Amount Due (Rs.)',
             'Amount Paid (Rs.)',
             'Balance (Rs.)',
-            'Status',
+            'Payment Status',
             'Paid At',
+            'Payment Account',
         ];
     }
 
@@ -85,22 +135,50 @@ class ReportExport implements
         $lastDataRow = $this->entries->count() + 1;  // +1 for heading
         $summaryRow  = $lastDataRow + 2;
 
-        // Write summary block below the data
-        $sheet->setCellValue("A{$summaryRow}", 'Summary');
-        $sheet->setCellValue("A" . ($summaryRow + 1), 'Total Due (Rs.)');
-        $sheet->setCellValue("B" . ($summaryRow + 1), number_format($this->summary['total_due'], 2));
-        $sheet->setCellValue("A" . ($summaryRow + 2), 'Total Paid (Rs.)');
-        $sheet->setCellValue("B" . ($summaryRow + 2), number_format($this->summary['total_paid'], 2));
-        $sheet->setCellValue("A" . ($summaryRow + 3), 'Outstanding (Rs.)');
-        $sheet->setCellValue("B" . ($summaryRow + 3), number_format($this->summary['outstanding'], 2));
-        $sheet->setCellValue("A" . ($summaryRow + 4), 'Rent Collected (Rs.)');
-        $sheet->setCellValue("B" . ($summaryRow + 4), number_format($this->summary['rent_collected'], 2));
-        $sheet->setCellValue("A" . ($summaryRow + 5), 'Utilities Paid (Rs.)');
-        $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['utilities_paid'], 2));
-        $sheet->setCellValue("A" . ($summaryRow + 6), 'Fines Collected (Rs.)');
-        $sheet->setCellValue("B" . ($summaryRow + 6), number_format($this->summary['fines_collected'], 2));
-        $sheet->setCellValue("A" . ($summaryRow + 7), 'Total Records');
-        $sheet->setCellValue("B" . ($summaryRow + 7), $this->summary['count']);
+        if ($this->reportType === 'monthly_matrix') {
+            // Write summary block below the data for Monthly Matrix
+            $sheet->setCellValue("A{$summaryRow}", 'Summary');
+            $sheet->setCellValue("A" . ($summaryRow + 1), 'Total Serv (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 1), number_format($this->summary['total_serv'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 2), 'Total Extra (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 2), number_format($this->summary['total_extra'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 3), 'Total Rent (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 3), number_format($this->summary['total_rent'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 4), 'Total Amount (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 4), number_format($this->summary['total_amount'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 5), 'Total Received (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['total_received'], 2));
+            
+            $idx = 6;
+            foreach ($this->summary['accounts_total'] as $accName => $total) {
+                $sheet->setCellValue("A" . ($summaryRow + $idx), "Received in {$accName} (Rs.)");
+                $sheet->setCellValue("B" . ($summaryRow + $idx), number_format($total, 2));
+                $idx++;
+            }
+            
+            $sheet->setCellValue("A" . ($summaryRow + $idx), 'Total Pending (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + $idx), number_format($this->summary['total_pending'], 2));
+            
+            $sheet->setCellValue("A" . ($summaryRow + $idx + 1), 'Total Records');
+            $sheet->setCellValue("B" . ($summaryRow + $idx + 1), $this->summary['count']);
+        } else {
+            // Write summary block below the data for flat report
+            $sheet->setCellValue("A{$summaryRow}", 'Summary');
+            $sheet->setCellValue("A" . ($summaryRow + 1), 'Total Due (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 1), number_format($this->summary['total_due'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 2), 'Total Paid (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 2), number_format($this->summary['total_paid'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 3), 'Outstanding (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 3), number_format($this->summary['outstanding'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 4), 'Rent Collected (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 4), number_format($this->summary['rent_collected'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 5), 'Utilities Paid (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['utilities_paid'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 6), 'Fines Collected (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 6), number_format($this->summary['fines_collected'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 7), 'Total Records');
+            $sheet->setCellValue("B" . ($summaryRow + 7), $this->summary['count']);
+        }
 
         return [
             // Header row
@@ -122,21 +200,23 @@ class ReportExport implements
 
     public function columnWidths(): array
     {
+        if ($this->reportType === 'monthly_matrix') {
+            return [];
+        }
+
         return [
-            'A' => 12,  // Month
-            'B' => 14,  // Date
+            'A' => 16,  // Created Date
+            'B' => 18,  // Voucher #
             'C' => 14,  // Flat/Shop
-            'D' => 22,  // Tenant
+            'D' => 14,  // Type
             'E' => 22,  // Landlord
-            'F' => 12,  // Category
-            'G' => 14,  // Type
-            'H' => 18,  // Payment Method
-            'I' => 22,  // Payment Account
-            'J' => 18,  // Amount Due
-            'K' => 18,  // Amount Paid
-            'L' => 16,  // Balance
-            'M' => 12,  // Status
-            'N' => 14,  // Paid At
+            'F' => 22,  // Tenant
+            'G' => 18,  // Amount Due
+            'H' => 18,  // Amount Paid
+            'I' => 16,  // Balance
+            'J' => 16,  // Payment Status
+            'K' => 14,  // Paid At
+            'L' => 22,  // Payment Account
         ];
     }
 

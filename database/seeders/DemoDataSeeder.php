@@ -22,10 +22,16 @@ class DemoDataSeeder extends Seeder
         $this->command->info('Seeding demo units...');
         $this->seedUnits();
 
+        $this->command->info('Seeding demo unit ownerships...');
+        $this->seedUnitOwnerships();
+
         $this->command->info('Seeding demo meters...');
         $this->seedMeters();
 
-        $this->command->info('Seeding demo tenants + agreements...');
+        $this->command->info('Seeding demo inspection persons...');
+        $this->seedInspectionPersons();
+
+        $this->command->info('Seeding demo tenants + agreements + checklists...');
         $this->seedTenants();
 
         $this->command->info('Seeding demo payment accounts...');
@@ -36,6 +42,9 @@ class DemoDataSeeder extends Seeder
 
         $this->command->info('Seeding demo utility readings...');
         $this->seedUtilities();
+
+        $this->command->info('Seeding demo expenses...');
+        $this->seedExpenses();
 
         $this->command->info('Demo data seeded successfully.');
     }
@@ -159,6 +168,9 @@ class DemoDataSeeder extends Seeder
                     'status'   => $unitData['status'],
                     'landlord_id' => $landlordId,
                     'date' => $creationDate,
+                    'file_no'  => 'PALL-FILE-' . $unitData['unit_number'],
+                    'area_sqft' => $unitData['type'] === 'flat' ? 1200.00 : 850.00,
+                    'notes'    => 'Demo unit for Palladium Mall presentation.',
                 ]
             );
         }
@@ -323,7 +335,7 @@ class DemoDataSeeder extends Seeder
             $start = $td['start']->startOfMonth();
             $end = $start->copy()->addMonths($td['months'])->subDay();
 
-            Agreement::create([
+            $agreement = Agreement::create([
                 'tenant_id' => $tenant->id,
                 'unit_id' => $unit->id,
                 'start_date' => $start,
@@ -336,6 +348,9 @@ class DemoDataSeeder extends Seeder
                 'status' => 'active',
                 'terms' => 'No subletting. Tenant responsible for utility bills. Two months notice required.',
             ]);
+
+            // Seed detailed extras for this tenant and agreement
+            $this->seedTenantExtras($tenant, $agreement, $start);
         }
     }
 
@@ -529,6 +544,226 @@ class DemoDataSeeder extends Seeder
                         'payment_account_id' => $acc ? $acc->id : null,
                     ]);
                 }
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Unit Ownerships
+    // -----------------------------------------------------------------------
+    private function seedUnitOwnerships(): void
+    {
+        $units = Unit::all();
+        foreach ($units as $unit) {
+            if ($unit->landlord_id) {
+                \App\Models\UnitOwnership::firstOrCreate(
+                    ['unit_id' => $unit->id, 'landlord_id' => $unit->landlord_id, 'is_current' => true],
+                    [
+                        'start_date' => $unit->date ?? now()->subYear()->toDateString(),
+                        'nominee_name' => 'Muhammad ' . explode(' ', $unit->landlord->name)[0],
+                        'nominee_relation_type' => 'son_of',
+                        'nominee_relation_name' => $unit->landlord->name,
+                        'total_amount' => 12000000.00,
+                        'received_amount' => 10000000.00,
+                        'credit_amount' => 2000000.00,
+                        'received_from' => $unit->landlord->name,
+                        'approved_by' => 'CEO Office',
+                        'received_by' => 'Accounts Manager',
+                        'approved_date' => $unit->date ?? now()->subYear()->toDateString(),
+                        'notes' => 'Seeded ownership record for demo presentation.',
+                    ]
+                );
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Inspection Persons
+    // -----------------------------------------------------------------------
+    private function seedInspectionPersons(): void
+    {
+        \App\Models\InspectionPerson::firstOrCreate(
+            ['name' => 'Waseem Akram'],
+            [
+                'designation' => 'Senior Facility Inspector',
+                'phone' => '0321-1234567',
+                'email' => 'waseem@palladium.com',
+                'is_active' => true,
+            ]
+        );
+
+        \App\Models\InspectionPerson::firstOrCreate(
+            ['name' => 'Junaid Khan'],
+            [
+                'designation' => 'Assistant Building Inspector',
+                'phone' => '0322-7654321',
+                'email' => 'junaid@palladium.com',
+                'is_active' => true,
+            ]
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // Tenant Extras (Guarantors, Contacts, Partners, Checklists)
+    // -----------------------------------------------------------------------
+    private function seedTenantExtras($tenant, $agreement, $start): void
+    {
+        // 1. Guarantor
+        \App\Models\Guarantor::create([
+            'tenant_id' => $tenant->id,
+            'agreement_id' => $agreement->id,
+            'name' => 'Mohammad Asif',
+            'cnic' => '35201-9999999-9',
+            'phone' => '0333-1234567',
+            'relation' => 'relative',
+            'address' => 'Model Town, Lahore',
+            'occupation' => 'Retailer Business Owner',
+            'shop_name' => 'Asif Traders',
+        ]);
+
+        // 2. Emergency Contact
+        \App\Models\EmergencyContact::create([
+            'tenant_id' => $tenant->id,
+            'agreement_id' => $agreement->id,
+            'name' => 'Zahid Mahmood',
+            'relation' => 'brother',
+            'phone' => '0345-1234567',
+            'address' => 'Johar Town, Lahore',
+        ]);
+
+        // 3. Tenant Partner
+        if (rand(0, 1) === 1) {
+            \App\Models\TenantPartner::create([
+                'tenant_id' => $tenant->id,
+                'agreement_id' => $agreement->id,
+                'name' => 'Arsalan Ahmad',
+                'father_name' => 'Ahmad Mahmood',
+                'cnic' => '35201-8888888-8',
+                'gender' => 'male',
+                'marital_status' => 'single',
+                'phone' => '0312-3456789',
+                'whatsapp_number' => '0312-3456789',
+                'email' => 'arsalan@partner.com',
+                'address' => 'Gulberg, Lahore',
+                'occupation' => 'Co-Owner',
+                'monthly_income' => 75000,
+            ]);
+        }
+
+        // 4. Tenant Document Checklist
+        \App\Models\TenantDocumentChecklist::create([
+            'tenant_id' => $tenant->id,
+            'agreement_id' => $agreement->id,
+            'cnic_copy_tenant_front' => true,
+            'cnic_copy_tenant_back' => true,
+            'cnic_copy_father' => true,
+            'cnic_copy_guarantor' => true,
+            'passport_photo' => true,
+            'nikah_nama' => false,
+            'frc_form_b' => true,
+            'police_verification' => true,
+            'tenant_application_form' => true,
+            'tenancy_agreement_copy' => true,
+            'rules_acknowledgment' => true,
+            'inspection_report' => true,
+            'property_handover_form' => true,
+            'security_deposit_receipt' => true,
+            'meter_picture' => true,
+            'emergency_contacts_added' => true,
+            'guarantor_info_added' => true,
+            'guarantor_business_card' => true,
+            'tenant_business_card' => true,
+            'property_advisor_card' => false,
+            'old_tenant_verification' => false,
+            'business_license' => $tenant->unit?->type === 'shop',
+            'utility_bills_clearance' => true,
+            'notes' => 'All basic verification documents checked and verified for the client presentation.',
+        ]);
+
+        // 5. Move In Checklist
+        $inspector = \App\Models\InspectionPerson::first();
+        \App\Models\MoveInChecklist::create([
+            'tenant_id' => $tenant->id,
+            'agreement_id' => $agreement->id,
+            'inspection_person_id' => $inspector ? $inspector->id : null,
+            'inspection_member' => $inspector ? $inspector->name : 'Facility Inspector',
+            'checklist_date' => $start->toDateString(),
+            'type' => 'move_in',
+            'rooms_cleaned' => true,
+            'kitchen_cleaned' => true,
+            'bathrooms_cleaned' => true,
+            'no_garbage' => true,
+            'no_wall_damage' => true,
+            'paint_condition_ok' => true,
+            'light_fixtures_ok' => true,
+            'electric_wiring_ok' => true,
+            'no_breaker_issues' => true,
+            'furniture_ok' => true,
+            'ac_working' => true,
+            'kitchen_appliances_ok' => true,
+            'stove_clean' => true,
+            'keys_returned' => true,
+            'doors_locks_ok' => true,
+            'windows_ok' => true,
+            'balcony_doors_ok' => true,
+            'water_supply_ok' => true,
+            'electricity_supply_ok' => true,
+            'gas_supply_ok' => true,
+            'no_pending_utility_bills' => true,
+            'no_pending_maintenance' => true,
+            'no_pending_rent' => true,
+            'fixtures_available' => true,
+            'no_missing_items' => true,
+            'flat_condition' => 'good',
+            'final_remarks' => 'Unit handed over in pristine condition. All fittings verified.',
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Expenses
+    // -----------------------------------------------------------------------
+    private function seedExpenses(): void
+    {
+        $heads = \App\Models\ExpenseHead::all();
+        $accounts = PaymentAccount::all();
+        $adminUser = \App\Models\User::first();
+
+        if ($heads->isEmpty() || $accounts->isEmpty()) {
+            return;
+        }
+
+        $cashAcc = $accounts->where('type', 'cash')->first() ?? $accounts->first();
+        $bankAcc = $accounts->where('type', 'bank_transfer')->first() ?? $accounts->first();
+
+        $expenseItems = [
+            ['head' => 'Salaries & Wages', 'amount' => 120000, 'notes' => 'Staff salary for security and janitorial crew.', 'method' => 'bank_transfer', 'acc' => $bankAcc],
+            ['head' => 'Utility Bills (Common Area)', 'amount' => 45000, 'notes' => 'LESCO common area commercial electric bill.', 'method' => 'bank_transfer', 'acc' => $bankAcc],
+            ['head' => 'Repair & Maintenance', 'amount' => 15000, 'notes' => 'HVAC filter replacement & system servicing.', 'method' => 'cash', 'acc' => $cashAcc],
+            ['head' => 'Entertainment & Tea', 'amount' => 3500, 'notes' => 'Office tea and refreshments for guest meetings.', 'method' => 'cash', 'acc' => $cashAcc],
+            ['head' => 'Office Supplies & Stationery', 'amount' => 8500, 'notes' => 'Office printing paper and registration files.', 'method' => 'cash', 'acc' => $cashAcc],
+            ['head' => 'Security Services', 'amount' => 25000, 'notes' => 'CCTV maintenance and monthly service fee.', 'method' => 'bank_transfer', 'acc' => $bankAcc],
+        ];
+
+        for ($monthsAgo = 2; $monthsAgo >= 0; $monthsAgo--) {
+            $date = Carbon::now()->subMonths($monthsAgo)->startOfMonth()->addDays(5);
+
+            foreach ($expenseItems as $item) {
+                $headObj = $heads->where('name', $item['head'])->first();
+                if (!$headObj) continue;
+
+                // Adjust amount slightly per month for realism
+                $amount = $item['amount'] + rand(-2000, 4000);
+
+                \App\Models\Expense::create([
+                    'expense_head_id' => $headObj->id,
+                    'amount' => $amount,
+                    'date' => $date->toDateString(),
+                    'payment_method' => $item['method'],
+                    'payment_account_id' => $item['acc']->id,
+                    'reference' => 'EXP-' . $date->format('Ym') . '-' . rand(100, 999),
+                    'notes' => $item['notes'],
+                    'user_id' => $adminUser ? $adminUser->id : null,
+                ]);
             }
         }
     }

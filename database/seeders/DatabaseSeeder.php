@@ -30,7 +30,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             AdminUserSeeder::class,
             FloorBlockAreaSeeder::class,
-            // DemoDataSeeder::class,
+            DemoDataSeeder::class,
         ]);
     }
 }

@@ -225,9 +225,9 @@
                     <div class="text-gray-500">Unit</div>
                     <div class="font-medium text-gray-900 dark:text-white/90">{{ $tenant->unit?->unit_number ?? '—' }}</div>
                     <div class="text-gray-500">Period</div>
-                    <div class="font-medium text-gray-900 dark:text-white/90">{{ $agreement->start_date->format('d M Y') }} → {{ $agreement->end_date->format('d M Y') }}</div>
+                    <div class="font-medium text-gray-900 dark:text-white/90">{{ $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft' }} → {{ $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft' }}</div>
                     <div class="text-gray-500">Monthly Rent</div>
-                    <div class="font-medium text-gray-900 dark:text-white/90">PKR {{ number_format($agreement->monthly_rent) }}</div>
+                    <div class="font-medium text-gray-900 dark:text-white/90">{{ $agreement->monthly_rent ? 'PKR ' . number_format($agreement->monthly_rent) : '—' }}</div>
                     @if($agreement->maintenance_charge)
                         <div class="text-gray-500">Maintenance</div>
                         <div class="font-medium text-gray-900 dark:text-white/90">PKR {{ number_format($agreement->maintenance_charge) }}</div>

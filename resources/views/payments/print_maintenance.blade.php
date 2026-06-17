@@ -137,7 +137,7 @@
                         <tr>
                             <td class="py-4">
                                 <p class="font-medium text-gray-900">{{ $record->type_label }}</p>
-                                <p class="text-xs text-gray-400">Ref: PM-PAY-{{ str_pad($record->id, 5, '0', STR_PAD_LEFT) }}</p>
+                                <p class="text-xs text-gray-400">Ref: {{ $record->receipt_no ?? ('PM-PAY-' . str_pad($record->id, 5, '0', STR_PAD_LEFT)) }}</p>
                             </td>
                             <td class="py-4 text-right text-gray-500 text-xs">
                                 @if(in_array($record->type, ['electricity', 'water', 'gas']))

@@ -77,9 +77,9 @@
                                     {{ $agreement->unit->unit_number }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-xs">{{ $agreement->start_date->format('d M Y') }}</td>
-                            <td class="px-4 py-3 text-xs">{{ $agreement->end_date->format('d M Y') }}</td>
-                            <td class="px-4 py-3 font-medium">Rs. {{ number_format($agreement->monthly_rent) }}</td>
+                            <td class="px-4 py-3 text-xs">{{ $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft' }}</td>
+                            <td class="px-4 py-3 text-xs">{{ $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft' }}</td>
+                            <td class="px-4 py-3 font-medium">{{ $agreement->monthly_rent ? 'Rs. ' . number_format($agreement->monthly_rent) : '—' }}</td>
                             <td class="px-4 py-3">
                                 @if($agreement->isActive())
                                     @php $days = $agreement->daysRemaining(); @endphp

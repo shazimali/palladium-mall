@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\Landlord;
 use App\Models\PaymentAccount;
+use App\Models\Agreement;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -41,8 +42,13 @@ class ReportController extends Controller
         $summary = null;
 
         if ($hasQuery) {
-            $entries = $this->buildEntries($request);
-            $summary = $this->buildSummary($entries);
+            if ($request->report_type === 'monthly_matrix') {
+                $entries = $this->buildMatrixEntries($request);
+                $summary = $this->buildMatrixSummary($entries);
+            } else {
+                $entries = $this->buildEntries($request);
+                $summary = $this->buildSummary($entries);
+            }
         }
 
         return view('reports.index', [
@@ -74,8 +80,14 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
-        $entries  = $this->buildEntries($request);
-        $summary  = $this->buildSummary($entries);
+        $reportType = $request->report_type ?? 'all';
+        if ($reportType === 'monthly_matrix') {
+            $entries = $this->buildMatrixEntries($request);
+            $summary = $this->buildMatrixSummary($entries);
+        } else {
+            $entries  = $this->buildEntries($request);
+            $summary  = $this->buildSummary($entries);
+        }
         $label    = $this->reportLabel($request);
         $filename = 'report-' . str($label)->slug() . '-' . now()->format('Y-m-d') . '.xlsx';
 
@@ -85,7 +97,7 @@ class ReportController extends Controller
         ]);
 
         return Excel::download(
-            new ReportExport($entries, $label, $summary),
+            new ReportExport($entries, $label, $summary, $reportType),
             $filename
         );
     }
@@ -96,17 +108,28 @@ class ReportController extends Controller
 
     public function exportPdf(Request $request): \Illuminate\Http\Response
     {
-        $entries = $this->buildEntries($request);
-        $summary = $this->buildSummary($entries);
+        $reportType = $request->report_type ?? 'all';
+        if ($reportType === 'monthly_matrix') {
+            $entries = $this->buildMatrixEntries($request);
+            $summary = $this->buildMatrixSummary($entries);
+        } else {
+            $entries = $this->buildEntries($request);
+            $summary = $this->buildSummary($entries);
+        }
         $label   = $this->reportLabel($request);
         $filters = $request->only([
             'date_from', 'date_to', 'unit_id', 'tenant_id', 'status', 'report_type',
             'landlord_id', 'payment_method', 'payment_account_id'
         ]);
 
-        $period = ($filters['date_from'] ?? false) || ($filters['date_to'] ?? false)
-            ? ($filters['date_from'] ?? '—') . ' to ' . ($filters['date_to'] ?? '—')
-            : 'All time';
+        if ($reportType === 'monthly_matrix') {
+            $month = ($filters['date_from'] ?? false) ? \Carbon\Carbon::parse($filters['date_from'])->format('F Y') : \Carbon\Carbon::now()->format('F Y');
+            $period = $month;
+        } else {
+            $period = ($filters['date_from'] ?? false) || ($filters['date_to'] ?? false)
+                ? ($filters['date_from'] ?? '—') . ' to ' . ($filters['date_to'] ?? '—')
+                : 'All time';
+        }
 
         $pdf = Pdf::loadView('reports.pdf', [
             'entries'    => $entries,
@@ -114,7 +137,8 @@ class ReportController extends Controller
             'label'      => $label,
             'period'     => $period,
             'filters'    => $filters,
-            'reportType' => $request->report_type ?? 'all',
+            'reportType' => $reportType,
+            'paymentAccounts' => PaymentAccount::orderBy('name')->get(['id', 'name']),
         ])->setPaper('a4', 'landscape');
 
         $filename = 'report-' . str($label)->slug() . '-' . now()->format('Y-m-d') . '.pdf';
@@ -163,7 +187,11 @@ class ReportController extends Controller
             $query->whereIn('type', ['rent', 'fine', 'maintenance', 'electricity', 'water', 'gas', 'other']);
         }
 
-        $entries = $query->get()->map(fn($p) => [
+        $dbPayments = $query->get();
+
+        $entries = $dbPayments->map(fn($p) => [
+            'created_date'    => $p->created_at,
+            'voucher_number'  => $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT)),
             'month'           => $p->month,
             'date'            => $p->due_date,
             'unit'            => $p->unit?->unit_number ?? '—',
@@ -179,6 +207,103 @@ class ReportController extends Controller
             'status'          => $p->status,
             'paid_at'         => $p->paid_at,
         ]);
+
+        // Projections: only run if payment-specific filters are NOT set
+        $runProjections = !$request->filled('payment_method')
+            && !$request->filled('payment_account_id')
+            && !$request->filled('status');
+
+        if ($runProjections && ($reportType === 'all' || $reportType === 'rent')) {
+            $startMonth = $from ? \Carbon\Carbon::parse($from)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
+            $endMonth = $to ? \Carbon\Carbon::parse($to)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
+
+            if ($startMonth->lte($endMonth)) {
+                $monthsToProject = [];
+                $current = $startMonth->copy();
+                $limit = 0;
+                while ($current->lte($endMonth) && $limit < 36) {
+                    $monthsToProject[] = $current->copy();
+                    $current->addMonth();
+                    $limit++;
+                }
+
+                // Index existing payments by: unit_id, tenant_id, type, month
+                $existingKeys = [];
+                foreach ($dbPayments as $p) {
+                    $monthStr = $p->month ? $p->month->format('Y-m-d') : '';
+                    $key = "{$p->unit_id}_{$p->tenant_id}_{$p->type}_{$monthStr}";
+                    $existingKeys[$key] = true;
+                }
+
+                foreach ($monthsToProject as $month) {
+                    $monthStr = $month->format('Y-m-d');
+
+                    $activeAgreements = \App\Models\Agreement::where('status', 'active')
+                        ->when($unitId,     fn($q) => $q->where('unit_id', $unitId))
+                        ->when($tenantId,   fn($q) => $q->where('tenant_id', $tenantId))
+                        ->when($landlordId, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
+                        ->where('start_date', '<=', $month->copy()->endOfMonth())
+                        ->where('end_date', '>=', $month->copy()->startOfMonth())
+                        ->with(['tenant', 'unit.landlord'])
+                        ->get();
+
+                    foreach ($activeAgreements as $agreement) {
+                        $dueDay = min($agreement->payment_due_day ?: 1, $month->daysInMonth);
+                        $dueDate = $month->copy()->day($dueDay);
+
+                        // Rent projection
+                        if ($reportType === 'all' || $reportType === 'rent') {
+                            $rentKey = "{$agreement->unit_id}_{$agreement->tenant_id}_rent_{$monthStr}";
+                            if (!isset($existingKeys[$rentKey])) {
+                                $entries->push([
+                                    'created_date'    => null,
+                                    'voucher_number'  => 'PM-PAY-PROJ',
+                                    'month'           => $month->copy(),
+                                    'date'            => $dueDate,
+                                    'unit'            => $agreement->unit?->unit_number ?? '—',
+                                    'tenant'          => $agreement->tenant?->name ?? '—',
+                                    'landlord'        => $agreement->unit?->landlord?->name ?? '—',
+                                    'payment_method'  => '—',
+                                    'payment_account' => '—',
+                                    'category'        => 'payment',
+                                    'type'            => 'rent',
+                                    'description'     => 'Rent — ' . $month->format('F Y') . ' (Projected)',
+                                    'amount_due'      => (float) $agreement->monthly_rent,
+                                    'amount_paid'     => 0.0,
+                                    'status'          => 'pending',
+                                    'paid_at'         => null,
+                                ]);
+                            }
+                        }
+
+                        // Maintenance projection
+                        if ($reportType === 'all' && $agreement->maintenance_charge > 0) {
+                            $maintKey = "{$agreement->unit_id}_{$agreement->tenant_id}_maintenance_{$monthStr}";
+                            if (!isset($existingKeys[$maintKey])) {
+                                $entries->push([
+                                    'created_date'    => null,
+                                    'voucher_number'  => 'PM-PAY-PROJ',
+                                    'month'           => $month->copy(),
+                                    'date'            => $dueDate,
+                                    'unit'            => $agreement->unit?->unit_number ?? '—',
+                                    'tenant'          => $agreement->tenant?->name ?? '—',
+                                    'landlord'        => $agreement->unit?->landlord?->name ?? '—',
+                                    'payment_method'  => '—',
+                                    'payment_account' => '—',
+                                    'category'        => 'payment',
+                                    'type'            => 'maintenance',
+                                    'description'     => 'Maintenance — ' . $month->format('F Y') . ' (Projected)',
+                                    'amount_due'      => (float) $agreement->maintenance_charge,
+                                    'amount_paid'     => 0.0,
+                                    'status'          => 'pending',
+                                    'paid_at'         => null,
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         $balance = 0;
 
@@ -202,6 +327,12 @@ class ReportController extends Controller
         $utilitiesPaid    = $entries->where('category', 'utility')->sum('amount_paid');
         $finesCollected   = $entries->where('type', 'fine')->sum('amount_paid');
 
+        // Sum amount_paid grouped by payment_account name (ignoring empty/hyphen entries)
+        $accountSummaries = $entries->groupBy('payment_account')
+            ->map(fn($group) => $group->sum('amount_paid'))
+            ->filter(fn($total, $account) => $account !== '—' && $total > 0)
+            ->toArray();
+
         return [
             'total_due'         => $entries->sum('amount_due'),
             'total_paid'        => $entries->sum('amount_paid'),
@@ -210,6 +341,146 @@ class ReportController extends Controller
             'rent_collected'    => $rentCollected,
             'utilities_paid'    => $utilitiesPaid,
             'fines_collected'   => $finesCollected,
+            'accounts_summary'  => $accountSummaries,
+        ];
+    }
+
+    // -------------------------------------------------------------------------
+    // Monthly Matrix Builders
+    // -------------------------------------------------------------------------
+
+    private function buildMatrixEntries(Request $request): Collection
+    {
+        $from = $request->date_from;
+        $month = $from ? \Carbon\Carbon::parse($from)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
+        $monthStr = $month->format('Y-m-d');
+
+        $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
+        
+        $units = Unit::with(['landlord'])->orderBy('unit_number')->get();
+
+        $agreements = Agreement::where('status', 'active')
+            ->where('start_date', '<=', $month->copy()->endOfMonth())
+            ->where('end_date', '>=', $month->copy()->startOfMonth())
+            ->with(['tenant'])
+            ->get()
+            ->groupBy('unit_id');
+
+        $payments = Payment::where('month', $monthStr)
+            ->with(['paymentAccount'])
+            ->get()
+            ->groupBy('unit_id');
+
+        $matrixEntries = collect();
+
+        foreach ($units as $index => $unit) {
+            $agreement = $agreements->get($unit->id)?->first();
+            $unitPayments = $payments->get($unit->id) ?? collect();
+
+            if ($agreement) {
+                $status = $unit->status === 'sp' ? 'SP' : 'RENTED';
+            } else {
+                $status = match ($unit->status) {
+                    'self' => 'SELF',
+                    'sp' => 'SP',
+                    default => 'VACANT',
+                };
+            }
+
+            // Rent
+            $rentPayment = $unitPayments->where('type', 'rent')->first();
+            if ($rentPayment) {
+                $rent_due = (float) $rentPayment->amount;
+                $rent_paid = (float) $rentPayment->amount_paid;
+            } elseif ($agreement) {
+                $rent_due = (float) $agreement->monthly_rent;
+                $rent_paid = 0.0;
+            } else {
+                $rent_due = 0.0;
+                $rent_paid = 0.0;
+            }
+
+            // Services (Maintenance)
+            $maintPayment = $unitPayments->where('type', 'maintenance')->first();
+            if ($maintPayment) {
+                $serv_due = (float) $maintPayment->amount;
+                $serv_paid = (float) $maintPayment->amount_paid;
+            } elseif ($agreement && $agreement->maintenance_charge > 0) {
+                $serv_due = (float) $agreement->maintenance_charge;
+                $serv_paid = 0.0;
+            } else {
+                $serv_due = 0.0;
+                $serv_paid = 0.0;
+            }
+
+            // Extra
+            $extraPayments = $unitPayments->whereNotIn('type', ['rent', 'maintenance']);
+            $extra_due = (float) $extraPayments->sum('amount');
+            $extra_paid = (float) $extraPayments->sum('amount_paid');
+
+            $total_due = $serv_due + $extra_due + $rent_due;
+            $total_received = $serv_paid + $extra_paid + $rent_paid;
+            $pending = max(0.0, $total_due - $total_received);
+
+            $accountsBreakdown = [];
+            foreach ($paymentAccounts as $account) {
+                $accountsBreakdown[$account->name] = (float) $unitPayments->where('payment_account_id', $account->id)->sum('amount_paid');
+            }
+
+            $vouchers = [];
+            $dates = [];
+            foreach ($unitPayments as $p) {
+                if ($p->status === 'paid' || $p->amount_paid > 0) {
+                    $vouchers[] = $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT));
+                    if ($p->paid_at) {
+                        $dates[] = $p->paid_at->format('d/m');
+                    }
+                }
+            }
+
+            $datesString = !empty($dates) ? implode(', ', array_unique($dates)) : '';
+            $vouchersString = !empty($vouchers) ? implode('/', array_unique($vouchers)) : '';
+
+            $matrixEntries->push([
+                'sr'               => $index + 1,
+                'date'             => $datesString,
+                'rsv'              => $vouchersString,
+                'flat_no'          => $unit->unit_number,
+                'owner'            => $unit->landlord?->name ?? '—',
+                'status'           => $status,
+                'serv'             => $serv_due,
+                'extra'            => $extra_due,
+                'rent'             => $rent_due,
+                'total_amount'     => $total_due,
+                'received'         => $total_received,
+                'payment_accounts' => $accountsBreakdown,
+                'pending'          => $pending,
+            ]);
+        }
+
+        return $matrixEntries;
+    }
+
+    private function buildMatrixSummary(Collection $matrixEntries): array
+    {
+        $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
+
+        $accountsTotal = [];
+        foreach ($paymentAccounts as $account) {
+            $accountsTotal[$account->name] = $matrixEntries->sum(function ($e) use ($account) {
+                return $e['payment_accounts'][$account->name] ?? 0.0;
+            });
+        }
+
+        return [
+            'total_serv'     => $matrixEntries->sum('serv'),
+            'total_extra'    => $matrixEntries->sum('extra'),
+            'total_rent'     => $matrixEntries->sum('rent'),
+            'total_amount'   => $matrixEntries->sum('total_amount'),
+            'total_received' => $matrixEntries->sum('received'),
+            'accounts_total' => $accountsTotal,
+            'total_pending'  => $matrixEntries->sum('pending'),
+            'count'          => $matrixEntries->count(),
         ];
     }
 
@@ -220,10 +491,11 @@ class ReportController extends Controller
     private function reportLabel(Request $request): string
     {
         return match ($request->report_type ?? 'all') {
-            'rent'      => 'Rent Collected',
-            'fines'     => 'Fines',
-            'utilities' => 'Utilities Paid',
-            default     => 'Full Report',
+            'rent'           => 'Rent Collected',
+            'fines'          => 'Fines',
+            'utilities'      => 'Utilities Paid',
+            'monthly_matrix' => 'Monthly Matrix',
+            default          => 'Full Report',
         };
     }
 }

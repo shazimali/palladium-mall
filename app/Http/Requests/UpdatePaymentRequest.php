@@ -30,19 +30,24 @@ class UpdatePaymentRequest extends FormRequest
     {
         $payment = $this->route('payment');
 
+        $uniqueRule = null;
+        if (in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
+            $uniqueRule = Rule::unique('payments', 'month')
+                ->where('unit_id', $this->unit_id)
+                ->where('type', $this->type)
+                ->ignore($payment->id);
+        }
+
         return [
             'tenant_id' => ['required', 'exists:tenants,id'],
             'unit_id' => ['required', 'exists:units,id'],
             'agreement_id' => ['required', 'exists:agreements,id'],
             'type' => ['required', 'in:rent,maintenance,fine,other'],
-            'month' => [
+            'month' => array_filter([
                 'required',
                 'date',
-                Rule::unique('payments', 'month')
-                    ->where('tenant_id', $this->tenant_id)
-                    ->where('type', $this->type)
-                    ->ignore($payment->id)
-            ],
+                $uniqueRule
+            ]),
             'amount' => ['required', 'numeric', 'min:0'],
             'due_date' => ['required', 'date'],
             'notes' => ['nullable', 'string', 'max:500'],
