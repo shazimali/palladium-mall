@@ -240,6 +240,49 @@ class AjaxUnitController extends Controller
     }
 
     // ──────────────────────────────────────────────────────────────
+    // POST ajax/landlord-units/check-unique
+    // Check if unit number or file no is unique in database.
+    // ──────────────────────────────────────────────────────────────
+    public function checkUnique(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'unit_number' => ['nullable', 'string', 'max:20'],
+            'file_no'     => ['nullable', 'string', 'max:100'],
+            'ignore_id'   => ['nullable', 'integer'],
+        ]);
+
+        $unitNumber = $data['unit_number'] ?? null;
+        $fileNo = $data['file_no'] ?? null;
+        $ignoreId = $data['ignore_id'] ?? null;
+
+        $errors = [];
+
+        if ($unitNumber) {
+            $exists = Unit::where('unit_number', $unitNumber)
+                ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+                ->exists();
+            if ($exists) {
+                $errors['unit_number'] = "Flat/Shop No. {$unitNumber} is already registered.";
+            }
+        }
+
+        if ($fileNo) {
+            $exists = Unit::where('file_no', $fileNo)
+                ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+                ->exists();
+            if ($exists) {
+                $errors['file_no'] = "File No. {$fileNo} is already registered.";
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'is_unique' => empty($errors),
+            'errors' => $errors,
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────
     // Helper — format a unit for JSON response
     // ──────────────────────────────────────────────────────────────
     private function formatUnit(Unit $unit): array

@@ -156,102 +156,117 @@ Landlord Contact Info Card
                 <p class="text-sm mt-2 font-medium">Save the landlord profile above, then come back to add flat/shops.</p>
             </div>
         @else
+            {{-- ── Feedback Toast (shows above table) ────────────────────── --}}
+        <div x-show="toast" x-cloak x-transition class="mx-5 mb-4 mt-4 rounded-lg px-4 py-2.5 text-sm font-medium"
+            :class="toastType === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'"
+            x-text="toast">
+        </div>
 
-            {{-- Units Table --}}
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                    <thead class="text-xs uppercase bg-gray-100/60 text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
-                        <tr>
-                            <th class="px-4 py-2.5">Flat/Shops #</th>
-                            <th class="px-4 py-2.5">Type</th>
-                            <th class="px-4 py-2.5">Floor / Block / Area</th>
-                            <th class="px-4 py-2.5">File No.</th>
-                            <th class="px-4 py-2.5 text-right">Total</th>
-                            <th class="px-4 py-2.5 text-right">Received</th>
-                            <th class="px-4 py-2.5 text-right">Credit</th>
-                            <th class="px-4 py-2.5 text-center">Actions</th>
+        {{-- Units Table --}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+                <thead class="text-xs uppercase bg-gray-100/60 text-gray-500 dark:bg-gray-800/60 dark:text-gray-400">
+                    <tr>
+                        <th class="px-4 py-2.5">Flat/Shops #</th>
+                        <th class="px-4 py-2.5">Type</th>
+                        <th class="px-4 py-2.5">Floor / Block / Area</th>
+                        <th class="px-4 py-2.5">File No.</th>
+                        <th class="px-4 py-2.5 text-right">Total</th>
+                        <th class="px-4 py-2.5 text-right">Received</th>
+                        <th class="px-4 py-2.5 text-right">Credit</th>
+                        <th class="px-4 py-2.5 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                    <template x-for="u in units" :key="u.id">
+                        <tr class="hover:bg-white dark:hover:bg-white/[0.02] transition-colors">
+                            <td class="px-4 py-2.5 font-semibold text-gray-800 dark:text-white/90"
+                                x-text="u.unit_number"></td>
+                            <td class="px-4 py-2.5">
+                                <span
+                                    class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
+                                    :class="u.type==='flat' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                                          u.type==='shop' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
+                                                          'bg-gray-100 text-gray-600'" x-text="u.type">
+                                </span>
+                            </td>
+                            <td class="px-4 py-2.5 text-xs text-gray-500">
+                                <span x-text="u.floor_name + ' / ' + u.block_name + ' / ' + u.area_name"></span>
+                            </td>
+                            <td class="px-4 py-2.5 text-xs" x-text="u.file_no || '—'"></td>
+                            <td class="px-4 py-2.5 text-right text-xs font-medium"
+                                x-text="u.total_amount ? 'Rs. ' + Number(u.total_amount).toLocaleString('en-PK') : '—'">
+                            </td>
+                            <td class="px-4 py-2.5 text-right text-xs text-green-600 font-medium"
+                                x-text="u.received_amount ? 'Rs. ' + Number(u.received_amount).toLocaleString('en-PK') : '—'">
+                            </td>
+                            <td class="px-4 py-2.5 text-right text-xs text-red-500 font-medium"
+                                x-text="u.credit_amount ? 'Rs. ' + Number(u.credit_amount).toLocaleString('en-PK') : '—'">
+                            </td>
+                            <td class="px-4 py-2.5 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button type="button" @click="openEdit(u)"
+                                        class="rounded-md p-1.5 text-gray-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-900/20 transition-colors"
+                                        title="Edit unit">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                                        </svg>
+                                    </button>
+                                    <button type="button" @click="openTransfer(u)"
+                                        x-show="landlordId"
+                                        class="rounded-md p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20 transition-colors"
+                                        title="Transfer ownership">
+                                        🔁
+                                    </button>
+                                    <button type="button" @click="deleteUnit(u)"
+                                        class="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-colors"
+                                        title="Delete unit">
+                                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        <template x-for="u in units" :key="u.id">
-                            <tr class="hover:bg-white dark:hover:bg-white/[0.02] transition-colors">
-                                <td class="px-4 py-2.5 font-semibold text-gray-800 dark:text-white/90"
-                                    x-text="u.unit_number"></td>
-                                <td class="px-4 py-2.5">
-                                    <span
-                                        class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-                                        :class="u.type==='flat' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                                                              u.type==='shop' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                                                              'bg-gray-100 text-gray-600'"
-                                        x-text="u.type">
-                                    </span>
-                                </td>
-                                <td class="px-4 py-2.5 text-xs text-gray-500">
-                                    <span x-text="u.floor_name + ' / ' + u.block_name + ' / ' + u.area_name"></span>
-                                </td>
-                                <td class="px-4 py-2.5 text-xs" x-text="u.file_no || '—'"></td>
-                                <td class="px-4 py-2.5 text-right text-xs font-medium"
-                                    x-text="u.total_amount ? 'Rs. ' + Number(u.total_amount).toLocaleString('en-PK') : '—'">
-                                </td>
-                                <td class="px-4 py-2.5 text-right text-xs text-green-600 font-medium"
-                                    x-text="u.received_amount ? 'Rs. ' + Number(u.received_amount).toLocaleString('en-PK') : '—'">
-                                </td>
-                                <td class="px-4 py-2.5 text-right text-xs text-red-500 font-medium"
-                                    x-text="u.credit_amount ? 'Rs. ' + Number(u.credit_amount).toLocaleString('en-PK') : '—'">
-                                </td>
-                                <td class="px-4 py-2.5 text-center">
-                                    <div class="flex items-center justify-center gap-1.5">
-                                        <button type="button" @click="openEdit(u)"
-                                            class="rounded-md p-1.5 text-gray-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-900/20 transition-colors"
-                                            title="Edit unit">
-                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-                                            </svg>
-                                        </button>
-                                        <button type="button" @click="openTransfer(u)"
-                                            class="rounded-md p-1.5 text-gray-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20 transition-colors"
-                                            title="Transfer ownership">
-                                            🔁
-                                        </button>
-                                        <button type="button" @click="deleteUnit(u)"
-                                            class="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-colors"
-                                            title="Delete unit">
-                                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </template>
-                        <template x-if="units.length === 0">
-                            <tr>
-                                <td colspan="8" class="px-4 py-8 text-center text-gray-400 text-xs">No flat/shops assigned
-                                    to
-                                    this landlord yet.</td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
-            </div>
+                    </template>
+                    <template x-if="units.length === 0">
+                        <tr>
+                            <td colspan="8" class="px-4 py-8 text-center text-gray-400 text-xs">No flat/shops assigned
+                                to
+                                this landlord yet.</td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
 
-            {{-- ── Feedback Toast ─────────────────────────────────────────── --}}
-            <div x-show="toast" x-cloak x-transition class="mx-5 mb-4 mt-2 rounded-lg px-4 py-2.5 text-sm font-medium"
-                :class="toastType === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'"
-                x-text="toast">
-            </div>
+        {{-- ── Add / Edit Unit Modal ───────────────────────────── --}}
+        <div x-show="formOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+            style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);"
+            x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="closeForm()">
+            <div class="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900 mx-4 my-8 max-h-[90vh] overflow-y-auto relative z-50"
+                x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-200"
+                x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                x-transition:leave-end="opacity-0 scale-95 translate-y-4" @keydown.escape.window="closeForm()">
 
-            {{-- ── Add / Edit Unit Inline Form ───────────────────────────── --}}
-            <div x-show="formOpen" x-cloak x-transition
-                class="border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50 px-5 py-5">
-
-                <h5 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200"
-                    x-text="editingId ? '✏️ Edit Flat/Shops' : '➕ Add New Flat/Shops'">
-                </h5>
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4 dark:border-gray-800">
+                    <h5 class="text-base font-bold text-gray-800 dark:text-white"
+                        x-text="editingId ? '✏️ Edit Flat/Shops' : '➕ Add New Flat/Shops'">
+                    </h5>
+                    <button type="button" @click="closeForm()"
+                        class="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                        ✕
+                    </button>
+                </div>
 
                 {{-- Section 1: Unit Identity --}}
                 <div class="mb-4 rounded-lg bg-gray-50 p-4 dark:bg-white/[0.02]">
@@ -261,24 +276,31 @@ Landlord Contact Info Card
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Flat/Shop No.
                                 <span class="text-red-400">*</span></label>
                             <input type="text" x-model="form.unit_number" placeholder="e.g. A-101"
+                                @input="errors.unit_number = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.unit_number" x-text="errors.unit_number"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Type <span
                                     class="text-red-400">*</span></label>
-                            <select x-model="form.type"
+                            <select x-model="form.type" @change="errors.type = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
                                 <option value="">Select</option>
                                 <option value="flat">Flat</option>
                                 <option value="shop">Shop</option>
                                 <option value="office">Office</option>
                             </select>
+                            <p x-show="errors.type" x-text="errors.type" class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Size
                                 (sqft)</label>
                             <input type="number" x-model="form.area_sqft" placeholder="e.g. 1200" step="0.01"
+                                @input="errors.area_sqft = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.area_sqft" x-text="errors.area_sqft"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Date</label>
@@ -294,6 +316,7 @@ Landlord Contact Info Card
                                                             disableMobile: true,
                                                             onChange: (selectedDates, dateStr) => {
                                                                 form.date = dateStr;
+                                                                errors.date = '';
                                                             }
                                                         });
                                                         $watch('form.date', value => {
@@ -305,7 +328,8 @@ Landlord Contact Info Card
                                                 });
                                             "
                                     class="w-full rounded-lg border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
-                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <span
+                                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="1.5">
                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -313,41 +337,48 @@ Landlord Contact Info Card
                                     </svg>
                                 </span>
                             </div>
+                            <p x-show="errors.date" x-text="errors.date" class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                     </div>
                     <div class="mt-3 grid grid-cols-3 gap-3">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Floor <span
                                     class="text-red-400">*</span></label>
-                            <select x-model="form.floor_id"
+                            <select x-model="form.floor_id" @change="errors.floor_id = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
                                 <option value="">Select Floor</option>
                                 <template x-for="f in floors" :key="f.id">
                                     <option :value="f.id" x-text="f.name"></option>
                                 </template>
                             </select>
+                            <p x-show="errors.floor_id" x-text="errors.floor_id" class="mt-1 text-[11px] text-red-500">
+                            </p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Block <span
                                     class="text-red-400">*</span></label>
-                            <select x-model="form.block_id"
+                            <select x-model="form.block_id" @change="errors.block_id = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
                                 <option value="">Select Block</option>
                                 <template x-for="b in blocks" :key="b.id">
                                     <option :value="b.id" x-text="b.name"></option>
                                 </template>
                             </select>
+                            <p x-show="errors.block_id" x-text="errors.block_id" class="mt-1 text-[11px] text-red-500">
+                            </p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Area /
                                 Zone</label>
-                            <select x-model="form.area_id"
+                            <select x-model="form.area_id" @change="errors.area_id = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
                                 <option value="">Select Area</option>
                                 <template x-for="a in areas" :key="a.id">
                                     <option :value="a.id" x-text="a.name"></option>
                                 </template>
                             </select>
+                            <p x-show="errors.area_id" x-text="errors.area_id" class="mt-1 text-[11px] text-red-500">
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -360,23 +391,32 @@ Landlord Contact Info Card
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Nominee
                                 Name</label>
                             <input type="text" x-model="form.nominee_name" placeholder="Full name"
+                                @input="errors.nominee_name = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.nominee_name" x-text="errors.nominee_name"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Relation</label>
-                            <select x-model="form.nominee_relation_type"
+                            <label
+                                class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Relation</label>
+                            <select x-model="form.nominee_relation_type" @change="errors.nominee_relation_type = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
                                 <option value="">Select</option>
                                 <option value="son_of">S/O (Son of)</option>
                                 <option value="daughter_of">D/O (Daughter of)</option>
                                 <option value="wife_of">W/O (Wife of)</option>
                             </select>
+                            <p x-show="errors.nominee_relation_type" x-text="errors.nominee_relation_type"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Of (Father /
                                 Husband)</label>
                             <input type="text" x-model="form.nominee_relation_name" placeholder="Parent/Spouse name"
+                                @input="errors.nominee_relation_name = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.nominee_relation_name" x-text="errors.nominee_relation_name"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                     </div>
                 </div>
@@ -388,16 +428,20 @@ Landlord Contact Info Card
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Total
                                 Amount</label>
-                            <input type="number" x-model="form.total_amount" @input="updateCredit()" placeholder="0.00"
-                                step="0.01"
+                            <input type="number" x-model="form.total_amount"
+                                @input="errors.total_amount = ''; updateCredit()" placeholder="0.00" step="0.01"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.total_amount" x-text="errors.total_amount"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Received
                                 Amount</label>
-                            <input type="number" x-model="form.received_amount" @input="updateCredit()" placeholder="0.00"
-                                step="0.01"
+                            <input type="number" x-model="form.received_amount"
+                                @input="errors.received_amount = ''; updateCredit()" placeholder="0.00" step="0.01"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.received_amount" x-text="errors.received_amount"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Credit /
@@ -407,12 +451,17 @@ Landlord Contact Info Card
                                 <span class="text-xs text-gray-400">🔒</span>
                                 <span class="text-sm font-semibold text-red-500" x-text="'Rs. ' + creditAmount"></span>
                             </div>
+                            <p x-show="errors.credit_amount" x-text="errors.credit_amount"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Received
                                 From</label>
                             <input type="text" x-model="form.received_from" placeholder="e.g. Cash / Bank"
+                                @input="errors.received_from = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.received_from" x-text="errors.received_from"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                     </div>
                 </div>
@@ -422,21 +471,31 @@ Landlord Contact Info Card
                     <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-amber-500">Office Record</p>
                     <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                         <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">File No.</label>
+                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">File
+                                No.</label>
                             <input type="text" x-model="form.file_no" placeholder="e.g. PMM-2026-042"
+                                @input="errors.file_no = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.file_no" x-text="errors.file_no" class="mt-1 text-[11px] text-red-500">
+                            </p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Approved
                                 By</label>
                             <input type="text" x-model="form.approved_by" placeholder="e.g. Director"
+                                @input="errors.approved_by = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.approved_by" x-text="errors.approved_by"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Received
                                 By</label>
                             <input type="text" x-model="form.received_by" placeholder="e.g. Kamran (Accounts)"
+                                @input="errors.received_by = ''"
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <p x-show="errors.received_by" x-text="errors.received_by"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Approved
@@ -453,6 +512,7 @@ Landlord Contact Info Card
                                                             disableMobile: true,
                                                             onChange: (selectedDates, dateStr) => {
                                                                 form.approved_date = dateStr;
+                                                                errors.approved_date = '';
                                                             }
                                                         });
                                                         $watch('form.approved_date', value => {
@@ -464,7 +524,8 @@ Landlord Contact Info Card
                                                 });
                                             "
                                     class="w-full rounded-lg border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
-                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <span
+                                    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
                                         stroke-width="1.5">
                                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -472,12 +533,16 @@ Landlord Contact Info Card
                                     </svg>
                                 </span>
                             </div>
+                            <p x-show="errors.approved_date" x-text="errors.approved_date"
+                                class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                     </div>
                     <div class="mt-3">
                         <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Notes</label>
                         <textarea x-model="form.notes" rows="2" placeholder="Any additional details..."
+                            @input="errors.notes = ''"
                             class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"></textarea>
+                        <p x-show="errors.notes" x-text="errors.notes" class="mt-1 text-[11px] text-red-500"></p>
                     </div>
                 </div>
 
@@ -502,88 +567,88 @@ Landlord Contact Info Card
                     </button>
                 </div>
             </div>
+        </div>
 
-            {{-- ── Transfer Ownership Modal ─────────────────────────────── --}}
-            <div x-show="transferOpen" x-cloak
-                class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-                @click.self="transferOpen = false">
-                <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900 mx-4"
-                    x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
-                    x-transition:enter-end="opacity-100 scale-100">
-                    <h4 class="text-base font-bold text-gray-800 dark:text-white mb-1">🔁 Transfer Ownership</h4>
-                    <p class="text-xs text-gray-500 mb-4">Transfer <strong x-text="transferUnit?.unit_number"></strong> to a
-                        new landlord. All current ownership data will be archived.</p>
+        {{-- ── Transfer Ownership Modal ─────────────────────────────── --}}
+        <div x-show="transferOpen" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            @click.self="transferOpen = false">
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900 mx-4"
+                x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100">
+                <h4 class="text-base font-bold text-gray-800 dark:text-white mb-1">🔁 Transfer Ownership</h4>
+                <p class="text-xs text-gray-500 mb-4">Transfer <strong x-text="transferUnit?.unit_number"></strong> to a
+                    new landlord. All current ownership data will be archived.</p>
 
-                    <div class="space-y-3">
-                        <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">New Landlord
-                                <span class="text-red-400">*</span></label>
-                            <select x-model="transfer.new_landlord_id"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
-                                <option value="">Select new landlord</option>
-                                <template x-for="l in allLandlords" :key="l.id">
-                                    <option :value="l.id" x-text="l.name"></option>
-                                </template>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Transfer Date
-                                <span class="text-red-400">*</span></label>
-                            <div class="relative">
-                                <input type="text" x-init="
-                                                $nextTick(() => {
-                                                    if (typeof flatpickr !== 'undefined') {
-                                                        const fp = flatpickr($el, {
-                                                            dateFormat: 'Y-m-d',
-                                                            altInput: true,
-                                                            altFormat: 'd M Y',
-                                                            defaultDate: transfer.transfer_date,
-                                                            disableMobile: true,
-                                                            onChange: (selectedDates, dateStr) => {
-                                                                transfer.transfer_date = dateStr;
-                                                            }
-                                                        });
-                                                        $watch('transfer.transfer_date', value => {
-                                                            if (fp && value !== fp.currentDateStr) {
-                                                                fp.setDate(value, false);
-                                                            }
-                                                        });
-                                                    }
-                                                });
-                                            "
-                                    class="w-full rounded-lg border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
-                                <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                        stroke-width="1.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                </span>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Transfer
-                                Notes</label>
-                            <textarea x-model="transfer.notes" rows="2" placeholder="Reason for transfer..."
-                                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"></textarea>
+                <div class="space-y-3">
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">New Landlord
+                            <span class="text-red-400">*</span></label>
+                        <select x-model="transfer.new_landlord_id"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <option value="">Select new landlord</option>
+                            <template x-for="l in allLandlords" :key="l.id">
+                                <option :value="l.id" x-text="l.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Transfer Date
+                            <span class="text-red-400">*</span></label>
+                        <div class="relative">
+                            <input type="text" x-init="
+                                            $nextTick(() => {
+                                                if (typeof flatpickr !== 'undefined') {
+                                                    const fp = flatpickr($el, {
+                                                        dateFormat: 'Y-m-d',
+                                                        altInput: true,
+                                                        altFormat: 'd M Y',
+                                                        defaultDate: transfer.transfer_date,
+                                                        disableMobile: true,
+                                                        onChange: (selectedDates, dateStr) => {
+                                                            transfer.transfer_date = dateStr;
+                                                        }
+                                                    });
+                                                    $watch('transfer.transfer_date', value => {
+                                                        if (fp && value !== fp.currentDateStr) {
+                                                            fp.setDate(value, false);
+                                                        }
+                                                    });
+                                                }
+                                            });
+                                        "
+                                class="w-full rounded-lg border border-gray-300 bg-white pl-3 pr-10 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                            <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                    stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </span>
                         </div>
                     </div>
-
-                    <div class="mt-5 flex items-center gap-3">
-                        <button type="button" @click="confirmTransfer()" :disabled="transferring"
-                            class="flex-1 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-50 transition-colors">
-                            <span x-text="transferring ? 'Transferring...' : 'Confirm Transfer'"></span>
-                        </button>
-                        <button type="button" @click="transferOpen = false"
-                            class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
-                            Cancel
-                        </button>
+                    <div>
+                        <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Transfer
+                            Notes</label>
+                        <textarea x-model="transfer.notes" rows="2" placeholder="Reason for transfer..."
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white/90"></textarea>
                     </div>
                 </div>
-            </div>
 
-        @endunless
+                <div class="mt-5 flex items-center gap-3">
+                    <button type="button" @click="confirmTransfer()" :disabled="transferring"
+                        class="flex-1 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-50 transition-colors">
+                        <span x-text="transferring ? 'Transferring...' : 'Confirm Transfer'"></span>
+                    </button>
+                    <button type="button" @click="transferOpen = false"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
+    @endunless
 </div>
 
 @once
@@ -593,9 +658,6 @@ Landlord Contact Info Card
 
             function landlordUnitsPanel(landlordId, initialUnits, floors, blocks, areas, allLandlords) {
                 const mappedUnits = (initialUnits || []).map(u => {
-                    if ('floor_name' in u) {
-                        return u;
-                    }
                     const o = u.current_ownership;
                     let relationLabel = '';
                     if (o) {
@@ -631,6 +693,7 @@ Landlord Contact Info Card
                         received_by: o?.received_by ?? '',
                         approved_date: o?.approved_date ? (typeof o.approved_date === 'string' ? o.approved_date.split('T')[0] : o.approved_date) : '',
                         notes: o?.notes ?? '',
+                        validation_errors: {},
                     };
                 });
 
@@ -648,6 +711,7 @@ Landlord Contact Info Card
                     saving: false,
                     toast: '',
                     toastType: 'success',
+                    errors: {},
 
                     // Transfer state
                     transferOpen: false,
@@ -674,6 +738,7 @@ Landlord Contact Info Card
 
                     openAdd() {
                         this.editingId = null;
+                        this.errors = {};
                         this.form = {
                             unit_number: '', type: '', floor_id: '', block_id: '', area_id: '',
                             area_sqft: '', date: new Date().toISOString().split('T')[0],
@@ -687,6 +752,7 @@ Landlord Contact Info Card
 
                     openEdit(unit) {
                         this.editingId = unit.id;
+                        this.errors = { ...(unit.validation_errors || {}) };
                         this.form = {
                             unit_number: unit.unit_number || '',
                             type: unit.type || '',
@@ -713,15 +779,21 @@ Landlord Contact Info Card
                     closeForm() {
                         this.formOpen = false;
                         this.editingId = null;
+                        this.errors = {};
                     },
 
                     async saveUnit() {
-                        if (!this.form.unit_number || !this.form.type || !this.form.floor_id || !this.form.block_id) {
-                            this.showToast('Please fill all required fields (Unit Number, Type, Floor, and Block).', 'error');
+                        this.errors = {};
+                        if (!this.form.unit_number) this.errors.unit_number = 'Flat/Shop No. is required.';
+                        if (!this.form.type) this.errors.type = 'Type is required.';
+                        if (!this.form.floor_id) this.errors.floor_id = 'Floor is required.';
+                        if (!this.form.block_id) this.errors.block_id = 'Block is required.';
+
+                        if (Object.keys(this.errors).length > 0) {
                             return;
                         }
-                        this.saving = true;
 
+                        this.saving = true;
                         const url = this.editingId
                             ? `/ajax/landlord-units/${this.editingId}`
                             : '/ajax/landlord-units';
@@ -741,7 +813,14 @@ Landlord Contact Info Card
                             });
                             const d = await r.json();
                             if (!r.ok) {
-                                const errorMsg = d.errors ? Object.values(d.errors).flat().join(' ') : (d.message || 'Error saving unit.');
+                                if (r.status === 422 && d.errors) {
+                                    this.errors = {};
+                                    for (const key in d.errors) {
+                                        this.errors[key] = d.errors[key].join(' ');
+                                    }
+                                    throw new Error('Validation failed.');
+                                }
+                                const errorMsg = d.message || 'Error saving unit.';
                                 throw new Error(errorMsg);
                             }
                             if (!d.success) throw new Error(d.message || 'Error saving unit.');
@@ -757,7 +836,9 @@ Landlord Contact Info Card
                             this.showToast(d.message, 'success');
                             this.closeForm();
                         } catch (e) {
-                            this.showToast(e.message, 'error');
+                            if (e.message !== 'Validation failed.') {
+                                this.showToast(e.message, 'error');
+                            }
                         } finally {
                             this.saving = false;
                         }
