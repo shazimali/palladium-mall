@@ -78,6 +78,19 @@
                     </select>
                 </div>
 
+                {{-- Unit Status --}}
+                <div>
+                    <label for="unit_status" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Flat/Shop Status
+                    </label>
+                    <select id="unit_status" name="unit_status"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Unit Statuses</option>
+                        <option value="rented" {{ ($filters['unit_status'] ?? '') === 'rented' ? 'selected' : '' }}>Rented</option>
+                        <option value="vacant" {{ ($filters['unit_status'] ?? '') === 'vacant' ? 'selected' : '' }}>Vacant</option>
+                    </select>
+                </div>
+
                 {{-- Tenant --}}
                 <div>
                     <label for="tenant_id" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">

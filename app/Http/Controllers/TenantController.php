@@ -59,12 +59,19 @@ class TenantController extends Controller
     // Wizard Step 1 — Create tenant (GET + POST)
     // -----------------------------------------------------------------------
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $selectedUnitId = $request->query('unit_id');
+        
+        $units = Unit::where('status', 'vacant')
+            ->when($selectedUnitId, fn($q) => $q->orWhere('id', $selectedUnitId))
+            ->orderBy('unit_number')
+            ->get();
+
         return view('tenants.create', [
             'title' => 'Add New Tenant',
             'step'  => 1,
-            'units' => Unit::orderBy('unit_number')->get(),
+            'units' => $units,
         ]);
     }
 
@@ -406,7 +413,10 @@ class TenantController extends Controller
 
         return match ($step) {
             1 => view('tenants.wizard.step1', array_merge($data, [
-                'units' => Unit::orderBy('unit_number')->get(),
+                'units' => Unit::where('status', 'vacant')
+                    ->orWhere('id', $tenant->unit_id)
+                    ->orderBy('unit_number')
+                    ->get(),
                 'partners' => ($draftAgreement ? $draftAgreement->partners()->get() : collect())->map(fn($p) => [
                     'id'                 => $p->id,
                     'name'               => $p->name,

@@ -166,6 +166,12 @@
                 <div class="value">{{ ucfirst($filters['status']) }}</div>
             </div>
         @endif
+        @if(!empty($filters['unit_status']))
+            <div class="meta-box">
+                <div class="label">Unit Status</div>
+                <div class="value">{{ ucfirst($filters['unit_status']) }}</div>
+            </div>
+        @endif
         <div class="meta-box">
             <div class="label">Total Records</div>
             <div class="value">{{ number_format($summary['count']) }}</div>

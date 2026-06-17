@@ -430,4 +430,33 @@ class PaymentController extends Controller
             'payment' => $payment,
         ]);
     }
+
+    public function toggleStatus(Payment $payment): RedirectResponse
+    {
+        if ($payment->isPaid()) {
+            // Toggle to Unpaid
+            $payment->update([
+                'status' => 'unpaid',
+                'amount_paid' => 0.00,
+                'paid_at' => null,
+                'payment_account_id' => null,
+                'payment_method' => null,
+            ]);
+            $msg = 'Payment status updated to unpaid.';
+        } else {
+            // Toggle to Paid
+            $account = \App\Models\PaymentAccount::where('is_active', true)->first();
+            
+            $payment->update([
+                'status' => 'paid',
+                'amount_paid' => $payment->amount,
+                'paid_at' => now(),
+                'payment_account_id' => $account?->id,
+                'payment_method' => $account?->type,
+            ]);
+            $msg = 'Payment status updated to paid.';
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
 }

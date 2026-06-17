@@ -53,4 +53,11 @@ class UpdatePaymentRequest extends FormRequest
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'month.unique' => 'A payment record for this unit, type, and month already exists.',
+        ];
+    }
 }

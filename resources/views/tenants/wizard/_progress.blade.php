@@ -7,13 +7,34 @@
         5 => 'Move-in',
         6 => 'Confirm',
     ];
+
+    $tenant = $tenantId ? \App\Models\Tenant::find($tenantId) : null;
+    $draftAgreement = $tenant ? $tenant->agreements()->where('status', 'draft')->latest()->first() : null;
+
+    $stepFilled = [
+        1 => $tenant !== null,
+        2 => $draftAgreement && $draftAgreement->guarantors()->exists(),
+        3 => $draftAgreement && 
+             $draftAgreement->start_date !== null &&
+             $draftAgreement->end_date !== null &&
+             $draftAgreement->monthly_rent !== null &&
+             $draftAgreement->security_deposit !== null &&
+             $draftAgreement->payment_due_day !== null &&
+             $draftAgreement->fine_per_day !== null,
+        4 => $draftAgreement && $draftAgreement->documentChecklist()->exists(),
+        5 => $draftAgreement && 
+             $draftAgreement->moveInChecklist !== null &&
+             $draftAgreement->moveInChecklist->inspection_member !== null &&
+             $draftAgreement->moveInChecklist->checklist_date !== null,
+        6 => false,
+    ];
 @endphp
 
 <div class="mb-8">
     <div class="flex items-center justify-between">
         @foreach($steps as $n => $label)
             @php
-                $isCompleted = $n < $currentStep;
+                $isCompleted = ($n < $currentStep) || ($stepFilled[$n] ?? false);
                 $isActive    = $n === $currentStep;
             @endphp
 
@@ -21,7 +42,7 @@
                 <div class="flex items-center w-full">
                     {{-- Left connector --}}
                     @if($n > 1)
-                        <div class="flex-1 h-0.5 transition-colors duration-300 {{ ($isCompleted || $isActive) ? 'bg-brand-500' : 'bg-gray-200 dark:bg-gray-700' }}"></div>
+                        <div class="flex-1 h-0.5 transition-colors duration-300 {{ ($n <= $currentStep) ? 'bg-brand-500' : 'bg-gray-200 dark:bg-gray-700' }}"></div>
                     @endif
 
                     {{-- Circle --}}

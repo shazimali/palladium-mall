@@ -188,10 +188,27 @@
                                 {{ $payment->due_date->format('d M Y') }}
                             </td>
                             <td class="px-4 py-3">
-                                <span
-                                    class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $payment->status_badge_class }}">
-                                    {{ ucfirst($payment->status) }}
-                                </span>
+                                @if(auth()->user()->hasPermission('payments.record') || auth()->user()->isSuperAdmin())
+                                    <form action="{{ route('payments.toggle-status', $payment) }}" method="POST" class="inline-block">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" 
+                                                title="Click to toggle status (Paid / Unpaid)"
+                                                class="group relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-xs transition-all hover:scale-105 active:scale-95 border border-transparent {{ $payment->status === 'paid' ? 'bg-green-50 text-green-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 dark:hover:bg-red-950/20 dark:hover:text-red-400' : 'bg-red-50 text-red-700 hover:bg-green-50 hover:text-green-700 hover:border-green-200 dark:hover:bg-green-950/20 dark:hover:text-green-400' }}">
+                                            <!-- Dot indicator -->
+                                            <span class="h-1.5 w-1.5 rounded-full transition-colors {{ $payment->status === 'paid' ? 'bg-green-600 group-hover:bg-red-600' : 'bg-red-600 group-hover:bg-green-600' }}"></span>
+                                            
+                                            <!-- Status Text with hover state toggling -->
+                                            <span class="group-hover:hidden">{{ ucfirst($payment->status) }}</span>
+                                            <span class="hidden group-hover:inline">Mark as {{ $payment->status === 'paid' ? 'Unpaid' : 'Paid' }}</span>
+                                        </button>
+                                    </form>
+                                @else
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $payment->status_badge_class }}">
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $payment->status === 'paid' ? 'bg-green-600' : ($payment->status === 'partial' ? 'bg-orange-500' : 'bg-red-600') }}"></span>
+                                        {{ ucfirst($payment->status) }}
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-col items-end gap-1.5">

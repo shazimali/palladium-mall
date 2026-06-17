@@ -57,22 +57,91 @@ $error = 'mt-1 text-xs text-red-500';
 <div x-data="partnerManager({{ json_encode($initialPartners) }}, '{{ $initialRentedByMultiple }}')">
 
     {{-- ── Section: Flat/Unit Assignment ───────────────────────────────── --}}
+    @php
+        $unitsJson = $units->map(fn($unit) => [
+            'id' => $unit->id,
+            'number' => $unit->unit_number,
+            'label' => $unit->unit_number . ($unit->floor ? ' — ' . $unit->floor->name : '') . ($unit->block ? ' / ' . $unit->block->name : '') . ' (' . ucfirst($unit->type) . ')',
+            'status' => $unit->status,
+            'status_label' => ucfirst($unit->status),
+        ])->values()->toJson();
+    @endphp
     <div class="rounded-xl border border-brand-100 bg-brand-50 p-5 dark:border-brand-900/30 dark:bg-brand-900/10 mb-6">
         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-400">Flat / Shop Assignment</h4>
-        <div>
+        <div x-data="{
+            open: false,
+            search: '',
+            selectedId: '{{ old('unit_id', $t?->unit_id ?? '') }}',
+            selectedLabel: '',
+            units: {{ $unitsJson }},
+            init() {
+                let match = this.units.find(u => u.id == this.selectedId);
+                if (match) {
+                    this.selectedLabel = match.label;
+                }
+            },
+            get filteredUnits() {
+                if (!this.search) return this.units;
+                let q = this.search.toLowerCase();
+                return this.units.filter(u => u.label.toLowerCase().includes(q));
+            },
+            selectUnit(unit) {
+                this.selectedId = unit.id;
+                this.selectedLabel = unit.label;
+                this.open = false;
+                this.search = '';
+            }
+        }" class="relative">
             <label class="{{ $label }}">Select Flat / Shop <span class="text-red-500">*</span></label>
-            <select name="unit_id" class="{{ $select }} {{ $errors->has('unit_id') ? 'border-red-400' : '' }}">
-                <option value="">— Select a flat/shop —</option>
-                @foreach($units as $unit)
-                    <option value="{{ $unit->id }}" {{ old('unit_id', $t?->unit_id ?? '') == $unit->id ? 'selected' : '' }}>
-                        {{ $unit->unit_number }}
-                        {{ $unit->floor ? '— ' . $unit->floor->name : '' }}
-                        {{ $unit->block ? '/ ' . $unit->block->name : '' }}
-                        ({{ ucfirst($unit->type) }})
-                        — <span class="{{ $unit->status === 'vacant' ? 'text-green-600' : 'text-orange-500' }}">{{ ucfirst($unit->status) }}</span>
-                    </option>
-                @endforeach
-            </select>
+            
+            <!-- Hidden Input for Form Submission -->
+            <input type="hidden" name="unit_id" :value="selectedId">
+
+            <!-- Trigger Button -->
+            <div @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
+                 @click.outside="open = false"
+                 class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('unit_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
+                <span x-text="selectedLabel || '— Select a flat/shop —'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
+                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+
+            <!-- Dropdown Menu -->
+            <div x-show="open"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0 transform scale-95"
+                 x-transition:enter-end="opacity-100 transform scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="opacity-100 transform scale-100"
+                 x-transition:leave-end="opacity-0 transform scale-95"
+                 class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                 style="display: none;">
+                
+                <!-- Search Input -->
+                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                    <input x-ref="searchInput"
+                           x-model="search"
+                           type="text"
+                           placeholder="Type to search unit number, floor, or block..."
+                           class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                </div>
+
+                <!-- Options List -->
+                <ul class="max-h-60 overflow-y-auto mt-1">
+                    <template x-if="filteredUnits.length === 0">
+                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching units found.</li>
+                    </template>
+                    <template x-for="unit in filteredUnits" :key="unit.id">
+                        <li @click="selectUnit(unit)"
+                            class="px-4 py-2 text-sm text-gray-800 dark:text-white/90 hover:bg-brand-50 dark:hover:bg-brand-900/20 cursor-pointer flex justify-between items-center transition-colors">
+                            <span x-text="unit.label"></span>
+                            <span x-text="unit.status_label" 
+                                  :class="unit.status === 'vacant' ? 'text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' : 'text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
             @error('unit_id') <p class="{{ $error }}">{{ $message }}</p> @enderror
         </div>
     </div>

@@ -161,6 +161,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:payments.record')->group(function () {
         Route::post('payments/{payment}/record', [PaymentController::class, 'recordPayment'])
             ->name('payments.record');
+        Route::patch('payments/{payment}/toggle-status', [PaymentController::class, 'toggleStatus'])
+            ->name('payments.toggle-status');
     });
 
     Route::middleware('permission:payments.bulk-generate')->group(function () {

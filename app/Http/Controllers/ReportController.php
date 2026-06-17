@@ -36,7 +36,8 @@ class ReportController extends Controller
             || $request->filled('status')
             || $request->filled('landlord_id')
             || $request->filled('payment_method')
-            || $request->filled('payment_account_id');
+            || $request->filled('payment_account_id')
+            || $request->filled('unit_status');
 
         $entries = collect();
         $summary = null;
@@ -70,6 +71,7 @@ class ReportController extends Controller
                 'landlord_id',
                 'payment_method',
                 'payment_account_id',
+                'unit_status',
             ]),
         ]);
     }
@@ -119,7 +121,7 @@ class ReportController extends Controller
         $label   = $this->reportLabel($request);
         $filters = $request->only([
             'date_from', 'date_to', 'unit_id', 'tenant_id', 'status', 'report_type',
-            'landlord_id', 'payment_method', 'payment_account_id'
+            'landlord_id', 'payment_method', 'payment_account_id', 'unit_status'
         ]);
 
         if ($reportType === 'monthly_matrix') {
@@ -166,6 +168,7 @@ class ReportController extends Controller
         $landlordId = $request->landlord_id;
         $paymentMethod = $request->payment_method;
         $paymentAccountId = $request->payment_account_id;
+        $unitStatus = $request->unit_status;
 
         $query = Payment::with(['tenant', 'unit.landlord', 'paymentAccount'])
             ->when($unitId,           fn($q) => $q->where('unit_id',   $unitId))
@@ -175,7 +178,8 @@ class ReportController extends Controller
             ->when($status,           fn($q) => $q->where('status', $status))
             ->when($paymentMethod,    fn($q) => $q->where('payment_method', $paymentMethod))
             ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
-            ->when($landlordId,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)));
+            ->when($landlordId,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
+            ->when($unitStatus,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)));
 
         if ($reportType === 'rent') {
             $query->where('type', 'rent');
@@ -242,6 +246,7 @@ class ReportController extends Controller
                         ->when($unitId,     fn($q) => $q->where('unit_id', $unitId))
                         ->when($tenantId,   fn($q) => $q->where('tenant_id', $tenantId))
                         ->when($landlordId, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
+                        ->when($unitStatus, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)))
                         ->where('start_date', '<=', $month->copy()->endOfMonth())
                         ->where('end_date', '>=', $month->copy()->startOfMonth())
                         ->with(['tenant', 'unit.landlord'])
@@ -354,10 +359,14 @@ class ReportController extends Controller
         $from = $request->date_from;
         $month = $from ? \Carbon\Carbon::parse($from)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
         $monthStr = $month->format('Y-m-d');
+        $unitStatus = $request->unit_status;
 
         $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
         
-        $units = Unit::with(['landlord'])->orderBy('unit_number')->get();
+        $units = Unit::with(['landlord'])
+            ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
+            ->orderBy('unit_number')
+            ->get();
 
         $agreements = Agreement::where('status', 'active')
             ->where('start_date', '<=', $month->copy()->endOfMonth())
