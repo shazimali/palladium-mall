@@ -58,10 +58,16 @@ class AgreementController extends Controller
     {
         $data = $request->validated();
 
-        // Expire any existing active agreement for this tenant
-        Agreement::where('tenant_id', $data['tenant_id'])
+        // Restrict tenant to only one active agreement at a time
+        $hasActiveAgreement = Agreement::where('tenant_id', $data['tenant_id'])
             ->where('status', 'active')
-            ->update(['status' => 'expired']);
+            ->exists();
+
+        if ($hasActiveAgreement && $data['status'] === 'active') {
+            return back()->withErrors([
+                'tenant_id' => 'This tenant already has an active agreement. A tenant cannot have multiple active agreements at the same time. The previous agreement must be expired or terminated first.'
+            ])->withInput();
+        }
 
         // Handle document upload
         if ($request->hasFile('document')) {
@@ -70,6 +76,11 @@ class AgreementController extends Controller
         }
 
         $agreement = Agreement::create($data);
+
+        if ($agreement->status === 'active') {
+            $agreement->unit?->update(['status' => 'rented']);
+            $agreement->tenant?->update(['status' => 'active', 'unit_id' => $agreement->unit_id]);
+        }
 
         return redirect()
             ->route('agreements.show', $agreement)
@@ -121,6 +132,22 @@ class AgreementController extends Controller
         }
 
         $agreement->update($data);
+
+        if ($agreement->status === 'active') {
+            $agreement->unit?->update(['status' => 'rented']);
+            $agreement->tenant?->update(['status' => 'active', 'unit_id' => $agreement->unit_id]);
+        } elseif (in_array($agreement->status, ['expired', 'terminated'])) {
+            $agreement->unit?->update(['status' => 'vacant']);
+            if ($agreement->tenant) {
+                $hasOtherActive = Agreement::where('tenant_id', $agreement->tenant_id)
+                    ->where('id', '!=', $agreement->id)
+                    ->where('status', 'active')
+                    ->exists();
+                if (!$hasOtherActive) {
+                    $agreement->tenant->update(['status' => 'inactive', 'unit_id' => null]);
+                }
+            }
+        }
 
         return redirect()
             ->route('agreements.show', $agreement)

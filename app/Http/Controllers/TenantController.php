@@ -174,6 +174,25 @@ class TenantController extends Controller
         // Check if tenant with this CNIC already exists
         $existingTenant = Tenant::where('cnic', $data['cnic'])->first();
 
+        if ($existingTenant) {
+            $hasActiveAgreement = Agreement::where('tenant_id', $existingTenant->id)
+                ->where('status', 'active')
+                ->exists();
+
+            if ($hasActiveAgreement) {
+                $errorMessage = "This tenant already has an active agreement. A tenant cannot have multiple active agreements at the same time. The previous agreement must be expired or terminated first.";
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => [
+                            'cnic' => [$errorMessage]
+                        ]
+                    ], 422);
+                }
+                return back()->withErrors(['cnic' => $errorMessage])->withInput();
+            }
+        }
+
         $tenantData = collect($data)->except([
             'ec_name', 'ec_relation', 'ec_phone', 'partners', 'rented_by_multiple',
             'passport_photo', 'cnic_front_image', 'cnic_back_image'
@@ -971,12 +990,27 @@ class TenantController extends Controller
                 ->with('error', 'Agreement cannot be confirmed. Please upload the Government Document in Step 3 first.');
         }
 
+        // Restrict tenant to only one active agreement at a time
+        $hasActiveAgreement = Agreement::where('tenant_id', $tenant->id)
+            ->where('status', 'active')
+            ->where('id', '!=', $agreement->id)
+            ->exists();
+
+        if ($hasActiveAgreement) {
+            return redirect()->route('tenants.showStep', [$tenant, 6])
+                ->with('error', 'This tenant already has another active agreement. A tenant cannot have multiple active agreements at the same time. The previous agreement must be expired or terminated first.');
+        }
+
         \Illuminate\Support\Facades\DB::transaction(function () use ($tenant, $agreement) {
             // Activate tenant
             $tenant->update(['status' => 'active']);
 
-            // Expire any previous active agreements
-            $tenant->agreements()->where('status', 'active')->where('id', '!=', $agreement->id)->update(['status' => 'expired']);
+            // Expire any previous active agreements for this tenant on the same unit
+            $tenant->agreements()
+                ->where('unit_id', $agreement->unit_id)
+                ->where('status', 'active')
+                ->where('id', '!=', $agreement->id)
+                ->update(['status' => 'expired']);
 
             // Activate agreement
             $agreement->update(['status' => 'active']);
