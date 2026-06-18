@@ -137,6 +137,19 @@
                     </select>
                 </div>
 
+                {{-- Owner Type --}}
+                <div>
+                    <label for="owner_type" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Owner Type
+                    </label>
+                    <select id="owner_type" name="owner_type"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Owners</option>
+                        <option value="pm_mall" {{ ($filters['owner_type'] ?? '') === 'pm_mall' ? 'selected' : '' }}>PM Mall Owners</option>
+                        <option value="other" {{ ($filters['owner_type'] ?? '') === 'other' ? 'selected' : '' }}>Other Owners</option>
+                    </select>
+                </div>
+
                 {{-- Payment Method --}}
                 <div>
                     <label for="payment_method" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">

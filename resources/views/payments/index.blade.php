@@ -158,7 +158,14 @@
                         <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                             <td class="px-4 py-3 text-gray-400">{{ $payments->firstItem() + $index }}</td>
                             <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
-                                {{ $payment->tenant->name }}
+                                @if($payment->tenant)
+                                    {{ $payment->tenant->name }}
+                                @else
+                                    <span class="inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                                        External Owner
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-4 py-3">
                                 <span
@@ -234,6 +241,7 @@
                                         </a>
 
                                         @if(auth()->user()->hasPermission('payments.whatsapp') || auth()->user()->isSuperAdmin())
+                                            @if($payment->tenant)
                                             @php
                                                 $phone = $payment->tenant->whatsapp_number ?: $payment->tenant->phone;
                                                 $phoneClean = preg_replace('/\D/', '', $phone);
@@ -259,6 +267,7 @@
                                                     <path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.76.46 3.413 1.258 4.868L2 22l5.29-1.387c1.405.766 3 1.205 4.722 1.205 5.506 0 9.988-4.482 9.988-9.988C22 6.482 17.518 2 12.012 2zm6.262 14.373c-.258.73-1.468 1.413-2.025 1.48-.48.06-1.106.1-3.23-.787-2.716-1.137-4.46-3.906-4.594-4.088-.135-.183-.996-1.328-.996-2.534s.623-1.802.846-2.052c.222-.25.48-.312.642-.312.163 0 .326.01.467.01.147.01.343-.06.538.41.196.48.674 1.638.73 1.75.056.113.093.243.017.393-.075.15-.112.24-.225.37-.113.13-.238.29-.338.39-.11.1-.225.21-.096.43.128.22.57 1.004 1.22 1.58.84.75 1.55.98 1.77 1.1.22.12.35.1.48-.05.13-.15.56-.65.71-.87.15-.22.3-.18.5-.1.21.08 1.32.62 1.55.73.23.11.38.16.44.27.06.1.06.59-.19 1.32z"/>
                                                 </svg>
                                             </a>
+                                            @endif
                                         @endif
 
                                         {{-- Record Payment --}}
@@ -459,17 +468,31 @@
                         <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Generate For <span class="text-red-500">*</span>
                         </label>
-                        <div class="flex items-center gap-4">
-                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <input type="checkbox" name="types[]" value="rent" checked
-                                    class="rounded border-gray-300 text-brand-500 focus:ring-brand-500">
-                                Rent
-                            </label>
-                            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                <input type="checkbox" name="types[]" value="maintenance"
-                                    class="rounded border-gray-300 text-brand-500 focus:ring-brand-500">
-                                Maintenance
-                            </label>
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-center gap-4">
+                                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" name="types[]" value="rent" checked
+                                        class="rounded border-gray-300 text-brand-500 focus:ring-brand-500">
+                                    Rent
+                                </label>
+                                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                    <input type="checkbox" name="types[]" value="maintenance"
+                                        class="rounded border-gray-300 text-brand-500 focus:ring-brand-500">
+                                    Maintenance
+                                </label>
+                            </div>
+
+                            {{-- External owner units checkbox --}}
+                            <div class="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-800/40 dark:bg-violet-900/10">
+                                <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                    <input type="checkbox" name="include_self_units" value="1"
+                                        class="mt-0.5 rounded border-gray-300 text-violet-500 focus:ring-violet-500">
+                                    <div>
+                                        <span class="font-medium">Include External Owner Units</span>
+                                        <p class="mt-0.5 text-[11px] text-gray-400">Also generates maintenance payments for all self-owned units. Duplicates are automatically skipped.</p>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                     </div>
 

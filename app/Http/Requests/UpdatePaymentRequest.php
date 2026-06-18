@@ -29,28 +29,34 @@ class UpdatePaymentRequest extends FormRequest
     public function rules(): array
     {
         $payment = $this->route('payment');
+        $isSelf = is_null($payment->tenant_id);
 
         $uniqueRule = null;
-        if (in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
+        if (!$isSelf && in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
             $uniqueRule = Rule::unique('payments', 'month')
                 ->where('unit_id', $this->unit_id)
                 ->where('type', $this->type)
                 ->ignore($payment->id);
+        } elseif ($isSelf) {
+            $uniqueRule = Rule::unique('payments', 'month')
+                ->where('unit_id', $this->unit_id)
+                ->where('type', 'maintenance')
+                ->ignore($payment->id);
         }
 
         return [
-            'tenant_id' => ['required', 'exists:tenants,id'],
-            'unit_id' => ['required', 'exists:units,id'],
-            'agreement_id' => ['required', 'exists:agreements,id'],
-            'type' => ['required', 'in:rent,maintenance,fine,other'],
+            'tenant_id'    => $isSelf ? ['nullable'] : ['required', 'exists:tenants,id'],
+            'unit_id'      => ['required', 'exists:units,id'],
+            'agreement_id' => $isSelf ? ['nullable'] : ['required', 'exists:agreements,id'],
+            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other'],
             'month' => array_filter([
                 'required',
                 'date',
                 $uniqueRule
             ]),
-            'amount' => ['required', 'numeric', 'min:0'],
+            'amount'   => ['required', 'numeric', 'min:0'],
             'due_date' => ['required', 'date'],
-            'notes' => ['nullable', 'string', 'max:500'],
+            'notes'    => ['nullable', 'string', 'max:500'],
         ];
     }
 

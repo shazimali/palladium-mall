@@ -172,6 +172,12 @@
                 <div class="value">{{ ucfirst($filters['unit_status']) }}</div>
             </div>
         @endif
+        @if(!empty($filters['owner_type']))
+            <div class="meta-box">
+                <div class="label">Owner Type</div>
+                <div class="value">{{ $filters['owner_type'] === 'pm_mall' ? 'PM Mall Owners' : 'Other Owners' }}</div>
+            </div>
+        @endif
         <div class="meta-box">
             <div class="label">Total Records</div>
             <div class="value">{{ number_format($summary['count']) }}</div>

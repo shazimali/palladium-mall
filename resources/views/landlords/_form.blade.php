@@ -180,8 +180,12 @@ Landlord Contact Info Card
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     <template x-for="u in units" :key="u.id">
                         <tr class="hover:bg-white dark:hover:bg-white/[0.02] transition-colors">
-                            <td class="px-4 py-2.5 font-semibold text-gray-800 dark:text-white/90"
-                                x-text="u.unit_number"></td>
+                            <td class="px-4 py-2.5 font-semibold text-gray-800 dark:text-white/90">
+                                <span x-text="u.unit_number"></span>
+                                <template x-if="u.is_self">
+                                    <span class="ml-1.5 inline-flex items-center rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300">SELF</span>
+                                </template>
+                            </td>
                             <td class="px-4 py-2.5">
                                 <span
                                     class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize"
@@ -546,6 +550,84 @@ Landlord Contact Info Card
                     </div>
                 </div>
 
+                {{-- Section 5: External Owner (is_self) --}}
+                <div class="mb-4 overflow-hidden rounded-xl border transition-all duration-200"
+                    :class="form.is_self
+                        ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-600 dark:bg-indigo-900/20'
+                        : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/40'">
+
+                    {{-- Header row with toggle --}}
+                    <div class="flex items-center gap-4 px-4 py-3">
+                        {{-- Icon --}}
+                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors duration-200"
+                            :class="form.is_self ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-400 dark:bg-gray-700'">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </div>
+
+                        {{-- Label --}}
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold leading-tight"
+                                :class="form.is_self ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-200'">
+                                External Owner (Self-Owned Unit)
+                            </p>
+                            <p class="mt-0.5 text-xs leading-snug"
+                                :class="form.is_self ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'">
+                                <span x-show="!form.is_self">Toggle ON if this unit belongs to an external person — only maintenance will be billed.</span>
+                                <span x-show="form.is_self">✓ Self-owned unit — <strong>only maintenance</strong> will be auto-billed monthly. No rent generated.</span>
+                            </p>
+                        </div>
+
+                        {{-- Toggle switch --}}
+                        <button type="button" @click="form.is_self = !form.is_self; if (!form.is_self) { form.self_maintenance_charge = ''; errors.self_maintenance_charge = ''; }"
+                            :class="form.is_self ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'"
+                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
+                            role="switch" :aria-checked="form.is_self.toString()">
+                            <span :class="form.is_self ? 'translate-x-5' : 'translate-x-0'"
+                                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ease-in-out"></span>
+                        </button>
+                    </div>
+
+                    {{-- Expandable maintenance charge input --}}
+                    <div x-show="form.is_self"
+                        x-transition:enter="transition ease-out duration-200"
+                        x-transition:enter-start="opacity-0 -translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 -translate-y-1"
+                        class="border-t border-indigo-200 bg-white px-4 py-4 dark:border-indigo-700/50 dark:bg-gray-900/40">
+
+                        <label class="mb-1.5 block text-xs font-semibold text-indigo-700 dark:text-indigo-300">
+                            Fixed Monthly Maintenance Charge <span class="text-red-500">*</span>
+                        </label>
+
+                        <div class="flex items-center gap-2">
+                            <div class="relative w-56">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">Rs.</span>
+                                <input type="number" x-model="form.self_maintenance_charge"
+                                    @input="errors.self_maintenance_charge = ''"
+                                    placeholder="e.g. 2500" step="0.01" min="0"
+                                    :class="errors.self_maintenance_charge ? 'border-red-400 focus:ring-red-400' : 'border-indigo-300 focus:ring-indigo-500 focus:border-indigo-500'"
+                                    class="w-full rounded-lg border bg-white pl-10 pr-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:ring-1 dark:border-indigo-700 dark:bg-gray-800 dark:text-white/90">
+                            </div>
+                            <p class="text-xs text-indigo-400">per month</p>
+                        </div>
+
+                        <p x-show="errors.self_maintenance_charge" x-text="errors.self_maintenance_charge"
+                            class="mt-1 text-[11px] font-medium text-red-500"></p>
+
+                        <p class="mt-2 flex items-center gap-1.5 text-[11px] text-indigo-400">
+                            <svg class="h-3 w-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                            </svg>
+                            This amount will be auto-generated as a maintenance payment each month.
+                        </p>
+                    </div>
+                </div>
+
                 {{-- Form Actions --}}
                 <div class="flex items-center gap-3">
                     <button type="button" @click="saveUnit()" :disabled="saving"
@@ -670,6 +752,8 @@ Landlord Contact Info Card
                         unit_number: u.unit_number,
                         type: u.type,
                         status: u.status,
+                        is_self: u.is_self ?? false,
+                        self_maintenance_charge: u.self_maintenance_charge ?? '',
                         area_sqft: u.area_sqft,
                         date: u.date ? (typeof u.date === 'string' ? u.date.split('T')[0] : u.date) : '',
                         floor_id: u.floor_id,
@@ -722,6 +806,7 @@ Landlord Contact Info Card
                     form: {
                         unit_number: '', type: '', floor_id: '', block_id: '', area_id: '',
                         area_sqft: '', date: '',
+                        is_self: false, self_maintenance_charge: '',
                         nominee_name: '', nominee_relation_type: '', nominee_relation_name: '',
                         total_amount: '', received_amount: '', received_from: '',
                         file_no: '', approved_by: '', received_by: '', approved_date: '',
@@ -742,6 +827,7 @@ Landlord Contact Info Card
                         this.form = {
                             unit_number: '', type: '', floor_id: '', block_id: '', area_id: '',
                             area_sqft: '', date: new Date().toISOString().split('T')[0],
+                            is_self: false, self_maintenance_charge: '',
                             nominee_name: '', nominee_relation_type: '', nominee_relation_name: '',
                             total_amount: '', received_amount: '', received_from: '',
                             file_no: '', approved_by: '', received_by: '', approved_date: '',
@@ -761,6 +847,8 @@ Landlord Contact Info Card
                             area_id: unit.area_id || '',
                             area_sqft: unit.area_sqft || '',
                             date: unit.date || '',
+                            is_self: unit.is_self ?? false,
+                            self_maintenance_charge: unit.self_maintenance_charge || '',
                             nominee_name: unit.nominee_name || '',
                             nominee_relation_type: unit.nominee_relation_type || '',
                             nominee_relation_name: unit.nominee_relation_name || '',
@@ -788,6 +876,9 @@ Landlord Contact Info Card
                         if (!this.form.type) this.errors.type = 'Type is required.';
                         if (!this.form.floor_id) this.errors.floor_id = 'Floor is required.';
                         if (!this.form.block_id) this.errors.block_id = 'Block is required.';
+                        if (this.form.is_self && (!this.form.self_maintenance_charge || parseFloat(this.form.self_maintenance_charge) <= 0)) {
+                            this.errors.self_maintenance_charge = 'Maintenance charge is required and must be greater than 0.';
+                        }
 
                         if (Object.keys(this.errors).length > 0) {
                             return;

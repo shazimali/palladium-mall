@@ -25,6 +25,8 @@ class Unit extends Model
         'area_id',
         'type',
         'status',
+        'is_self',
+        'self_maintenance_charge',
         'file_no',
         'area_sqft',
         'notes',
@@ -33,8 +35,10 @@ class Unit extends Model
     ];
 
     protected $casts = [
-        'area_sqft' => 'decimal:2',
-        'date' => 'date',
+        'area_sqft'               => 'decimal:2',
+        'date'                    => 'date',
+        'is_self'                 => 'boolean',
+        'self_maintenance_charge' => 'decimal:2',
     ];
 
     // -----------------------------------------------------------------------
@@ -54,6 +58,11 @@ class Unit extends Model
     public function scopeSelf(Builder $query): Builder
     {
         return $query->where('status', 'self');
+    }
+
+    public function scopeIsSelf(Builder $query): Builder
+    {
+        return $query->where('is_self', true);
     }
 
     public function scopeOfType(Builder $query, string $type): Builder
@@ -88,6 +97,11 @@ class Unit extends Model
     public function isSelf(): bool
     {
         return $this->status === 'self';
+    }
+
+    public function isSelfOwned(): bool
+    {
+        return $this->is_self === true;
     }
 
     public function getStatusBadgeClassAttribute(): string

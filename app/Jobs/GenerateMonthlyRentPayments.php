@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Tenant;
+use App\Models\Unit;
 use App\Models\Payment;
 use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
@@ -109,6 +110,40 @@ class GenerateMonthlyRentPayments implements ShouldQueue
                 }
             }
         });
+
+        // ── is_self units: generate maintenance-only payments ──────────────
+        // These units are owned by external persons; no tenant/agreement needed.
+        $selfUnits = Unit::where('is_self', true)
+            ->whereNotNull('self_maintenance_charge')
+            ->where('self_maintenance_charge', '>', 0)
+            ->get();
+
+        // Determine a shared due date for self-unit maintenance (10th of month)
+        $selfDueDay   = 10;
+        $daysInMonth  = $billingMonth->copy()->daysInMonth;
+        $selfDueDate  = $billingMonth->copy()->day(min($selfDueDay, $daysInMonth))->toDateString();
+
+        foreach ($selfUnits as $selfUnit) {
+            $exists = Payment::where('unit_id', $selfUnit->id)
+                ->where('type', 'maintenance')
+                ->where('month', $monthStr)
+                ->exists();
+
+            if (! $exists) {
+                Payment::create([
+                    'tenant_id'    => null,
+                    'unit_id'      => $selfUnit->id,
+                    'agreement_id' => null,
+                    'type'         => 'maintenance',
+                    'month'        => $monthStr,
+                    'amount'       => $selfUnit->self_maintenance_charge,
+                    'amount_paid'  => 0,
+                    'status'       => 'unpaid',
+                    'due_date'     => $selfDueDate,
+                ]);
+                $createdCount++;
+            }
+        }
 
         Log::info("GenerateMonthlyRentPayments executed. Total generated payment records: {$createdCount}");
     }

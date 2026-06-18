@@ -29,6 +29,7 @@ class UnitController extends Controller
             ->when($request->floor_id, fn($q) => $q->where('floor_id', $request->floor_id))
             ->when($request->block_id, fn($q) => $q->where('block_id', $request->block_id))
             ->when($request->area_id, fn($q) => $q->where('area_id', $request->area_id))
+            ->when($request->filled('is_self'), fn($q) => $q->where('is_self', (bool) $request->is_self))
             ->orderBy('unit_number')
             ->paginate(20)
             ->withQueryString();

@@ -61,17 +61,68 @@ class PaymentController extends Controller
     public function create(Request $request): View
     {
         $tenants = Tenant::where('status', 'active')
+            ->whereDoesntHave('unit', fn($q) => $q->where('is_self', true))
             ->orderBy('name')
             ->get();
 
+        $selfUnits = Unit::where('is_self', true)
+            ->with(['floor', 'block'])
+            ->orderBy('unit_number')
+            ->get();
+
         return view('payments.create', [
-            'title' => 'Add Payment Record',
-            'tenants' => $tenants,
+            'title'     => 'Add Payment Record',
+            'tenants'   => $tenants,
+            'selfUnits' => $selfUnits,
         ]);
     }
 
     public function store(StorePaymentRequest $request): RedirectResponse
     {
+        // ── Self-unit maintenance payment (no tenant / agreement) ──────────
+        if ($request->input('payment_mode') === 'self') {
+            $request->validate([
+                'unit_id'  => ['required', 'exists:units,id'],
+                'month'    => ['required', 'date'],
+                'amount'   => ['required', 'numeric', 'min:0'],
+                'due_date' => ['required', 'date'],
+                'notes'    => ['nullable', 'string', 'max:500'],
+            ]);
+
+            $unit  = Unit::findOrFail($request->unit_id);
+            $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
+
+            // Duplicate check
+            $exists = Payment::where('unit_id', $unit->id)
+                ->where('type', 'maintenance')
+                ->where('month', $month)
+                ->exists();
+
+            if ($exists) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['month' => 'A maintenance payment for this unit and month already exists.']);
+            }
+
+            Payment::create([
+                'tenant_id'    => null,
+                'unit_id'      => $unit->id,
+                'agreement_id' => null,
+                'type'         => 'maintenance',
+                'month'        => $month,
+                'amount'       => $request->amount,
+                'amount_paid'  => 0,
+                'status'       => 'unpaid',
+                'due_date'     => $request->due_date,
+                'notes'        => $request->notes,
+            ]);
+
+            return redirect()
+                ->route('payments.index')
+                ->with('success', "Maintenance payment for unit {$unit->unit_number} created successfully.");
+        }
+
+        // ── Normal tenant payment ─────────────────────────────────────────
         $data = $request->validated();
         $data['month'] = Carbon::parse($data['month'])->startOfMonth()->toDateString();
         $data['status'] = 'unpaid';
@@ -88,9 +139,13 @@ class PaymentController extends Controller
     {
         $payment->load(['tenant', 'unit', 'agreement', 'paymentAccount']);
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
- 
+
+        $titleName = $payment->tenant
+            ? $payment->tenant->name
+            : 'Unit ' . ($payment->unit->unit_number ?? '—') . ' (External Owner)';
+
         return view('payments.show', [
-            'title' => 'Payment — ' . $payment->tenant->name,
+            'title' => 'Payment — ' . $titleName,
             'payment' => $payment,
             'paymentAccounts' => $paymentAccounts,
         ]);
@@ -100,12 +155,26 @@ class PaymentController extends Controller
     {
         $payment->load(['tenant', 'unit', 'agreement']);
 
-        $tenants = Tenant::where('status', 'active')->orderBy('name')->get();
+        $tenants = Tenant::where('status', 'active')
+            ->whereDoesntHave('unit', fn($q) => $q->where('is_self', true))
+            ->orderBy('name')
+            ->get();
+
+        $selfUnits = Unit::where(function($q) use ($payment) {
+            $q->where('is_self', true);
+            if ($payment->unit_id) {
+                $q->orWhere('id', $payment->unit_id);
+            }
+        })
+        ->with(['floor', 'block'])
+        ->orderBy('unit_number')
+        ->get();
 
         return view('payments.edit', [
             'title' => 'Edit Payment',
             'payment' => $payment,
             'tenants' => $tenants,
+            'selfUnits' => $selfUnits,
         ]);
     }
 
@@ -113,6 +182,12 @@ class PaymentController extends Controller
     {
         $data = $request->validated();
         $data['month'] = Carbon::parse($data['month'])->startOfMonth()->toDateString();
+
+        if (is_null($payment->tenant_id)) {
+            $data['tenant_id'] = null;
+            $data['agreement_id'] = null;
+            $data['type'] = 'maintenance';
+        }
 
         $payment->update($data);
 
@@ -206,6 +281,12 @@ class PaymentController extends Controller
                 }
 
                 foreach ($request->types as $type) {
+                    // Skip rent for is_self units — they are external owners; only maintenance applies
+                    if ($type === 'rent' && $agreement->unit?->is_self) {
+                        $skipped++;
+                        continue;
+                    }
+
                     // Skip if already exists for this tenant, agreement, type, and month
                     $exists = Payment::where('tenant_id', $agreement->tenant_id)
                         ->where('agreement_id', $agreement->id)
@@ -239,11 +320,46 @@ class PaymentController extends Controller
                     $created++;
                 }
             }
+
+            // ── External owner (is_self) units: maintenance-only ──────────
+            if ($request->boolean('include_self_units') && in_array('maintenance', $request->types)) {
+                $selfUnits = Unit::where('is_self', true)
+                    ->whereNotNull('self_maintenance_charge')
+                    ->where('self_maintenance_charge', '>', 0)
+                    ->get();
+
+                foreach ($selfUnits as $selfUnit) {
+                    // Duplicate check: unit + type + month
+                    $exists = Payment::where('unit_id', $selfUnit->id)
+                        ->where('type', 'maintenance')
+                        ->where('month', $month)
+                        ->exists();
+
+                    if ($exists) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    Payment::create([
+                        'tenant_id'    => null,
+                        'unit_id'      => $selfUnit->id,
+                        'agreement_id' => null,
+                        'type'         => 'maintenance',
+                        'month'        => $month,
+                        'amount'       => $selfUnit->self_maintenance_charge,
+                        'amount_paid'  => 0,
+                        'status'       => 'unpaid',
+                        'due_date'     => $dueDate,
+                    ]);
+
+                    $created++;
+                }
+            }
         });
 
         return redirect()
             ->route('payments.index')
-            ->with('success', "{$created} payment records generated. {$skipped} already existed.");
+            ->with('success', "{$created} payment records generated. {$skipped} already existed or skipped.");
     }
 
     // -----------------------------------------------------------------------

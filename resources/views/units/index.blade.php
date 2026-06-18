@@ -23,31 +23,32 @@
             {{-- Stats strip --}}
             <div class="flex flex-wrap gap-2">
                 @php
-                    $total = $units->total();
-                    $vacant = $units->getCollection()->where('status', 'vacant')->count();
-                    $rented = $units->getCollection()->where('status', 'rented')->count();
-                    $self = $units->getCollection()->where('status', 'self')->count();
-                @endphp
-                <span
-                    class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    Total: {{ $total }}
-                </span>
-                <span
-                    class="inline-flex items-center rounded-lg bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    Rented: {{ $rented }}
-                </span>
-                <span
-                    class="inline-flex items-center rounded-lg bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
-                    Self: {{ $self }}
-                </span>
-                <span
-                    class="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                    Vacant: {{ $vacant }}
-                </span>
+                $total    = $units->total();
+                $vacant   = $units->getCollection()->where('status', 'vacant')->count();
+                $rented   = $units->getCollection()->where('status', 'rented')->count();
+                $self     = $units->getCollection()->where('status', 'self')->count();
+                $isSelf   = $units->getCollection()->where('is_self', true)->count();
+            @endphp
+            <span class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                Total: {{ $total }}
+            </span>
+            <span class="inline-flex items-center rounded-lg bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                Rented: {{ $rented }}
+            </span>
+            <span class="inline-flex items-center rounded-lg bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                Self Status: {{ $self }}
+            </span>
+            <span class="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                External Owner: {{ $isSelf }}
+            </span>
+            <span class="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
+                Vacant: {{ $vacant }}
+            </span>
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'status', 'type', 'floor_id', 'block_id', 'area_id']))
+                @if(request()->anyFilled(['search', 'status', 'type', 'floor_id', 'block_id', 'area_id', 'is_self']))
                     <a href="{{ route('units.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
                         Clear
@@ -134,6 +135,16 @@
                     </select>
                 </div>
 
+                <!-- External Owner Filter -->
+                <div class="relative">
+                    <select name="is_self" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Owners</option>
+                        <option value="1" {{ request('is_self') === '1' ? 'selected' : '' }}>External Owner (Self)</option>
+                        <option value="0" {{ request('is_self') === '0' ? 'selected' : '' }}>Managed by PM Mall</option>
+                    </select>
+                </div>
+
                 <button type="submit" class="hidden">Submit</button>
             </form>
         </div>
@@ -142,17 +153,18 @@
         <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
             <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                    <tr>
-                        <th class="px-4 py-3">#</th>
-                        <th class="px-4 py-3">Flat No.</th>
-                        <th class="px-4 py-3">Floor</th>
-                        <th class="px-4 py-3">Block</th>
-                        <th class="px-4 py-3">Area / Zone</th>
-                        <th class="px-4 py-3">Landlord</th>
-                        <th class="px-4 py-3">Type</th>
-                        <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3 text-right">Actions</th>
-                    </tr>
+                <tr>
+                    <th class="px-4 py-3">#</th>
+                    <th class="px-4 py-3">Flat No.</th>
+                    <th class="px-4 py-3">Floor</th>
+                    <th class="px-4 py-3">Block</th>
+                    <th class="px-4 py-3">Area / Zone</th>
+                    <th class="px-4 py-3">Landlord</th>
+                    <th class="px-4 py-3">Type</th>
+                    <th class="px-4 py-3">Status</th>
+                    <th class="px-4 py-3">External Owner</th>
+                    <th class="px-4 py-3 text-right">Actions</th>
+                </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @forelse($units as $index => $unit)
@@ -184,13 +196,32 @@
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium
-                                                                            {{ $unit->status === 'rented'
-                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : ($unit->status === 'vacant'
-                            ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                            : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400') }}">
+                                            {{ $unit->status === 'rented'
+                                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                                : ($unit->status === 'vacant'
+                                                    ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                                                    : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400') }}">
                                             {{ ucfirst($unit->status) }}
                                         </span>
+                                    </td>
+
+                                    {{-- External Owner (is_self) --}}
+                                    <td class="px-4 py-3">
+                                        @if($unit->is_self)
+                                            <div class="flex flex-col gap-1">
+                                                <span class="inline-flex w-fit items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                                                    <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                                    </svg>
+                                                    External Owner
+                                                </span>
+                                                @if($unit->self_maintenance_charge)
+                                                    <span class="text-[11px] text-gray-400">Rs. {{ number_format($unit->self_maintenance_charge, 0) }}/mo</span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-xs text-gray-400">—</span>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-3">
                                         <div class="flex items-center justify-end gap-2">

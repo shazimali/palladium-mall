@@ -83,8 +83,13 @@ class TenantController extends Controller
     {
         $selectedUnitId = $request->query('unit_id');
         
-        $units = Unit::where('status', 'vacant')
-            ->when($selectedUnitId, fn($q) => $q->orWhere('id', $selectedUnitId))
+        $units = Unit::where('is_self', false)
+            ->where(function($q) use ($selectedUnitId) {
+                $q->where('status', 'vacant');
+                if ($selectedUnitId) {
+                    $q->orWhere('id', $selectedUnitId);
+                }
+            })
             ->orderBy('unit_number')
             ->get();
 
@@ -433,8 +438,11 @@ class TenantController extends Controller
 
         return match ($step) {
             1 => view('tenants.wizard.step1', array_merge($data, [
-                'units' => Unit::where('status', 'vacant')
-                    ->orWhere('id', $tenant->unit_id)
+                'units' => Unit::where('is_self', false)
+                    ->where(function($q) use ($tenant) {
+                        $q->where('status', 'vacant')
+                          ->orWhere('id', $tenant->unit_id);
+                    })
                     ->orderBy('unit_number')
                     ->get(),
                 'partners' => ($draftAgreement ? $draftAgreement->partners()->get() : collect())->map(fn($p) => [
@@ -461,8 +469,11 @@ class TenantController extends Controller
             ])),
             3 => view('tenants.wizard.step3', array_merge($data, [
                 'agreement' => $draftAgreement,
-                'units'     => Unit::where('status', 'vacant')
-                    ->orWhere('id', $tenant->unit_id)
+                'units'     => Unit::where('is_self', false)
+                    ->where(function($q) use ($tenant) {
+                        $q->where('status', 'vacant')
+                          ->orWhere('id', $tenant->unit_id);
+                    })
                     ->orderBy('unit_number')
                     ->get(),
             ])),

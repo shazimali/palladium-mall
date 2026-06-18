@@ -37,7 +37,8 @@ class ReportController extends Controller
             || $request->filled('landlord_id')
             || $request->filled('payment_method')
             || $request->filled('payment_account_id')
-            || $request->filled('unit_status');
+            || $request->filled('unit_status')
+            || $request->filled('owner_type');
 
         $entries = collect();
         $summary = null;
@@ -72,6 +73,7 @@ class ReportController extends Controller
                 'payment_method',
                 'payment_account_id',
                 'unit_status',
+                'owner_type',
             ]),
         ]);
     }
@@ -121,7 +123,7 @@ class ReportController extends Controller
         $label   = $this->reportLabel($request);
         $filters = $request->only([
             'date_from', 'date_to', 'unit_id', 'tenant_id', 'status', 'report_type',
-            'landlord_id', 'payment_method', 'payment_account_id', 'unit_status'
+            'landlord_id', 'payment_method', 'payment_account_id', 'unit_status', 'owner_type'
         ]);
 
         if ($reportType === 'monthly_matrix') {
@@ -169,6 +171,7 @@ class ReportController extends Controller
         $paymentMethod = $request->payment_method;
         $paymentAccountId = $request->payment_account_id;
         $unitStatus = $request->unit_status;
+        $ownerType  = $request->owner_type;
 
         $query = Payment::with(['tenant', 'unit.landlord', 'paymentAccount'])
             ->when($unitId,           fn($q) => $q->where('unit_id',   $unitId))
@@ -179,7 +182,9 @@ class ReportController extends Controller
             ->when($paymentMethod,    fn($q) => $q->where('payment_method', $paymentMethod))
             ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
             ->when($landlordId,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
-            ->when($unitStatus,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)));
+            ->when($unitStatus,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)))
+            ->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
+            ->when($ownerType === 'other',    fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
 
         if ($reportType === 'rent') {
             $query->where('type', 'rent');
@@ -247,6 +252,8 @@ class ReportController extends Controller
                         ->when($tenantId,   fn($q) => $q->where('tenant_id', $tenantId))
                         ->when($landlordId, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
                         ->when($unitStatus, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)))
+                        ->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
+                        ->when($ownerType === 'other',    fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)))
                         ->where('start_date', '<=', $month->copy()->endOfMonth())
                         ->where('end_date', '>=', $month->copy()->startOfMonth())
                         ->with(['tenant', 'unit.landlord'])
@@ -360,11 +367,14 @@ class ReportController extends Controller
         $month = $from ? \Carbon\Carbon::parse($from)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
         $monthStr = $month->format('Y-m-d');
         $unitStatus = $request->unit_status;
+        $ownerType  = $request->owner_type;
 
         $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
         
         $units = Unit::with(['landlord'])
             ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
+            ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
+            ->when($ownerType === 'other',    fn($q) => $q->where('is_self', true))
             ->orderBy('unit_number')
             ->get();
 
