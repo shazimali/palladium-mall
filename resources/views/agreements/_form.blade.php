@@ -139,13 +139,22 @@
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Status <span class="text-red-500">*</span>
             </label>
-            <select name="status"
-                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('status') ? 'border-red-400' : '' }}">
-                <option value="active" {{ old('status', $agreement->status ?? 'active') === 'active' ? 'selected' : '' }}>
-                    Active</option>
-                <option value="expired" {{ old('status', $agreement->status ?? 'active') === 'expired' ? 'selected' : '' }}>Expired</option>
-                <option value="terminated" {{ old('status', $agreement->status ?? 'active') === 'terminated' ? 'selected' : '' }}>Terminated</option>
-            </select>
+            @if(isset($agreement))
+                <div class="w-full rounded-lg border border-gray-250 bg-gray-155 dark:border-gray-700 dark:bg-gray-800/50 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold {{ $agreement->status_badge_class }}">
+                        {{ ucfirst($agreement->status) }}
+                    </span>
+                </div>
+                <input type="hidden" name="status" value="{{ $agreement->status }}">
+            @else
+                <select name="status"
+                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('status') ? 'border-red-400' : '' }}">
+                    <option value="active" {{ old('status', $agreement->status ?? 'active') === 'active' ? 'selected' : '' }}>
+                        Active</option>
+                    <option value="expired" {{ old('status', $agreement->status ?? 'active') === 'expired' ? 'selected' : '' }}>Expired</option>
+                    <option value="terminated" {{ old('status', $agreement->status ?? 'active') === 'terminated' ? 'selected' : '' }}>Terminated</option>
+                </select>
+            @endif
             @error('status')
                 <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
             @enderror
