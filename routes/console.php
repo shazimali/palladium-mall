@@ -12,7 +12,7 @@ use App\Jobs\GenerateLatePaymentFines;
 use Illuminate\Support\Facades\Schedule;
 
 // Expire overdue agreements and vacate their units daily at midnight
-Schedule::command('agreements:expire')->daily()->at('16:30');
+Schedule::command('agreements:expire')->daily()->at('00:05');
 
-Schedule::job(new GenerateMonthlyRentPayments)->weekdays()->at('00:00');
-Schedule::job(new GenerateLatePaymentFines)->weekdays()->at('00:00');
+Schedule::job(new GenerateMonthlyRentPayments)->weekdays()->at('00:10');
+Schedule::job(new GenerateLatePaymentFines)->weekdays()->at('00:10');
