@@ -23,11 +23,11 @@
             {{-- Stats strip --}}
             <div class="flex flex-wrap gap-2">
                 @php
-                $total    = $units->total();
-                $vacant   = $units->getCollection()->where('status', 'vacant')->count();
-                $rented   = $units->getCollection()->where('status', 'rented')->count();
-                $self     = $units->getCollection()->where('status', 'self')->count();
-                $isSelf   = $units->getCollection()->where('is_self', true)->count();
+                $total    = $counts['total'];
+                $vacant   = $counts['vacant'];
+                $rented   = $counts['rented'];
+                $self     = $counts['self'];
+                $isSelf   = $counts['is_self'];
             @endphp
             <span class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
                 Total: {{ $total }}

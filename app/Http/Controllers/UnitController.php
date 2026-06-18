@@ -21,15 +21,25 @@ class UnitController extends Controller
 {
     public function index(Request $request): View
     {
-        $units = Unit::query()
-            ->with(['floor', 'block', 'area', 'landlord'])
+        $baseQuery = Unit::query()
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->type, fn($q) => $q->where('type', $request->type))
             ->when($request->floor_id, fn($q) => $q->where('floor_id', $request->floor_id))
             ->when($request->block_id, fn($q) => $q->where('block_id', $request->block_id))
             ->when($request->area_id, fn($q) => $q->where('area_id', $request->area_id))
-            ->when($request->filled('is_self'), fn($q) => $q->where('is_self', (bool) $request->is_self))
+            ->when($request->filled('is_self'), fn($q) => $q->where('is_self', (bool) $request->is_self));
+
+        $counts = [
+            'total'   => (clone $baseQuery)->count(),
+            'vacant'  => (clone $baseQuery)->where('status', 'vacant')->count(),
+            'rented'  => (clone $baseQuery)->where('status', 'rented')->count(),
+            'self'    => (clone $baseQuery)->where('status', 'self')->count(),
+            'is_self' => (clone $baseQuery)->where('is_self', true)->count(),
+        ];
+
+        $units = $baseQuery
+            ->with(['floor', 'block', 'area', 'landlord'])
             ->orderBy('unit_number')
             ->paginate(20)
             ->withQueryString();
@@ -41,6 +51,7 @@ class UnitController extends Controller
         return view('units.index', [
             'title' => 'Flat / Shop Master',
             'units' => $units,
+            'counts' => $counts,
             'floors' => $floors,
             'blocks' => $blocks,
             'areas' => $areas,
