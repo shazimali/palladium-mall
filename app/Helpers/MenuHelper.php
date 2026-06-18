@@ -119,7 +119,7 @@ class MenuHelper
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [
                 'icon' => 'ecommerce',
-                'name' => 'Payments',
+                'name' => 'Billings',
                 'path' => '/payments',
             ];
         }
