@@ -39,13 +39,13 @@ class PaymentController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        // Summary counts for current month
-        $currentMonth = Carbon::now()->startOfMonth()->toDateString();
+        // Summary counts for selected month (defaults to current month)
+        $targetMonth = $month ?: Carbon::now()->startOfMonth()->toDateString();
         $summary = [
-            'total_due' => Payment::forMonth($currentMonth)->sum('amount'),
-            'total_paid' => Payment::forMonth($currentMonth)->sum('amount_paid'),
-            'unpaid_count' => Payment::forMonth($currentMonth)->unpaid()->count(),
-            'overdue_count' => Payment::overdue()->count(),
+            'total_due' => Payment::forMonth($targetMonth)->sum('amount'),
+            'total_paid' => Payment::forMonth($targetMonth)->sum('amount_paid'),
+            'unpaid_count' => Payment::forMonth($targetMonth)->unpaid()->count(),
+            'overdue_count' => Payment::forMonth($targetMonth)->whereIn('status', ['unpaid', 'partial'])->where('due_date', '<', now())->count(),
         ];
 
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
@@ -66,7 +66,7 @@ class PaymentController extends Controller
             ->get();
 
         $selfUnits = Unit::where('is_self', true)
-            ->with(['floor', 'block'])
+            ->with(['floor', 'block', 'otherTenant'])
             ->orderBy('unit_number')
             ->get();
 
@@ -89,7 +89,7 @@ class PaymentController extends Controller
                 'notes'    => ['nullable', 'string', 'max:500'],
             ]);
 
-            $unit  = Unit::findOrFail($request->unit_id);
+            $unit  = Unit::with('otherTenant')->findOrFail($request->unit_id);
             $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
 
             // Duplicate check
@@ -105,16 +105,17 @@ class PaymentController extends Controller
             }
 
             Payment::create([
-                'tenant_id'    => null,
-                'unit_id'      => $unit->id,
-                'agreement_id' => null,
-                'type'         => 'maintenance',
-                'month'        => $month,
-                'amount'       => $request->amount,
-                'amount_paid'  => 0,
-                'status'       => 'unpaid',
-                'due_date'     => $request->due_date,
-                'notes'        => $request->notes,
+                'tenant_id'        => null,
+                'other_tenant_id'  => $unit->otherTenant?->id,
+                'unit_id'          => $unit->id,
+                'agreement_id'     => null,
+                'type'             => 'maintenance',
+                'month'            => $month,
+                'amount'           => $request->amount,
+                'amount_paid'      => 0,
+                'status'           => 'unpaid',
+                'due_date'         => $request->due_date,
+                'notes'            => $request->notes,
             ]);
 
             return redirect()
@@ -324,11 +325,15 @@ class PaymentController extends Controller
             // ── External owner (is_self) units: maintenance-only ──────────
             if ($request->boolean('include_self_units') && in_array('maintenance', $request->types)) {
                 $selfUnits = Unit::where('is_self', true)
-                    ->whereNotNull('self_maintenance_charge')
-                    ->where('self_maintenance_charge', '>', 0)
+                    ->with('otherTenant')
                     ->get();
 
                 foreach ($selfUnits as $selfUnit) {
+                    $otherTenant = $selfUnit->otherTenant;
+                    if (!$otherTenant || !$otherTenant->maintenance_charge || $otherTenant->maintenance_charge <= 0) {
+                        continue;
+                    }
+
                     // Duplicate check: unit + type + month
                     $exists = Payment::where('unit_id', $selfUnit->id)
                         ->where('type', 'maintenance')
@@ -341,15 +346,16 @@ class PaymentController extends Controller
                     }
 
                     Payment::create([
-                        'tenant_id'    => null,
-                        'unit_id'      => $selfUnit->id,
-                        'agreement_id' => null,
-                        'type'         => 'maintenance',
-                        'month'        => $month,
-                        'amount'       => $selfUnit->self_maintenance_charge,
-                        'amount_paid'  => 0,
-                        'status'       => 'unpaid',
-                        'due_date'     => $dueDate,
+                        'tenant_id'        => null,
+                        'other_tenant_id'  => $otherTenant->id,
+                        'unit_id'          => $selfUnit->id,
+                        'agreement_id'     => null,
+                        'type'             => 'maintenance',
+                        'month'            => $month,
+                        'amount'           => $otherTenant->maintenance_charge,
+                        'amount_paid'      => 0,
+                        'status'           => 'unpaid',
+                        'due_date'         => $dueDate,
                     ]);
 
                     $created++;

@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             ActionPermissionSeeder::class,
             ExpenseHeadSeeder::class,
             ExpensePermissionSeeder::class,
+            OtherTenantPermissionSeeder::class,
             RoleSeeder::class,
             AdminUserSeeder::class,
             FloorBlockAreaSeeder::class,

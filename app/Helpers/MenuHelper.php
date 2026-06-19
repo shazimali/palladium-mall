@@ -116,6 +116,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('other_tenants.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Other Tenants',
+                'path' => '/other-tenants',
+            ];
+        }
+
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [
                 'icon' => 'ecommerce',

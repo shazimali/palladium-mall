@@ -207,6 +207,17 @@ Route::middleware('auth')->group(function () {
         Route::resource('expenses', \App\Http\Controllers\ExpenseController::class);
     });
 
+    // Other Tenants
+    Route::middleware('permission:other_tenants.view')->group(function () {
+        Route::resource('other-tenants', \App\Http\Controllers\OtherTenantController::class);
+    });
+    Route::middleware('permission:other_tenants.attach')->group(function () {
+        Route::post('other-tenants/{other_tenant}/attach', [\App\Http\Controllers\OtherTenantController::class, 'attach'])
+            ->name('other-tenants.attach');
+        Route::post('other-tenants/{other_tenant}/detach', [\App\Http\Controllers\OtherTenantController::class, 'detach'])
+            ->name('other-tenants.detach');
+    });
+
     // AJAX
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');

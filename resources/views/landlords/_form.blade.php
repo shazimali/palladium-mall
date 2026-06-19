@@ -249,12 +249,12 @@ Landlord Contact Info Card
         </div>
 
         {{-- ── Add / Edit Unit Modal ───────────────────────────── --}}
-        <div x-show="formOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto"
+        <div x-show="formOpen" x-cloak class="fixed inset-0 z-50 flex items-start md:items-center justify-center overflow-y-auto p-2 sm:p-4 lg:p-6"
             style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);"
             x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
             x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="closeForm()">
-            <div class="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900 mx-4 my-8 max-h-[90vh] overflow-y-auto relative z-50"
+            <div class="w-full max-w-full sm:max-w-2xl lg:max-w-4xl rounded-2xl bg-white p-3 sm:p-5 lg:p-6 shadow-2xl dark:bg-gray-900 my-2 sm:my-4 lg:my-8 max-h-[96vh] sm:max-h-[92vh] lg:max-h-[90vh] overflow-y-auto relative z-50"
                 x-transition:enter="transition ease-out duration-300"
                 x-transition:enter-start="opacity-0 scale-95 translate-y-4"
                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -275,7 +275,7 @@ Landlord Contact Info Card
                 {{-- Section 1: Unit Identity --}}
                 <div class="mb-4 rounded-lg bg-gray-50 p-4 dark:bg-white/[0.02]">
                     <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Flat/Shop Identity</p>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Flat/Shop No.
                                 <span class="text-red-400">*</span></label>
@@ -344,7 +344,7 @@ Landlord Contact Info Card
                             <p x-show="errors.date" x-text="errors.date" class="mt-1 text-[11px] text-red-500"></p>
                         </div>
                     </div>
-                    <div class="mt-3 grid grid-cols-3 gap-3">
+                    <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Floor <span
                                     class="text-red-400">*</span></label>
@@ -428,7 +428,7 @@ Landlord Contact Info Card
                 {{-- Section 3: Financial --}}
                 <div class="mb-4 rounded-lg bg-green-50/50 p-4 dark:bg-green-900/10">
                     <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-green-500">Financial Summary</p>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Total
                                 Amount</label>
@@ -473,7 +473,7 @@ Landlord Contact Info Card
                 {{-- Section 4: Office Record --}}
                 <div class="mb-4 rounded-lg bg-amber-50/40 p-4 dark:bg-amber-900/10">
                     <p class="mb-3 text-xs font-semibold uppercase tracking-wide text-amber-500">Office Record</p>
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
                             <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">File
                                 No.</label>
@@ -550,81 +550,74 @@ Landlord Contact Info Card
                     </div>
                 </div>
 
-                {{-- Section 5: External Owner (is_self) --}}
-                <div class="mb-4 overflow-hidden rounded-xl border transition-all duration-200"
+                {{-- Section 5: Self-Owned Unit (is_self) --}}
+                <div class="mb-4 overflow-hidden rounded-xl border transition-all duration-300"
                     :class="form.is_self
-                        ? 'border-indigo-400 bg-indigo-50 dark:border-indigo-600 dark:bg-indigo-900/20'
+                        ? 'border-blue-400 bg-gradient-to-br from-blue-50 to-sky-50 shadow-sm dark:border-blue-600 dark:from-blue-950/30 dark:to-sky-950/20'
                         : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/40'">
 
                     {{-- Header row with toggle --}}
-                    <div class="flex items-center gap-4 px-4 py-3">
+                    <div class="flex items-center gap-4 px-5 py-4">
                         {{-- Icon --}}
-                        <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors duration-200"
-                            :class="form.is_self ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-400 dark:bg-gray-700'">
-                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-700">
+                            <svg class="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                         </div>
 
                         {{-- Label --}}
-                        <div class="flex-1">
-                            <p class="text-sm font-semibold leading-tight"
-                                :class="form.is_self ? 'text-indigo-700 dark:text-indigo-300' : 'text-gray-700 dark:text-gray-200'">
-                                External Owner (Self-Owned Unit)
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-bold leading-tight text-blue-600 dark:text-blue-400">
+                                Self-Owned Unit
                             </p>
                             <p class="mt-0.5 text-xs leading-snug"
-                                :class="form.is_self ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'">
-                                <span x-show="!form.is_self">Toggle ON if this unit belongs to an external person — only maintenance will be billed.</span>
-                                <span x-show="form.is_self">✓ Self-owned unit — <strong>only maintenance</strong> will be auto-billed monthly. No rent generated.</span>
+                                :class="form.is_self ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'">
+                                <span x-show="!form.is_self">Toggle ON to mark this unit as self-owned.</span>
+                                <span x-show="form.is_self">This unit is marked as self-owned — no rent will be generated.</span>
                             </p>
                         </div>
 
                         {{-- Toggle switch --}}
-                        <button type="button" @click="form.is_self = !form.is_self; if (!form.is_self) { form.self_maintenance_charge = ''; errors.self_maintenance_charge = ''; }"
-                            :class="form.is_self ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'"
-                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
-                            role="switch" :aria-checked="form.is_self.toString()">
-                            <span :class="form.is_self ? 'translate-x-5' : 'translate-x-0'"
-                                class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ease-in-out"></span>
+                        <button type="button"
+                            x-on:click="form.is_self = !form.is_self"
+                            :style="'background-color:' + (form.is_self ? '#2563eb' : '#d1d5db')"
+                            style="transition: background-color 0.3s ease"
+                            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                            role="switch"
+                            :aria-checked="form.is_self.toString()">
+                            <span
+                                :style="'transform: translateX(' + (form.is_self ? '20px' : '1px') + ') translateY(1px)'"
+                                style="transition: transform 0.3s ease"
+                                class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md">
+                            </span>
                         </button>
                     </div>
 
-                    {{-- Expandable maintenance charge input --}}
+                    {{-- Info banner when self is toggled on --}}
                     <div x-show="form.is_self"
-                        x-transition:enter="transition ease-out duration-200"
-                        x-transition:enter-start="opacity-0 -translate-y-1"
-                        x-transition:enter-end="opacity-100 translate-y-0"
-                        x-transition:leave="transition ease-in duration-150"
-                        x-transition:leave-start="opacity-100 translate-y-0"
-                        x-transition:leave-end="opacity-0 -translate-y-1"
-                        class="border-t border-indigo-200 bg-white px-4 py-4 dark:border-indigo-700/50 dark:bg-gray-900/40">
+                        x-transition:enter="transition ease-out duration-250"
+                        x-transition:enter-start="opacity-0 max-h-0"
+                        x-transition:enter-end="opacity-100 max-h-20"
+                        x-transition:leave="transition ease-in duration-200"
+                        x-transition:leave-start="opacity-100 max-h-20"
+                        x-transition:leave-end="opacity-0 max-h-0"
+                        class="border-t border-blue-200/60 bg-white/70 px-5 py-3 dark:border-blue-700/40 dark:bg-gray-900/50">
 
-                        <label class="mb-1.5 block text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                            Fixed Monthly Maintenance Charge <span class="text-red-500">*</span>
-                        </label>
-
-                        <div class="flex items-center gap-2">
-                            <div class="relative w-56">
-                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">Rs.</span>
-                                <input type="number" x-model="form.self_maintenance_charge"
-                                    @input="errors.self_maintenance_charge = ''"
-                                    placeholder="e.g. 2500" step="0.01" min="0"
-                                    :class="errors.self_maintenance_charge ? 'border-red-400 focus:ring-red-400' : 'border-indigo-300 focus:ring-indigo-500 focus:border-indigo-500'"
-                                    class="w-full rounded-lg border bg-white pl-10 pr-3 py-2 text-sm font-medium text-gray-800 focus:outline-none focus:ring-1 dark:border-indigo-700 dark:bg-gray-800 dark:text-white/90">
+                        <div class="flex items-center gap-2.5">
+                            <div class="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md bg-blue-100 dark:bg-blue-900/40">
+                                <svg class="h-3.5 w-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
                             </div>
-                            <p class="text-xs text-indigo-400">per month</p>
+                            <p class="text-xs text-blue-600 dark:text-blue-300">
+                                Manage tenants & maintenance charges via the
+                                <a href="{{ route('other-tenants.index') }}" class="font-semibold underline decoration-blue-400/50 underline-offset-2 hover:text-blue-800 dark:hover:text-blue-200 transition-colors">
+                                    Other Tenants
+                                </a>
+                                module.
+                            </p>
                         </div>
-
-                        <p x-show="errors.self_maintenance_charge" x-text="errors.self_maintenance_charge"
-                            class="mt-1 text-[11px] font-medium text-red-500"></p>
-
-                        <p class="mt-2 flex items-center gap-1.5 text-[11px] text-indigo-400">
-                            <svg class="h-3 w-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                            </svg>
-                            This amount will be auto-generated as a maintenance payment each month.
-                        </p>
                     </div>
                 </div>
 
@@ -753,7 +746,6 @@ Landlord Contact Info Card
                         type: u.type,
                         status: u.status,
                         is_self: u.is_self ?? false,
-                        self_maintenance_charge: u.self_maintenance_charge ?? '',
                         area_sqft: u.area_sqft,
                         date: u.date ? (typeof u.date === 'string' ? u.date.split('T')[0] : u.date) : '',
                         floor_id: u.floor_id,
@@ -806,7 +798,7 @@ Landlord Contact Info Card
                     form: {
                         unit_number: '', type: '', floor_id: '', block_id: '', area_id: '',
                         area_sqft: '', date: '',
-                        is_self: false, self_maintenance_charge: '',
+                        is_self: false,
                         nominee_name: '', nominee_relation_type: '', nominee_relation_name: '',
                         total_amount: '', received_amount: '', received_from: '',
                         file_no: '', approved_by: '', received_by: '', approved_date: '',
@@ -827,7 +819,7 @@ Landlord Contact Info Card
                         this.form = {
                             unit_number: '', type: '', floor_id: '', block_id: '', area_id: '',
                             area_sqft: '', date: new Date().toISOString().split('T')[0],
-                            is_self: false, self_maintenance_charge: '',
+                            is_self: false,
                             nominee_name: '', nominee_relation_type: '', nominee_relation_name: '',
                             total_amount: '', received_amount: '', received_from: '',
                             file_no: '', approved_by: '', received_by: '', approved_date: '',
@@ -848,7 +840,6 @@ Landlord Contact Info Card
                             area_sqft: unit.area_sqft || '',
                             date: unit.date || '',
                             is_self: unit.is_self ?? false,
-                            self_maintenance_charge: unit.self_maintenance_charge || '',
                             nominee_name: unit.nominee_name || '',
                             nominee_relation_type: unit.nominee_relation_type || '',
                             nominee_relation_name: unit.nominee_relation_name || '',
@@ -876,9 +867,7 @@ Landlord Contact Info Card
                         if (!this.form.type) this.errors.type = 'Type is required.';
                         if (!this.form.floor_id) this.errors.floor_id = 'Floor is required.';
                         if (!this.form.block_id) this.errors.block_id = 'Block is required.';
-                        if (this.form.is_self && (!this.form.self_maintenance_charge || parseFloat(this.form.self_maintenance_charge) <= 0)) {
-                            this.errors.self_maintenance_charge = 'Maintenance charge is required and must be greater than 0.';
-                        }
+
 
                         if (Object.keys(this.errors).length > 0) {
                             return;

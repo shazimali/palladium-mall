@@ -161,10 +161,23 @@ class AgreementController extends Controller
             Storage::disk('local')->delete($agreement->document);
         }
 
+        // If the deleted agreement was active, clean up the associated unit and tenant status
+        if ($agreement->status === 'active') {
+            if ($agreement->unit) {
+                $agreement->unit->update(['status' => 'vacant']);
+            }
+            if ($agreement->tenant) {
+                $agreement->tenant->update(['status' => 'inactive', 'unit_id' => null]);
+            }
+        }
+
+        // Delete all related payments (soft-delete)
+        $agreement->payments()->delete();
+
         $agreement->delete();
 
         return redirect()
             ->route('agreements.index')
-            ->with('success', 'Agreement removed successfully.');
+            ->with('success', 'Agreement and all associated payments removed successfully.');
     }
 }

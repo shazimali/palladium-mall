@@ -18,6 +18,7 @@ class Payment extends Model
 
     protected $fillable = [
         'tenant_id',
+        'other_tenant_id',
         'unit_id',
         'agreement_id',
         'type',
@@ -77,7 +78,12 @@ class Payment extends Model
     {
         return $this->belongsTo(Meter::class);
     }
- 
+
+    public function otherTenant(): BelongsTo
+    {
+        return $this->belongsTo(OtherTenant::class)->withTrashed();
+    }
+
     public function paymentAccount(): BelongsTo
     {
         return $this->belongsTo(PaymentAccount::class);

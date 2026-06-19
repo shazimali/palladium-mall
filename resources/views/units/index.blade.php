@@ -40,7 +40,7 @@
             </span>
             <span class="inline-flex items-center gap-1 rounded-lg bg-violet-100 px-3 py-1 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                External Owner: {{ $isSelf }}
+                Self-Owned: {{ $isSelf }}
             </span>
             <span class="inline-flex items-center rounded-lg bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
                 Vacant: {{ $vacant }}
@@ -140,7 +140,7 @@
                     <select name="is_self" onchange="this.form.submit()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="">All Owners</option>
-                        <option value="1" {{ request('is_self') === '1' ? 'selected' : '' }}>External Owner (Self)</option>
+                        <option value="1" {{ request('is_self') === '1' ? 'selected' : '' }}>Self-Owned</option>
                         <option value="0" {{ request('is_self') === '0' ? 'selected' : '' }}>Managed by PM Mall</option>
                     </select>
                 </div>
@@ -162,7 +162,7 @@
                     <th class="px-4 py-3">Landlord</th>
                     <th class="px-4 py-3">Type</th>
                     <th class="px-4 py-3">Status</th>
-                    <th class="px-4 py-3">External Owner</th>
+                    <th class="px-4 py-3">Self-Owned</th>
                     <th class="px-4 py-3 text-right">Actions</th>
                 </tr>
                 </thead>
@@ -213,11 +213,8 @@
                                                     <svg class="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                                     </svg>
-                                                    External Owner
+                                                    Self-Owned
                                                 </span>
-                                                @if($unit->self_maintenance_charge)
-                                                    <span class="text-[11px] text-gray-400">Rs. {{ number_format($unit->self_maintenance_charge, 0) }}/mo</span>
-                                                @endif
                                             </div>
                                         @else
                                             <span class="text-xs text-gray-400">—</span>

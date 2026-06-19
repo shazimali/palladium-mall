@@ -112,10 +112,9 @@ class GenerateMonthlyRentPayments implements ShouldQueue
         });
 
         // ── is_self units: generate maintenance-only payments ──────────────
-        // These units are owned by external persons; no tenant/agreement needed.
+        // These units are owned by external persons; amount comes from attached other-tenant.
         $selfUnits = Unit::where('is_self', true)
-            ->whereNotNull('self_maintenance_charge')
-            ->where('self_maintenance_charge', '>', 0)
+            ->with('otherTenant')
             ->get();
 
         // Determine a shared due date for self-unit maintenance (10th of month)
@@ -124,6 +123,12 @@ class GenerateMonthlyRentPayments implements ShouldQueue
         $selfDueDate  = $billingMonth->copy()->day(min($selfDueDay, $daysInMonth))->toDateString();
 
         foreach ($selfUnits as $selfUnit) {
+            // Skip if no other-tenant attached or charge is 0
+            $otherTenant = $selfUnit->otherTenant;
+            if (!$otherTenant || !$otherTenant->maintenance_charge || $otherTenant->maintenance_charge <= 0) {
+                continue;
+            }
+
             $exists = Payment::where('unit_id', $selfUnit->id)
                 ->where('type', 'maintenance')
                 ->where('month', $monthStr)
@@ -131,15 +136,16 @@ class GenerateMonthlyRentPayments implements ShouldQueue
 
             if (! $exists) {
                 Payment::create([
-                    'tenant_id'    => null,
-                    'unit_id'      => $selfUnit->id,
-                    'agreement_id' => null,
-                    'type'         => 'maintenance',
-                    'month'        => $monthStr,
-                    'amount'       => $selfUnit->self_maintenance_charge,
-                    'amount_paid'  => 0,
-                    'status'       => 'unpaid',
-                    'due_date'     => $selfDueDate,
+                    'tenant_id'        => null,
+                    'other_tenant_id'  => $otherTenant->id,
+                    'unit_id'          => $selfUnit->id,
+                    'agreement_id'     => null,
+                    'type'             => 'maintenance',
+                    'month'            => $monthStr,
+                    'amount'           => $otherTenant->maintenance_charge,
+                    'amount_paid'      => 0,
+                    'status'           => 'unpaid',
+                    'due_date'         => $selfDueDate,
                 ]);
                 $createdCount++;
             }

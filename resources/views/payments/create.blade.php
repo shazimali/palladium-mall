@@ -10,7 +10,7 @@
         selfUnits: {{ $selfUnits->map(fn($u) => [
             'id'      => $u->id,
             'label'   => $u->unit_number . ($u->floor ? ' — ' . $u->floor->name : '') . ($u->block ? ' / ' . $u->block->name : ''),
-            'charge'  => $u->self_maintenance_charge,
+            'charge'  => $u->otherTenant?->maintenance_charge ?? 0,
         ])->values()->toJson() }},
         selectSelfUnit(id) {
             this.selfUnitId = id;
@@ -46,7 +46,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    External Owner (Self)
+                    Self-Owned Unit
                 </button>
 
             </div>
@@ -79,7 +79,7 @@
 
         {{-- ── SELF-UNIT MAINTENANCE FORM ───────────────────────────────── --}}
         <div x-show="mode === 'self'" x-cloak>
-            <x-common.component-card title="External Owner — Maintenance Payment" desc="Generate a maintenance-only payment for a self-owned (external owner) unit. No tenant or agreement required.">
+            <x-common.component-card title="Self-Owned Unit — Maintenance Payment" desc="Generate a maintenance-only payment for a self-owned unit. No tenant or agreement required.">
                 <form action="{{ route('payments.store') }}" method="POST">
                     @csrf
                     <input type="hidden" name="payment_mode" value="self">
@@ -92,7 +92,7 @@
 
                         @if($selfUnits->isEmpty())
                             <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-                                No external owner units found. Go to a Landlord and toggle <strong>External Owner</strong> on a unit first.
+                                No self-owned units found. Go to a Landlord and toggle <strong>Self-Owned</strong> on a unit first.
                             </div>
                         @else
                             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -107,7 +107,7 @@
                                         <option value="">Select unit</option>
                                         @foreach($selfUnits as $su)
                                             <option value="{{ $su->id }}"
-                                                data-charge="{{ $su->self_maintenance_charge }}"
+                                                data-charge="{{ $su->otherTenant?->maintenance_charge ?? 0 }}"
                                                 {{ old('unit_id') == $su->id ? 'selected' : '' }}>
                                                 {{ $su->unit_number }}
                                                 {{ $su->floor ? '— ' . $su->floor->name : '' }}

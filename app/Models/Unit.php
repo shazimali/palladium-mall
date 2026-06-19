@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\UnitOwnership;
+use App\Models\OtherTenant;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
@@ -188,6 +189,11 @@ class Unit extends Model
     public function gasMeter(): HasOne
     {
         return $this->hasOne(Meter::class)->where('type', 'gas');
+    }
+
+    public function otherTenant(): HasOne
+    {
+        return $this->hasOne(OtherTenant::class);
     }
 
 

@@ -16,22 +16,25 @@
     @endif
 
     {{-- Summary cards --}}
+    @php
+        $monthLabel = request('month') ? Carbon\Carbon::parse(request('month'))->format('F Y') : 'This Month';
+    @endphp
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs text-gray-400">Total Due (This Month)</p>
+            <p class="text-xs text-gray-400">Total Due ({{ $monthLabel }})</p>
             <p class="mt-1 text-lg font-bold text-gray-800 dark:text-white">Rs. {{ number_format($summary['total_due']) }}
             </p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs text-gray-400">Total Collected</p>
+            <p class="text-xs text-gray-400">Total Collected ({{ $monthLabel }})</p>
             <p class="mt-1 text-lg font-bold text-green-600">Rs. {{ number_format($summary['total_paid']) }}</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs text-gray-400">Unpaid This Month</p>
+            <p class="text-xs text-gray-400">Unpaid ({{ $monthLabel }})</p>
             <p class="mt-1 text-lg font-bold text-red-500">{{ $summary['unpaid_count'] }}</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs text-gray-400">Overdue Records</p>
+            <p class="text-xs text-gray-400">Overdue ({{ $monthLabel }})</p>
             <p class="mt-1 text-lg font-bold text-orange-500">{{ $summary['overdue_count'] }}</p>
         </div>
     </div>
@@ -127,9 +130,9 @@
                     </select>
                 </div>
 
-                <!-- Month Filter -->
+                <!-- Month & Year Filter Datepicker -->
                 <div class="relative max-w-[180px]">
-                    <input type="text" id="filter_month" name="month" value="{{ request('month') }}" placeholder="All Months" autocomplete="off"
+                    <input type="text" id="filter_month" name="month" value="{{ request('month') }}" placeholder="Select Month/Year" autocomplete="off"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
@@ -163,7 +166,7 @@
                                 @else
                                     <span class="inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
                                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                        External Owner
+                                        Self-Owned
                                     </span>
                                 @endif
                             </td>
@@ -488,7 +491,7 @@
                                     <input type="checkbox" name="include_self_units" value="1"
                                         class="mt-0.5 rounded border-gray-300 text-violet-500 focus:ring-violet-500">
                                     <div>
-                                        <span class="font-medium">Include External Owner Units</span>
+                                        <span class="font-medium">Include Self-Owned Units</span>
                                         <p class="mt-0.5 text-[11px] text-gray-400">Also generates maintenance payments for all self-owned units. Duplicates are automatically skipped.</p>
                                     </div>
                                 </label>
@@ -518,12 +521,19 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             flatpickr('#filter_month', {
-                dateFormat: 'Y-m-d',
+                dateFormat: 'Y-m-01',
                 altInput: true,
                 altFormat: 'F Y',
                 allowInput: false,
                 disableMobile: true,
-                disable: [function (date) { return date.getDate() !== 1; }],
+                plugins: [
+                    new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    })
+                ],
                 onChange: function(selectedDates, dateStr, instance) {
                     instance.element.form.submit();
                 }

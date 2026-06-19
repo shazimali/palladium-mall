@@ -3,9 +3,9 @@
 @section('content')
     @php
         $isSelf = is_null($payment->tenant_id);
-        $pageTitle = $isSelf ? 'Edit External Owner Payment' : 'Edit Tenant Payment';
+        $pageTitle = $isSelf ? 'Edit Self-Owned Unit Payment' : 'Edit Tenant Payment';
         $descText = $isSelf 
-            ? 'Update maintenance payment details for a self-owned (external owner) unit' 
+            ? 'Update maintenance payment details for a self-owned unit' 
             : 'Update payment record details linked to a tenant\'s agreement';
     @endphp
 
@@ -19,7 +19,7 @@
             selfUnits: {{ $selfUnits->map(fn($u) => [
                 'id'      => $u->id,
                 'label'   => $u->unit_number . ($u->floor ? ' — ' . $u->floor->name : '') . ($u->block ? ' / ' . $u->block->name : ''),
-                'charge'  => $u->self_maintenance_charge,
+                'charge'  => $u->otherTenant?->maintenance_charge ?? 0,
             ])->values()->toJson() }},
             selectSelfUnit(id) {
                 this.selfUnitId = id;
@@ -27,7 +27,7 @@
                 if (u && u.charge) this.selfAmount = u.charge;
             }
         }">
-            <x-common.component-card title="External Owner — Maintenance Payment" desc="{{ $descText }}">
+            <x-common.component-card title="Self-Owned Unit — Maintenance Payment" desc="{{ $descText }}">
                 <form action="{{ route('payments.update', $payment) }}" method="POST">
                     @csrf
                     @method('PUT')
@@ -50,7 +50,7 @@
                                     <option value="">Select unit</option>
                                     @foreach($selfUnits as $su)
                                         <option value="{{ $su->id }}"
-                                            data-charge="{{ $su->self_maintenance_charge }}"
+                                            data-charge="{{ $su->otherTenant?->maintenance_charge ?? 0 }}"
                                             {{ old('unit_id', $payment->unit_id) == $su->id ? 'selected' : '' }}>
                                             {{ $su->unit_number }}
                                             {{ $su->floor ? '— ' . $su->floor->name : '' }}
