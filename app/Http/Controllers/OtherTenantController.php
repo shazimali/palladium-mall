@@ -117,13 +117,26 @@ class OtherTenantController extends Controller
 
         $data = $request->validate([
             'name'               => ['required', 'string', 'max:255'],
-            'cnic'               => ['nullable', 'string', 'max:20', 'unique:other_tenants,cnic'],
+            'cnic'               => ['required', 'string', 'max:15', 'unique:other_tenants,cnic', 'regex:/^\d{5}-\d{7}-\d{1}$/'],
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'address'            => ['nullable', 'string'],
             'status'             => ['required', 'in:active,inactive'],
-            'maintenance_charge' => ['required', 'numeric', 'min:0'],
-            'unit_id'            => ['nullable', 'exists:units,id'],
+            'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'unit_id'            => [
+                'nullable',
+                'exists:units,id',
+                function ($attribute, $value, $fail) {
+                    $exists = OtherTenant::where('unit_id', $value)->exists();
+                    if ($exists) {
+                        $fail('The selected unit is already attached to another tenant.');
+                    }
+                }
+            ],
+        ], [
+            'cnic.required' => 'CNIC is required.',
+            'cnic.regex'    => 'CNIC format must be: 35201-1234567-1',
+            'cnic.unique'   => 'This CNIC is already registered to another tenant.',
         ]);
 
         $unitId = $data['unit_id'] ?? null;
@@ -174,13 +187,28 @@ class OtherTenantController extends Controller
 
         $data = $request->validate([
             'name'               => ['required', 'string', 'max:255'],
-            'cnic'               => ['nullable', 'string', 'max:20', 'unique:other_tenants,cnic,' . $otherTenant->id],
+            'cnic'               => ['required', 'string', 'max:15', 'unique:other_tenants,cnic,' . $otherTenant->id, 'regex:/^\d{5}-\d{7}-\d{1}$/'],
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'address'            => ['nullable', 'string'],
             'status'             => ['required', 'in:active,inactive'],
-            'maintenance_charge' => ['required', 'numeric', 'min:0'],
-            'unit_id'            => ['nullable', 'exists:units,id'],
+            'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'unit_id'            => [
+                'nullable',
+                'exists:units,id',
+                function ($attribute, $value, $fail) use ($otherTenant) {
+                    $exists = OtherTenant::where('unit_id', $value)
+                        ->where('id', '!=', $otherTenant->id)
+                        ->exists();
+                    if ($exists) {
+                        $fail('The selected unit is already attached to another tenant.');
+                    }
+                }
+            ],
+        ], [
+            'cnic.required' => 'CNIC is required.',
+            'cnic.regex'    => 'CNIC format must be: 35201-1234567-1',
+            'cnic.unique'   => 'This CNIC is already registered to another tenant.',
         ]);
 
         $newUnitId = $data['unit_id'] ?? null;
@@ -234,7 +262,18 @@ class OtherTenantController extends Controller
         }
 
         $request->validate([
-            'unit_id' => ['required', 'exists:units,id'],
+            'unit_id' => [
+                'required',
+                'exists:units,id',
+                function ($attribute, $value, $fail) use ($otherTenant) {
+                    $exists = OtherTenant::where('unit_id', $value)
+                        ->where('id', '!=', $otherTenant->id)
+                        ->exists();
+                    if ($exists) {
+                        $fail('The selected unit is already attached to another tenant.');
+                    }
+                }
+            ],
         ]);
 
         $unit = Unit::where('id', $request->unit_id)
@@ -274,12 +313,6 @@ class OtherTenantController extends Controller
 
     private function performAttach(OtherTenant $otherTenant, int $unitId): void
     {
-        // Detach any existing other-tenant from the target unit first
-        $existingTenant = OtherTenant::where('unit_id', $unitId)->first();
-        if ($existingTenant && $existingTenant->id !== $otherTenant->id) {
-            $this->performDetach($existingTenant);
-        }
-
         // Set unit_id on other_tenant
         $otherTenant->update(['unit_id' => $unitId]);
 

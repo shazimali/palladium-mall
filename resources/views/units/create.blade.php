@@ -8,13 +8,13 @@
             @csrf
             @include('units._form')
 
-            <div class="flex items-center gap-3 pt-2">
+            <div class="flex items-center gap-3 pt-4 mt-6 border-t border-gray-150 dark:border-gray-800">
                 <button type="submit"
                     class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
-                    Save Unit
+                    Save Flat/Shop
                 </button>
                 <a href="{{ route('units.index') }}"
                     class="inline-flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">

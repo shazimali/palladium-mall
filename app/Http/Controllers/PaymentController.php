@@ -34,27 +34,33 @@ class PaymentController extends Controller
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->type, fn($q) => $q->ofType($request->type))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id))
             ->when($month, fn($q) => $q->forMonth($month))
             ->latest('month')
             ->paginate(20)
             ->withQueryString();
 
-        // Summary counts for selected month (defaults to current month)
+        // Summary counts for selected month and unit (defaults to current month)
         $targetMonth = $month ?: Carbon::now()->startOfMonth()->toDateString();
+        $summaryQuery = Payment::forMonth($targetMonth)
+            ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id));
+
         $summary = [
-            'total_due' => Payment::forMonth($targetMonth)->sum('amount'),
-            'total_paid' => Payment::forMonth($targetMonth)->sum('amount_paid'),
-            'unpaid_count' => Payment::forMonth($targetMonth)->unpaid()->count(),
-            'overdue_count' => Payment::forMonth($targetMonth)->whereIn('status', ['unpaid', 'partial'])->where('due_date', '<', now())->count(),
+            'total_due' => (float) (clone $summaryQuery)->sum('amount'),
+            'total_paid' => (float) (clone $summaryQuery)->sum('amount_paid'),
+            'unpaid_count' => (clone $summaryQuery)->unpaid()->count(),
+            'overdue_count' => (clone $summaryQuery)->whereIn('status', ['unpaid', 'partial'])->where('due_date', '<', now())->count(),
         ];
 
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
+        $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
 
         return view('payments.index', [
             'title' => 'Rent & Payments',
             'payments' => $payments,
             'summary' => $summary,
             'paymentAccounts' => $paymentAccounts,
+            'units' => $units,
         ]);
     }
 
@@ -89,7 +95,7 @@ class PaymentController extends Controller
                 'notes'    => ['nullable', 'string', 'max:500'],
             ]);
 
-            $unit  = Unit::with('otherTenant')->findOrFail($request->unit_id);
+            $unit  = Unit::with(['otherTenant', 'landlord'])->findOrFail($request->unit_id);
             $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
 
             // Duplicate check
@@ -104,9 +110,14 @@ class PaymentController extends Controller
                     ->withErrors(['month' => 'A maintenance payment for this unit and month already exists.']);
             }
 
+            $otherTenant = $unit->otherTenant;
+            $whatsappNumber = $otherTenant 
+                ? $otherTenant->whatsapp_number 
+                : $unit->landlord?->phone;
+
             Payment::create([
                 'tenant_id'        => null,
-                'other_tenant_id'  => $unit->otherTenant?->id,
+                'other_tenant_id'  => $otherTenant?->id,
                 'unit_id'          => $unit->id,
                 'agreement_id'     => null,
                 'type'             => 'maintenance',
@@ -116,6 +127,7 @@ class PaymentController extends Controller
                 'status'           => 'unpaid',
                 'due_date'         => $request->due_date,
                 'notes'            => $request->notes,
+                'whatsapp_number'  => $whatsappNumber,
             ]);
 
             return redirect()

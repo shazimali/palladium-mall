@@ -3,6 +3,16 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Other Tenants" />
 
+    @if($errors->any())
+        <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+            <ul class="list-disc pl-4 space-y-1">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     @if(session('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
             class="mb-4 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
@@ -88,7 +98,6 @@
                         <th class="px-4 py-3">CNIC / INC</th>
                         <th class="px-4 py-3">Phone</th>
                         <th class="px-4 py-3">Attached Unit</th>
-                        <th class="px-4 py-3">Maint. Charge</th>
                         <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -125,16 +134,6 @@
                                             {{ $ot->unit->floor?->name }} &mdash; {{ $ot->unit->block?->name }}
                                         </span>
                                     </div>
-                                @else
-                                    <span class="text-gray-400 text-xs">—</span>
-                                @endif
-                            </td>
-
-                            {{-- Maintenance Charge --}}
-                            <td class="px-4 py-3">
-                                @if($ot->maintenance_charge)
-                                    <span class="font-semibold text-gray-800 dark:text-white/90">Rs. {{ number_format($ot->maintenance_charge, 0) }}</span>
-                                    <span class="text-[11px] text-gray-400">/mo</span>
                                 @else
                                     <span class="text-gray-400 text-xs">—</span>
                                 @endif
@@ -280,21 +279,28 @@
                                         </td>
                                         <td class="px-3 py-2 text-xs">
                                             @if($unit->otherTenant)
-                                                <span class="text-orange-600 dark:text-orange-400">{{ $unit->otherTenant->name }}</span>
-                                                <span class="text-gray-400">(will be replaced)</span>
+                                                <span class="font-semibold text-red-600 dark:text-red-400">{{ $unit->otherTenant->name }}</span>
+                                                <span class="block text-[10px] text-gray-400 font-normal mt-0.5">(Already attached)</span>
                                             @else
                                                 <span class="text-gray-400">—</span>
                                             @endif
                                         </td>
                                         <td class="px-3 py-2 text-right">
-                                            <form :action="`/other-tenants/${tenantId}/attach`" method="POST">
-                                                @csrf
-                                                <input type="hidden" name="unit_id" value="{{ $unit->id }}">
-                                                <button type="submit"
-                                                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors">
-                                                    Select
+                                            @if($unit->otherTenant)
+                                                <button type="button" disabled
+                                                    class="inline-flex items-center gap-1 rounded-lg px-3 py-1 text-xs font-medium bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600">
+                                                    <span>🔒</span> Locked
                                                 </button>
-                                            </form>
+                                            @else
+                                                <form :action="`/other-tenants/${tenantId}/attach`" method="POST">
+                                                    @csrf
+                                                    <input type="hidden" name="unit_id" value="{{ $unit->id }}">
+                                                    <button type="submit"
+                                                        class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors">
+                                                        Select
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach

@@ -1,7 +1,13 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Payment — {{ $payment->tenant?->name ?? 'Deleted Tenant' }}" />
+    @php
+        $recipientName = $payment->tenant?->name 
+            ?: ($payment->otherTenant?->name 
+                ?: ($payment->unit?->landlord?->name ?: 'Self-Owned Unit'));
+    @endphp
+
+    <x-common.page-breadcrumb pageTitle="Payment — {{ $recipientName }}" />
 
     @if(session('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
@@ -14,12 +20,12 @@
     @endif
 
     <x-common.component-card
-        title="{{ $payment->tenant?->name ?? 'Deleted Tenant' }}"
+        title="{{ $recipientName }}"
         desc="{{ ucfirst($payment->type) }} — {{ $payment->month->format('F Y') }} — Unit {{ $payment->unit?->unit_number ?? 'Deleted Unit' }}">
 
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach([
-                ['Tenant',          $payment->tenant?->name ?? 'Deleted Tenant'],
+                ['Owner / Tenant',  $recipientName],
                 ['Unit',            $payment->unit?->unit_number ?? 'Deleted Unit'],
                 ['Type',            ucfirst($payment->type)],
                 ['Month',           $payment->month->format('F Y')],
@@ -74,7 +80,7 @@
 
             @if(auth()->user()->hasPermission('payments.whatsapp') || auth()->user()->isSuperAdmin())
                 @php
-                    $phone = $payment->tenant->whatsapp_number ?: $payment->tenant->phone;
+                    $phone = $payment->whatsapp_number ?: ($payment->tenant?->whatsapp_number ?: $payment->tenant?->phone);
                     $phoneClean = preg_replace('/\D/', '', $phone);
                     if (strpos($phoneClean, '0') === 0 && strlen($phoneClean) === 11) {
                         $phoneClean = '92' . substr($phoneClean, 1);
@@ -88,7 +94,7 @@
                     $statusStr = ucfirst($payment->status);
                     $paymentUrl = $payment->public_url;
 
-                    $message = "Dear {$payment->tenant->name},\n\nThis is a notification for your {$typeStr} payment towards Unit {$payment->unit->unit_number} for {$monthStr}.\n\nBill Details:\n- Type: {$typeStr}\n- Month: {$monthStr}\n- Total Amount: Rs. {$amountStr}\n- Amount Paid: Rs. {$paidStr}\n- Due Date: {$dueDateStr}\n- Status: {$statusStr}\n\nYou can view/print your bill copy here: {$paymentUrl}\n\nRegards,\nPalladium Mall Management";
+                    $message = "Dear {$recipientName},\n\nThis is a notification for your {$typeStr} payment towards Unit " . ($payment->unit?->unit_number ?? '') . " for {$monthStr}.\n\nBill Details:\n- Type: {$typeStr}\n- Month: {$monthStr}\n- Total Amount: Rs. {$amountStr}\n- Amount Paid: Rs. {$paidStr}\n- Due Date: {$dueDateStr}\n- Status: {$statusStr}\n\nYou can view/print your bill copy here: {$paymentUrl}\n\nRegards,\nPalladium Mall Management";
                     $whatsappUrl = "https://api.whatsapp.com/send?phone=" . urlencode($phoneClean) . "&text=" . urlencode($message);
                 @endphp
                 <a href="{{ $whatsappUrl }}" target="_blank"

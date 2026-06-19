@@ -50,7 +50,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'status', 'type', 'month']))
+                @if(request()->anyFilled(['search', 'status', 'type', 'month', 'unit_id']))
                     <a href="{{ route('payments.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
                         Clear
@@ -102,6 +102,19 @@
                     </span>
                     <input type="text" name="search" value="{{ request('search') }}" placeholder="Search tenant, unit, ref..."
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+                </div>
+
+                <!-- Unit Filter -->
+                <div class="relative">
+                    <select name="unit_id" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Units</option>
+                        @foreach($units as $unit)
+                            <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
+                                {{ $unit->unit_number }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <!-- Status Filter -->
@@ -244,9 +257,15 @@
                                         </a>
 
                                         @if(auth()->user()->hasPermission('payments.whatsapp') || auth()->user()->isSuperAdmin())
-                                            @if($payment->tenant)
                                             @php
-                                                $phone = $payment->tenant->whatsapp_number ?: $payment->tenant->phone;
+                                                $phone = $payment->whatsapp_number ?: ($payment->tenant?->whatsapp_number ?: $payment->tenant?->phone);
+                                            @endphp
+                                            @if($phone)
+                                            @php
+                                                $recipientName = $payment->tenant?->name 
+                                                    ?: ($payment->otherTenant?->name 
+                                                        ?: ($payment->unit?->landlord?->name ?: 'Self-Owned Unit'));
+
                                                 $phoneClean = preg_replace('/\D/', '', $phone);
                                                 if (strpos($phoneClean, '0') === 0 && strlen($phoneClean) === 11) {
                                                     $phoneClean = '92' . substr($phoneClean, 1);
@@ -260,7 +279,7 @@
                                                 $statusStr = ucfirst($payment->status);
                                                 $paymentUrl = $payment->public_url;
 
-                                                $message = "Dear {$payment->tenant->name},\n\nThis is a notification for your {$typeStr} payment towards Unit {$payment->unit->unit_number} for {$monthStr}.\n\nBill Details:\n- Type: {$typeStr}\n- Month: {$monthStr}\n- Total Amount: Rs. {$amountStr}\n- Amount Paid: Rs. {$paidStr}\n- Due Date: {$dueDateStr}\n- Status: {$statusStr}\n\nYou can view/print your bill copy here: {$paymentUrl}\n\nRegards,\nPalladium Mall Management";
+                                                $message = "Dear {$recipientName},\n\nThis is a notification for your {$typeStr} payment towards Unit " . ($payment->unit?->unit_number ?? '') . " for {$monthStr}.\n\nBill Details:\n- Type: {$typeStr}\n- Month: {$monthStr}\n- Total Amount: Rs. {$amountStr}\n- Amount Paid: Rs. {$paidStr}\n- Due Date: {$dueDateStr}\n- Status: {$statusStr}\n\nYou can view/print your bill copy here: {$paymentUrl}\n\nRegards,\nPalladium Mall Management";
                                                 $whatsappUrl = "https://api.whatsapp.com/send?phone=" . urlencode($phoneClean) . "&text=" . urlencode($message);
                                             @endphp
                                             <a href="{{ $whatsappUrl }}" target="_blank"

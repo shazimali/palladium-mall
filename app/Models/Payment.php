@@ -41,6 +41,7 @@ class Payment extends Model
         'payment_account_id',
         'hash',
         'receipt_no',
+        'whatsapp_number',
     ];
 
     protected $casts = [

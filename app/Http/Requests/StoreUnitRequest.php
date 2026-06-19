@@ -25,20 +25,34 @@ class StoreUnitRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'unit_number' => ['required', 'string', 'max:20', Rule::unique('units', 'unit_number')],
-            'floor_id' => ['required', 'exists:floors,id'],
-            'block_id' => ['required', 'exists:blocks,id'],
-            'area_id' => ['required', 'exists:areas,id'],
-            'landlord_id' => ['required', 'exists:landlords,id'],
-            'type' => ['required', 'in:flat,shop,office'],
-            'status' => ['required', 'in:vacant,rented,self'],
-            'file_no' => ['nullable', 'string', 'max:100', Rule::unique('units', 'file_no')],
-            'area_sqft' => ['nullable', 'numeric', 'min:0'],
-            'elec_meter_id' => ['nullable', 'string', 'max:50'],
-            'water_meter_id' => ['nullable', 'string', 'max:50'],
-            'gas_meter_id' => ['nullable', 'string', 'max:50'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'date' => ['nullable', 'date'],
+            'unit_number'             => ['required', 'string', 'max:20', Rule::unique('units', 'unit_number')],
+            'floor_id'                => ['required', 'exists:floors,id'],
+            'block_id'                => ['required', 'exists:blocks,id'],
+            'area_id'                 => ['nullable', 'exists:areas,id'],
+            'landlord_id'             => ['nullable', 'exists:landlords,id'],
+            'type'                    => ['required', 'in:flat,shop,office'],
+            'status'                  => ['nullable', 'in:vacant,rented,self'],
+            'file_no'                 => ['nullable', 'string', 'max:100', Rule::unique('units', 'file_no')],
+            'area_sqft'               => ['nullable', 'numeric', 'min:0'],
+            'is_self'                 => ['nullable', 'boolean'],
+            'self_maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            
+            // Nominee
+            'nominee_name'            => ['nullable', 'string', 'max:255'],
+            'nominee_relation_type'   => ['nullable', 'in:son_of,daughter_of,wife_of'],
+            'nominee_relation_name'   => ['nullable', 'string', 'max:255'],
+            
+            // Financial
+            'total_amount'            => ['nullable', 'numeric', 'min:0'],
+            'received_amount'         => ['nullable', 'numeric', 'min:0'],
+            'received_from'           => ['nullable', 'string', 'max:255'],
+            
+            // Office
+            'approved_by'             => ['nullable', 'string', 'max:255'],
+            'received_by'             => ['nullable', 'string', 'max:255'],
+            'approved_date'           => ['nullable', 'date'],
+            'notes'                   => ['nullable', 'string', 'max:1000'],
+            'date'                    => ['nullable', 'date'],
         ];
     }
 }

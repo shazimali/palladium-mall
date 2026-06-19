@@ -35,17 +35,6 @@
                 <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->whatsapp_number ?? '—' }}</p>
             </div>
             <div>
-                <p class="text-xs font-medium uppercase text-gray-400">Maintenance Charge</p>
-                <p class="mt-1 text-sm font-bold text-gray-800 dark:text-white/90">
-                    @if($otherTenant->maintenance_charge)
-                        Rs. {{ number_format($otherTenant->maintenance_charge, 0) }}
-                        <span class="text-xs font-normal text-gray-400">/mo</span>
-                    @else
-                        —
-                    @endif
-                </p>
-            </div>
-            <div>
                 <p class="text-xs font-medium uppercase text-gray-400">Status</p>
                 <p class="mt-1">
                     @if($otherTenant->status === 'active')

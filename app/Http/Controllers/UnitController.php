@@ -58,16 +58,67 @@ class UnitController extends Controller
         ]);
     }
 
-    public function create(): RedirectResponse
+    public function create(Request $request): View
     {
-        return redirect()->route('landlords.index')
-            ->with('info', 'Units are created and managed through the Landlord form. Select a landlord and use the Units panel.');
+        $floors = Floor::orderBy('name')->get();
+        $blocks = Block::orderBy('name')->get();
+        $areas = Area::orderBy('name')->get();
+        $landlords = Landlord::orderBy('name')->get();
+        
+        $selectedLandlordId = $request->query('landlord_id');
+        $unit = new Unit();
+
+        return view('units.create', [
+            'title'              => 'Add New Flat/Shop',
+            'unit'               => $unit,
+            'floors'             => $floors,
+            'blocks'             => $blocks,
+            'areas'              => $areas,
+            'landlords'          => $landlords,
+            'selectedLandlordId' => $selectedLandlordId,
+        ]);
     }
 
-    public function store(): RedirectResponse
+    public function store(StoreUnitRequest $request): RedirectResponse
     {
-        return redirect()->route('landlords.index')
-            ->with('info', 'Units are created through the Landlord form.');
+        $data = $request->validated();
+
+        $unit = Unit::create([
+            'unit_number'             => $data['unit_number'],
+            'type'                    => $data['type'],
+            'floor_id'                => $data['floor_id'],
+            'block_id'                => $data['block_id'],
+            'area_id'                 => $data['area_id'] ?? null,
+            'area_sqft'               => $data['area_sqft'] ?? null,
+            'file_no'                 => $data['file_no'] ?? null,
+            'date'                    => $data['date'] ?? now()->toDateString(),
+            'status'                  => $data['status'] ?? 'vacant',
+            'landlord_id'             => $data['landlord_id'] ?? null,
+            'is_self'                 => $data['is_self'] ?? false,
+            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? 2500) : null,
+        ]);
+
+        if (!empty($data['landlord_id'])) {
+            \App\Models\UnitOwnership::create([
+                'unit_id'               => $unit->id,
+                'landlord_id'           => $data['landlord_id'],
+                'is_current'            => true,
+                'start_date'            => $data['date'] ?? now()->toDateString(),
+                'nominee_name'          => $data['nominee_name'] ?? null,
+                'nominee_relation_type' => $data['nominee_relation_type'] ?? null,
+                'nominee_relation_name' => $data['nominee_relation_name'] ?? null,
+                'total_amount'          => $data['total_amount'] ?? null,
+                'received_amount'       => $data['received_amount'] ?? null,
+                'received_from'         => $data['received_from'] ?? null,
+                'approved_by'           => $data['approved_by'] ?? null,
+                'received_by'           => $data['received_by'] ?? null,
+                'approved_date'         => $data['approved_date'] ?? null,
+                'notes'                 => $data['notes'] ?? null,
+            ]);
+        }
+
+        return redirect()->route('units.show', $unit)
+            ->with('success', "Flat/Shop {$unit->unit_number} created successfully.");
     }
 
     public function show(Unit $unit): View
@@ -197,20 +248,109 @@ class UnitController extends Controller
     {
         $unit->load(['meters', 'landlord', 'currentOwnership']);
 
+        $floors = Floor::orderBy('name')->get();
+        $blocks = Block::orderBy('name')->get();
+        $areas = Area::orderBy('name')->get();
+        $landlords = Landlord::orderBy('name')->get();
+
         return view('units.edit', [
-            'title' => 'Billing Update — ' . $unit->unit_number,
-            'unit' => $unit,
+            'title'          => 'Update Flat/Shop — ' . $unit->unit_number,
+            'unit'           => $unit,
             'existingMeters' => $unit->meters->keyBy('type'),
+            'floors'         => $floors,
+            'blocks'         => $blocks,
+            'areas'          => $areas,
+            'landlords'      => $landlords,
         ]);
     }
 
     public function update(UpdateUnitRequest $request, Unit $unit): RedirectResponse
     {
-        $unit->update($request->only(['notes']));
+        $data = $request->validated();
+        $oldLandlordId = $unit->landlord_id;
+        $newLandlordId = $data['landlord_id'] ?? null;
 
-        return redirect()
-            ->route('units.show', $unit)
-            ->with('success', 'Billing notes updated successfully.');
+        // Update structural unit fields
+        $unit->update([
+            'unit_number'             => $data['unit_number'],
+            'type'                    => $data['type'],
+            'floor_id'                => $data['floor_id'],
+            'block_id'                => $data['block_id'],
+            'area_id'                 => $data['area_id'] ?? null,
+            'area_sqft'               => $data['area_sqft'] ?? null,
+            'file_no'                 => $data['file_no'] ?? null,
+            'date'                    => $data['date'] ?? $unit->date,
+            'status'                  => $data['status'] ?? $unit->status,
+            'landlord_id'             => $newLandlordId,
+            'is_self'                 => $data['is_self'] ?? false,
+            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? 2500) : null,
+        ]);
+
+        // Manage ownership records
+        if ($oldLandlordId != $newLandlordId) {
+            // Landlord changed or removed
+            if ($oldLandlordId) {
+                // Close the old ownership record
+                \App\Models\UnitOwnership::where('unit_id', $unit->id)
+                    ->where('is_current', true)
+                    ->update([
+                        'is_current' => false,
+                        'end_date'   => $data['date'] ?? now()->toDateString(),
+                    ]);
+            }
+
+            if ($newLandlordId) {
+                // Create a new ownership record
+                \App\Models\UnitOwnership::create([
+                    'unit_id'               => $unit->id,
+                    'landlord_id'           => $newLandlordId,
+                    'is_current'            => true,
+                    'start_date'            => $data['date'] ?? now()->toDateString(),
+                    'nominee_name'          => $data['nominee_name'] ?? null,
+                    'nominee_relation_type' => $data['nominee_relation_type'] ?? null,
+                    'nominee_relation_name' => $data['nominee_relation_name'] ?? null,
+                    'total_amount'          => $data['total_amount'] ?? null,
+                    'received_amount'       => $data['received_amount'] ?? null,
+                    'received_from'         => $data['received_from'] ?? null,
+                    'approved_by'           => $data['approved_by'] ?? null,
+                    'received_by'           => $data['received_by'] ?? null,
+                    'approved_date'         => $data['approved_date'] ?? null,
+                    'notes'                 => $data['notes'] ?? null,
+                ]);
+            }
+        } else {
+            // Landlord didn't change (could be the same landlord, or both are null)
+            if ($newLandlordId) {
+                // Update or create current ownership
+                \App\Models\UnitOwnership::updateOrCreate(
+                    ['unit_id' => $unit->id, 'is_current' => true],
+                    [
+                        'landlord_id'           => $newLandlordId,
+                        'nominee_name'          => $data['nominee_name'] ?? null,
+                        'nominee_relation_type' => $data['nominee_relation_type'] ?? null,
+                        'nominee_relation_name' => $data['nominee_relation_name'] ?? null,
+                        'total_amount'          => $data['total_amount'] ?? null,
+                        'received_amount'       => $data['received_amount'] ?? null,
+                        'received_from'         => $data['received_from'] ?? null,
+                        'approved_by'           => $data['approved_by'] ?? null,
+                        'received_by'           => $data['received_by'] ?? null,
+                        'approved_date'         => $data['approved_date'] ?? null,
+                        'notes'                 => $data['notes'] ?? null,
+                    ]
+                );
+            } else {
+                // No landlord assigned, close any current ownership if it somehow exists
+                \App\Models\UnitOwnership::where('unit_id', $unit->id)
+                    ->where('is_current', true)
+                    ->update([
+                        'is_current' => false,
+                        'end_date'   => $data['date'] ?? now()->toDateString(),
+                    ]);
+            }
+        }
+
+        return redirect()->route('units.show', $unit)
+            ->with('success', "Flat/Shop {$unit->unit_number} updated successfully.");
     }
 
     public function destroy(Unit $unit): RedirectResponse
