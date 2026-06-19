@@ -215,6 +215,7 @@ class ReportController extends Controller
             'amount_paid'     => (float) $p->amount_paid,
             'status'          => $p->status,
             'paid_at'         => $p->paid_at,
+            'is_self'         => (bool) ($p->unit?->is_self),
         ]);
 
         // Projections: only run if payment-specific filters are NOT set
@@ -284,6 +285,7 @@ class ReportController extends Controller
                                     'amount_paid'     => 0.0,
                                     'status'          => 'pending',
                                     'paid_at'         => null,
+                                    'is_self'         => (bool) ($agreement->unit?->is_self),
                                 ]);
                             }
                         }
@@ -309,6 +311,7 @@ class ReportController extends Controller
                                     'amount_paid'     => 0.0,
                                     'status'          => 'pending',
                                     'paid_at'         => null,
+                                    'is_self'         => (bool) ($agreement->unit?->is_self),
                                 ]);
                             }
                         }
@@ -474,6 +477,7 @@ class ReportController extends Controller
                 'received'         => $total_received,
                 'payment_accounts' => $accountsBreakdown,
                 'pending'          => $pending,
+                'is_self'          => (bool) $unit->is_self,
             ]);
         }
 

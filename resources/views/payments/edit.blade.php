@@ -19,7 +19,7 @@
             selfUnits: {{ $selfUnits->map(fn($u) => [
                 'id'      => $u->id,
                 'label'   => $u->unit_number . ($u->floor ? ' — ' . $u->floor->name : '') . ($u->block ? ' / ' . $u->block->name : ''),
-                'charge'  => $u->otherTenant?->maintenance_charge ?? 0,
+                'charge'  => $u->self_maintenance_charge ?? 0,
             ])->values()->toJson() }},
             selectSelfUnit(id) {
                 this.selfUnitId = id;
@@ -50,7 +50,7 @@
                                     <option value="">Select unit</option>
                                     @foreach($selfUnits as $su)
                                         <option value="{{ $su->id }}"
-                                            data-charge="{{ $su->otherTenant?->maintenance_charge ?? 0 }}"
+                                            data-charge="{{ $su->self_maintenance_charge ?? 0 }}"
                                             {{ old('unit_id', $payment->unit_id) == $su->id ? 'selected' : '' }}>
                                             {{ $su->unit_number }}
                                             {{ $su->floor ? '— ' . $su->floor->name : '' }}

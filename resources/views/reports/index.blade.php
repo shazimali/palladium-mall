@@ -303,7 +303,7 @@
                     @if(($filters['report_type'] ?? '') === 'monthly_matrix')
                         @include('reports.partials.matrix_table')
                     @else
-                        <div class="overflow-x-auto">
+                        <div class="max-h-[calc(100vh-320px)] overflow-auto rounded-lg border border-gray-200 dark:border-gray-800">
                             <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
                                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
                                     <tr>
@@ -383,16 +383,23 @@
                                             </td>
 
                                             <td class="px-4 py-3">
-                                                @php
-                                                    $statusClass = match($entry['status']) {
-                                                        'paid'    => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                                        'partial' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                                        default   => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-                                                    };
-                                                @endphp
-                                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $statusClass }}">
-                                                    {{ ucfirst($entry['status']) }}
-                                                </span>
+                                                <div class="flex flex-col gap-1 items-start">
+                                                    @php
+                                                        $statusClass = match($entry['status']) {
+                                                            'paid'    => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                                            'partial' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                                                            default   => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+                                                        };
+                                                    @endphp
+                                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $statusClass }}">
+                                                        {{ ucfirst($entry['status']) }}
+                                                    </span>
+                                                    @if(!empty($entry['is_self']))
+                                                        <span class="inline-flex items-center gap-0.5 rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                                                            Self
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             </td>
 
                                             <td data-order="{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->toDateString() : '0000-00-00' }}" class="px-4 py-3 text-xs text-gray-500">
@@ -596,6 +603,18 @@
     .dark #reportTable thead th,
     .dark table.dataTable thead th {
         color: #ffffff !important;
+    }
+    /* Sticky table header headings */
+    #reportTable thead th {
+        position: sticky !important;
+        top: 0 !important; /* Aligns to the top of the scroll container */
+        z-index: 20 !important;
+        background-color: #f9fafb !important; /* bg-gray-50 */
+        box-shadow: inset 0 -1px 0 #e5e7eb, 0 1px 2px rgba(0,0,0,0.05) !important;
+    }
+    .dark #reportTable thead th {
+        background-color: #1f2937 !important; /* dark:bg-gray-800 */
+        box-shadow: inset 0 -1px 0 #374151, 0 1px 2px rgba(0,0,0,0.2) !important;
     }
 </style>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>

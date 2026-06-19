@@ -107,6 +107,7 @@
         .badge-unpaid  { background: #FEE2E2; color: #DC2626; }
         .badge-partial { background: #FEF3C7; color: #DC7609; }
         .badge-pending { background: #DBEAFE; color: #1D4ED8; }
+        .badge-self    { background: #EDE9FE; color: #6D28D9; }
 
         .type-rent        { background: #DBEAFE; color: #1D4ED8; }
         .type-fine        { background: #FEE2E2; color: #DC2626; }
@@ -308,6 +309,12 @@
                             <span class="badge {{ $entry['status'] === 'RENTED' ? 'badge-paid' : ($entry['status'] === 'VACANT' ? 'badge-unpaid' : 'badge-pending') }}">
                                 {{ $entry['status'] }}
                             </span>
+                            @if(!empty($entry['is_self']))
+                                <br>
+                                <span class="badge badge-self" style="margin-top: 3px;">
+                                    Self
+                                </span>
+                            @endif
                         </td>
                         <td>Rs. {{ number_format($entry['serv'], 2) }}</td>
                         <td>Rs. {{ number_format($entry['extra'], 2) }}</td>
@@ -396,6 +403,12 @@
                             <span class="badge badge-{{ $entry['status'] ?? 'unpaid' }}">
                                 {{ ucfirst($entry['status'] ?? '') }}
                             </span>
+                            @if(!empty($entry['is_self']))
+                                <br>
+                                <span class="badge badge-self" style="margin-top: 3px;">
+                                    Self
+                                </span>
+                            @endif
                         </td>
                         <td>{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->format('d M Y') : '—' }}</td>
                         <td>{{ $entry['payment_account'] ?? '—' }}</td>

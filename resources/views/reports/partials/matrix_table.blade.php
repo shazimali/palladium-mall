@@ -2,7 +2,7 @@
     $paymentAccountsList = \App\Models\PaymentAccount::orderBy('name')->get(['id', 'name']);
 @endphp
 
-<div class="overflow-x-auto">
+<div class="max-h-[calc(100vh-320px)] overflow-auto rounded-lg border border-gray-200 dark:border-gray-800">
     <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
         <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
             <tr>
@@ -43,17 +43,24 @@
                     </td>
                     <td class="px-4 py-3 font-medium">{{ $entry['owner'] }}</td>
                     <td class="px-4 py-3 text-xs">
-                        @php
-                            $statusClass = match($entry['status']) {
-                                'RENTED' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                'VACANT' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                'SELF'   => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                                default  => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-                            };
-                        @endphp
-                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $statusClass }}">
-                            {{ $entry['status'] }}
-                        </span>
+                        <div class="flex flex-col gap-1 items-start">
+                            @php
+                                $statusClass = match($entry['status']) {
+                                    'RENTED' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                    'VACANT' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+                                    'SELF'   => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+                                    default  => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+                                };
+                            @endphp
+                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $statusClass }}">
+                                {{ $entry['status'] }}
+                            </span>
+                            @if(!empty($entry['is_self']))
+                                <span class="inline-flex items-center gap-0.5 rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                                    Self
+                                </span>
+                            @endif
+                        </div>
                     </td>
                     <td class="px-4 py-3">Rs. {{ number_format($entry['serv']) }}</td>
                     <td class="px-4 py-3">Rs. {{ number_format($entry['extra']) }}</td>

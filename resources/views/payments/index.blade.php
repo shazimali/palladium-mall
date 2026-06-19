@@ -504,16 +504,11 @@
                                 </label>
                             </div>
 
-                            {{-- External owner units checkbox --}}
-                            <div class="rounded-lg border border-violet-200 bg-violet-50 px-3 py-2.5 dark:border-violet-800/40 dark:bg-violet-900/10">
-                                <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                                    <input type="checkbox" name="include_self_units" value="1"
-                                        class="mt-0.5 rounded border-gray-300 text-violet-500 focus:ring-violet-500">
-                                    <div>
-                                        <span class="font-medium">Include Self-Owned Units</span>
-                                        <p class="mt-0.5 text-[11px] text-gray-400">Also generates maintenance payments for all self-owned units. Duplicates are automatically skipped.</p>
-                                    </div>
-                                </label>
+                            {{-- External owner units note --}}
+                            <div class="rounded-lg border border-blue-200 bg-blue-50/50 px-3.5 py-2.5 dark:border-blue-900/40 dark:bg-blue-950/10">
+                                <p class="text-xs text-blue-700 dark:text-blue-300">
+                                    <strong>Note:</strong> Self-owned units with active maintenance charges are automatically included when generating <strong>Maintenance</strong> payments.
+                                </p>
                             </div>
                         </div>
                     </div>

@@ -335,14 +335,14 @@ class PaymentController extends Controller
             }
 
             // ── External owner (is_self) units: maintenance-only ──────────
-            if ($request->boolean('include_self_units') && in_array('maintenance', $request->types)) {
+            if (in_array('maintenance', $request->types)) {
                 $selfUnits = Unit::where('is_self', true)
-                    ->with('otherTenant')
+                    ->with(['otherTenant', 'landlord'])
                     ->get();
 
                 foreach ($selfUnits as $selfUnit) {
-                    $otherTenant = $selfUnit->otherTenant;
-                    if (!$otherTenant || !$otherTenant->maintenance_charge || $otherTenant->maintenance_charge <= 0) {
+                    $charge = $selfUnit->self_maintenance_charge;
+                    if (!$charge || $charge <= 0) {
                         continue;
                     }
 
@@ -357,17 +357,23 @@ class PaymentController extends Controller
                         continue;
                     }
 
+                    $otherTenant = $selfUnit->otherTenant;
+                    $whatsappNumber = $otherTenant 
+                        ? $otherTenant->whatsapp_number 
+                        : $selfUnit->landlord?->phone;
+
                     Payment::create([
                         'tenant_id'        => null,
-                        'other_tenant_id'  => $otherTenant->id,
+                        'other_tenant_id'  => $otherTenant?->id,
                         'unit_id'          => $selfUnit->id,
                         'agreement_id'     => null,
                         'type'             => 'maintenance',
                         'month'            => $month,
-                        'amount'           => $otherTenant->maintenance_charge,
+                        'amount'           => $charge,
                         'amount_paid'      => 0,
                         'status'           => 'unpaid',
                         'due_date'         => $dueDate,
+                        'whatsapp_number'  => $whatsappNumber,
                     ]);
 
                     $created++;
