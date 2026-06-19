@@ -406,7 +406,7 @@ Structural and ownership fields managed directly in the Units module.
                 <div class="relative max-w-xs">
                     <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Rs.</span>
                     <input type="number" name="self_maintenance_charge" step="0.01"
-                        value="{{ old('self_maintenance_charge', $unit->self_maintenance_charge ?? 2500) }}"
+                        value="{{ old('self_maintenance_charge', $unit->self_maintenance_charge) }}"
                         placeholder="0.00"
                         class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                 </div>

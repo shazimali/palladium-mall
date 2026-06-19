@@ -88,7 +88,7 @@ class AjaxUnitController extends Controller
             'status'                  => 'vacant',
             'landlord_id'             => $data['landlord_id'],
             'is_self'                 => $data['is_self'] ?? false,
-            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? 2500) : null,
+            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? null) : null,
         ]);
 
         // Create the initial ownership record
@@ -154,7 +154,7 @@ class AjaxUnitController extends Controller
             'file_no'                 => $data['file_no'] ?? null,
             'date'                    => $data['date'] ?? $unit->date,
             'is_self'                 => $data['is_self'] ?? false,
-            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? 2500) : null,
+            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? null) : null,
         ]);
 
         // Update or create current ownership record
