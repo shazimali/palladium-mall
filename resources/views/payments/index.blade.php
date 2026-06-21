@@ -15,6 +15,32 @@
         </div>
     @endif
 
+    {{-- Owner Type Filter Tabs --}}
+    <div class="mb-6 flex flex-wrap gap-2">
+        @php
+            $activeOwner = request('owner_type', '');
+            $ownerTabs = [
+                ''        => ['label' => 'All Payments',          'icon' => '💳'],
+                'other'   => ['label' => 'Other-Owned Payments',  'icon' => '🏠'],
+                'pm_mall' => ['label' => 'PM Mall Payments',      'icon' => '🏢'],
+            ];
+        @endphp
+        @foreach($ownerTabs as $ownerKey => $tab)
+            @php
+                $tabParams = array_merge(request()->query(), ['owner_type' => $ownerKey]);
+                $isActive  = $activeOwner === $ownerKey;
+            @endphp
+            <a href="{{ route('payments.index', $tabParams) }}"
+               class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all
+                      {{ $isActive
+                          ? 'bg-brand-500 text-white shadow-sm'
+                          : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}">
+                <span>{{ $tab['icon'] }}</span>
+                {{ $tab['label'] }}
+            </a>
+        @endforeach
+    </div>
+
     {{-- Summary cards --}}
     @php
         $monthLabel = request('month') ? Carbon\Carbon::parse(request('month'))->format('F Y') : 'This Month';
@@ -39,7 +65,14 @@
         </div>
     </div>
 
-    <x-common.component-card title="All Payments" desc="Track rent, maintenance and fine payments">
+    @php
+        $cardTitle = match(request('owner_type')) {
+            'pm_mall' => 'PM Mall Payments',
+            'other' => 'Other-Owned Payments',
+            default => 'All Payments',
+        };
+    @endphp
+    <x-common.component-card :title="$cardTitle" desc="Track rent, maintenance and fine payments">
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-wrap gap-2">
@@ -90,6 +123,7 @@
         <div
             class="my-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <form action="{{ route('payments.index') }}" method="GET" class="flex flex-col gap-4 sm:flex-row sm:items-center">
+                <input type="hidden" name="owner_type" value="{{ request('owner_type') }}">
 
                 <!-- Search Input -->
                 <div class="relative flex-1 max-w-md">
@@ -176,10 +210,17 @@
                             <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
                                 @if($payment->tenant)
                                     {{ $payment->tenant->name }}
+                                @elseif($payment->otherTenant)
+                                    <div class="flex flex-col">
+                                        <span>{{ $payment->otherTenant->name }}</span>
+                                        <span class="inline-flex items-center gap-0.5 mt-0.5 text-[10px] font-medium text-violet-600 dark:text-violet-400">
+                                            Other-Owned
+                                        </span>
+                                    </div>
                                 @else
                                     <span class="inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
                                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                        Self-Owned
+                                        Other-Owned
                                     </span>
                                 @endif
                             </td>
@@ -211,27 +252,10 @@
                                 {{ $payment->due_date->format('d M Y') }}
                             </td>
                             <td class="px-4 py-3">
-                                @if(auth()->user()->hasPermission('payments.record') || auth()->user()->isSuperAdmin())
-                                    <form action="{{ route('payments.toggle-status', $payment) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" 
-                                                title="Click to toggle status (Paid / Unpaid)"
-                                                class="group relative inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold shadow-xs transition-all hover:scale-105 active:scale-95 border border-transparent {{ $payment->status === 'paid' ? 'bg-green-50 text-green-700 hover:bg-red-50 hover:text-red-700 hover:border-red-200 dark:hover:bg-red-950/20 dark:hover:text-red-400' : 'bg-red-50 text-red-700 hover:bg-green-50 hover:text-green-700 hover:border-green-200 dark:hover:bg-green-950/20 dark:hover:text-green-400' }}">
-                                            <!-- Dot indicator -->
-                                            <span class="h-1.5 w-1.5 rounded-full transition-colors {{ $payment->status === 'paid' ? 'bg-green-600 group-hover:bg-red-600' : 'bg-red-600 group-hover:bg-green-600' }}"></span>
-                                            
-                                            <!-- Status Text with hover state toggling -->
-                                            <span class="group-hover:hidden">{{ ucfirst($payment->status) }}</span>
-                                            <span class="hidden group-hover:inline">Mark as {{ $payment->status === 'paid' ? 'Unpaid' : 'Paid' }}</span>
-                                        </button>
-                                    </form>
-                                @else
-                                    <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $payment->status_badge_class }}">
-                                        <span class="h-1.5 w-1.5 rounded-full {{ $payment->status === 'paid' ? 'bg-green-600' : ($payment->status === 'partial' ? 'bg-orange-500' : 'bg-red-600') }}"></span>
-                                        {{ ucfirst($payment->status) }}
-                                    </span>
-                                @endif
+                                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $payment->status_badge_class }}">
+                                    <span class="h-1.5 w-1.5 rounded-full {{ $payment->status === 'paid' ? 'bg-green-600' : ($payment->status === 'partial' ? 'bg-orange-500' : 'bg-red-600') }}"></span>
+                                    {{ ucfirst($payment->status) }}
+                                </span>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex flex-col items-end gap-1.5">
@@ -264,7 +288,7 @@
                                             @php
                                                 $recipientName = $payment->tenant?->name 
                                                     ?: ($payment->otherTenant?->name 
-                                                        ?: ($payment->unit?->landlord?->name ?: 'Self-Owned Unit'));
+                                                        ?: ($payment->unit?->landlord?->name ?: 'Other-Owned Unit'));
 
                                                 $phoneClean = preg_replace('/\D/', '', $phone);
                                                 if (strpos($phoneClean, '0') === 0 && strlen($phoneClean) === 11) {
@@ -507,7 +531,7 @@
                             {{-- External owner units note --}}
                             <div class="rounded-lg border border-blue-200 bg-blue-50/50 px-3.5 py-2.5 dark:border-blue-900/40 dark:bg-blue-950/10">
                                 <p class="text-xs text-blue-700 dark:text-blue-300">
-                                    <strong>Note:</strong> Self-owned units with active maintenance charges are automatically included when generating <strong>Maintenance</strong> payments.
+                                    <strong>Note:</strong> Other-owned units with active maintenance charges are automatically included when generating <strong>Maintenance</strong> payments.
                                 </p>
                             </div>
                         </div>

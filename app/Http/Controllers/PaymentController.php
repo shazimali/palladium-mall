@@ -30,7 +30,21 @@ class PaymentController extends Controller
             }
         }
 
-        $payments = Payment::with(['tenant', 'unit', 'agreement', 'paymentAccount'])
+        // Base query with tenant constraints for other-owned units
+        $baseQuery = Payment::where(function ($q) {
+            $q->whereHas('unit', function ($qu) {
+                $qu->where('is_self', true)->whereHas('otherTenant');
+            })->orWhereHas('unit', function ($qu) {
+                $qu->where('is_self', false);
+            });
+        });
+
+        // Filter by owner_type
+        $ownerType = $request->owner_type;
+        $baseQuery->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
+                  ->when($ownerType === 'other',    fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
+
+        $payments = (clone $baseQuery)->with(['tenant', 'unit', 'agreement', 'paymentAccount', 'otherTenant'])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->type, fn($q) => $q->ofType($request->type))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
@@ -42,7 +56,7 @@ class PaymentController extends Controller
 
         // Summary counts for selected month and unit (defaults to current month)
         $targetMonth = $month ?: Carbon::now()->startOfMonth()->toDateString();
-        $summaryQuery = Payment::forMonth($targetMonth)
+        $summaryQuery = (clone $baseQuery)->forMonth($targetMonth)
             ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id));
 
         $summary = [

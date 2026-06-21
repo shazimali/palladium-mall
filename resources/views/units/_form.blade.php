@@ -348,12 +348,12 @@ Structural and ownership fields managed directly in the Units module.
             {{-- Label --}}
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-bold leading-tight text-blue-600 dark:text-blue-400">
-                    Self-Owned Unit
+                    Other-Owned Unit
                 </p>
                 <p class="mt-0.5 text-xs leading-snug"
                     :class="isSelf ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'">
-                    <span x-show="!isSelf">Toggle ON to mark this unit as self-owned.</span>
-                    <span x-show="isSelf">This unit is marked as self-owned — no rent will be generated.</span>
+                    <span x-show="!isSelf">Toggle ON to mark this unit as other-owned.</span>
+                    <span x-show="isSelf">This unit is marked as other-owned — no rent will be generated.</span>
                 </p>
             </div>
 

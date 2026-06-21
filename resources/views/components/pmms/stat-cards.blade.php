@@ -5,9 +5,10 @@
     'rentDue'       => 0,
     'utilitiesDue'  => 0,
     'occupancyRate' => 0,
+    'otherUnits'    => 0,
 ])
 
-<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 md:gap-5">
+<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 md:gap-5">
 
     {{-- Total Units — Blue/Brand --}}
     <div class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
@@ -100,6 +101,26 @@
             <h4 class="mt-1 text-xl font-extrabold">Rs. {{ number_format($utilitiesDue) }}</h4>
             <span class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: rgba(255,255,255,0.2);">
                 Pending
+            </span>
+        </div>
+    </div>
+
+    {{-- Other-Owned Units — Violet --}}
+    <div class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+         style="background: linear-gradient(135deg, #a855f7 0%, #701a75 100%);">
+        <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10" style="background: #fff;"></div>
+        <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10" style="background: #fff;"></div>
+        <div class="relative">
+            <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-xl" style="background: rgba(255,255,255,0.18);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+            </div>
+            <p class="text-xs font-semibold uppercase tracking-widest" style="color: rgba(255,255,255,0.75);">Other Owned</p>
+            <h4 class="mt-1 text-3xl font-extrabold">{{ number_format($otherUnits) }}</h4>
+            <span class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: rgba(255,255,255,0.2);">
+                Total Units
             </span>
         </div>
     </div>

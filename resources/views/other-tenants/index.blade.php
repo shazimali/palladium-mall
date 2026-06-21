@@ -25,7 +25,7 @@
         </div>
     @endif
 
-    <x-common.component-card title="Other Tenants" desc="Manage tenant profiles for self-owned units">
+    <x-common.component-card title="Other Tenants" desc="Manage tenant profiles for other-owned units">
 
         {{-- ── Top bar: Status tabs + Actions ── --}}
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

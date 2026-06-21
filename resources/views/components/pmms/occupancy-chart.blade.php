@@ -39,7 +39,7 @@
         </div>
         <div class="py-4 text-center">
             <div class="mx-auto mb-1.5 h-2 w-8 rounded-full" style="background: #94a3b8;"></div>
-            <p class="text-xs text-gray-400 dark:text-gray-500">Self</p>
+            <p class="text-xs text-gray-400 dark:text-gray-500">Other</p>
             <p class="mt-0.5 text-lg font-extrabold text-gray-500 dark:text-gray-400">{{ $selfUnits }}</p>
         </div>
     </div>

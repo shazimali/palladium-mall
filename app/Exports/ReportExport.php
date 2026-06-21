@@ -172,12 +172,14 @@ class ReportExport implements
             $sheet->setCellValue("B" . ($summaryRow + 3), number_format($this->summary['outstanding'], 2));
             $sheet->setCellValue("A" . ($summaryRow + 4), 'Rent Collected (Rs.)');
             $sheet->setCellValue("B" . ($summaryRow + 4), number_format($this->summary['rent_collected'], 2));
-            $sheet->setCellValue("A" . ($summaryRow + 5), 'Utilities Paid (Rs.)');
-            $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['utilities_paid'], 2));
-            $sheet->setCellValue("A" . ($summaryRow + 6), 'Fines Collected (Rs.)');
-            $sheet->setCellValue("B" . ($summaryRow + 6), number_format($this->summary['fines_collected'], 2));
-            $sheet->setCellValue("A" . ($summaryRow + 7), 'Total Records');
-            $sheet->setCellValue("B" . ($summaryRow + 7), $this->summary['count']);
+            $sheet->setCellValue("A" . ($summaryRow + 5), 'Maintenance Collected (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['maintenance_collected'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 6), 'Utilities Paid (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 6), number_format($this->summary['utilities_paid'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 7), 'Fines Collected (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 7), number_format($this->summary['fines_collected'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 8), 'Total Records');
+            $sheet->setCellValue("B" . ($summaryRow + 8), $this->summary['count']);
         }
 
         return [

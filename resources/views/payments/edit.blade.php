@@ -3,9 +3,9 @@
 @section('content')
     @php
         $isSelf = is_null($payment->tenant_id);
-        $pageTitle = $isSelf ? 'Edit Self-Owned Unit Payment' : 'Edit Tenant Payment';
+        $pageTitle = $isSelf ? 'Edit Other-Owned Unit Payment' : 'Edit Tenant Payment';
         $descText = $isSelf 
-            ? 'Update maintenance payment details for a self-owned unit' 
+            ? 'Update maintenance payment details for an other-owned unit' 
             : 'Update payment record details linked to a tenant\'s agreement';
     @endphp
 
@@ -27,7 +27,7 @@
                 if (u && u.charge) this.selfAmount = u.charge;
             }
         }">
-            <x-common.component-card title="Self-Owned Unit — Maintenance Payment" desc="{{ $descText }}">
+            <x-common.component-card title="Other-Owned Unit — Maintenance Payment" desc="{{ $descText }}">
                 <form action="{{ route('payments.update', $payment) }}" method="POST">
                     @csrf
                     @method('PUT')

@@ -10,8 +10,10 @@
             $tabs = [
                 ''               => ['label' => 'All Data',        'icon' => '📊'],
                 'rent'           => ['label' => 'Rent Collected',  'icon' => '🏠'],
+                'maintinance'    => ['label' => 'Maintenance',     'icon' => '🛠️'],
                 'utilities'      => ['label' => 'Utilities Paid',  'icon' => '⚡'],
                 'fines'          => ['label' => 'Fines',           'icon' => '⚠️'],
+                'other_owned'    => ['label' => 'Other Owned',     'icon' => '🔑'],
                 'monthly_matrix' => ['label' => 'Monthly Matrix',  'icon' => '📅'],
             ];
         @endphp
@@ -247,6 +249,60 @@
                 $totalDue = $isMatrix ? ($summary['total_amount'] ?? 0) : ($summary['total_due'] ?? 0);
                 $totalPaid = $isMatrix ? ($summary['total_received'] ?? 0) : ($summary['total_paid'] ?? 0);
                 $outstanding = $isMatrix ? ($summary['total_pending'] ?? 0) : ($summary['outstanding'] ?? 0);
+
+                if ($isMatrix) {
+                    $card5Label = '🏠 Rent Due';
+                    $card5Value = $summary['total_rent'] ?? 0;
+                    $card5Class = 'text-blue-600';
+                    $card6Label = '🛠️ Services Due';
+                    $card6Value = $summary['total_serv'] ?? 0;
+                    $card6Class = 'text-purple-600';
+                } else {
+                    $reportType = $filters['report_type'] ?? '';
+                    if ($reportType === 'rent') {
+                        $card5Label = '🏠 Rent Collected';
+                        $card5Value = $summary['rent_collected'] ?? 0;
+                        $card5Class = 'text-blue-600';
+                        $card6Label = '🏠 Rent Outstanding';
+                        $card6Value = $outstanding;
+                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
+                    } elseif ($reportType === 'maintinance' || $reportType === 'maintenance') {
+                        $card5Label = '🛠️ Maintenance Collected';
+                        $card5Value = $summary['maintenance_collected'] ?? 0;
+                        $card5Class = 'text-purple-600';
+                        $card6Label = '🛠️ Maintenance Outstanding';
+                        $card6Value = $outstanding;
+                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
+                    } elseif ($reportType === 'utilities') {
+                        $card5Label = '⚡ Utilities Paid';
+                        $card5Value = $summary['utilities_paid'] ?? 0;
+                        $card5Class = 'text-yellow-600';
+                        $card6Label = '⚡ Utilities Outstanding';
+                        $card6Value = $outstanding;
+                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
+                    } elseif ($reportType === 'fines') {
+                        $card5Label = '⚠️ Fines Collected';
+                        $card5Value = $summary['fines_collected'] ?? 0;
+                        $card5Class = 'text-red-600';
+                        $card6Label = '⚠️ Fines Outstanding';
+                        $card6Value = $outstanding;
+                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
+                    } elseif ($reportType === 'other_owned') {
+                        $card5Label = '🔑 Other Owned Collected';
+                        $card5Value = $summary['maintenance_collected'] ?? 0;
+                        $card5Class = 'text-purple-600';
+                        $card6Label = '🔑 Other Owned Outstanding';
+                        $card6Value = $outstanding;
+                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
+                    } else {
+                        $card5Label = '🏠 Rent Collected';
+                        $card5Value = $summary['rent_collected'] ?? 0;
+                        $card5Class = 'text-blue-600';
+                        $card6Label = '🛠️ Maintenance Collected';
+                        $card6Value = $summary['maintenance_collected'] ?? 0;
+                        $card6Class = 'text-purple-600';
+                    }
+                }
             @endphp
             <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
 
@@ -273,13 +329,13 @@
                 </div>
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">{{ $isMatrix ? '🏠 Rent Due' : '🏠 Rent Collected' }}</p>
-                    <p class="mt-1 text-lg font-bold text-blue-600">Rs. {{ number_format($isMatrix ? ($summary['total_rent'] ?? 0) : ($summary['rent_collected'] ?? 0)) }}</p>
+                    <p class="text-xs text-gray-400">{{ $card5Label }}</p>
+                    <p class="mt-1 text-lg font-bold {{ $card5Class }}">Rs. {{ number_format($card5Value) }}</p>
                 </div>
 
                 <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">{{ $isMatrix ? '🛠️ Services Due' : '⚡ Utilities Paid' }}</p>
-                    <p class="mt-1 text-lg font-bold text-purple-600">Rs. {{ number_format($isMatrix ? ($summary['total_serv'] ?? 0) : ($summary['utilities_paid'] ?? 0)) }}</p>
+                    <p class="text-xs text-gray-400">{{ $card6Label }}</p>
+                    <p class="mt-1 text-lg font-bold {{ $card6Class }}">Rs. {{ number_format($card6Value) }}</p>
                 </div>
 
             </div>
@@ -396,7 +452,7 @@
                                                     </span>
                                                     @if(!empty($entry['is_self']))
                                                         <span class="inline-flex items-center gap-0.5 rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                                                            Self
+                                                            Other-Owned
                                                         </span>
                                                     @endif
                                                 </div>

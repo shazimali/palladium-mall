@@ -4,7 +4,7 @@
     @php
         $recipientName = $payment->tenant?->name 
             ?: ($payment->otherTenant?->name 
-                ?: ($payment->unit?->landlord?->name ?: 'Self-Owned Unit'));
+                ?: ($payment->unit?->landlord?->name ?: 'Other-Owned Unit'));
     @endphp
 
     <x-common.page-breadcrumb pageTitle="Payment — {{ $recipientName }}" />

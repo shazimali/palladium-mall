@@ -242,18 +242,45 @@
                 <div class="s-label">Outstanding</div>
                 <div class="s-value" style="color:#1A56DB;">Rs. {{ number_format($summary['outstanding'], 2) }}</div>
             </div>
-            <div class="s-box rent">
-                <div class="s-label">🏠 Rent Collected</div>
-                <div class="s-value" style="color:#3730A3;">Rs. {{ number_format($summary['rent_collected'], 2) }}</div>
-            </div>
-            <div class="s-box utilities">
-                <div class="s-label">⚡ Utilities Paid</div>
-                <div class="s-value" style="color:#92400E;">Rs. {{ number_format($summary['utilities_paid'], 2) }}</div>
-            </div>
-            <div class="s-box fines">
-                <div class="s-label">⚠️ Fines Collected</div>
-                <div class="s-value" style="color:#9D174D;">Rs. {{ number_format($summary['fines_collected'], 2) }}</div>
-            </div>
+            @if($reportType === 'rent')
+                <div class="s-box rent">
+                    <div class="s-label">🏠 Rent Collected</div>
+                    <div class="s-value" style="color:#3730A3;">Rs. {{ number_format($summary['rent_collected'], 2) }}</div>
+                </div>
+            @elseif($reportType === 'maintinance' || $reportType === 'maintenance')
+                <div class="s-box rent" style="background: #F5F3FF;">
+                    <div class="s-label" style="color:#7C3AED;">🛠️ Maintenance Collected</div>
+                    <div class="s-value" style="color:#7C3AED;">Rs. {{ number_format($summary['maintenance_collected'], 2) }}</div>
+                </div>
+            @elseif($reportType === 'utilities')
+                <div class="s-box utilities">
+                    <div class="s-label">⚡ Utilities Paid</div>
+                    <div class="s-value" style="color:#92400E;">Rs. {{ number_format($summary['utilities_paid'], 2) }}</div>
+                </div>
+            @elseif($reportType === 'fines')
+                <div class="s-box fines">
+                    <div class="s-label">⚠️ Fines Collected</div>
+                    <div class="s-value" style="color:#9D174D;">Rs. {{ number_format($summary['fines_collected'], 2) }}</div>
+                </div>
+            @elseif($reportType === 'other_owned')
+                <div class="s-box rent" style="background: #F5F3FF;">
+                    <div class="s-label" style="color:#7C3AED;">🔑 Other Owned Collected</div>
+                    <div class="s-value" style="color:#7C3AED;">Rs. {{ number_format($summary['maintenance_collected'], 2) }}</div>
+                </div>
+            @else
+                <div class="s-box rent">
+                    <div class="s-label">🏠 Rent Collected</div>
+                    <div class="s-value" style="color:#3730A3;">Rs. {{ number_format($summary['rent_collected'], 2) }}</div>
+                </div>
+                <div class="s-box rent" style="background: #F5F3FF;">
+                    <div class="s-label" style="color:#7C3AED;">🛠️ Maintenance Collected</div>
+                    <div class="s-value" style="color:#7C3AED;">Rs. {{ number_format($summary['maintenance_collected'], 2) }}</div>
+                </div>
+                <div class="s-box utilities">
+                    <div class="s-label">⚡ Utilities Paid</div>
+                    <div class="s-value" style="color:#92400E;">Rs. {{ number_format($summary['utilities_paid'], 2) }}</div>
+                </div>
+            @endif
         </div>
 
         {{-- Payment Accounts Summary boxes --}}
@@ -306,13 +333,13 @@
                         <td style="font-weight:600;">{{ $entry['flat_no'] }}</td>
                         <td>{{ $entry['owner'] }}</td>
                         <td>
-                            <span class="badge {{ $entry['status'] === 'RENTED' ? 'badge-paid' : ($entry['status'] === 'VACANT' ? 'badge-unpaid' : 'badge-pending') }}">
+                            <span class="badge {{ $entry['status'] === 'RENTED' || $entry['status'] === 'OCCUPIED' ? 'badge-paid' : ($entry['status'] === 'VACANT' ? 'badge-unpaid' : 'badge-pending') }}">
                                 {{ $entry['status'] }}
                             </span>
                             @if(!empty($entry['is_self']))
                                 <br>
                                 <span class="badge badge-self" style="margin-top: 3px;">
-                                    Self
+                                    Other-Owned
                                 </span>
                             @endif
                         </td>
@@ -406,7 +433,7 @@
                             @if(!empty($entry['is_self']))
                                 <br>
                                 <span class="badge badge-self" style="margin-top: 3px;">
-                                    Self
+                                    Other-Owned
                                 </span>
                             @endif
                         </td>

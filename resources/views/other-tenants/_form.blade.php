@@ -83,12 +83,12 @@
         @enderror
     </div>
 
-    {{-- Attach to Self-Owned Unit --}}
+    {{-- Attach to Other-Owned Unit --}}
     @if(!empty($selfUnits) && $selfUnits->isNotEmpty())
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Attach to Unit
-            <span class="ml-1 text-xs font-normal text-gray-400">(optional — self-owned units only)</span>
+            <span class="ml-1 text-xs font-normal text-gray-400">(optional — other-owned units only)</span>
         </label>
         <select name="unit_id"
             class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('unit_id') border-red-400 @enderror">

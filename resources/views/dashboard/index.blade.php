@@ -24,6 +24,7 @@
       :rentDue="$rentDue"
       :utilitiesDue="$utilitiesDue"
       :occupancyRate="$occupancyRate"
+      :otherUnits="$otherUnits"
     />
 
     {{-- ── Widgets: All Full Width ──────────────────────────────────── --}}
@@ -145,7 +146,7 @@
             {{ $vacantUnits }},
             {{ $selfUnits }},
           ],
-          labels: ['Rented', 'Vacant', 'Self'],
+          labels: ['Rented', 'Vacant', 'Other'],
           colors: ['#12b76a', '#f79009', '#94a3b8'],
           plotOptions: {
             pie: {

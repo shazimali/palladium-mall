@@ -22,6 +22,7 @@ class DashboardController extends Controller
         $totalUnits = Unit::count();
         $rentedUnits = Unit::where('status', 'rented')->count();
         $vacantUnits = Unit::where('status', 'vacant')->count();
+        $otherUnits = Unit::where('is_self', true)->count();
         $rentDue = Payment::where('month', $currentMonth)
             ->where('type', 'rent')
             ->whereIn('status', ['unpaid', 'partial'])
@@ -110,6 +111,7 @@ class DashboardController extends Controller
             'totalUnits' => $totalUnits,
             'rentedUnits' => $rentedUnits,
             'vacantUnits' => $vacantUnits,
+            'otherUnits' => $otherUnits,
             'rentDue' => $rentDue,
             'utilitiesDue' => $utilitiesDue,
             // Chart data
