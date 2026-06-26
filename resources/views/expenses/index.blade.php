@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Expenses Ledger" />
+    <x-common.page-breadcrumb pageTitle="Expense Vouchers" />
 
     {{-- Flash Messages --}}
     @if(session('success'))
@@ -37,7 +37,7 @@
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Transactions Count</p>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Vouchers Count</p>
                     <h4 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white/90">
                         {{ $expenses->total() }}
                     </h4>
@@ -51,7 +51,7 @@
         </div>
     </div>
 
-    <x-common.component-card title="Expenses Ledger Book" desc="View and filter all historical payments and business expenditures">
+    <x-common.component-card title="Expense Vouchers Ledger Book" desc="View and filter all historical operating expense payments and business expenditures">
 
         {{-- Top bar --}}
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -74,7 +74,7 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        Record Expense
+                        Create Expense Voucher
                     </a>
                 @endif
             </div>
@@ -97,7 +97,7 @@
                                 <path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
                             </svg>
                         </span>
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search description, reference..."
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Voucher #, description, ref..."
                             class="{{ $filterInput }} pl-10" />
                     </div>
                 </div>
@@ -140,9 +140,9 @@
                 </div>
 
                 <!-- Filter Action Button -->
-                <div class="sm:col-span-1">
-                    <button type="submit" class="w-full flex justify-center items-center h-10 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-200 transition-colors">
-                        Apply Filter
+                <div class="sm:col-span-1 md:col-span-5 flex justify-end">
+                    <button type="submit" class="w-full sm:w-auto px-6 flex justify-center items-center h-10 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-200 transition-colors">
+                        Apply Filters
                     </button>
                 </div>
             </form>
@@ -153,35 +153,35 @@
             <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                     <tr>
-                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Voucher #</th>
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Category (Head)</th>
-                        <th class="px-4 py-3">Amount</th>
+                        <th class="px-4 py-3 text-right">Amount</th>
                         <th class="px-4 py-3">Method</th>
                         <th class="px-4 py-3">Paid From (Account)</th>
-                        <th class="px-4 py-3">Ref/Voucher</th>
+                        <th class="px-4 py-3">Ref/Cheque</th>
                         <th class="px-4 py-3">Description</th>
                         <th class="px-4 py-3 text-center">Receipt</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                    @forelse($expenses as $index => $expense)
+                    @forelse($expenses as $expense)
                         <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                            <td class="px-4 py-3 text-gray-400">{{ $expenses->firstItem() + $index }}</td>
-                            <td class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
+                            <td class="px-4 py-3 font-mono font-bold text-gray-900 dark:text-white/90">
+                                {{ $expense->voucher_no }}
+                            </td>
+                            <td class="px-4 py-3">
                                 {{ $expense->date->format('d M Y') }}
                             </td>
                             <td class="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">
                                 {{ $expense->expenseHead->name }}
                             </td>
-                            <td class="px-4 py-3 font-bold text-red-600 dark:text-red-400">
+                            <td class="px-4 py-3 font-bold text-red-600 dark:text-red-400 text-right">
                                 Rs. {{ number_format($expense->amount, 2) }}
                             </td>
-                            <td class="px-4 py-3">
-                                <span class="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300 capitalize">
-                                    {{ $expense->payment_method }}
-                                </span>
+                            <td class="px-4 py-3 font-mono text-xs capitalize">
+                                {{ $expense->payment_method }}
                             </td>
                             <td class="px-4 py-3">
                                 {{ $expense->paymentAccount ? $expense->paymentAccount->name : '—' }}
@@ -205,26 +205,34 @@
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-end gap-2">
-                                    {{-- Edit --}}
-                                    @if(auth()->user()->hasPermission('expenses.edit') || auth()->user()->isSuperAdmin())
-                                        <a href="{{ route('expenses.edit', $expense) }}"
-                                            class="inline-flex items-center rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 transition-colors"
-                                            title="Edit">
-                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                            </svg>
-                                        </a>
-                                    @endif
+                                    {{-- Print --}}
+                                    <a href="{{ route('expenses.print', $expense) }}" target="_blank"
+                                        class="inline-flex items-center rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                                        title="Print Voucher">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
+                                        </svg>
+                                    </a>
 
-                                    {{-- Delete --}}
+                                    {{-- Show --}}
+                                    <a href="{{ route('expenses.show', $expense) }}"
+                                        class="inline-flex items-center rounded-lg p-1.5 text-brand-500 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-950/20 transition-colors"
+                                        title="View Details">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </a>
+
+                                    {{-- Delete/Cancel --}}
                                     @if(auth()->user()->hasPermission('expenses.delete') || auth()->user()->isSuperAdmin())
                                         <form action="{{ route('expenses.destroy', $expense) }}" method="POST" x-data
-                                            @submit.prevent="if(confirm('Are you sure you want to delete this recorded expense of Rs. {{ number_format($expense->amount) }}?')) $el.submit()">
+                                            @submit.prevent="if(confirm('Are you sure you want to cancel and delete this Expense Voucher of Rs. {{ number_format($expense->amount) }}? This will reverse any balances.')) $el.submit()">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
                                                 class="inline-flex items-center rounded-lg p-1.5 text-red-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 transition-colors"
-                                                title="Delete">
+                                                title="Cancel / Delete">
                                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
@@ -240,7 +248,7 @@
                                 <svg class="mx-auto mb-3 h-10 w-10 opacity-40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                                 </svg>
-                                No expense transactions found. <a href="{{ route('expenses.create') }}" class="text-brand-500 hover:underline">Record first one.</a>
+                                No expense vouchers found. <a href="{{ route('expenses.create') }}" class="text-brand-500 hover:underline">Create first one.</a>
                             </td>
                         </tr>
                     @endforelse

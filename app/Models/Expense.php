@@ -14,6 +14,7 @@ class Expense extends Model
     use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
+        'voucher_no',
         'expense_head_id',
         'amount',
         'date',
@@ -29,6 +30,22 @@ class Expense extends Model
         'amount' => 'decimal:2',
         'date' => 'date',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function ($expense) {
+            if (empty($expense->voucher_no)) {
+                $expense->voucher_no = 'TEMP-EV-' . \Illuminate\Support\Str::random(12);
+            }
+        });
+
+        static::created(function ($expense) {
+            if (strpos($expense->voucher_no, 'TEMP-EV-') === 0) {
+                $expense->voucher_no = 'PM-EV-' . str_pad($expense->id, 5, '0', STR_PAD_LEFT);
+                $expense->saveQuietly();
+            }
+        });
+    }
 
     /**
      * Get the expense head/category associated with this expense.

@@ -3,12 +3,12 @@
 @section('content')
     <div class="mx-auto max-w-3xl px-4 py-6">
         <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <a href="{{ route('expenses.index') }}" class="hover:text-brand-500">Expenses Ledger</a>
+            <a href="{{ route('expenses.index') }}" class="hover:text-brand-500">Expense Vouchers</a>
             <span>/</span>
-            <span class="text-gray-800 dark:text-white/90">Record Expense</span>
+            <span class="text-gray-800 dark:text-white/90">Record Expense Voucher</span>
         </div>
 
-        <x-common.component-card title="Record Expense" desc="Log a new operational or business payment into the ledger book">
+        <x-common.component-card title="Record Expense Voucher" desc="Log a new operational or business payment into the ledger book">
             <form action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
 
@@ -75,9 +75,9 @@
                         @error('payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- Reference/Voucher Number --}}
+                    {{-- Reference --}}
                     <div>
-                        <label class="{{ $label }}">Reference / Voucher #</label>
+                        <label class="{{ $label }}">Reference / Cheque #</label>
                         <input type="text" name="reference" value="{{ old('reference') }}" placeholder="e.g. Voucher 1045, Cheque 4893" 
                                class="{{ $input }} {{ $errors->has('reference') ? 'border-red-400' : '' }}">
                         @error('reference') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
@@ -108,7 +108,7 @@
                     </a>
                     <button type="submit"
                             class="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors">
-                        Save Expense Record
+                        Save Expense Voucher
                     </button>
                 </div>
             </form>

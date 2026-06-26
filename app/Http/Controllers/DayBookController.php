@@ -32,23 +32,30 @@ class DayBookController extends Controller
             $endDate = Carbon::today()->endOfDay();
         }
 
-        // Fetch Inflows (Tenant Payments)
-        // Only payments that have been paid/partially paid with amount_paid > 0
-        $inflows = Payment::with(['tenant', 'unit', 'paymentAccount'])
-            ->whereBetween('paid_at', [$startDate, $endDate])
-            ->where('amount_paid', '>', 0)
-            ->orderBy('paid_at', 'asc')
-            ->get();
-
-        // Fetch Outflows (Expenses)
-        $outflows = Expense::with(['expenseHead', 'paymentAccount', 'user'])
+        // Fetch Inflows (Receiving Vouchers)
+        $inflows = \App\Models\ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->orderBy('date', 'asc')
             ->orderBy('created_at', 'asc')
             ->get();
 
+        // Fetch Outflows (Expenses)
+        $expenses = Expense::with(['expenseHead', 'paymentAccount', 'user'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->get();
+
+        // Fetch Outflows (Payment Vouchers)
+        $paymentVouchers = \App\Models\PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->get();
+
+        // Combine and sort outflows
+        $outflows = $expenses->concat($paymentVouchers)->sortBy(function ($item) {
+            return $item->date->format('Y-m-d') . '_' . $item->created_at->format('Y-m-d H:i:s');
+        })->values();
+
         // Calculations
-        $totalInflows = $inflows->sum('amount_paid');
+        $totalInflows = $inflows->sum('amount');
         $totalOutflows = $outflows->sum('amount');
         $netFlow = $totalInflows - $totalOutflows;
 

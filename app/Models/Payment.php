@@ -90,6 +90,13 @@ class Payment extends Model
         return $this->belongsTo(PaymentAccount::class);
     }
 
+    public function receivingVouchers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(ReceivingVoucher::class, 'receiving_voucher_payments', 'payment_id', 'receiving_voucher_id')
+            ->withPivot('amount_allocated')
+            ->withTimestamps();
+    }
+
     // -----------------------------------------------------------------------
     // Scopes
     // -----------------------------------------------------------------------
@@ -250,6 +257,22 @@ class Payment extends Model
                 $payment->receipt_no = 'PM-PAY-' . str_pad($payment->id, 5, '0', STR_PAD_LEFT);
                 $payment->saveQuietly();
             }
+        });
+
+        static::deleting(function ($payment) {
+            $voucherPayments = \DB::table('receiving_voucher_payments')->where('payment_id', $payment->id)->get();
+            foreach ($voucherPayments as $vp) {
+                $voucher = \App\Models\ReceivingVoucher::find($vp->receiving_voucher_id);
+                if ($voucher) {
+                    $linkedCount = \DB::table('receiving_voucher_payments')->where('receiving_voucher_id', $voucher->id)->count();
+                    if ($linkedCount <= 1) {
+                        $voucher->delete();
+                    } else {
+                        $voucher->decrement('amount', $vp->amount_allocated);
+                    }
+                }
+            }
+            \DB::table('receiving_voucher_payments')->where('payment_id', $payment->id)->delete();
         });
     }
 

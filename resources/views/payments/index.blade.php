@@ -316,22 +316,6 @@
                                             @endif
                                         @endif
 
-                                        {{-- Record Payment --}}
-                                        @if(!$payment->isPaid())
-                                            <button type="button" x-data @click="$dispatch('open-record-payment', {
-                                                                action: '{{ route('payments.record', $payment) }}',
-                                                                amount: '{{ $payment->amount }}',
-                                                                balance: '{{ $payment->balanceDue() }}'
-                                                            })"
-                                                class="inline-flex items-center rounded-lg p-1.5 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                                                title="Record Payment">
-                                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"
-                                                    viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                                </svg>
-                                            </button>
-                                        @endif
                                     </div>
 
                                     @if(auth()->user()->hasPermission('payments.edit') || auth()->user()->hasPermission('payments.delete') || auth()->user()->isSuperAdmin())
@@ -388,96 +372,6 @@
         @endif
     </x-common.component-card>
 
-    {{-- Record Payment Modal --}}
-    <div x-data="{
-                show: false,
-                action: '',
-                balance: 0,
-                init() {
-                    window.addEventListener('open-record-payment', (e) => {
-                        this.action  = e.detail.action;
-                        this.balance = e.detail.balance;
-                        this.show    = true;
-                    });
-                }
-            }" x-show="show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900" @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
-            <h3 class="mb-4 text-base font-semibold text-gray-800 dark:text-white">Record Payment</h3>
-            <form :action="action" method="POST" enctype="multipart/form-data">
-                @csrf
-                <div class="space-y-4">
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Amount Paid (Rs.) <span class="text-red-500">*</span>
-                            </label>
-                            <input type="number" name="amount_paid" min="0" step="0.01" required
-                                :placeholder="'Balance: Rs. ' + parseFloat(balance).toLocaleString()"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                        </div>
-
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Payment Account <span class="text-red-500">*</span>
-                            </label>
-                            <select name="payment_account_id" required
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                <option value="">Select Account</option>
-                                @foreach($paymentAccounts as $account)
-                                    <option value="{{ $account->id }}">{{ $account->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Reference / Cheque No.
-                        </label>
-                        <input type="text" name="reference" placeholder="Optional"
-                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Payment Date <span class="text-red-500">*</span>
-                            </label>
-                            <input type="date" name="paid_at" value="{{ now()->toDateString() }}" required
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                        </div>
-
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Receipt (optional)
-                            </label>
-                            <input type="file" name="receipt" accept="image/jpeg,image/jpg,image/png,application/pdf"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-xs file:font-medium file:text-brand-600 dark:border-gray-700 dark:bg-gray-800">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Notes</label>
-                        <input type="text" name="notes" placeholder="Optional"
-                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                    </div>
-
-                </div>
-
-                <div class="mt-5 flex items-center gap-3">
-                    <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors">
-                        Confirm Payment
-                    </button>
-                    <button type="button" @click="show = false"
-                        class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 
     {{-- Bulk Generate Modal --}}
     <div x-data="{

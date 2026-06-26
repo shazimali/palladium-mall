@@ -262,9 +262,17 @@
                     <div class="s-label">⚠️ Fines Collected</div>
                     <div class="s-value" style="color:#9D174D;">Rs. {{ number_format($summary['fines_collected'], 2) }}</div>
                 </div>
-            @elseif($reportType === 'other_owned')
+            @elseif($reportType === 'other_owned' || $reportType === 'occupied' || $reportType === 'occupide' || $reportType === 'non_occupied' || $reportType === 'non_occupide')
                 <div class="s-box rent" style="background: #F5F3FF;">
-                    <div class="s-label" style="color:#7C3AED;">🔑 Other Owned Collected</div>
+                    <div class="s-label" style="color:#7C3AED;">
+                        @if($reportType === 'occupied' || $reportType === 'occupide')
+                            👥 Occupied (Ext) Collected
+                        @elseif($reportType === 'non_occupied' || $reportType === 'non_occupide')
+                            🚪 Vacant (Ext) Collected
+                        @else
+                            🔑 Other Owned Collected
+                        @endif
+                    </div>
                     <div class="s-value" style="color:#7C3AED;">Rs. {{ number_format($summary['maintenance_collected'], 2) }}</div>
                 </div>
             @else

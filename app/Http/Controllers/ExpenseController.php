@@ -121,23 +121,28 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Display the specified resource.
+     */
+    public function show(Expense $expense): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('expenses.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $expense->load(['expenseHead', 'paymentAccount', 'user']);
+
+        return view('expenses.show', [
+            'title'   => 'Voucher details — ' . $expense->voucher_no,
+            'expense' => $expense,
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Expense $expense): View
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('expenses.edit')) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $expenseHeads = ExpenseHead::orderBy('name')->get();
-        $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
-
-        return view('expenses.edit', [
-            'title'           => 'Edit Recorded Expense',
-            'expense'         => $expense,
-            'expenseHeads'    => $expenseHeads,
-            'paymentAccounts' => $paymentAccounts,
-        ]);
+        abort(403, 'Editing expense vouchers is disabled to maintain financial integrity.');
     }
 
     /**
@@ -145,33 +150,7 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, Expense $expense): RedirectResponse
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('expenses.edit')) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $data = $request->validate([
-            'expense_head_id'    => ['required', 'exists:expense_heads,id'],
-            'amount'             => ['required', 'numeric', 'min:0.01'],
-            'date'               => ['required', 'date'],
-            'payment_method'     => ['required', 'string', 'max:50'],
-            'payment_account_id' => ['nullable', 'exists:payment_accounts,id'],
-            'reference'          => ['nullable', 'string', 'max:255'],
-            'notes'              => ['nullable', 'string', 'max:1000'],
-            'receipt'            => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], // Max 5MB
-        ]);
-
-        if ($request->hasFile('receipt')) {
-            // Delete old receipt if exists
-            if ($expense->receipt) {
-                Storage::disk('public')->delete($expense->receipt);
-            }
-            $data['receipt'] = $request->file('receipt')->store('expenses/receipts', 'public');
-        }
-
-        $expense->update($data);
-
-        return redirect()->route('expenses.index')
-            ->with('success', 'Expense updated successfully.');
+        abort(403, 'Editing expense vouchers is disabled to maintain financial integrity.');
     }
 
     /**
@@ -183,11 +162,26 @@ class ExpenseController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        // Keep the file in storage for audit trailing unless explicitly requested, but let's clean up if needed
-        // Or keep it since it's SoftDeletes
         $expense->delete();
 
         return redirect()->route('expenses.index')
-            ->with('success', 'Expense deleted successfully.');
+            ->with('success', 'Expense voucher cancelled/deleted successfully.');
+    }
+
+    /**
+     * Print the specified expense voucher.
+     */
+    public function print(Expense $expense): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('expenses.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $expense->load(['expenseHead', 'paymentAccount', 'user']);
+
+        return view('expenses.print', [
+            'title'   => 'Print Voucher — ' . $expense->voucher_no,
+            'expense' => $expense,
+        ]);
     }
 }

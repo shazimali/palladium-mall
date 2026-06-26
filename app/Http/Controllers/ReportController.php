@@ -23,6 +23,8 @@ class ReportController extends Controller
 
     public function index(Request $request): View
     {
+        $this->prepareMatrixDate($request);
+
         $tenants = Tenant::orderBy('name')->get(['id', 'name']);
         $units   = Unit::orderBy('unit_number')->get(['id', 'unit_number', 'type']);
         $landlords = Landlord::orderBy('name')->get(['id', 'name']);
@@ -84,6 +86,8 @@ class ReportController extends Controller
 
     public function exportExcel(Request $request): \Symfony\Component\HttpFoundation\BinaryFileResponse
     {
+        $this->prepareMatrixDate($request);
+
         $reportType = $request->report_type ?? 'all';
         if ($reportType === 'monthly_matrix') {
             $entries = $this->buildMatrixEntries($request);
@@ -112,6 +116,8 @@ class ReportController extends Controller
 
     public function exportPdf(Request $request): \Illuminate\Http\Response
     {
+        $this->prepareMatrixDate($request);
+
         $reportType = $request->report_type ?? 'all';
         if ($reportType === 'monthly_matrix') {
             $entries = $this->buildMatrixEntries($request);
@@ -173,7 +179,7 @@ class ReportController extends Controller
         $unitStatus = $request->unit_status;
         $ownerType  = $request->owner_type;
 
-        $query = Payment::with(['tenant', 'unit.landlord', 'paymentAccount', 'otherTenant'])
+        $query = Payment::with(['tenant', 'unit.landlord', 'paymentAccount', 'otherTenant', 'receivingVouchers'])
             ->when($unitId,           fn($q) => $q->where('unit_id',   $unitId))
             ->when($tenantId,         fn($q) => $q->where('tenant_id', $tenantId))
             ->when($from,             fn($q) => $q->where('month', '>=', $from))
@@ -182,18 +188,34 @@ class ReportController extends Controller
             ->when($paymentMethod,    fn($q) => $q->where('payment_method', $paymentMethod))
             ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
             ->when($landlordId,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
-            ->when($unitStatus,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)))
-            ->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
-            ->when($ownerType === 'other' || $reportType === 'other_owned', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)))
-            ->when($reportType !== 'other_owned', function ($q) {
-                $q->where(function ($sq) {
+            ->when($unitStatus,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)));
+
+        // Owner type filters
+        if ($ownerType === 'pm_mall') {
+            $query->whereHas('unit', fn($qu) => $qu->where('is_self', false));
+        } elseif ($ownerType === 'other') {
+            $query->whereHas('unit', fn($qu) => $qu->where('is_self', true));
+        }
+
+        // Apply Report Type specific unit constraints
+        if ($reportType === 'occupied' || $reportType === 'occupide') {
+            $query->whereHas('unit', fn($qu) => $qu->where('is_self', true)->whereHas('otherTenant'));
+        } elseif ($reportType === 'non_occupied' || $reportType === 'non_occupide') {
+            $query->whereHas('unit', fn($qu) => $qu->where('is_self', true)->whereDoesntHave('otherTenant'));
+        } elseif ($reportType === 'other_owned') {
+            $query->whereHas('unit', fn($qu) => $qu->where('is_self', true));
+        } else {
+            // Default base safety filter
+            if (!$ownerType) {
+                $query->where(function ($sq) {
                     $sq->whereHas('unit', function ($qu) {
                         $qu->where('is_self', true)->whereHas('otherTenant');
                     })->orWhereHas('unit', function ($qu) {
                         $qu->where('is_self', false);
                     });
                 });
-            });
+            }
+        }
 
         if ($reportType === 'rent') {
             $query->where('type', 'rent');
@@ -203,8 +225,6 @@ class ReportController extends Controller
             $query->whereIn('type', ['electricity', 'water', 'gas']);
         } elseif ($reportType === 'maintinance' || $reportType === 'maintenance') {
             $query->where('type', 'maintenance');
-        } elseif ($reportType === 'other_owned') {
-            $query->whereHas('unit', fn($qu) => $qu->where('is_self', true));
         } else {
             $query->whereIn('type', ['rent', 'fine', 'maintenance', 'electricity', 'water', 'gas', 'other']);
         }
@@ -213,7 +233,9 @@ class ReportController extends Controller
 
         $entries = $dbPayments->map(fn($p) => [
             'created_date'    => $p->created_at,
-            'voucher_number'  => $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT)),
+            'voucher_number'  => $p->receivingVouchers->isNotEmpty()
+                ? implode(', ', $p->receivingVouchers->pluck('voucher_no')->toArray())
+                : ($p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT))),
             'month'           => $p->month,
             'date'            => $p->due_date,
             'unit'            => $p->unit?->unit_number ?? '—',
@@ -236,7 +258,17 @@ class ReportController extends Controller
             && !$request->filled('payment_account_id')
             && !$request->filled('status');
 
-        if ($runProjections && ($reportType === 'all' || $reportType === 'rent' || $reportType === 'maintinance' || $reportType === 'maintenance' || $reportType === 'other_owned')) {
+        if ($runProjections && (
+            $reportType === 'all' || 
+            $reportType === 'rent' || 
+            $reportType === 'maintinance' || 
+            $reportType === 'maintenance' || 
+            $reportType === 'other_owned' ||
+            $reportType === 'occupied' ||
+            $reportType === 'occupide' ||
+            $reportType === 'non_occupied' ||
+            $reportType === 'non_occupide'
+        )) {
             $startMonth = $from ? \Carbon\Carbon::parse($from)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
             $endMonth = $to ? \Carbon\Carbon::parse($to)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
 
@@ -258,6 +290,28 @@ class ReportController extends Controller
                     $existingKeys[$key] = true;
                 }
 
+                $projectSelfUnits = collect();
+                if ($ownerType !== 'pm_mall' && (
+                    $reportType === 'all' || 
+                    $reportType === 'maintinance' || 
+                    $reportType === 'maintenance' || 
+                    $reportType === 'other_owned' ||
+                    $reportType === 'occupied' ||
+                    $reportType === 'occupide' ||
+                    $reportType === 'non_occupied' ||
+                    $reportType === 'non_occupide'
+                )) {
+                    $projectSelfUnits = \App\Models\Unit::where('is_self', true)
+                        ->where('self_maintenance_charge', '>', 0)
+                        ->when($unitId,     fn($q) => $q->where('id', $unitId))
+                        ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
+                        ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
+                        ->when($reportType === 'occupied' || $reportType === 'occupide', fn($q) => $q->whereHas('otherTenant'))
+                        ->when($reportType === 'non_occupied' || $reportType === 'non_occupide', fn($q) => $q->whereDoesntHave('otherTenant'))
+                        ->with(['otherTenant', 'landlord'])
+                        ->get();
+                }
+
                 foreach ($monthsToProject as $month) {
                     $monthStr = $month->format('Y-m-d');
 
@@ -268,6 +322,8 @@ class ReportController extends Controller
                         ->when($unitStatus, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)))
                         ->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
                         ->when($ownerType === 'other' || $reportType === 'other_owned', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)))
+                        ->when($reportType === 'occupied' || $reportType === 'occupide', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)->whereHas('otherTenant')))
+                        ->when($reportType === 'non_occupied' || $reportType === 'non_occupide', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)->whereDoesntHave('otherTenant')))
                         ->where('start_date', '<=', $month->copy()->endOfMonth())
                         ->where('end_date', '>=', $month->copy()->startOfMonth())
                         ->with(['tenant', 'unit.landlord'])
@@ -329,6 +385,33 @@ class ReportController extends Controller
                             }
                         }
                     }
+
+                    // Self Units maintenance projections
+                    foreach ($projectSelfUnits as $selfUnit) {
+                        $maintKey = "{$selfUnit->id}__maintenance_{$monthStr}";
+                        if (!isset($existingKeys[$maintKey])) {
+                            $selfDueDate = $month->copy()->day(min(10, $month->daysInMonth));
+                            $entries->push([
+                                'created_date'    => null,
+                                'voucher_number'  => 'PM-PAY-PROJ',
+                                'month'           => $month->copy(),
+                                'date'            => $selfDueDate,
+                                'unit'            => $selfUnit->unit_number,
+                                'tenant'          => $selfUnit->otherTenant?->name ?? '—',
+                                'landlord'        => $selfUnit->landlord?->name ?? '—',
+                                'payment_method'  => '—',
+                                'payment_account' => '—',
+                                'category'        => 'payment',
+                                'type'            => 'maintenance',
+                                'description'     => 'Maintenance — ' . $month->format('F Y') . ' (Projected)',
+                                'amount_due'      => (float) $selfUnit->self_maintenance_charge,
+                                'amount_paid'     => 0.0,
+                                'status'          => 'pending',
+                                'paid_at'         => null,
+                                'is_self'         => true,
+                            ]);
+                        }
+                    }
                 }
             }
         }
@@ -386,13 +469,46 @@ class ReportController extends Controller
         $monthStr = $month->format('Y-m-d');
         $unitStatus = $request->unit_status;
         $ownerType  = $request->owner_type;
+        $unitId = $request->unit_id;
+        $tenantId = $request->tenant_id;
+        $statusFilter = $request->status;
+        $landlordId = $request->landlord_id;
+        $paymentMethod = $request->payment_method;
+        $paymentAccountId = $request->payment_account_id;
 
         $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
         
         $units = Unit::with(['landlord', 'otherTenant'])
             ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
+            ->when($unitId,     fn($q) => $q->where('id', $unitId))
+            ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
             ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
             ->when($ownerType === 'other',    fn($q) => $q->where('is_self', true))
+            ->when($tenantId, function ($q) use ($tenantId, $month) {
+                $q->where(function ($sq) use ($tenantId, $month) {
+                    $sq->whereHas('agreements', function ($qa) use ($tenantId, $month) {
+                        $qa->where('status', 'active')
+                           ->where('tenant_id', $tenantId)
+                           ->where('start_date', '<=', $month->copy()->endOfMonth())
+                           ->where('end_date', '>=', $month->copy()->startOfMonth());
+                    })->orWhereHas('payments', function ($qp) use ($tenantId, $month) {
+                        $qp->where('tenant_id', $tenantId)
+                           ->where('month', $month->format('Y-m-d'));
+                    });
+                });
+            })
+            ->when($paymentMethod, function ($q) use ($paymentMethod, $month) {
+                $q->whereHas('payments', function ($qp) use ($paymentMethod, $month) {
+                    $qp->where('payment_method', $paymentMethod)
+                       ->where('month', $month->format('Y-m-d'));
+                });
+            })
+            ->when($paymentAccountId, function ($q) use ($paymentAccountId, $month) {
+                $q->whereHas('payments', function ($qp) use ($paymentAccountId, $month) {
+                    $qp->where('payment_account_id', $paymentAccountId)
+                       ->where('month', $month->format('Y-m-d'));
+                });
+            })
             ->orderBy('unit_number')
             ->get();
 
@@ -404,7 +520,9 @@ class ReportController extends Controller
             ->groupBy('unit_id');
 
         $payments = Payment::where('month', $monthStr)
-            ->with(['paymentAccount'])
+            ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
+            ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
+            ->with(['paymentAccount', 'receivingVouchers'])
             ->get()
             ->groupBy('unit_id');
 
@@ -474,7 +592,13 @@ class ReportController extends Controller
             $dates = [];
             foreach ($unitPayments as $p) {
                 if ($p->status === 'paid' || $p->amount_paid > 0) {
-                    $vouchers[] = $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT));
+                    if ($p->receivingVouchers->isNotEmpty()) {
+                        foreach ($p->receivingVouchers->pluck('voucher_no') as $vNo) {
+                            $vouchers[] = $vNo;
+                        }
+                    } else {
+                        $vouchers[] = $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT));
+                    }
                     if ($p->paid_at) {
                         $dates[] = $p->paid_at->format('d/m');
                     }
@@ -500,6 +624,26 @@ class ReportController extends Controller
                 'pending'          => $pending,
                 'is_self'          => (bool) $unit->is_self,
             ]);
+        }
+
+        if ($statusFilter) {
+            $matrixEntries = $matrixEntries->filter(function ($entry) use ($statusFilter) {
+                $due = (float) $entry['total_amount'];
+                $paid = (float) $entry['received'];
+                $pending = (float) $entry['pending'];
+
+                if ($statusFilter === 'paid') {
+                    return $due > 0 && $pending <= 0;
+                } elseif ($statusFilter === 'unpaid') {
+                    return $due > 0 && $paid <= 0;
+                } elseif ($statusFilter === 'partial') {
+                    return $paid > 0 && $paid < $due;
+                }
+                return true;
+            })->values()->map(function ($entry, $idx) {
+                $entry['sr'] = $idx + 1;
+                return $entry;
+            });
         }
 
         return $matrixEntries;
@@ -541,7 +685,16 @@ class ReportController extends Controller
             'monthly_matrix'             => 'Monthly Matrix',
             'maintinance', 'maintenance' => 'Maintenance',
             'other_owned'                => 'Other Owned Payments',
+            'occupied', 'occupide'       => 'Occupied (External Units)',
+            'non_occupied', 'non_occupide' => 'Non-Occupied (External Units)',
             default                      => 'Full Report',
         };
+    }
+
+    private function prepareMatrixDate(Request $request): void
+    {
+        if ($request->report_type === 'monthly_matrix' && !$request->filled('date_from')) {
+            $request->merge(['date_from' => \Carbon\Carbon::now()->startOfMonth()->toDateString()]);
+        }
     }
 }

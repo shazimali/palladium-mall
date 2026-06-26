@@ -265,7 +265,27 @@ class PaymentController extends Controller
             (float) $data['amount_paid']
         );
 
-        $payment->update($data);
+        $oldAmountPaid = (float) $payment->amount_paid;
+        $incrementalAmount = (float) $data['amount_paid'] - $oldAmountPaid;
+
+        DB::transaction(function () use ($payment, $data, $incrementalAmount, $paymentAccount) {
+            $payment->update($data);
+
+            if ($incrementalAmount > 0) {
+                $voucher = \App\Models\ReceivingVoucher::create([
+                    'date' => $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString(),
+                    'amount' => $incrementalAmount,
+                    'received_from_type' => 'tenant',
+                    'tenant_id' => $payment->tenant_id,
+                    'payment_method' => $paymentAccount->type,
+                    'payment_account_id' => $paymentAccount->id,
+                    'reference' => $payment->reference,
+                    'notes' => 'Auto-generated from Billings page.',
+                    'user_id' => auth()->id() ?? 1,
+                ]);
+                $voucher->payments()->attach($payment->id, ['amount_allocated' => $incrementalAmount]);
+            }
+        });
 
         return redirect()
             ->back()
@@ -588,26 +608,53 @@ class PaymentController extends Controller
     public function toggleStatus(Payment $payment): RedirectResponse
     {
         if ($payment->isPaid()) {
-            // Toggle to Unpaid
-            $payment->update([
-                'status' => 'unpaid',
-                'amount_paid' => 0.00,
-                'paid_at' => null,
-                'payment_account_id' => null,
-                'payment_method' => null,
-            ]);
+            DB::transaction(function () use ($payment) {
+                // Find and delete the receiving vouchers associated with this payment
+                $voucherIds = DB::table('receiving_voucher_payments')
+                    ->where('payment_id', $payment->id)
+                    ->pluck('receiving_voucher_id');
+                
+                \App\Models\ReceivingVoucher::whereIn('id', $voucherIds)->delete();
+                DB::table('receiving_voucher_payments')->where('payment_id', $payment->id)->delete();
+
+                // Toggle to Unpaid
+                $payment->update([
+                    'status' => 'unpaid',
+                    'amount_paid' => 0.00,
+                    'paid_at' => null,
+                    'payment_account_id' => null,
+                    'payment_method' => null,
+                ]);
+            });
             $msg = 'Payment status updated to unpaid.';
         } else {
-            // Toggle to Paid
-            $account = \App\Models\PaymentAccount::where('is_active', true)->first();
-            
-            $payment->update([
-                'status' => 'paid',
-                'amount_paid' => $payment->amount,
-                'paid_at' => now(),
-                'payment_account_id' => $account?->id,
-                'payment_method' => $account?->type,
-            ]);
+            DB::transaction(function () use ($payment) {
+                // Toggle to Paid
+                $account = \App\Models\PaymentAccount::where('is_active', true)->first();
+                $incrementalAmount = (float) $payment->amount - (float) $payment->amount_paid;
+
+                $payment->update([
+                    'status' => 'paid',
+                    'amount_paid' => $payment->amount,
+                    'paid_at' => now(),
+                    'payment_account_id' => $account?->id,
+                    'payment_method' => $account?->type,
+                ]);
+
+                if ($incrementalAmount > 0) {
+                    $voucher = \App\Models\ReceivingVoucher::create([
+                        'date' => now()->toDateString(),
+                        'amount' => $incrementalAmount,
+                        'received_from_type' => 'tenant',
+                        'tenant_id' => $payment->tenant_id,
+                        'payment_method' => $account?->type,
+                        'payment_account_id' => $account?->id,
+                        'notes' => 'Auto-generated on status toggle.',
+                        'user_id' => auth()->id() ?? 1,
+                    ]);
+                    $voucher->payments()->attach($payment->id, ['amount_allocated' => $incrementalAmount]);
+                }
+            });
             $msg = 'Payment status updated to paid.';
         }
 

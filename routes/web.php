@@ -15,6 +15,10 @@ use App\Http\Controllers\LandlordController;
 use App\Http\Controllers\AjaxUnitController;
 use App\Http\Controllers\PaymentAccountController;
 use App\Http\Controllers\InspectionPersonController;
+use App\Http\Controllers\OwnerController;
+use App\Http\Controllers\ReceivingVoucherController;
+use App\Http\Controllers\PaymentVoucherController;
+use App\Http\Controllers\ProfitLossController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -186,8 +190,53 @@ Route::middleware('auth')->group(function () {
     // AJAX
     Route::get('ajax/agreement-by-tenant', [PaymentController::class, 'getAgreementByTenant'])
         ->name('ajax.agreement-by-tenant');
+    Route::get('ajax/tenant-pending-payments', [ReceivingVoucherController::class, 'getTenantPendingPayments'])
+        ->name('ajax.tenant-pending-payments');
 
+    // Owners
+    Route::middleware('permission:owners.view')->group(function () {
+        Route::resource('owners', OwnerController::class);
+    });
 
+    // Receiving Vouchers
+    Route::middleware('permission:receiving_vouchers.view')->group(function () {
+        Route::resource('receiving-vouchers', ReceivingVoucherController::class)->except(['edit', 'update']);
+        Route::get('receiving-vouchers/{receiving_voucher}/print', [ReceivingVoucherController::class, 'print'])
+            ->name('receiving-vouchers.print');
+    });
+
+    // Payment Vouchers
+    Route::middleware('permission:payment_vouchers.view')->group(function () {
+        Route::resource('payment-vouchers', PaymentVoucherController::class)->except(['edit', 'update']);
+        Route::get('payment-vouchers/{payment_voucher}/print', [PaymentVoucherController::class, 'print'])
+            ->name('payment-vouchers.print');
+    });
+
+    // Profit & Loss Report
+    Route::middleware('permission:reports.view')->group(function () {
+        Route::get('reports/profit-loss', [ProfitLossController::class, 'index'])->name('reports.profit-loss');
+        Route::get('reports/profit-loss/pdf', [ProfitLossController::class, 'exportPdf'])->name('reports.profit-loss.pdf');
+        Route::get('reports/profit-loss/excel', [ProfitLossController::class, 'exportExcel'])->name('reports.profit-loss.excel');
+    });
+
+    // Ledgers
+    Route::middleware('permission:ledgers.view')->group(function () {
+        Route::get('ledgers/tenant', [\App\Http\Controllers\LedgerController::class, 'tenant'])->name('ledgers.tenant');
+        Route::get('ledgers/tenant/pdf', [\App\Http\Controllers\LedgerController::class, 'exportTenantPdf'])->name('ledgers.tenant.pdf');
+        Route::get('ledgers/tenant/excel', [\App\Http\Controllers\LedgerController::class, 'exportTenantExcel'])->name('ledgers.tenant.excel');
+
+        Route::get('ledgers/owner', [\App\Http\Controllers\LedgerController::class, 'owner'])->name('ledgers.owner');
+        Route::get('ledgers/owner/pdf', [\App\Http\Controllers\LedgerController::class, 'exportOwnerPdf'])->name('ledgers.owner.pdf');
+        Route::get('ledgers/owner/excel', [\App\Http\Controllers\LedgerController::class, 'exportOwnerExcel'])->name('ledgers.owner.excel');
+
+        Route::get('ledgers/payment-account', [\App\Http\Controllers\LedgerController::class, 'paymentAccount'])->name('ledgers.payment-account');
+        Route::get('ledgers/payment-account/pdf', [\App\Http\Controllers\LedgerController::class, 'exportAccountPdf'])->name('ledgers.payment-account.pdf');
+        Route::get('ledgers/payment-account/excel', [\App\Http\Controllers\LedgerController::class, 'exportAccountExcel'])->name('ledgers.payment-account.excel');
+
+        Route::get('ledgers/expense', [\App\Http\Controllers\LedgerController::class, 'expense'])->name('ledgers.expense');
+        Route::get('ledgers/expense/pdf', [\App\Http\Controllers\LedgerController::class, 'exportExpensePdf'])->name('ledgers.expense.pdf');
+        Route::get('ledgers/expense/excel', [\App\Http\Controllers\LedgerController::class, 'exportExpenseExcel'])->name('ledgers.expense.excel');
+    });
 
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
@@ -204,7 +253,15 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:expenses.view')->group(function () {
-        Route::resource('expenses', \App\Http\Controllers\ExpenseController::class);
+        Route::resource('expense-vouchers', \App\Http\Controllers\ExpenseController::class)->except(['edit', 'update'])->names([
+            'index'   => 'expenses.index',
+            'create'  => 'expenses.create',
+            'store'   => 'expenses.store',
+            'show'    => 'expenses.show',
+            'destroy' => 'expenses.destroy',
+        ]);
+        Route::get('expense-vouchers/{expense}/print', [\App\Http\Controllers\ExpenseController::class, 'print'])
+            ->name('expenses.print');
     });
 
     // Other Tenants
@@ -216,6 +273,20 @@ Route::middleware('auth')->group(function () {
             ->name('other-tenants.attach');
         Route::post('other-tenants/{other_tenant}/detach', [\App\Http\Controllers\OtherTenantController::class, 'detach'])
             ->name('other-tenants.detach');
+    });
+
+    // Inventory & Stock Management
+    Route::middleware('permission:inventory.view')->group(function () {
+        Route::resource('inventory/items', \App\Http\Controllers\InventoryItemController::class)->except(['show']);
+        Route::resource('inventory/stock-entries', \App\Http\Controllers\StockEntryController::class)->except(['edit', 'update']);
+    });
+
+    Route::middleware('permission:gatepasses.view')->group(function () {
+        Route::resource('inventory/gate-passes', \App\Http\Controllers\GatePassController::class)->except(['edit', 'update']);
+        Route::get('inventory/gate-passes/{gate_pass}/print', [\App\Http\Controllers\GatePassController::class, 'print'])
+            ->name('gate-passes.print');
+        Route::post('inventory/gate-passes/{gate_pass}/cancel', [\App\Http\Controllers\GatePassController::class, 'cancel'])
+            ->name('gate-passes.cancel');
     });
 
     // AJAX

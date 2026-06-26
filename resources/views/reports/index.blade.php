@@ -14,6 +14,8 @@
                 'utilities'      => ['label' => 'Utilities Paid',  'icon' => '⚡'],
                 'fines'          => ['label' => 'Fines',           'icon' => '⚠️'],
                 'other_owned'    => ['label' => 'Other Owned',     'icon' => '🔑'],
+                'occupide'       => ['label' => 'Occupied (Ext)',  'icon' => '👥'],
+                'non_occupide'   => ['label' => 'Vacant (Ext)',    'icon' => '🚪'],
                 'monthly_matrix' => ['label' => 'Monthly Matrix',  'icon' => '📅'],
             ];
         @endphp
@@ -287,11 +289,19 @@
                         $card6Label = '⚠️ Fines Outstanding';
                         $card6Value = $outstanding;
                         $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
-                    } elseif ($reportType === 'other_owned') {
-                        $card5Label = '🔑 Other Owned Collected';
+                    } elseif ($reportType === 'other_owned' || $reportType === 'occupied' || $reportType === 'occupide' || $reportType === 'non_occupied' || $reportType === 'non_occupide') {
+                        $card5Label = match ($reportType) {
+                            'occupied', 'occupide' => '👥 Occupied (Ext) Collected',
+                            'non_occupied', 'non_occupide' => '🚪 Vacant (Ext) Collected',
+                            default => '🔑 Other Owned Collected',
+                        };
                         $card5Value = $summary['maintenance_collected'] ?? 0;
                         $card5Class = 'text-purple-600';
-                        $card6Label = '🔑 Other Owned Outstanding';
+                        $card6Label = match ($reportType) {
+                            'occupied', 'occupide' => '👥 Occupied (Ext) Outstanding',
+                            'non_occupied', 'non_occupide' => '🚪 Vacant (Ext) Outstanding',
+                            default => '🔑 Other Owned Outstanding',
+                        };
                         $card6Value = $outstanding;
                         $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
                     } else {

@@ -95,6 +95,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('owners.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Managing Owners',
+                'path' => '/owners',
+            ];
+        }
+
         if (auth()->check() && $user->can('units.view')) {
             $mainItems[] = [
                 'icon' => 'tables',
@@ -132,6 +140,62 @@ class MenuHelper
             ];
         }
 
+        $voucherSubItems = [];
+        if (auth()->check()) {
+            if ($user->can('receiving_vouchers.view')) {
+                $voucherSubItems[] = ['name' => 'Receiving Vouchers', 'path' => '/receiving-vouchers'];
+            }
+            if ($user->can('payment_vouchers.view')) {
+                $voucherSubItems[] = ['name' => 'Payment Vouchers', 'path' => '/payment-vouchers'];
+            }
+            if ($user->can('expenses.view')) {
+                $voucherSubItems[] = ['name' => 'Expense Vouchers', 'path' => '/expense-vouchers'];
+            }
+        }
+
+        if (!empty($voucherSubItems)) {
+            $mainItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Vouchers',
+                'subItems' => $voucherSubItems,
+            ];
+        }
+
+        $ledgerSubItems = [];
+        if (auth()->check() && $user->can('ledgers.view')) {
+            $ledgerSubItems[] = ['name' => 'Tenant Ledger', 'path' => '/ledgers/tenant'];
+            $ledgerSubItems[] = ['name' => 'Owner Ledger', 'path' => '/ledgers/owner'];
+            $ledgerSubItems[] = ['name' => 'Account Ledger', 'path' => '/ledgers/payment-account'];
+            $ledgerSubItems[] = ['name' => 'Expense Ledger', 'path' => '/ledgers/expense'];
+        }
+
+        if (!empty($ledgerSubItems)) {
+            $mainItems[] = [
+                'icon' => 'tables',
+                'name' => 'Ledgers',
+                'subItems' => $ledgerSubItems,
+            ];
+        }
+
+        $inventorySubItems = [];
+        if (auth()->check()) {
+            if ($user->can('inventory.view')) {
+                $inventorySubItems[] = ['name' => 'Items Stock', 'path' => '/inventory/items'];
+                $inventorySubItems[] = ['name' => 'Stock Inflows', 'path' => '/inventory/stock-entries'];
+            }
+            if ($user->can('gatepasses.view')) {
+                $inventorySubItems[] = ['name' => 'Gate Passes', 'path' => '/inventory/gate-passes'];
+            }
+        }
+
+        if (!empty($inventorySubItems)) {
+            $mainItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Inventory & Stock',
+                'subItems' => $inventorySubItems,
+            ];
+        }
+
         if (auth()->check() && $user->can('payment_accounts.view')) {
             $mainItems[] = [
                 'icon' => 'task',
@@ -148,14 +212,6 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('expenses.view')) {
-            $mainItems[] = [
-                'icon' => 'ecommerce',
-                'name' => 'Expenses Ledger',
-                'path' => '/expenses',
-            ];
-        }
-
         if (auth()->check() && $user->can('inspection_persons.view')) {
             $mainItems[] = [
                 'icon' => 'user-profile',
@@ -169,6 +225,11 @@ class MenuHelper
                 'icon' => 'charts',
                 'name' => 'Reports',
                 'path' => '/reports',
+            ];
+            $mainItems[] = [
+                'icon' => 'charts',
+                'name' => 'Profit & Loss',
+                'path' => '/reports/profit-loss',
             ];
         }
 

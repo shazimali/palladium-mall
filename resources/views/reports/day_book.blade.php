@@ -127,15 +127,31 @@
                         @forelse($inflows as $inflow)
                             <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
                                 <td class="px-3 py-2 text-xs">
-                                    {{ $inflow->paid_at ? $inflow->paid_at->format('d M y H:i') : $inflow->created_at->format('d M y H:i') }}
+                                    {{ $inflow->date ? $inflow->date->format('d M y') : $inflow->created_at->format('d M y') }}
                                 </td>
                                 <td class="px-3 py-2">
-                                    <div class="font-semibold text-gray-800 dark:text-white/90">
-                                        {{ $inflow->tenant ? $inflow->tenant->name : 'N/A' }}
-                                    </div>
-                                    <div class="text-xs text-gray-400">
-                                        Unit {{ $inflow->unit ? $inflow->unit->unit_number : 'N/A' }} • {{ ucfirst($inflow->type) }}
-                                    </div>
+                                    @if($inflow->received_from_type === 'tenant')
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">
+                                            👤 {{ $inflow->tenant ? $inflow->tenant->name : 'N/A' }}
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            Voucher: {{ $inflow->voucher_no }} • Units: {{ $inflow->payments->map(fn($p) => $p->unit?->unit_number)->filter()->unique()->implode(', ') ?: 'N/A' }}
+                                        </div>
+                                    @elseif($inflow->received_from_type === 'owner')
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">
+                                            👤 Partner: {{ $inflow->owner ? $inflow->owner->name : 'N/A' }}
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            Voucher: {{ $inflow->voucher_no }} • Partnership Contribution
+                                        </div>
+                                    @else
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">
+                                            👤 Misc: {{ $inflow->other_name ?: 'N/A' }}
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            Voucher: {{ $inflow->voucher_no }} • {{ $inflow->notes ?? 'Other Income' }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-3 py-2 text-xs">
                                     <span class="capitalize font-mono text-gray-700 dark:text-gray-300">
@@ -146,7 +162,7 @@
                                     @endif
                                 </td>
                                 <td class="px-3 py-2 text-right font-bold text-green-600 dark:text-green-400">
-                                    Rs. {{ number_format($inflow->amount_paid, 2) }}
+                                    Rs. {{ number_format($inflow->amount, 2) }}
                                 </td>
                             </tr>
                         @empty
@@ -171,12 +187,12 @@
             </div>
         </div>
 
-        {{-- OUTFLOWS (EXPENSES) --}}
+        {{-- OUTFLOWS (PAYMENTS & EXPENSES) --}}
         <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="mb-4 flex items-center justify-between">
                 <h3 class="text-lg font-bold text-gray-900 dark:text-white/90 flex items-center gap-2">
                     <span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
-                    Cash Outflow (Expenses)
+                    Cash Outflow (Payments & Expenses)
                 </h3>
                 <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
                     {{ $outflows->count() }} Transactions
@@ -200,12 +216,25 @@
                                     {{ $outflow->date->format('d M y') }}
                                 </td>
                                 <td class="px-3 py-2">
-                                    <div class="font-semibold text-gray-800 dark:text-white/90">
-                                        {{ $outflow->expenseHead->name }}
-                                    </div>
-                                    <div class="text-xs text-gray-400 truncate max-w-[150px]" title="{{ $outflow->notes }}">
-                                        {{ $outflow->notes ?? 'No description' }}
-                                    </div>
+                                    @if($outflow instanceof \App\Models\Expense)
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">
+                                            💸 {{ $outflow->expenseHead?->name ?? 'Expense' }}
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            Voucher: {{ $outflow->voucher_no }} • {{ $outflow->notes ?? 'No description' }}
+                                        </div>
+                                    @else
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">
+                                            @if($outflow->is_advance)
+                                                ⚠️ Advance Payout to: {{ $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A') }}
+                                            @else
+                                                📤 Payout to: {{ $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A') }}
+                                            @endif
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            Voucher: {{ $outflow->voucher_no }} • {{ $outflow->notes ?? 'No description' }}
+                                        </div>
+                                    @endif
                                 </td>
                                 <td class="px-3 py-2 text-xs">
                                     <span class="capitalize font-mono text-gray-700 dark:text-gray-300">
@@ -222,7 +251,7 @@
                         @empty
                             <tr>
                                 <td colspan="4" class="px-3 py-8 text-center text-gray-400 dark:text-gray-600">
-                                    No expenses logged for this period.
+                                    No outflows logged for this period.
                                 </td>
                             </tr>
                         @endforelse
