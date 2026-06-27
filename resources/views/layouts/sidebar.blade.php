@@ -51,7 +51,8 @@
             if (path === '/tenants' && current.startsWith('/tenants/pending-documents')) {
                 return false;
             }
-            if (path === '/reports' && current.startsWith('/reports/day-book')) {
+            // /reports is a top-level item — only exact match; all /reports/* are their own items
+            if (path === '/reports' && current.startsWith('/reports/')) {
                 return false;
             }
             // Active if exact match OR current path starts with path + '/'
