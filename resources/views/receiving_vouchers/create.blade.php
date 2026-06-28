@@ -18,6 +18,8 @@
                     @foreach($tenants as $tenant)
                     {
                         id: '{{ $tenant->id }}',
+                        unit: 'Flat/Shop: {{ addslashes($tenant->unit?->unit_number ?? '—') }}',
+                        tenant: '(Tenant: {{ addslashes($tenant->name) }})',
                         text: 'Flat/Shop: {{ addslashes($tenant->unit?->unit_number ?? '—') }} (Tenant: {{ addslashes($tenant->name) }})',
                         searchLabel: '{{ strtolower(($tenant->unit?->unit_number ?? "") . " " . $tenant->name) }}'
                     },
@@ -59,6 +61,16 @@
                     return this.options.filter(opt => opt.searchLabel.includes(s));
                 },
 
+                get selectedUnit() {
+                    let selected = this.options.find(opt => opt.id == this.tenantId);
+                    return selected ? selected.unit : '';
+                },
+
+                get selectedTenant() {
+                    let selected = this.options.find(opt => opt.id == this.tenantId);
+                    return selected ? selected.tenant : '';
+                },
+
                 get selectedText() {
                     let selected = this.options.find(opt => opt.id == this.tenantId);
                     return selected ? selected.text : 'Choose a Flat / Shop';
@@ -98,7 +110,15 @@
                         {{-- Trigger Button --}}
                         <button type="button" @click="open = !open"
                             class="w-full flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 text-left focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                            <span x-text="selectedText" :class="tenantId ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-gray-500'"></span>
+                            <template x-if="tenantId">
+                                <span class="flex items-center gap-1.5">
+                                    <span x-text="selectedUnit" class="font-bold text-gray-900 dark:text-white"></span>
+                                    <span x-text="selectedTenant" class="text-gray-500 dark:text-gray-400 font-normal"></span>
+                                </span>
+                            </template>
+                            <template x-if="!tenantId">
+                                <span class="text-gray-400 dark:text-gray-500">Choose a Flat / Shop</span>
+                            </template>
                             <svg class="h-4 w-4 text-gray-500 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                             </svg>
@@ -139,7 +159,12 @@
                                     <button type="button" @click="selectOption(opt)"
                                         class="w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between"
                                         :class="tenantId == opt.id ? 'bg-brand-500 text-white font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'">
-                                        <span x-text="opt.text"></span>
+                                    <template x-if="true">
+                                        <span class="flex items-center gap-1.5 flex-1 min-w-0">
+                                            <span x-text="opt.unit" class="font-bold"></span>
+                                            <span x-text="opt.tenant" class="font-normal opacity-75 truncate"></span>
+                                        </span>
+                                    </template>
                                         <span x-show="tenantId == opt.id" class="text-[10px]">✔️</span>
                                     </button>
                                 </template>

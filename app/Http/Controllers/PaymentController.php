@@ -243,7 +243,7 @@ class PaymentController extends Controller
     public function recordPayment(RecordPaymentRequest $request, Payment $payment): RedirectResponse
     {
         $data = $request->validated();
- 
+
         // Resolve payment_method from the selected payment account
         $paymentAccount = \App\Models\PaymentAccount::findOrFail($data['payment_account_id']);
         $data['payment_method'] = $paymentAccount->type;
@@ -259,37 +259,94 @@ class PaymentController extends Controller
             unset($data['receipt']);
         }
 
-        // Calculate new status
+        $oldAmountPaid = (float) $payment->amount_paid;
+        $incrementalAmount = (float) $data['amount_paid'] - $oldAmountPaid;
+
+        // Update the triggered payment's own paid amount & status first
         $data['status'] = Payment::calculateStatus(
             (float) $payment->amount,
             (float) $data['amount_paid']
         );
 
-        $oldAmountPaid = (float) $payment->amount_paid;
-        $incrementalAmount = (float) $data['amount_paid'] - $oldAmountPaid;
-
         DB::transaction(function () use ($payment, $data, $incrementalAmount, $paymentAccount) {
             $payment->update($data);
 
-            if ($incrementalAmount > 0) {
-                $voucher = \App\Models\ReceivingVoucher::create([
-                    'date' => $payment->paid_at ? $payment->paid_at->toDateString() : now()->toDateString(),
-                    'amount' => $incrementalAmount,
-                    'received_from_type' => 'tenant',
-                    'tenant_id' => $payment->tenant_id,
-                    'payment_method' => $paymentAccount->type,
-                    'payment_account_id' => $paymentAccount->id,
-                    'reference' => $payment->reference,
-                    'notes' => 'Auto-generated from Billings page.',
-                    'user_id' => auth()->id() ?? 1,
+            if ($incrementalAmount <= 0 || ! $payment->tenant_id) {
+                return;
+            }
+
+            // ── Single voucher for the full incremental amount ──────────────
+            $voucherDate = isset($data['paid_at'])
+                ? (is_string($data['paid_at']) ? $data['paid_at'] : $data['paid_at']->toDateString())
+                : now()->toDateString();
+
+            $voucher = \App\Models\ReceivingVoucher::create([
+                'date'               => $voucherDate,
+                'amount'             => $incrementalAmount,
+                'received_from_type' => 'tenant',
+                'tenant_id'          => $payment->tenant_id,
+                'payment_method'     => $paymentAccount->type,
+                'payment_account_id' => $paymentAccount->id,
+                'reference'          => $data['reference'] ?? null,
+                'notes'              => 'Auto-generated from Billings page.',
+                'user_id'            => auth()->id() ?? 1,
+            ]);
+
+            // ── Cascade allocation: oldest outstanding payments first ────────
+            // Re-fetch all unpaid/partial payments for this tenant (oldest first).
+            // The payment that was just updated may already be paid/partial — that
+            // is fine; we skip fully-paid rows automatically via balanceDue().
+            $outstandingPayments = Payment::where('tenant_id', $payment->tenant_id)
+                ->whereIn('status', ['unpaid', 'partial'])
+                ->orderBy('month', 'asc')
+                ->orderBy('id', 'asc')
+                ->lockForUpdate()
+                ->get();
+
+            $remaining = $incrementalAmount;
+
+            foreach ($outstandingPayments as $p) {
+                if ($remaining <= 0) {
+                    break;
+                }
+
+                $balanceDue = $p->balanceDue();
+                if ($balanceDue <= 0) {
+                    continue; // already paid off (e.g. by the update above)
+                }
+
+                $allocated   = min($remaining, $balanceDue);
+                $newAmtPaid  = (float) $p->amount_paid + $allocated;
+
+                // Avoid double-updating the payment that was just saved above
+                if ($p->id !== $payment->id) {
+                    $p->update([
+                        'amount_paid'        => $newAmtPaid,
+                        'status'             => Payment::calculateStatus((float) $p->amount, $newAmtPaid),
+                        'paid_at'            => $p->paid_at ?? $voucherDate,
+                        'payment_account_id' => $paymentAccount->id,
+                        'payment_method'     => $paymentAccount->type,
+                        'reference'          => $data['reference'] ?? $p->reference,
+                    ]);
+                }
+
+                $voucher->payments()->attach($p->id, ['amount_allocated' => $allocated]);
+                $remaining -= $allocated;
+            }
+
+            // If the triggered payment itself was not yet linked (e.g. it is now
+            // fully paid and no longer in the outstanding list), attach it.
+            if (! $voucher->payments->contains($payment->id)) {
+                $directAllocation = min($incrementalAmount, (float) $payment->amount);
+                $voucher->payments()->syncWithoutDetaching([
+                    $payment->id => ['amount_allocated' => $directAllocation],
                 ]);
-                $voucher->payments()->attach($payment->id, ['amount_allocated' => $incrementalAmount]);
             }
         });
 
         return redirect()
             ->back()
-            ->with('success', 'Payment recorded successfully.');
+            ->with('success', 'Payment recorded. One voucher generated and older outstanding payments settled first.');
     }
 
     // -----------------------------------------------------------------------
@@ -608,54 +665,112 @@ class PaymentController extends Controller
     public function toggleStatus(Payment $payment): RedirectResponse
     {
         if ($payment->isPaid()) {
+            // ── Revert to unpaid ──────────────────────────────────────────
             DB::transaction(function () use ($payment) {
-                // Find and delete the receiving vouchers associated with this payment
+                // Collect all vouchers linked to this payment
                 $voucherIds = DB::table('receiving_voucher_payments')
                     ->where('payment_id', $payment->id)
                     ->pluck('receiving_voucher_id');
-                
-                \App\Models\ReceivingVoucher::whereIn('id', $voucherIds)->delete();
-                DB::table('receiving_voucher_payments')->where('payment_id', $payment->id)->delete();
 
-                // Toggle to Unpaid
-                $payment->update([
-                    'status' => 'unpaid',
-                    'amount_paid' => 0.00,
-                    'paid_at' => null,
-                    'payment_account_id' => null,
-                    'payment_method' => null,
-                ]);
+                // For each voucher, revert ALL payments it allocated to
+                foreach ($voucherIds as $voucherId) {
+                    $voucher = \App\Models\ReceivingVoucher::with('payments')->find($voucherId);
+                    if (! $voucher) {
+                        continue;
+                    }
+
+                    foreach ($voucher->payments as $vp) {
+                        $allocated      = (float) $vp->pivot->amount_allocated;
+                        $revertedPaid   = max(0.00, (float) $vp->amount_paid - $allocated);
+
+                        $vp->update([
+                            'amount_paid'        => $revertedPaid,
+                            'status'             => $revertedPaid <= 0
+                                                        ? 'unpaid'
+                                                        : Payment::calculateStatus((float) $vp->amount, $revertedPaid),
+                            'paid_at'            => $revertedPaid <= 0 ? null : $vp->paid_at,
+                            'payment_account_id' => $revertedPaid <= 0 ? null : $vp->payment_account_id,
+                            'payment_method'     => $revertedPaid <= 0 ? null : $vp->payment_method,
+                        ]);
+                    }
+
+                    $voucher->payments()->detach();
+                    $voucher->delete();
+                }
             });
-            $msg = 'Payment status updated to unpaid.';
+
+            $msg = 'Payment and all associated voucher allocations reverted to unpaid.';
         } else {
+            // ── Mark as paid, one voucher, cascade oldest-first ───────────
             DB::transaction(function () use ($payment) {
-                // Toggle to Paid
-                $account = \App\Models\PaymentAccount::where('is_active', true)->first();
+                $account           = \App\Models\PaymentAccount::where('is_active', true)->first();
                 $incrementalAmount = (float) $payment->amount - (float) $payment->amount_paid;
 
-                $payment->update([
-                    'status' => 'paid',
-                    'amount_paid' => $payment->amount,
-                    'paid_at' => now(),
+                if ($incrementalAmount <= 0) {
+                    return;
+                }
+
+                // Create a single voucher for the full balance due
+                $voucher = \App\Models\ReceivingVoucher::create([
+                    'date'               => now()->toDateString(),
+                    'amount'             => $incrementalAmount,
+                    'received_from_type' => 'tenant',
+                    'tenant_id'          => $payment->tenant_id,
+                    'payment_method'     => $account?->type,
                     'payment_account_id' => $account?->id,
-                    'payment_method' => $account?->type,
+                    'notes'              => 'Auto-generated on status toggle.',
+                    'user_id'            => auth()->id() ?? 1,
                 ]);
 
-                if ($incrementalAmount > 0) {
-                    $voucher = \App\Models\ReceivingVoucher::create([
-                        'date' => now()->toDateString(),
-                        'amount' => $incrementalAmount,
-                        'received_from_type' => 'tenant',
-                        'tenant_id' => $payment->tenant_id,
-                        'payment_method' => $account?->type,
+                // ── Cascade: settle oldest unpaid/partial payments first ──
+                if ($payment->tenant_id) {
+                    $outstandingPayments = Payment::where('tenant_id', $payment->tenant_id)
+                        ->whereIn('status', ['unpaid', 'partial'])
+                        ->orderBy('month', 'asc')
+                        ->orderBy('id', 'asc')
+                        ->lockForUpdate()
+                        ->get();
+
+                    $remaining = $incrementalAmount;
+
+                    foreach ($outstandingPayments as $p) {
+                        if ($remaining <= 0) {
+                            break;
+                        }
+
+                        $balanceDue = $p->balanceDue();
+                        if ($balanceDue <= 0) {
+                            continue;
+                        }
+
+                        $allocated  = min($remaining, $balanceDue);
+                        $newAmtPaid = (float) $p->amount_paid + $allocated;
+
+                        $p->update([
+                            'amount_paid'        => $newAmtPaid,
+                            'status'             => Payment::calculateStatus((float) $p->amount, $newAmtPaid),
+                            'paid_at'            => $p->paid_at ?? now(),
+                            'payment_account_id' => $account?->id,
+                            'payment_method'     => $account?->type,
+                        ]);
+
+                        $voucher->payments()->attach($p->id, ['amount_allocated' => $allocated]);
+                        $remaining -= $allocated;
+                    }
+                } else {
+                    // Non-tenant payment (e.g. external owner) — settle directly
+                    $payment->update([
+                        'status'             => 'paid',
+                        'amount_paid'        => $payment->amount,
+                        'paid_at'            => now(),
                         'payment_account_id' => $account?->id,
-                        'notes' => 'Auto-generated on status toggle.',
-                        'user_id' => auth()->id() ?? 1,
+                        'payment_method'     => $account?->type,
                     ]);
                     $voucher->payments()->attach($payment->id, ['amount_allocated' => $incrementalAmount]);
                 }
             });
-            $msg = 'Payment status updated to paid.';
+
+            $msg = 'Payment marked as paid. One voucher generated and older outstanding payments settled first.';
         }
 
         return redirect()->back()->with('success', $msg);
