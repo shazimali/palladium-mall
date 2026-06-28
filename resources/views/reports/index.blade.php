@@ -218,8 +218,14 @@
                             </svg>
                             Export PDF
                         </a>
+                        <a href="{{ route('reports.print', $filters) }}"
+                            onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
+                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
+                            🖨️ Print
+                        </a>
                     </div>
                 @endif
+
             </div>
         </form>
     </x-common.component-card>
@@ -743,4 +749,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 </script>
+
+<script>
+    // Collapse the sidebar automatically on the Reports page
+    document.addEventListener('alpine:init', function () {
+        Alpine.nextTick(function () {
+            if (window.innerWidth >= 1280 && Alpine.store('sidebar')) {
+                Alpine.store('sidebar').isExpanded = false;
+            }
+        });
+    });
+
+    // Fallback: collapse after DOMContentLoaded in case alpine:init already fired
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof Alpine !== 'undefined' && window.innerWidth >= 1280) {
+            const sidebar = Alpine.store('sidebar');
+            if (sidebar) sidebar.isExpanded = false;
+        }
+    });
+</script>
 @endpush
+

@@ -70,10 +70,11 @@
                             class="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors dark:border-red-900/30 dark:bg-red-950/10 dark:text-red-400">
                             🔴 Export PDF
                         </a>
-                        <button type="button" onclick="window.print()"
+                        <a href="{{ route('ledgers.expense.print', request()->all()) }}"
+                            onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
                             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                             🖨️ Print
-                        </button>
+                        </a>
                     </div>
                 @endif
             </div>

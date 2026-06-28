@@ -477,5 +477,13 @@
         Printed on {{ now()->format('d M Y, H:i') }}
     </div>
 
+    @if(!empty($isPrint))
+        <script>
+            window.addEventListener('load', function () {
+                setTimeout(function () { window.print(); }, 400);
+            });
+        </script>
+    @endif
 </body>
 </html>
+

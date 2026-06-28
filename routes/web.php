@@ -224,29 +224,38 @@ Route::middleware('auth')->group(function () {
         Route::get('ledgers/tenant', [\App\Http\Controllers\LedgerController::class, 'tenant'])->name('ledgers.tenant');
         Route::get('ledgers/tenant/pdf', [\App\Http\Controllers\LedgerController::class, 'exportTenantPdf'])->name('ledgers.tenant.pdf');
         Route::get('ledgers/tenant/excel', [\App\Http\Controllers\LedgerController::class, 'exportTenantExcel'])->name('ledgers.tenant.excel');
+        Route::get('ledgers/tenant/print', [\App\Http\Controllers\LedgerController::class, 'printTenant'])->name('ledgers.tenant.print');
 
         Route::get('ledgers/owner', [\App\Http\Controllers\LedgerController::class, 'owner'])->name('ledgers.owner');
         Route::get('ledgers/owner/pdf', [\App\Http\Controllers\LedgerController::class, 'exportOwnerPdf'])->name('ledgers.owner.pdf');
         Route::get('ledgers/owner/excel', [\App\Http\Controllers\LedgerController::class, 'exportOwnerExcel'])->name('ledgers.owner.excel');
+        Route::get('ledgers/owner/print', [\App\Http\Controllers\LedgerController::class, 'printOwner'])->name('ledgers.owner.print');
 
         Route::get('ledgers/payment-account', [\App\Http\Controllers\LedgerController::class, 'paymentAccount'])->name('ledgers.payment-account');
         Route::get('ledgers/payment-account/pdf', [\App\Http\Controllers\LedgerController::class, 'exportAccountPdf'])->name('ledgers.payment-account.pdf');
         Route::get('ledgers/payment-account/excel', [\App\Http\Controllers\LedgerController::class, 'exportAccountExcel'])->name('ledgers.payment-account.excel');
+        Route::get('ledgers/payment-account/print', [\App\Http\Controllers\LedgerController::class, 'printAccount'])->name('ledgers.payment-account.print');
 
         Route::get('ledgers/expense', [\App\Http\Controllers\LedgerController::class, 'expense'])->name('ledgers.expense');
         Route::get('ledgers/expense/pdf', [\App\Http\Controllers\LedgerController::class, 'exportExpensePdf'])->name('ledgers.expense.pdf');
         Route::get('ledgers/expense/excel', [\App\Http\Controllers\LedgerController::class, 'exportExpenseExcel'])->name('ledgers.expense.excel');
+        Route::get('ledgers/expense/print', [\App\Http\Controllers\LedgerController::class, 'printExpense'])->name('ledgers.expense.print');
     });
+
 
     Route::middleware('permission:reports.view')->group(function () {
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::get('reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.excel');
         Route::get('reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
+        Route::get('reports/print', [ReportController::class, 'print'])->name('reports.print');
     });
+
 
     Route::middleware('permission:reports.daybook')->group(function () {
         Route::get('reports/day-book', [\App\Http\Controllers\DayBookController::class, 'index'])->name('reports.day-book');
+        Route::get('reports/day-book/print', [\App\Http\Controllers\DayBookController::class, 'print'])->name('reports.day-book.print');
     });
+
 
     Route::middleware('permission:expense_heads.view')->group(function () {
         Route::resource('expense-heads', \App\Http\Controllers\ExpenseHeadController::class)->except(['show']);

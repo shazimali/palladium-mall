@@ -588,4 +588,195 @@ class LedgerController extends Controller
             abort(403, 'Unauthorized action.');
         }
     }
+
+    // -----------------------------------------------------------------------
+    // Print pages (open in new window)
+    // -----------------------------------------------------------------------
+
+    public function printTenant(Request $request): \Illuminate\View\View
+    {
+        $this->authorizeLedger();
+
+        $unitId   = $request->query('unit_id');
+        $dateFrom = $request->query('date_from');
+        $dateTo   = $request->query('date_to');
+
+        if (!$unitId) {
+            abort(400, 'No unit selected.');
+        }
+
+        $ledgerData = $this->getTenantLedgerData($unitId, $dateFrom, $dateTo);
+        $unit       = $ledgerData['unit'];
+        $tenant     = $unit->tenant ?? $unit->otherTenant;
+
+        $filterChips = [
+            ['label' => 'Flat / Shop', 'value' => $unit->unit_number . ($tenant ? ' — ' . $tenant->name : '')],
+        ];
+        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+
+        $s = $ledgerData['summary'];
+        $summaryCards = [
+            ['label' => 'Total Billed / Charges',  'value' => 'Rs. ' . number_format($s['total_invoiced'], 2), 'color' => 's-blue'],
+            ['label' => 'Total Paid / Credits',     'value' => 'Rs. ' . number_format($s['total_paid'], 2),    'color' => 's-green'],
+            ['label' => 'Balance Outstanding',      'value' => 'Rs. ' . number_format($s['balance_due'], 2),   'color' => $s['balance_due'] > 0 ? 's-orange' : 's-neutral'],
+        ];
+
+        $columns = [
+            ['key' => 'date',            'label' => 'Date',             'type' => 'date'],
+            ['key' => 'description',     'label' => 'Description'],
+            ['key' => 'reference',       'label' => 'Ref / Voucher #',  'td_class' => 'mono'],
+            ['key' => 'debit',           'label' => 'Debit (Charged)',  'type' => 'debit',   'class' => 'text-right'],
+            ['key' => 'credit',          'label' => 'Credit (Paid)',    'type' => 'credit',  'class' => 'text-right'],
+            ['key' => 'running_balance', 'label' => 'Running Balance',  'type' => 'balance', 'class' => 'text-right'],
+        ];
+
+        return view('ledgers.print_page', [
+            'pageTitle'    => 'Tenant / Unit Ledger — ' . $unit->unit_number,
+            'filterChips'  => $filterChips,
+            'summaryCards' => $summaryCards,
+            'columns'      => $columns,
+            'rows'         => $ledgerData['entries']->toArray(),
+        ]);
+    }
+
+    public function printOwner(Request $request): \Illuminate\View\View
+    {
+        $this->authorizeLedger();
+
+        $ownerId  = $request->query('owner_id');
+        $dateFrom = $request->query('date_from');
+        $dateTo   = $request->query('date_to');
+
+        if (!$ownerId) {
+            abort(400, 'No owner selected.');
+        }
+
+        $ledgerData = $this->getOwnerLedgerData($ownerId, $dateFrom, $dateTo);
+        $owner      = $ledgerData['owner'];
+
+        $filterChips = [
+            ['label' => 'Owner', 'value' => $owner->name . ($owner->email ? ' (' . $owner->email . ')' : '')],
+        ];
+        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+
+        $s = $ledgerData['summary'];
+        $summaryCards = [
+            ['label' => 'Total Payouts (Debits)',    'value' => 'Rs. ' . number_format($s['total_debit'], 2),  'color' => 's-blue'],
+            ['label' => 'Total Deposits (Credits)',  'value' => 'Rs. ' . number_format($s['total_credit'], 2), 'color' => 's-green'],
+            ['label' => 'Net Business Balance',      'value' => 'Rs. ' . number_format($s['net_balance'], 2),  'color' => 's-neutral'],
+        ];
+
+        $columns = [
+            ['key' => 'date',            'label' => 'Date',            'type' => 'date'],
+            ['key' => 'voucher_no',      'label' => 'Voucher #',       'td_class' => 'mono'],
+            ['key' => 'account',         'label' => 'Account'],
+            ['key' => 'reference',       'label' => 'Reference',       'td_class' => 'mono'],
+            ['key' => 'notes',           'label' => 'Notes'],
+            ['key' => 'debit',           'label' => 'Debit (Payout)',  'type' => 'debit',   'class' => 'text-right'],
+            ['key' => 'credit',          'label' => 'Credit (Deposit)','type' => 'credit',  'class' => 'text-right'],
+            ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
+        ];
+
+        return view('ledgers.print_page', [
+            'pageTitle'    => 'Owner Capital Statement — ' . $owner->name,
+            'filterChips'  => $filterChips,
+            'summaryCards' => $summaryCards,
+            'columns'      => $columns,
+            'rows'         => $ledgerData['entries']->toArray(),
+        ]);
+    }
+
+    public function printAccount(Request $request): \Illuminate\View\View
+    {
+        $this->authorizeLedger();
+
+        $accountId = $request->query('payment_account_id');
+        $dateFrom  = $request->query('date_from');
+        $dateTo    = $request->query('date_to');
+
+        if (!$accountId) {
+            abort(400, 'No account selected.');
+        }
+
+        $ledgerData = $this->getAccountLedgerData($accountId, $dateFrom, $dateTo);
+        $account    = $ledgerData['account'];
+
+        $filterChips = [
+            ['label' => 'Account', 'value' => $account->name . ' (' . ucfirst($account->type) . ')'],
+        ];
+        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+
+        $s = $ledgerData['summary'];
+        $summaryCards = [
+            ['label' => 'Total Inflows (Debits)',   'value' => 'Rs. ' . number_format($s['total_inflow'], 2),  'color' => 's-green'],
+            ['label' => 'Total Outflows (Credits)', 'value' => 'Rs. ' . number_format($s['total_outflow'], 2), 'color' => 's-blue'],
+            ['label' => 'Account Running Balance',  'value' => 'Rs. ' . number_format($s['net_balance'], 2),   'color' => 's-neutral'],
+        ];
+
+        $columns = [
+            ['key' => 'date',            'label' => 'Date',              'type' => 'date'],
+            ['key' => 'voucher_no',      'label' => 'Voucher #',         'td_class' => 'mono'],
+            ['key' => 'type',            'label' => 'Type',              'type' => 'badge'],
+            ['key' => 'description',     'label' => 'Description / Ref'],
+            ['key' => 'debit',           'label' => 'Debit (Inflow)',    'type' => 'debit',   'class' => 'text-right'],
+            ['key' => 'credit',          'label' => 'Credit (Outflow)',  'type' => 'credit',  'class' => 'text-right'],
+            ['key' => 'running_balance', 'label' => 'Running Balance',   'type' => 'balance', 'class' => 'text-right'],
+        ];
+
+        return view('ledgers.print_page', [
+            'pageTitle'    => 'Cash & Bank Ledger — ' . $account->name,
+            'filterChips'  => $filterChips,
+            'summaryCards' => $summaryCards,
+            'columns'      => $columns,
+            'rows'         => $ledgerData['entries']->toArray(),
+        ]);
+    }
+
+    public function printExpense(Request $request): \Illuminate\View\View
+    {
+        $this->authorizeLedger();
+
+        $expenseHeadId = $request->query('expense_head_id');
+        $dateFrom      = $request->query('date_from');
+        $dateTo        = $request->query('date_to');
+
+        if (!$expenseHeadId) {
+            abort(400, 'No expense category selected.');
+        }
+
+        $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
+        $head       = $ledgerData['head'];
+
+        $filterChips = [
+            ['label' => 'Expense Category', 'value' => $head->name . ($head->code ? ' (Code: ' . $head->code . ')' : '')],
+        ];
+        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+
+        $s = $ledgerData['summary'];
+        $summaryCards = [
+            ['label' => 'Total Spent Under Head', 'value' => 'Rs. ' . number_format($s['total_amount'], 2), 'color' => 's-amber'],
+        ];
+
+        $columns = [
+            ['key' => 'date',            'label' => 'Date',            'type' => 'date'],
+            ['key' => 'voucher_no',      'label' => 'Voucher #',       'td_class' => 'mono'],
+            ['key' => 'notes',           'label' => 'Spent On / Notes'],
+            ['key' => 'payment_account', 'label' => 'Payment Account'],
+            ['key' => 'reference',       'label' => 'Reference',       'td_class' => 'mono'],
+            ['key' => 'amount',          'label' => 'Amount',          'type' => 'amount', 'class' => 'text-right'],
+        ];
+
+        return view('ledgers.print_page', [
+            'pageTitle'    => 'Expense Ledger — ' . $head->name,
+            'filterChips'  => $filterChips,
+            'summaryCards' => $summaryCards,
+            'columns'      => $columns,
+            'rows'         => $ledgerData['entries']->toArray(),
+        ]);
+    }
 }
+

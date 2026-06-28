@@ -177,10 +177,11 @@
                             🔴 Export PDF
                         </a>
                         <!-- Print Statement -->
-                        <button type="button" onclick="window.print()"
+                        <a href="{{ route('ledgers.tenant.print', request()->all()) }}"
+                            onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
                             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                             🖨️ Print
-                        </button>
+                        </a>
                     </div>
                 @endif
             </div>

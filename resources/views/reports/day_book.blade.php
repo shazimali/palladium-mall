@@ -13,18 +13,25 @@
                 @endphp
                 <div>
                     <label class="{{ $dateLabel }}">Start Date</label>
-                    <input type="date" name="start_date" value="{{ $startDate }}" class="{{ $dateInput }}" />
+                    <input type="text" id="start_date" name="start_date" value="{{ $startDate }}" placeholder="YYYY-MM-DD" autocomplete="off" class="{{ $dateInput }}" />
                 </div>
                 <div>
                     <label class="{{ $dateLabel }}">End Date</label>
-                    <input type="date" name="end_date" value="{{ $endDate }}" class="{{ $dateInput }}" />
+                    <input type="text" id="end_date" name="end_date" value="{{ $endDate }}" placeholder="YYYY-MM-DD" autocomplete="off" class="{{ $dateInput }}" />
                 </div>
-                <div>
-                    <label class="hidden sm:block {{ $dateLabel }}">&nbsp;</label>
+                <div class="flex gap-2 items-end w-full sm:w-auto">
                     <button type="submit" class="h-10 rounded-lg bg-brand-500 px-5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors w-full sm:w-auto">
                         Apply Filter
                     </button>
+                    @if($ledgerEntries->isNotEmpty())
+                        <a href="{{ route('reports.day-book.print', request()->all()) }}"
+                           onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
+                           class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors w-full sm:w-auto">
+                            🖨️ Print
+                        </a>
+                    @endif
                 </div>
+
             </div>
 
             <div class="flex gap-2">
@@ -98,177 +105,106 @@
         </div>
     </div>
 
-    {{-- Inflows & Outflows Tables Grid --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {{-- INFLOWS (RECEIPTS) --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white/90 flex items-center gap-2">
-                    <span class="inline-block h-2 w-2 rounded-full bg-green-500"></span>
-                    Cash Inflow (Receipts)
-                </h3>
-                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {{ $inflows->count() }} Transactions
-                </span>
-            </div>
-
-            <div class="overflow-x-auto border border-gray-100 rounded-lg dark:border-gray-800">
-                <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                    <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                        <tr>
-                            <th class="px-3 py-2">Time/Date</th>
-                            <th class="px-3 py-2">Details</th>
-                            <th class="px-3 py-2">Method</th>
-                            <th class="px-3 py-2 text-right">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @forelse($inflows as $inflow)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                                <td class="px-3 py-2 text-xs">
-                                    {{ $inflow->date ? $inflow->date->format('d M y') : $inflow->created_at->format('d M y') }}
-                                </td>
-                                <td class="px-3 py-2">
-                                    @if($inflow->received_from_type === 'tenant')
-                                        <div class="font-semibold text-gray-800 dark:text-white/90">
-                                            👤 {{ $inflow->tenant ? $inflow->tenant->name : 'N/A' }}
-                                        </div>
-                                        <div class="text-xs text-gray-400">
-                                            Voucher: {{ $inflow->voucher_no }} • Units: {{ $inflow->payments->map(fn($p) => $p->unit?->unit_number)->filter()->unique()->implode(', ') ?: 'N/A' }}
-                                        </div>
-                                    @elseif($inflow->received_from_type === 'owner')
-                                        <div class="font-semibold text-gray-800 dark:text-white/90">
-                                            👤 Partner: {{ $inflow->owner ? $inflow->owner->name : 'N/A' }}
-                                        </div>
-                                        <div class="text-xs text-gray-400">
-                                            Voucher: {{ $inflow->voucher_no }} • Partnership Contribution
-                                        </div>
-                                    @else
-                                        <div class="font-semibold text-gray-800 dark:text-white/90">
-                                            👤 Misc: {{ $inflow->other_name ?: 'N/A' }}
-                                        </div>
-                                        <div class="text-xs text-gray-400">
-                                            Voucher: {{ $inflow->voucher_no }} • {{ $inflow->notes ?? 'Other Income' }}
-                                        </div>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-2 text-xs">
-                                    <span class="capitalize font-mono text-gray-700 dark:text-gray-300">
-                                        {{ $inflow->payment_method }}
-                                    </span>
-                                    @if($inflow->paymentAccount)
-                                        <div class="text-[10px] text-gray-400">{{ $inflow->paymentAccount->name }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-2 text-right font-bold text-green-600 dark:text-green-400">
-                                    Rs. {{ number_format($inflow->amount, 2) }}
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="px-3 py-8 text-center text-gray-400 dark:text-gray-600">
-                                    No receipts recorded for this period.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                    @if($inflows->isNotEmpty())
-                        <tfoot class="bg-gray-50 dark:bg-gray-800 font-bold">
-                            <tr>
-                                <td colspan="3" class="px-3 py-2 text-gray-700 dark:text-gray-300 text-right">Total Inflow:</td>
-                                <td class="px-3 py-2 text-right text-green-600 dark:text-green-400">
-                                    Rs. {{ number_format($totalInflows, 2) }}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    @endif
-                </table>
-            </div>
+    {{-- Unified Ledger Table --}}
+    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] mb-6">
+        <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-900 dark:text-white/90">
+                Ledger Statement / Transaction History
+            </h3>
+            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {{ $ledgerEntries->count() }} Transactions Found
+            </span>
         </div>
 
-        {{-- OUTFLOWS (PAYMENTS & EXPENSES) --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-900 dark:text-white/90 flex items-center gap-2">
-                    <span class="inline-block h-2 w-2 rounded-full bg-red-500"></span>
-                    Cash Outflow (Payments & Expenses)
-                </h3>
-                <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                    {{ $outflows->count() }} Transactions
-                </span>
-            </div>
-
-            <div class="overflow-x-auto border border-gray-100 rounded-lg dark:border-gray-800">
-                <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                    <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                        <tr>
-                            <th class="px-3 py-2">Date</th>
-                            <th class="px-3 py-2">Details</th>
-                            <th class="px-3 py-2">Method</th>
-                            <th class="px-3 py-2 text-right">Amount</th>
+        <div class="overflow-x-auto border border-gray-100 rounded-lg dark:border-gray-800">
+            <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+                <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                    <tr>
+                        <th class="px-4 py-3">Date</th>
+                        <th class="px-4 py-3">Voucher #</th>
+                        <th class="px-4 py-3">Details / Reference</th>
+                        <th class="px-4 py-3">Method / Account</th>
+                        <th class="px-4 py-3 text-right text-red-600 dark:text-red-400">Debit (Outflow)</th>
+                        <th class="px-4 py-3 text-right text-green-600 dark:text-green-400">Credit (Inflow)</th>
+                        <th class="px-4 py-3 text-right font-semibold">Running Balance</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
+                    @forelse($ledgerEntries as $entry)
+                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                            <td class="px-4 py-3 text-xs font-mono">
+                                {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
+                            </td>
+                            <td class="px-4 py-3 text-xs font-mono font-semibold">
+                                {{ $entry['voucher_no'] }}
+                            </td>
+                            <td class="px-4 py-3 text-xs font-medium">
+                                {!! $entry['details'] !!}
+                            </td>
+                            <td class="px-4 py-3 text-xs font-mono">
+                                {{ $entry['method'] }}
+                            </td>
+                            <td class="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">
+                                {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
+                            </td>
+                            <td class="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">
+                                {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 2) : '—' }}
+                            </td>
+                            <td class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white font-mono">
+                                Rs. {{ number_format($entry['running_balance'], 2) }}
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @forelse($outflows as $outflow)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                                <td class="px-3 py-2 text-xs">
-                                    {{ $outflow->date->format('d M y') }}
-                                </td>
-                                <td class="px-3 py-2">
-                                    @if($outflow instanceof \App\Models\Expense)
-                                        <div class="font-semibold text-gray-800 dark:text-white/90">
-                                            💸 {{ $outflow->expenseHead?->name ?? 'Expense' }}
-                                        </div>
-                                        <div class="text-xs text-gray-400">
-                                            Voucher: {{ $outflow->voucher_no }} • {{ $outflow->notes ?? 'No description' }}
-                                        </div>
-                                    @else
-                                        <div class="font-semibold text-gray-800 dark:text-white/90">
-                                            @if($outflow->is_advance)
-                                                ⚠️ Advance Payout to: {{ $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A') }}
-                                            @else
-                                                📤 Payout to: {{ $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A') }}
-                                            @endif
-                                        </div>
-                                        <div class="text-xs text-gray-400">
-                                            Voucher: {{ $outflow->voucher_no }} • {{ $outflow->notes ?? 'No description' }}
-                                        </div>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-2 text-xs">
-                                    <span class="capitalize font-mono text-gray-700 dark:text-gray-300">
-                                        {{ $outflow->payment_method }}
-                                    </span>
-                                    @if($outflow->paymentAccount)
-                                        <div class="text-[10px] text-gray-400">{{ $outflow->paymentAccount->name }}</div>
-                                    @endif
-                                </td>
-                                <td class="px-3 py-2 text-right font-bold text-red-600 dark:text-red-400">
-                                    Rs. {{ number_format($outflow->amount, 2) }}
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="px-3 py-8 text-center text-gray-400 dark:text-gray-600">
-                                    No outflows logged for this period.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                    @if($outflows->isNotEmpty())
-                        <tfoot class="bg-gray-50 dark:bg-gray-800 font-bold">
-                            <tr>
-                                <td colspan="3" class="px-3 py-2 text-gray-700 dark:text-gray-300 text-right">Total Outflow:</td>
-                                <td class="px-3 py-2 text-right text-red-600 dark:text-red-400">
-                                    Rs. {{ number_format($totalOutflows, 2) }}
-                                </td>
-                            </tr>
-                        </tfoot>
-                    @endif
-                </table>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
+                                No ledger transactions logged for this period.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+                @if($ledgerEntries->isNotEmpty())
+                    <tfoot class="bg-gray-50 dark:bg-gray-800 font-bold">
+                        <tr>
+                            <td colspan="4" class="px-4 py-3 text-gray-700 dark:text-gray-300 text-right">Totals:</td>
+                            <td class="px-4 py-3 text-right text-red-600 dark:text-red-400">
+                                Rs. {{ number_format($totalOutflows, 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-green-600 dark:text-green-400">
+                                Rs. {{ number_format($totalInflows, 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right text-blue-600 dark:text-blue-400 font-mono">
+                                Rs. {{ number_format($netFlow, 2) }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                @endif
+            </table>
         </div>
-
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr('#start_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true,
+                });
+
+                flatpickr('#end_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true,
+                });
+            }
+        });
+    </script>
+@endpush
+
+

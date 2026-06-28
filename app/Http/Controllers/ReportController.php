@@ -162,6 +162,50 @@ class ReportController extends Controller
     }
 
     // -------------------------------------------------------------------------
+    // Print View (New Window)
+    // -------------------------------------------------------------------------
+
+    public function print(Request $request): View
+    {
+        $this->prepareMatrixDate($request);
+
+        $reportType = $request->report_type ?? 'all';
+        if ($reportType === 'monthly_matrix') {
+            $entries = $this->buildMatrixEntries($request);
+            $summary = $this->buildMatrixSummary($entries);
+        } else {
+            $entries = $this->buildEntries($request);
+            $summary = $this->buildSummary($entries);
+        }
+        $label   = $this->reportLabel($request);
+        $filters = $request->only([
+            'date_from', 'date_to', 'unit_id', 'tenant_id', 'status', 'report_type',
+            'landlord_id', 'payment_method', 'payment_account_id', 'unit_status', 'owner_type'
+        ]);
+
+        if ($reportType === 'monthly_matrix') {
+            $month = ($filters['date_from'] ?? false) ? \Carbon\Carbon::parse($filters['date_from'])->format('F Y') : \Carbon\Carbon::now()->format('F Y');
+            $period = $month;
+        } else {
+            $period = ($filters['date_from'] ?? false) || ($filters['date_to'] ?? false)
+                ? ($filters['date_from'] ?? '—') . ' to ' . ($filters['date_to'] ?? '—')
+                : 'All time';
+        }
+
+        return view('reports.pdf', [
+            'entries'    => $entries,
+            'summary'    => $summary,
+            'label'      => $label,
+            'period'     => $period,
+            'filters'    => $filters,
+            'reportType' => $reportType,
+            'paymentAccounts' => PaymentAccount::orderBy('name')->get(['id', 'name']),
+            'isPrint'    => true,
+        ]);
+    }
+
+
+    // -------------------------------------------------------------------------
     // Core: build unified entries collection
     // -------------------------------------------------------------------------
 
