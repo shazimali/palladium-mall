@@ -34,15 +34,16 @@
                     class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ !request('status') ? 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800' }}">
                     Total: {{ $counts['total'] }}
                 </a>
-                <a href="{{ route('other-tenants.index', ['status' => 'active', 'search' => request('search')]) }}"
-                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'active' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:text-green-400 dark:hover:bg-green-950/40' }}">
-                    Active: {{ $counts['active'] }}
+                <a href="{{ route('other-tenants.index', ['status' => 'attached', 'search' => request('search')]) }}"
+                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'attached' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:text-green-400 dark:hover:bg-green-950/40' }}">
+                    Attached: {{ $counts['attached'] }}
                 </a>
-                <a href="{{ route('other-tenants.index', ['status' => 'inactive', 'search' => request('search')]) }}"
-                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'inactive' ? 'bg-red-600 text-white' : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40' }}">
-                    Inactive: {{ $counts['inactive'] }}
+                <a href="{{ route('other-tenants.index', ['status' => 'detached', 'search' => request('search')]) }}"
+                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'detached' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800' }}">
+                    Detached: {{ $counts['detached'] }}
                 </a>
             </div>
+
 
             <div class="flex items-center gap-2">
                 @if(request()->anyFilled(['search', 'status']))
@@ -80,10 +81,11 @@
                 </div>
                 <select name="status" onchange="this.form.submit()"
                     class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    <option value="">All Statuses</option>
-                    <option value="active"   {{ request('status') === 'active'   ? 'selected' : '' }}>Active</option>
-                    <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                    <option value="">All Occupancy</option>
+                    <option value="attached" {{ request('status') === 'attached' ? 'selected' : '' }}>Attached</option>
+                    <option value="detached" {{ request('status') === 'detached' ? 'selected' : '' }}>Detached</option>
                 </select>
+
                 <button type="submit" class="hidden">Submit</button>
             </form>
         </div>
@@ -98,7 +100,7 @@
                         <th class="px-4 py-3">CNIC / INC</th>
                         <th class="px-4 py-3">Phone</th>
                         <th class="px-4 py-3">Attached Unit</th>
-                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3">Occupancy</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -139,14 +141,15 @@
                                 @endif
                             </td>
 
-                            {{-- Status --}}
+                            {{-- Occupancy --}}
                             <td class="px-4 py-3">
-                                @if($ot->status === 'active')
-                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
+                                @if($ot->unit_id)
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">Attached</span>
                                 @else
-                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">Inactive</span>
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-700 dark:bg-gray-800/40 dark:text-gray-400">Detached</span>
                                 @endif
                             </td>
+
 
                             {{-- Actions --}}
                             <td class="px-4 py-3">

@@ -28,16 +28,17 @@ class OtherTenantController extends Controller
 
         $counts = [
             'total'    => (clone $query)->count(),
-            'active'   => (clone $query)->active()->count(),
-            'inactive' => (clone $query)->inactive()->count(),
+            'attached' => (clone $query)->whereNotNull('unit_id')->count(),
+            'detached' => (clone $query)->whereNull('unit_id')->count(),
         ];
 
         $otherTenants = $query
-            ->when($request->status === 'active',   fn($q) => $q->active())
-            ->when($request->status === 'inactive', fn($q) => $q->inactive())
+            ->when($request->status === 'attached', fn($q) => $q->whereNotNull('unit_id'))
+            ->when($request->status === 'detached', fn($q) => $q->whereNull('unit_id'))
             ->latest()
             ->paginate(20)
             ->withQueryString();
+
 
         // Self-owned units for the attach modal
         $selfUnits = Unit::where('is_self', true)
@@ -121,7 +122,6 @@ class OtherTenantController extends Controller
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'address'            => ['nullable', 'string'],
-            'status'             => ['required', 'in:active,inactive'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
             'unit_id'            => [
                 'nullable',
@@ -142,6 +142,7 @@ class OtherTenantController extends Controller
         $unitId = $data['unit_id'] ?? null;
         unset($data['unit_id']);
 
+        $data['status'] = $unitId ? 'active' : 'inactive';
         $otherTenant = OtherTenant::create($data);
 
         // Attach to unit if selected
@@ -151,6 +152,7 @@ class OtherTenantController extends Controller
 
         return redirect()->route('other-tenants.index')
             ->with('success', 'Other tenant added successfully.');
+
     }
 
     // -----------------------------------------------------------------------
@@ -191,7 +193,6 @@ class OtherTenantController extends Controller
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'address'            => ['nullable', 'string'],
-            'status'             => ['required', 'in:active,inactive'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
             'unit_id'            => [
                 'nullable',
@@ -215,6 +216,7 @@ class OtherTenantController extends Controller
         $oldUnitId = $otherTenant->unit_id;
         unset($data['unit_id']);
 
+        $data['status'] = $newUnitId ? 'active' : 'inactive';
         $otherTenant->update($data);
 
         // Handle unit changes
@@ -229,6 +231,7 @@ class OtherTenantController extends Controller
 
         return redirect()->route('other-tenants.index')
             ->with('success', 'Other tenant updated successfully.');
+
     }
 
     // -----------------------------------------------------------------------
@@ -313,8 +316,11 @@ class OtherTenantController extends Controller
 
     private function performAttach(OtherTenant $otherTenant, int $unitId): void
     {
-        // Set unit_id on other_tenant
-        $otherTenant->update(['unit_id' => $unitId]);
+        // Set unit_id and status on other_tenant
+        $otherTenant->update([
+            'unit_id' => $unitId,
+            'status'  => 'active'
+        ]);
 
         // Create history record
         OtherTenantUnitHistory::create([
@@ -336,7 +342,11 @@ class OtherTenantController extends Controller
             ->whereNull('detached_at')
             ->update(['detached_at' => Carbon::today()]);
 
-        // Clear unit_id
-        $otherTenant->update(['unit_id' => null]);
+        // Clear unit_id and mark inactive
+        $otherTenant->update([
+            'unit_id' => null,
+            'status'  => 'inactive'
+        ]);
+
     }
 }
