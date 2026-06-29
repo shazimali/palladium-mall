@@ -136,7 +136,7 @@ class Tenant extends Model
 
     public function activeAgreement(): HasOne
     {
-        return $this->hasOne(Agreement::class)->where('status', 'active');
+        return $this->hasOne(Agreement::class)->where('status', 'active')->latest();
     }
 
     public function payments(): HasMany

@@ -483,21 +483,23 @@ class PaymentController extends Controller
 
     public function getAgreementByTenant(Request $request): JsonResponse
     {
-        $tenant = Tenant::with(['activeAgreement.unit', 'unit'])->find($request->tenant_id);
+        $agreement = Agreement::with('unit')
+            ->where('tenant_id', $request->tenant_id)
+            ->where('status', 'active')
+            ->latest('updated_at')
+            ->first();
 
-        if (!$tenant || !$tenant->activeAgreement) {
+        if (!$agreement) {
             return response()->json(['agreement' => null]);
         }
 
-        $agreement = $tenant->activeAgreement;
-
         return response()->json([
             'agreement' => [
-                'id' => $agreement->id,
-                'monthly_rent' => $agreement->monthly_rent,
+                'id'                 => $agreement->id,
+                'monthly_rent'       => $agreement->monthly_rent,
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
-                'unit_id' => $agreement->unit_id,
-                'unit_number' => $agreement->unit?->unit_number ?? '—',
+                'unit_id'            => $agreement->unit_id,
+                'unit_number'        => $agreement->unit?->unit_number ?? '—',
             ],
         ]);
     }
