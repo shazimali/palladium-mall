@@ -243,11 +243,20 @@ class TenantController extends Controller
             $msg = 'Step 1 saved. Continue with guarantor details.';
         }
 
-        // Initialize draft agreement immediately in Step 1
-        $agreement = $tenant->agreements()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'status' => 'draft'],
-            ['unit_id' => $tenant->unit_id]
-        );
+        // Initialize draft agreement immediately in Step 1.
+        // IMPORTANT: Only create/update a draft if there is no existing active agreement.
+        // If an active agreement already exists, we must NOT create a new draft row,
+        // as confirming it later would produce a second active agreement for the same tenant.
+        $hasActiveAgreement = $tenant->agreements()->where('status', 'active')->exists();
+        if ($hasActiveAgreement) {
+            // Tenant already has an active agreement — do not create a duplicate draft.
+            $agreement = $tenant->agreements()->where('status', 'active')->latest()->first();
+        } else {
+            $agreement = $tenant->agreements()->updateOrCreate(
+                ['tenant_id' => $tenant->id, 'status' => 'draft'],
+                ['unit_id' => $tenant->unit_id]
+            );
+        }
 
         // Save emergency contact (replace existing for this agreement)
         $agreement->emergencyContacts()->delete();
@@ -754,11 +763,18 @@ class TenantController extends Controller
             $data['unit_id'] = $unitId;
         }
 
-        // Upsert agreement
-        $tenant->agreements()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'status' => 'draft'],
-            array_merge($data, ['status' => 'draft'])
-        );
+        // Upsert agreement.
+        // If an active agreement already exists, update it directly instead of creating
+        // a new draft — creating a draft here would produce a second active agreement on confirm.
+        $existingActive = $tenant->agreements()->where('status', 'active')->latest()->first();
+        if ($existingActive) {
+            $existingActive->update(array_merge($data, ['unit_id' => $unitId ?? $existingActive->unit_id]));
+        } else {
+            $tenant->agreements()->updateOrCreate(
+                ['tenant_id' => $tenant->id, 'status' => 'draft'],
+                array_merge($data, ['status' => 'draft'])
+            );
+        }
 
         if ($request->input('save_only')) {
             return redirect()->route('tenants.showStep', [$tenant, 3])
@@ -1240,11 +1256,19 @@ class TenantController extends Controller
 
         $tenant->update($tenantData);
 
-        // Initialize/update draft agreement immediately in Step 1 update
-        $draftAgreement = $tenant->agreements()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'status' => 'draft'],
-            ['unit_id' => $tenant->unit_id]
-        );
+        // Initialize/update draft agreement immediately in Step 1 update.
+        // IMPORTANT: If an active agreement already exists, do NOT create a new draft —
+        // doing so and then confirming it would produce a second active agreement.
+        $hasActiveAgreementForUpdate = $tenant->agreements()->where('status', 'active')->exists();
+        if ($hasActiveAgreementForUpdate) {
+            // Reuse the existing active agreement; do not spawn a new draft.
+            $draftAgreement = $tenant->agreements()->where('status', 'active')->latest()->first();
+        } else {
+            $draftAgreement = $tenant->agreements()->updateOrCreate(
+                ['tenant_id' => $tenant->id, 'status' => 'draft'],
+                ['unit_id' => $tenant->unit_id]
+            );
+        }
 
         // Save emergency contact (replace for this draft agreement)
         if ($draftAgreement) {
