@@ -186,7 +186,34 @@
     </div>
 
     {{-- Summary boxes --}}
-    @if($reportType === 'monthly_matrix')
+    @if($reportType === 'potential_revenue')
+        <div class="summary">
+            <div class="s-box" style="background:#F3F4F6; border: 1px solid #E5E7EB;">
+                <div class="s-label">Total Flats/Shops</div>
+                <div class="s-value" style="color:#374151;">{{ number_format($summary['count']) }}</div>
+            </div>
+            <div class="s-box" style="background:#ECFDF5; border: 1px solid #A7F3D0;">
+                <div class="s-label">Rented Units</div>
+                <div class="s-value" style="color:#059669;">{{ number_format($summary['rented_count']) }}</div>
+            </div>
+            <div class="s-box" style="background:#FFF7ED; border: 1px solid #FFEDD5;">
+                <div class="s-label">Vacant/Other Units</div>
+                <div class="s-value" style="color:#EA580C;">{{ number_format($summary['vacant_count']) }}</div>
+            </div>
+            <div class="s-box" style="background:#EFF6FF; border: 1px solid #BFDBFE;">
+                <div class="s-label">Potential Rent</div>
+                <div class="s-value" style="color:#2563EB;">Rs. {{ number_format($summary['total_rent'], 2) }}</div>
+            </div>
+            <div class="s-box" style="background:#F5F3FF; border: 1px solid #DDD6FE;">
+                <div class="s-label">Potential Maintenance</div>
+                <div class="s-value" style="color:#7C3AED;">Rs. {{ number_format($summary['total_maintenance'], 2) }}</div>
+            </div>
+            <div class="s-box" style="background:#F0FDF4; border: 1px solid #BBF7D0;">
+                <div class="s-label">Combined Potential Monthly Revenue</div>
+                <div class="s-value" style="color:#16A34A;">Rs. {{ number_format($summary['total_combined'], 2) }}</div>
+            </div>
+        </div>
+    @elseif($reportType === 'monthly_matrix')
         <div class="summary">
             <div class="s-box total-due">
                 <div class="s-label">Total Amount Due</div>
@@ -393,6 +420,57 @@
                     <td style="color:{{ $summary['total_pending'] > 0 ? '#DC2626' : '#059669' }};">
                         Rs. {{ number_format($summary['total_pending'], 2) }}
                     </td>
+                </tr>
+            </tfoot>
+        </table>
+    @elseif($reportType === 'potential_revenue')
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align:center;">SR</th>
+                    <th>Flat/Shop</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Owner</th>
+                    <th>Rent Source</th>
+                    <th style="text-align:right;">Monthly Rent</th>
+                    <th style="text-align:right;">Maintenance</th>
+                    <th style="text-align:right;">Total Potential</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($entries as $i => $entry)
+                    <tr>
+                        <td style="text-align:center;color:#94A3B8;">{{ $i + 1 }}</td>
+                        <td style="font-weight:600;">{{ $entry['unit_number'] }}</td>
+                        <td style="text-transform:capitalize;">{{ $entry['type'] }}</td>
+                        <td>
+                            <span class="badge badge-{{ $entry['status'] === 'rented' ? 'paid' : ($entry['status'] === 'vacant' ? 'unpaid' : 'pending') }}">
+                                {{ ucfirst($entry['status']) }}
+                            </span>
+                        </td>
+                        <td>{{ $entry['landlord'] ?? '—' }}</td>
+                        <td>{{ $entry['source'] }}</td>
+                        <td style="text-align:right;font-weight:600;">Rs. {{ number_format($entry['rent'], 2) }}</td>
+                        <td style="text-align:right;font-weight:600;">Rs. {{ number_format($entry['maintenance'], 2) }}</td>
+                        <td style="text-align:right;font-weight:700;color:#0D9488;">Rs. {{ number_format($entry['total'], 2) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="9" style="text-align:center;padding:16px;color:#94A3B8;">
+                            No records found.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
+                <tr style="font-weight:bold;">
+                    <td colspan="6" style="color:#1D3461;">
+                        Totals — {{ number_format($summary['count']) }} records
+                    </td>
+                    <td style="color:#1D3461;text-align:right;">Rs. {{ number_format($summary['total_rent'], 2) }}</td>
+                    <td style="color:#1D3461;text-align:right;">Rs. {{ number_format($summary['total_maintenance'], 2) }}</td>
+                    <td style="color:#0D9488;text-align:right;">Rs. {{ number_format($summary['total_combined'], 2) }}</td>
                 </tr>
             </tfoot>
         </table>

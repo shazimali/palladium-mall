@@ -165,6 +165,49 @@ Structural and ownership fields managed directly in the Units module.
         </div>
     </div>
 
+    {{-- Section: Default Pricing & Estimates --}}
+    <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02]">
+        <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+            Default Pricing & Estimates (For Projections)
+        </h4>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 max-w-2xl">
+            {{-- Default Monthly Rent --}}
+            <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Default Monthly Rent (PKR)
+                </label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Rs.</span>
+                    <input type="number" name="default_monthly_rent" step="0.01"
+                        value="{{ old('default_monthly_rent', $unit->default_monthly_rent) }}"
+                        placeholder="0.00"
+                        class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                </div>
+                @error('default_monthly_rent')
+                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Default Maintenance Charge --}}
+            <div>
+                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Default Maintenance Charge (PKR)
+                </label>
+                <div class="relative">
+                    <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Rs.</span>
+                    <input type="number" name="default_maintenance_charge" step="0.01"
+                        value="{{ old('default_maintenance_charge', $unit->default_maintenance_charge) }}"
+                        placeholder="0.00"
+                        class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                </div>
+                @error('default_maintenance_charge')
+                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
+    </div>
+
     {{-- Nominee Section --}}
     <div class="rounded-xl border border-blue-100 bg-blue-50/20 p-5 dark:border-blue-950/40 dark:bg-white/[0.01]">
         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
@@ -399,20 +442,10 @@ Structural and ownership fields managed directly in the Units module.
                 </p>
             </div>
 
-            <div>
-                <label class="mb-1 block text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    Fixed Monthly Maintenance Charge <span class="text-red-500">*</span>
-                </label>
-                <div class="relative max-w-xs">
-                    <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Rs.</span>
-                    <input type="number" name="self_maintenance_charge" step="0.01"
-                        value="{{ old('self_maintenance_charge', $unit->self_maintenance_charge) }}"
-                        placeholder="0.00"
-                        class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                </div>
-                @error('self_maintenance_charge')
-                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                @enderror
+            <div class="rounded-lg bg-blue-50 border border-blue-100 p-3.5 dark:bg-blue-950/20 dark:border-blue-900/40">
+                <p class="text-xs text-blue-800 dark:text-blue-300 leading-relaxed font-medium">
+                    ℹ️ <strong>Monthly Maintenance Billing:</strong> Since this unit is marked as other-owned, monthly maintenance payments will automatically be generated using the <strong>Default Maintenance Charge</strong> specified in the Default Pricing section above.
+                </p>
             </div>
         </div>
     </div>

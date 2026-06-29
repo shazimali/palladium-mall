@@ -432,7 +432,7 @@ class PaymentController extends Controller
                     ->get();
 
                 foreach ($selfUnits as $selfUnit) {
-                    $charge = $selfUnit->self_maintenance_charge;
+                    $charge = $selfUnit->default_maintenance_charge;
                     if (!$charge || $charge <= 0) {
                         continue;
                     }

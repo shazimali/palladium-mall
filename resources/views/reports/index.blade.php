@@ -8,15 +8,16 @@
         @php
             $activeType = $filters['report_type'] ?? '';
             $tabs = [
-                ''               => ['label' => 'All Data',        'icon' => '📊'],
-                'rent'           => ['label' => 'Rent Collected',  'icon' => '🏠'],
-                'maintinance'    => ['label' => 'Maintenance',     'icon' => '🛠️'],
-                'utilities'      => ['label' => 'Utilities Paid',  'icon' => '⚡'],
-                'fines'          => ['label' => 'Fines',           'icon' => '⚠️'],
-                'other_owned'    => ['label' => 'Other Owned',     'icon' => '🔑'],
-                'occupide'       => ['label' => 'Occupied (Ext)',  'icon' => '👥'],
-                'non_occupide'   => ['label' => 'Vacant (Ext)',    'icon' => '🚪'],
-                'monthly_matrix' => ['label' => 'Monthly Matrix',  'icon' => '📅'],
+                ''                  => ['label' => 'All Data',             'icon' => '📊'],
+                'rent'              => ['label' => 'Rent Collected',       'icon' => '🏠'],
+                'maintinance'       => ['label' => 'Maintenance',          'icon' => '🛠️'],
+                'utilities'         => ['label' => 'Utilities Paid',       'icon' => '⚡'],
+                'fines'             => ['label' => 'Fines',                'icon' => '⚠️'],
+                'other_owned'       => ['label' => 'Other Owned',          'icon' => '🔑'],
+                'occupide'          => ['label' => 'Occupied (Ext)',       'icon' => '👥'],
+                'non_occupide'      => ['label' => 'Vacant (Ext)',         'icon' => '🚪'],
+                'monthly_matrix'    => ['label' => 'Monthly Matrix',       'icon' => '📅'],
+                'potential_revenue' => ['label' => 'Fully Rented Forecast','icon' => '📈'],
             ];
         @endphp
         @foreach($tabs as $typeKey => $tab)
@@ -43,7 +44,7 @@
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 
                 {{-- Date From --}}
-                <div>
+                <div class="{{ ($filters['report_type'] ?? '') === 'potential_revenue' ? 'hidden' : '' }}">
                     <label for="date_from" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         {{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Report Month' : 'Date From' }}
                     </label>
@@ -55,7 +56,7 @@
                 </div>
 
                 {{-- Date To --}}
-                <div class="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'hidden' : '' }}">
+                <div class="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'potential_revenue']) ? 'hidden' : '' }}">
                     <label for="date_to" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Date To
                     </label>
@@ -320,48 +321,84 @@
                     }
                 }
             @endphp
-            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            @if(($filters['report_type'] ?? '') === 'potential_revenue')
+                <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
 
-                <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">{{ $isMatrix ? 'Report Month' : 'Records Found' }}</p>
-                    <p class="mt-1 text-base font-bold text-gray-800 dark:text-white leading-tight">{{ $isMatrix ? $selectedMonth : number_format($summary['count']) }}</p>
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">Total Flats/Shops</p>
+                        <p class="mt-1 text-lg font-bold text-gray-800 dark:text-white leading-tight">{{ number_format($summary['count']) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">Potential Rent</p>
+                        <p class="mt-1 text-lg font-bold text-blue-600">Rs. {{ number_format($summary['total_rent']) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">Potential Maint.</p>
+                        <p class="mt-1 text-lg font-bold text-purple-600">Rs. {{ number_format($summary['total_maintenance']) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">Combined Potential</p>
+                        <p class="mt-1 text-lg font-bold text-emerald-600">Rs. {{ number_format($summary['total_combined']) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">Rented (Agreement)</p>
+                        <p class="mt-1 text-lg font-bold text-brand-600">{{ number_format($summary['rented_count']) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">Vacant/Other (Default)</p>
+                        <p class="mt-1 text-lg font-bold text-orange-500">{{ number_format($summary['vacant_count']) }}</p>
+                    </div>
+
                 </div>
+            @else
+                <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
 
-                <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">Total Due</p>
-                    <p class="mt-1 text-lg font-bold text-orange-500">Rs. {{ number_format($totalDue) }}</p>
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">{{ $isMatrix ? 'Report Month' : 'Records Found' }}</p>
+                        <p class="mt-1 text-base font-bold text-gray-800 dark:text-white leading-tight">{{ $isMatrix ? $selectedMonth : number_format($summary['count']) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">Total Due</p>
+                        <p class="mt-1 text-lg font-bold text-orange-500">Rs. {{ number_format($totalDue) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Received' : 'Total Collected' }}</p>
+                        <p class="mt-1 text-lg font-bold text-green-600">Rs. {{ number_format($totalPaid) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Pending' : 'Outstanding' }}</p>
+                        <p class="mt-1 text-lg font-bold {{ $outstanding > 0 ? 'text-red-500' : 'text-green-600' }}">
+                            Rs. {{ number_format($outstanding) }}
+                        </p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">{{ $card5Label }}</p>
+                        <p class="mt-1 text-lg font-bold {{ $card5Class }}">Rs. {{ number_format($card5Value) }}</p>
+                    </div>
+
+                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs text-gray-400">{{ $card6Label }}</p>
+                        <p class="mt-1 text-lg font-bold {{ $card6Class }}">Rs. {{ number_format($card6Value) }}</p>
+                    </div>
+
                 </div>
-
-                <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Received' : 'Total Collected' }}</p>
-                    <p class="mt-1 text-lg font-bold text-green-600">Rs. {{ number_format($totalPaid) }}</p>
-                </div>
-
-                <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Pending' : 'Outstanding' }}</p>
-                    <p class="mt-1 text-lg font-bold {{ $outstanding > 0 ? 'text-red-500' : 'text-green-600' }}">
-                        Rs. {{ number_format($outstanding) }}
-                    </p>
-                </div>
-
-                <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">{{ $card5Label }}</p>
-                    <p class="mt-1 text-lg font-bold {{ $card5Class }}">Rs. {{ number_format($card5Value) }}</p>
-                </div>
-
-                <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400">{{ $card6Label }}</p>
-                    <p class="mt-1 text-lg font-bold {{ $card6Class }}">Rs. {{ number_format($card6Value) }}</p>
-                </div>
-
-            </div>
+            @endif
         @endif
 
         {{-- Data Table --}}
         <div class="mt-4">
             <x-common.component-card
-                title="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix - ' . $selectedMonth : 'Report Results' }}"
-                desc="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Grid matrix for flat status and collections' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found' }}">
+                title="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix - ' . $selectedMonth : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Fully Rented Potential Revenue Forecast' : 'Report Results') }}"
+                desc="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Grid matrix for flat status and collections' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Potential monthly revenue snapshot for all flats and shops' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found') }}">
 
                 @if($entries->isEmpty())
                     <div class="py-12 text-center text-gray-400">
@@ -374,6 +411,8 @@
                 @else
                     @if(($filters['report_type'] ?? '') === 'monthly_matrix')
                         @include('reports.partials.matrix_table')
+                    @elseif(($filters['report_type'] ?? '') === 'potential_revenue')
+                        @include('reports.partials.potential_revenue_table')
                     @else
                         <div class="max-h-[calc(100vh-320px)] overflow-auto rounded-lg border border-gray-200 dark:border-gray-800">
                             <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">

@@ -35,7 +35,8 @@ class StoreUnitRequest extends FormRequest
             'file_no'                 => ['nullable', 'string', 'max:100', Rule::unique('units', 'file_no')],
             'area_sqft'               => ['nullable', 'numeric', 'min:0'],
             'is_self'                 => ['nullable', 'boolean'],
-            'self_maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'default_maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'default_monthly_rent'       => ['nullable', 'numeric', 'min:0'],
             
             // Nominee
             'nominee_name'            => ['nullable', 'string', 'max:255'],

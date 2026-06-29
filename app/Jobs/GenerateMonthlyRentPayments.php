@@ -123,8 +123,8 @@ class GenerateMonthlyRentPayments implements ShouldQueue
         $selfDueDate  = $billingMonth->copy()->day(min($selfDueDay, $daysInMonth))->toDateString();
 
         foreach ($selfUnits as $selfUnit) {
-            // Skip if self_maintenance_charge is 0 or null
-            $charge = $selfUnit->self_maintenance_charge;
+            // Skip if default_maintenance_charge is 0 or null
+            $charge = $selfUnit->default_maintenance_charge;
             if (!$charge || $charge <= 0) {
                 continue;
             }

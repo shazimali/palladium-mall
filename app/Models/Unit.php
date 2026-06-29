@@ -27,7 +27,8 @@ class Unit extends Model
         'type',
         'status',
         'is_self',
-        'self_maintenance_charge',
+        'default_maintenance_charge',
+        'default_monthly_rent',
         'file_no',
         'area_sqft',
         'notes',
@@ -36,10 +37,11 @@ class Unit extends Model
     ];
 
     protected $casts = [
-        'area_sqft'               => 'decimal:2',
-        'date'                    => 'date',
-        'is_self'                 => 'boolean',
-        'self_maintenance_charge' => 'decimal:2',
+        'area_sqft'                  => 'decimal:2',
+        'date'                       => 'date',
+        'is_self'                    => 'boolean',
+        'default_maintenance_charge' => 'decimal:2',
+        'default_monthly_rent'       => 'decimal:2',
     ];
 
     // -----------------------------------------------------------------------
@@ -174,6 +176,11 @@ class Unit extends Model
     public function currentOwnership(): HasOne
     {
         return $this->hasOne(UnitOwnership::class)->where('is_current', true);
+    }
+
+    public function activeAgreement(): HasOne
+    {
+        return $this->hasOne(Agreement::class)->where('status', 'active');
     }
 
     public function electricityMeter(): HasOne

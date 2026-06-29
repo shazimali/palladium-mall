@@ -92,10 +92,11 @@ class UnitController extends Controller
             'area_sqft'               => $data['area_sqft'] ?? null,
             'file_no'                 => $data['file_no'] ?? null,
             'date'                    => $data['date'] ?? now()->toDateString(),
-            'status'                  => $data['status'] ?? 'vacant',
-            'landlord_id'             => $data['landlord_id'] ?? null,
-            'is_self'                 => $data['is_self'] ?? false,
-            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? null) : null,
+            'status'                     => $data['status'] ?? 'vacant',
+            'landlord_id'                => $data['landlord_id'] ?? null,
+            'is_self'                    => $data['is_self'] ?? false,
+            'default_maintenance_charge' => $data['default_maintenance_charge'] ?? null,
+            'default_monthly_rent'       => $data['default_monthly_rent'] ?? null,
         ]);
 
         if (!empty($data['landlord_id'])) {
@@ -311,10 +312,11 @@ class UnitController extends Controller
             'area_sqft'               => $data['area_sqft'] ?? null,
             'file_no'                 => $data['file_no'] ?? null,
             'date'                    => $data['date'] ?? $unit->date,
-            'status'                  => $data['status'] ?? $unit->status,
-            'landlord_id'             => $newLandlordId,
-            'is_self'                 => $data['is_self'] ?? false,
-            'self_maintenance_charge' => ($data['is_self'] ?? false) ? ($data['self_maintenance_charge'] ?? null) : null,
+            'status'                     => $data['status'] ?? $unit->status,
+            'landlord_id'                => $newLandlordId,
+            'is_self'                    => $data['is_self'] ?? false,
+            'default_maintenance_charge' => $data['default_maintenance_charge'] ?? null,
+            'default_monthly_rent'       => $data['default_monthly_rent'] ?? null,
         ]);
 
         // Manage ownership records

@@ -49,6 +49,9 @@ class ReportController extends Controller
             if ($request->report_type === 'monthly_matrix') {
                 $entries = $this->buildMatrixEntries($request);
                 $summary = $this->buildMatrixSummary($entries);
+            } elseif ($request->report_type === 'potential_revenue') {
+                $entries = $this->buildPotentialRevenueEntries($request);
+                $summary = $this->buildPotentialRevenueSummary($entries);
             } else {
                 $entries = $this->buildEntries($request);
                 $summary = $this->buildSummary($entries);
@@ -92,6 +95,9 @@ class ReportController extends Controller
         if ($reportType === 'monthly_matrix') {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
+        } elseif ($reportType === 'potential_revenue') {
+            $entries = $this->buildPotentialRevenueEntries($request);
+            $summary = $this->buildPotentialRevenueSummary($entries);
         } else {
             $entries  = $this->buildEntries($request);
             $summary  = $this->buildSummary($entries);
@@ -122,6 +128,9 @@ class ReportController extends Controller
         if ($reportType === 'monthly_matrix') {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
+        } elseif ($reportType === 'potential_revenue') {
+            $entries = $this->buildPotentialRevenueEntries($request);
+            $summary = $this->buildPotentialRevenueSummary($entries);
         } else {
             $entries = $this->buildEntries($request);
             $summary = $this->buildSummary($entries);
@@ -173,6 +182,9 @@ class ReportController extends Controller
         if ($reportType === 'monthly_matrix') {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
+        } elseif ($reportType === 'potential_revenue') {
+            $entries = $this->buildPotentialRevenueEntries($request);
+            $summary = $this->buildPotentialRevenueSummary($entries);
         } else {
             $entries = $this->buildEntries($request);
             $summary = $this->buildSummary($entries);
@@ -346,7 +358,7 @@ class ReportController extends Controller
                     $reportType === 'non_occupide'
                 )) {
                     $projectSelfUnits = \App\Models\Unit::where('is_self', true)
-                        ->where('self_maintenance_charge', '>', 0)
+                        ->where('default_maintenance_charge', '>', 0)
                         ->when($unitId,     fn($q) => $q->where('id', $unitId))
                         ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
                         ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
@@ -448,7 +460,7 @@ class ReportController extends Controller
                                 'category'        => 'payment',
                                 'type'            => 'maintenance',
                                 'description'     => 'Maintenance — ' . $month->format('F Y') . ' (Projected)',
-                                'amount_due'      => (float) $selfUnit->self_maintenance_charge,
+                                'amount_due'      => (float) $selfUnit->default_maintenance_charge,
                                 'amount_paid'     => 0.0,
                                 'status'          => 'pending',
                                 'paid_at'         => null,
@@ -716,6 +728,84 @@ class ReportController extends Controller
         ];
     }
 
+    private function buildPotentialRevenueEntries(Request $request): Collection
+    {
+        $unitId = $request->unit_id;
+        $unitStatus = $request->unit_status;
+        $landlordId = $request->landlord_id;
+        $ownerType = $request->owner_type;
+
+        $query = Unit::with(['activeAgreement', 'landlord']);
+
+        if ($unitId) {
+            $query->where('id', $unitId);
+        }
+        if ($unitStatus) {
+            $query->where('status', $unitStatus);
+        }
+        if ($landlordId) {
+            $query->where('landlord_id', $landlordId);
+        }
+        if ($ownerType) {
+            if ($ownerType === 'pm_mall') {
+                $query->where('is_self', false);
+            } elseif ($ownerType === 'other') {
+                $query->where('is_self', true);
+            }
+        }
+
+        $units = $query->orderBy('unit_number')->get();
+
+        return $units->map(function ($unit) {
+            $isRented = $unit->status === 'rented';
+            $activeAgreement = $unit->activeAgreement;
+
+            if ($isRented && $activeAgreement) {
+                $rent = (float) $activeAgreement->monthly_rent;
+                $maintenance = (float) $activeAgreement->maintenance_charge;
+                $source = 'Active Agreement';
+            } else {
+                $rent = (float) ($unit->default_monthly_rent ?? 0.0);
+                $maintenance = (float) ($unit->default_maintenance_charge ?? 0.0);
+                $source = 'Default Values';
+            }
+
+            $total = $rent + $maintenance;
+
+            return [
+                'unit_id' => $unit->id,
+                'unit_number' => $unit->unit_number,
+                'type' => $unit->type,
+                'status' => $unit->status,
+                'landlord' => $unit->landlord?->name ?? '—',
+                'source' => $source,
+                'rent' => $rent,
+                'maintenance' => $maintenance,
+                'total' => $total,
+            ];
+        });
+    }
+
+    private function buildPotentialRevenueSummary(Collection $entries): array
+    {
+        $count = $entries->count();
+        $totalRent = $entries->sum('rent');
+        $totalMaintenance = $entries->sum('maintenance');
+        $totalCombined = $entries->sum('total');
+
+        $rentedCount = $entries->where('status', 'rented')->count();
+        $vacantCount = $count - $rentedCount;
+
+        return [
+            'count' => $count,
+            'total_rent' => $totalRent,
+            'total_maintenance' => $totalMaintenance,
+            'total_combined' => $totalCombined,
+            'rented_count' => $rentedCount,
+            'vacant_count' => $vacantCount,
+        ];
+    }
+
     // -------------------------------------------------------------------------
     // Human-readable report label for filenames / headings
     // -------------------------------------------------------------------------
@@ -727,6 +817,7 @@ class ReportController extends Controller
             'fines'                      => 'Fines',
             'utilities'                  => 'Utilities Paid',
             'monthly_matrix'             => 'Monthly Matrix',
+            'potential_revenue'          => 'Fully Rented Forecast',
             'maintinance', 'maintenance' => 'Maintenance',
             'other_owned'                => 'Other Owned Payments',
             'occupied', 'occupide'       => 'Occupied (External Units)',

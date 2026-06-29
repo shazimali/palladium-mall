@@ -62,6 +62,19 @@ class ReportExport implements
             });
         }
 
+        if ($this->reportType === 'potential_revenue') {
+            return $this->entries->map(fn($e) => [
+                'Flat/Shop' => $e['unit_number'],
+                'Type' => ucfirst($e['type']),
+                'Status' => ucfirst($e['status']),
+                'Owner' => $e['landlord'] ?? '—',
+                'Rent Source' => $e['source'],
+                'Rent (PKR)' => number_format((float) $e['rent'], 2),
+                'Maintenance (PKR)' => number_format((float) $e['maintenance'], 2),
+                'Total Potential (PKR)' => number_format((float) $e['total'], 2),
+            ]);
+        }
+
         return $this->entries->map(fn($e) => [
             'Created Date' => $e['created_date']?->format('d M Y') ?? '—',
             'Voucher #' => $e['voucher_number'] ?? '—',
@@ -84,6 +97,19 @@ class ReportExport implements
 
     public function headings(): array
     {
+        if ($this->reportType === 'potential_revenue') {
+            return [
+                'Flat/Shop',
+                'Type',
+                'Status',
+                'Owner',
+                'Rent Source',
+                'Rent (PKR)',
+                'Maintenance (PKR)',
+                'Total Potential (PKR)',
+            ];
+        }
+
         if ($this->reportType === 'monthly_matrix') {
             $headers = [
                 'SR',
@@ -136,7 +162,21 @@ class ReportExport implements
         $lastDataRow = $this->entries->count() + 1;  // +1 for heading
         $summaryRow = $lastDataRow + 2;
 
-        if ($this->reportType === 'monthly_matrix') {
+        if ($this->reportType === 'potential_revenue') {
+            $sheet->setCellValue("A{$summaryRow}", 'Summary');
+            $sheet->setCellValue("A" . ($summaryRow + 1), 'Total Flats/Shops');
+            $sheet->setCellValue("B" . ($summaryRow + 1), $this->summary['count']);
+            $sheet->setCellValue("A" . ($summaryRow + 2), 'Rented Units');
+            $sheet->setCellValue("B" . ($summaryRow + 2), $this->summary['rented_count']);
+            $sheet->setCellValue("A" . ($summaryRow + 3), 'Vacant/Other Units');
+            $sheet->setCellValue("B" . ($summaryRow + 3), $this->summary['vacant_count']);
+            $sheet->setCellValue("A" . ($summaryRow + 4), 'Total Potential Rent (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 4), number_format($this->summary['total_rent'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 5), 'Total Potential Maintenance (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['total_maintenance'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 6), 'Combined Potential Monthly Revenue (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 6), number_format($this->summary['total_combined'], 2));
+        } elseif ($this->reportType === 'monthly_matrix') {
             // Write summary block below the data for Monthly Matrix
             $sheet->setCellValue("A{$summaryRow}", 'Summary');
             $sheet->setCellValue("A" . ($summaryRow + 1), 'Total Serv (Rs.)');
