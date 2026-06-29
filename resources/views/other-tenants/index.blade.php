@@ -25,7 +25,7 @@
         </div>
     @endif
 
-    <x-common.component-card title="Other Tenants" desc="Manage tenant profiles for other-owned units">
+    <x-common.component-card title="Other Tenants" desc="Manage Other Tenants ">
 
         {{-- ── Top bar: Status tabs + Actions ── --}}
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -96,10 +96,9 @@
                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                     <tr>
                         <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Flat/Shop</th>
                         <th class="px-4 py-3">Name</th>
-                        <th class="px-4 py-3">CNIC / INC</th>
                         <th class="px-4 py-3">Phone</th>
-                        <th class="px-4 py-3">Attached Unit</th>
                         <th class="px-4 py-3">Occupancy</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -108,7 +107,26 @@
                     @forelse($otherTenants as $index => $ot)
                         <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                             <td class="px-4 py-3 text-gray-400">{{ $otherTenants->firstItem() + $index }}</td>
-
+ {{-- Attached Unit --}}
+                            <td class="px-4 py-3">
+                                @if($ot->unit)
+                                    @php
+                                        $activeHist = $ot->unitHistory->where('unit_id', $ot->unit_id)->whereNull('detached_at')->first();
+                                    @endphp
+                                    <div class="flex flex-col gap-0.5">
+                                        <span class="font-bold text-gray-900 dark:text-white text-sm">
+                                            {{ $ot->unit->unit_number }}
+                                        </span>
+                                        @if($activeHist && $activeHist->attached_at)
+                                            <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
+                                                Since {{ $activeHist->attached_at->format('d M Y') }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                @else
+                                    <span class="text-gray-400 text-xs">—</span>
+                                @endif
+                            </td>
                             {{-- Name --}}
                             <td class="px-4 py-3">
                                 <div class="font-semibold text-gray-800 dark:text-white/90">{{ $ot->name }}</div>
@@ -117,29 +135,10 @@
                                 @endif
                             </td>
 
-                            {{-- CNIC --}}
-                            <td class="px-4 py-3">
-                                {{ $ot->cnic ?? '—' }}
-                            </td>
-
                             {{-- Phone --}}
                             <td class="px-4 py-3">{{ $ot->phone ?? '—' }}</td>
 
-                            {{-- Attached Unit --}}
-                            <td class="px-4 py-3">
-                                @if($ot->unit)
-                                    <div class="flex flex-col gap-0.5">
-                                        <span class="font-bold text-gray-900 dark:text-white text-sm">
-                                            Unit {{ $ot->unit->unit_number }}
-                                        </span>
-                                        <span class="text-xs text-gray-400">
-                                            {{ $ot->unit->floor?->name }} &mdash; {{ $ot->unit->block?->name }}
-                                        </span>
-                                    </div>
-                                @else
-                                    <span class="text-gray-400 text-xs">—</span>
-                                @endif
-                            </td>
+                        
 
                             {{-- Occupancy --}}
                             <td class="px-4 py-3">

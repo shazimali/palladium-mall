@@ -196,5 +196,8 @@ class Unit extends Model
         return $this->hasOne(OtherTenant::class);
     }
 
-
+    public function otherTenantHistory(): HasMany
+    {
+        return $this->hasMany(OtherTenantUnitHistory::class)->orderBy('attached_at', 'desc');
+    }
 }

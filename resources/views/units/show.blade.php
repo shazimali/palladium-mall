@@ -67,10 +67,18 @@
                 class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
                 Timeline History
             </button>
-            <button @click="activeTab = 'agreements'" :class="activeTab === 'agreements' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
-                class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
-                Agreements ({{ $agreements_count }})
-            </button>
+            @if($unit->is_self)
+                <button @click="activeTab = 'other_tenant_history'" :class="activeTab === 'other_tenant_history' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+                    class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
+                    🔗 Occupancy History (Other Tenants)
+                    <span class="ml-1 inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300">{{ $unit->otherTenantHistory->count() }}</span>
+                </button>
+            @else
+                <button @click="activeTab = 'agreements'" :class="activeTab === 'agreements' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+                    class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
+                    Agreements ({{ $agreements_count }})
+                </button>
+            @endif
             <button @click="activeTab = 'payments'" :class="activeTab === 'payments' ? 'border-brand-500 text-brand-600 dark:text-brand-400' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
                 class="whitespace-nowrap border-b-2 px-6 py-3.5 text-sm font-medium transition-all">
                 Payments History
@@ -164,36 +172,68 @@
                     @endif
                 </x-common.component-card>
 
-                {{-- Tenant --}}
-                <x-common.component-card title="Current Active Tenant" desc="Active tenancy details">
-                    @if($unit->tenant)
-                        <div class="space-y-3">
-                            <div>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Name</p>
-                                <p class="text-sm font-medium text-brand-500 hover:underline">
-                                    <a href="{{ route('tenants.show', $unit->tenant->id) }}">{{ $unit->tenant->name }}</a>
-                                </p>
+                {{-- Tenant or Other Tenant depending on ownership --}}
+                @if($unit->is_self)
+                    <x-common.component-card title="Current Occupant (Other Tenant)" desc="Other tenant occupancy details">
+                        @if($unit->otherTenant)
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Name</p>
+                                    <p class="text-sm font-medium text-brand-500 hover:underline">
+                                        <a href="{{ route('other-tenants.show', $unit->otherTenant->id) }}">{{ $unit->otherTenant->name }}</a>
+                                    </p>
+                                </div>
+                                @if($unit->otherTenant->phone)
+                                    <div>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Phone</p>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $unit->otherTenant->phone }}</p>
+                                    </div>
+                                @endif
+                                @if($unit->otherTenant->whatsapp_number)
+                                    <div>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">WhatsApp</p>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $unit->otherTenant->whatsapp_number }}</p>
+                                    </div>
+                                @endif
                             </div>
-                            @if($unit->tenant->phone)
+                        @else
+                            <div class="py-2 text-center text-gray-400 dark:text-gray-600">
+                                <span class="text-2xl">🔑</span>
+                                <p class="text-xs mt-1">This unit is currently unoccupied.</p>
+                            </div>
+                        @endif
+                    </x-common.component-card>
+                @else
+                    <x-common.component-card title="Current Active Tenant" desc="Active tenancy details">
+                        @if($unit->tenant)
+                            <div class="space-y-3">
                                 <div>
-                                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Phone</p>
-                                    <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $unit->tenant->phone }}</p>
+                                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Name</p>
+                                    <p class="text-sm font-medium text-brand-500 hover:underline">
+                                        <a href="{{ route('tenants.show', $unit->tenant->id) }}">{{ $unit->tenant->name }}</a>
+                                    </p>
                                 </div>
-                            @endif
-                            @if($unit->tenant->email)
-                                <div>
-                                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Email</p>
-                                    <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $unit->tenant->email }}</p>
-                                </div>
-                            @endif
-                        </div>
-                    @else
-                        <div class="py-2 text-center text-gray-400 dark:text-gray-600">
-                            <span class="text-2xl">🔑</span>
-                            <p class="text-xs mt-1">This unit is currently vacant.</p>
-                        </div>
-                    @endif
-                </x-common.component-card>
+                                @if($unit->tenant->phone)
+                                    <div>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Phone</p>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $unit->tenant->phone }}</p>
+                                    </div>
+                                @endif
+                                @if($unit->tenant->email)
+                                    <div>
+                                        <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase">Email</p>
+                                        <p class="text-sm font-medium text-gray-800 dark:text-white/90">{{ $unit->tenant->email }}</p>
+                                    </div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="py-2 text-center text-gray-400 dark:text-gray-600">
+                                <span class="text-2xl">🔑</span>
+                                <p class="text-xs mt-1">This unit is currently vacant.</p>
+                            </div>
+                        @endif
+                    </x-common.component-card>
+                @endif
             </div>
         </div>
 
@@ -371,6 +411,78 @@
                 @endif
             </x-common.component-card>
         </div>
+
+        @if($unit->is_self)
+            {{-- ── OTHER TENANT HISTORY TAB ──────────────────────────────────── --}}
+            <div x-show="activeTab === 'other_tenant_history'">
+                <x-common.component-card title="Occupancy History (Other Tenants)" desc="Detailed history of attached and detached tenants for this unit">
+                    @if($unit->otherTenantHistory->isEmpty())
+                        <div class="py-12 text-center text-gray-400">
+                            <span class="text-3xl">🔗</span>
+                            <p class="text-sm font-medium mt-2">No occupant history records found for this unit.</p>
+                        </div>
+                    @else
+                        <div class="overflow-x-auto font-sans border border-gray-200 rounded-xl dark:border-gray-800">
+                            <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
+                                <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
+                                    <tr>
+                                        <th class="px-4 py-3">Tenant Name</th>
+                                        <th class="px-4 py-3">Phone</th>
+                                        <th class="px-4 py-3">Attached At</th>
+                                        <th class="px-4 py-3">Detached At</th>
+                                        <th class="px-4 py-3">Duration</th>
+                                        <th class="px-4 py-3 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach($unit->otherTenantHistory as $history)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+                                            <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white">
+                                                {{ $history->otherTenant->name ?? '—' }}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                {{ $history->otherTenant->phone ?? '—' }}
+                                            </td>
+                                            <td class="px-4 py-3 text-green-600 dark:text-green-400 font-medium">
+                                                {{ $history->attached_at ? $history->attached_at->format('d M Y') : '—' }}
+                                            </td>
+                                            <td class="px-4 py-3">
+                                                @if($history->detached_at)
+                                                    <span class="text-red-500 dark:text-red-400">
+                                                        {{ $history->detached_at->format('d M Y') }}
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                        Current Occupant
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td class="px-4 py-3 text-xs text-gray-400">
+                                                @php
+                                                    $end = $history->detached_at ?? now();
+                                                    $diff = $history->attached_at ? $history->attached_at->diffInDays($end) : 0;
+                                                @endphp
+                                                {{ $diff }} day{{ $diff === 1 ? '' : 's' }}
+                                            </td>
+                                            <td class="px-4 py-3 text-right">
+                                                @if($history->other_tenant_id)
+                                                    <a href="{{ route('other-tenants.show', $history->other_tenant_id) }}" class="text-brand-500 hover:underline font-semibold text-xs">
+                                                        View Profile
+                                                    </a>
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </x-common.component-card>
+            </div>
+        @endif
+
 
         {{-- ── PAYMENTS TAB ────────────────────────────────────────────────── --}}
         <div x-show="activeTab === 'payments'">

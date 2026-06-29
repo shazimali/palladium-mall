@@ -23,8 +23,9 @@ class OtherTenantController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = OtherTenant::with(['unit.floor', 'unit.block'])
+        $query = OtherTenant::with(['unit.floor', 'unit.block', 'unitHistory'])
             ->when($request->search, fn($q) => $q->search($request->search));
+
 
         $counts = [
             'total'    => (clone $query)->count(),
@@ -118,11 +119,11 @@ class OtherTenantController extends Controller
 
         $data = $request->validate([
             'name'               => ['required', 'string', 'max:255'],
-            'cnic'               => ['required', 'string', 'max:15', 'unique:other_tenants,cnic', 'regex:/^\d{5}-\d{7}-\d{1}$/'],
+            'cnic'               => ['nullable', 'string', 'max:15', 'unique:other_tenants,cnic', 'regex:/^\d{5}-\d{7}-\d{1}$/'],
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
-            'address'            => ['nullable', 'string'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'attached_at'        => ['nullable', 'date'],
             'unit_id'            => [
                 'nullable',
                 'exists:units,id',
@@ -134,24 +135,25 @@ class OtherTenantController extends Controller
                 }
             ],
         ], [
-            'cnic.required' => 'CNIC is required.',
             'cnic.regex'    => 'CNIC format must be: 35201-1234567-1',
             'cnic.unique'   => 'This CNIC is already registered to another tenant.',
         ]);
 
         $unitId = $data['unit_id'] ?? null;
-        unset($data['unit_id']);
+        $attachedAt = $data['attached_at'] ?? null;
+        unset($data['unit_id'], $data['attached_at']);
 
         $data['status'] = $unitId ? 'active' : 'inactive';
         $otherTenant = OtherTenant::create($data);
 
         // Attach to unit if selected
         if ($unitId) {
-            $this->performAttach($otherTenant, $unitId);
+            $this->performAttach($otherTenant, $unitId, $attachedAt);
         }
 
         return redirect()->route('other-tenants.index')
             ->with('success', 'Other tenant added successfully.');
+
 
     }
 
@@ -189,11 +191,11 @@ class OtherTenantController extends Controller
 
         $data = $request->validate([
             'name'               => ['required', 'string', 'max:255'],
-            'cnic'               => ['required', 'string', 'max:15', 'unique:other_tenants,cnic,' . $otherTenant->id, 'regex:/^\d{5}-\d{7}-\d{1}$/'],
+            'cnic'               => ['nullable', 'string', 'max:15', 'unique:other_tenants,cnic,' . $otherTenant->id, 'regex:/^\d{5}-\d{7}-\d{1}$/'],
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
-            'address'            => ['nullable', 'string'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'attached_at'        => ['nullable', 'date'],
             'unit_id'            => [
                 'nullable',
                 'exists:units,id',
@@ -207,14 +209,15 @@ class OtherTenantController extends Controller
                 }
             ],
         ], [
-            'cnic.required' => 'CNIC is required.',
             'cnic.regex'    => 'CNIC format must be: 35201-1234567-1',
             'cnic.unique'   => 'This CNIC is already registered to another tenant.',
         ]);
 
+
         $newUnitId = $data['unit_id'] ?? null;
+        $attachedAt = $data['attached_at'] ?? null;
         $oldUnitId = $otherTenant->unit_id;
-        unset($data['unit_id']);
+        unset($data['unit_id'], $data['attached_at']);
 
         $data['status'] = $newUnitId ? 'active' : 'inactive';
         $otherTenant->update($data);
@@ -225,12 +228,19 @@ class OtherTenantController extends Controller
                 $this->performDetach($otherTenant);
             }
             if ($newUnitId) {
-                $this->performAttach($otherTenant, $newUnitId);
+                $this->performAttach($otherTenant, $newUnitId, $attachedAt);
             }
+        } elseif ($newUnitId && $attachedAt) {
+            // Update the attachment date of the current unit
+            OtherTenantUnitHistory::where('other_tenant_id', $otherTenant->id)
+                ->where('unit_id', $newUnitId)
+                ->whereNull('detached_at')
+                ->update(['attached_at' => $attachedAt]);
         }
 
         return redirect()->route('other-tenants.index')
             ->with('success', 'Other tenant updated successfully.');
+
 
     }
 
@@ -314,7 +324,7 @@ class OtherTenantController extends Controller
     // Private helpers for attach / detach with history
     // -----------------------------------------------------------------------
 
-    private function performAttach(OtherTenant $otherTenant, int $unitId): void
+    private function performAttach(OtherTenant $otherTenant, int $unitId, $attachedAt = null): void
     {
         // Set unit_id and status on other_tenant
         $otherTenant->update([
@@ -326,9 +336,10 @@ class OtherTenantController extends Controller
         OtherTenantUnitHistory::create([
             'other_tenant_id' => $otherTenant->id,
             'unit_id'         => $unitId,
-            'attached_at'     => Carbon::today(),
+            'attached_at'     => $attachedAt ?: Carbon::today(),
         ]);
     }
+
 
     private function performDetach(OtherTenant $otherTenant): void
     {

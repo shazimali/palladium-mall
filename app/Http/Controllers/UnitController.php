@@ -134,6 +134,8 @@ class UnitController extends Controller
             'agreements.tenant',
             'payments.tenant',
             'payments.paymentAccount',
+            'otherTenant',
+            'otherTenantHistory.otherTenant',
         ]);
 
         $agreements = $unit->agreements;
@@ -227,6 +229,35 @@ class UnitController extends Controller
                 'icon' => '🏢',
                 'url' => route('landlords.show', $ownership->landlord_id),
             ]);
+        }
+        // Inject other tenant history events into timeline
+        foreach ($unit->otherTenantHistory as $history) {
+            if ($history->attached_at) {
+                $timeline->push([
+                    'type' => 'other_tenant_attached',
+                    'date' => $history->attached_at,
+                    'title' => 'Other Tenant Attached',
+                    'subtitle' => 'Occupant: ' . ($history->otherTenant->name ?? '—'),
+                    'details' => 'Attached to unit on ' . $history->attached_at->format('d M Y'),
+                    'status' => 'attached',
+                    'status_badge' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                    'icon' => '🔗',
+                    'url' => route('other-tenants.show', $history->other_tenant_id),
+                ]);
+            }
+            if ($history->detached_at) {
+                $timeline->push([
+                    'type' => 'other_tenant_detached',
+                    'date' => $history->detached_at,
+                    'title' => 'Other Tenant Detached',
+                    'subtitle' => 'Occupant: ' . ($history->otherTenant->name ?? '—'),
+                    'details' => 'Detached from unit on ' . $history->detached_at->format('d M Y'),
+                    'status' => 'detached',
+                    'status_badge' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
+                    'icon' => '🔓',
+                    'url' => route('other-tenants.show', $history->other_tenant_id),
+                ]);
+            }
         }
 
         // Sort chronological timeline by date descending

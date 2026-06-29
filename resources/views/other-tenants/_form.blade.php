@@ -1,7 +1,16 @@
 {{-- Shared form for create & edit --}}
 
+@php
+    $activeHistory = null;
+    if (isset($otherTenant) && $otherTenant->unit_id) {
+        $activeHistory = $otherTenant->unitHistory()->whereNull('detached_at')->first();
+    }
+    $attachmentDate = $activeHistory ? $activeHistory->attached_at?->toDateString() : old('attached_at', today()->toDateString());
+@endphp
+
 @if($errors->any())
-    <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+    <div
+        class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
         <ul class="list-disc pl-4 space-y-1">
             @foreach($errors->all() as $error)
                 <li>{{ $error }}</li>
@@ -12,13 +21,57 @@
 
 <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 
-    {{-- Name --}}
+    {{-- 1st: Attach to Other-Owned Unit --}}
+    @if(!empty($selfUnits) && $selfUnits->isNotEmpty())
+        <div>
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Attach Flat/Shop
+                <span class="ml-1 text-xs font-normal text-gray-400">(optional)</span>
+            </label>
+            <select name="unit_id"
+                class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('unit_id') border-red-400 @enderror">
+                <option value="">— No Flat/Shop Attached</option>
+                @foreach($selfUnits as $unit)
+                    @php
+                        $currentOccupant = $unit->otherTenant;
+                        $isSelf = isset($otherTenant) && $currentOccupant && $currentOccupant->id === ($otherTenant->id ?? null);
+                        $selected = old('unit_id', $otherTenant->unit_id ?? null) == $unit->id;
+                    @endphp
+                    <option value="{{ $unit->id }}" {{ $selected ? 'selected' : '' }} {{ $currentOccupant && !$isSelf ? 'disabled' : '' }}>
+                        {{ $unit->unit_number }}
+                        @if($currentOccupant && !$isSelf)
+                            (Occupied by {{ $currentOccupant->name }} — Locked)
+                        @endif
+                    </option>
+                @endforeach
+            </select>
+            @error('unit_id')
+                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+            @enderror
+            <p class="mt-1 text-xs text-gray-400">Only unattached units can be selected. You cannot select a unit already
+                attached to another tenant.</p>
+        </div>
+
+        {{-- Attachment Date --}}
+        <div>
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Date
+            </label>
+            <input type="text" name="attached_at" id="attached_at" value="{{ $attachmentDate }}"
+                class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('attached_at') border-red-400 @enderror" />
+            @error('attached_at')
+                <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+            @enderror
+        </div>
+    @endif
+
+
+    {{-- 2nd: Name --}}
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Full Name <span class="text-red-500">*</span>
         </label>
-        <input type="text" name="name" value="{{ old('name', $otherTenant->name ?? '') }}"
-            placeholder="Enter full name"
+        <input type="text" name="name" value="{{ old('name', $otherTenant->name ?? '') }}" placeholder="Enter full name"
             class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('name') border-red-400 @enderror"
             required />
         @error('name')
@@ -26,22 +79,7 @@
         @enderror
     </div>
 
-    {{-- CNIC --}}
-    <div>
-        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            CNIC <span class="text-red-500">*</span>
-        </label>
-        <input type="text" name="cnic" id="cnic_input" value="{{ old('cnic', $otherTenant->cnic ?? '') }}"
-            placeholder="35201-1234567-1" maxlength="15" required
-            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('cnic') border-red-400 @enderror"
-            pattern="\d{5}-\d{7}-\d{1}" />
-        <p class="mt-1 text-xs text-gray-400">Format: 35201-1234567-1</p>
-        @error('cnic')
-            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-        @enderror
-    </div>
-
-    {{-- Phone --}}
+    {{-- 3rd: Phone --}}
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
             Phone Number
@@ -54,68 +92,35 @@
         @enderror
     </div>
 
-    {{-- WhatsApp --}}
+    {{-- 4th: WhatsApp --}}
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
             WhatsApp Number
         </label>
-        <input type="text" name="whatsapp_number" value="{{ old('whatsapp_number', $otherTenant->whatsapp_number ?? '') }}"
-            placeholder="e.g. 0300-1234567"
+        <input type="text" name="whatsapp_number"
+            value="{{ old('whatsapp_number', $otherTenant->whatsapp_number ?? '') }}" placeholder="e.g. 0300-1234567"
             class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('whatsapp_number') border-red-400 @enderror" />
         @error('whatsapp_number')
             <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
         @enderror
     </div>
 
-
-
-
-    {{-- Attach to Other-Owned Unit --}}
-    @if(!empty($selfUnits) && $selfUnits->isNotEmpty())
+    {{-- 5th: CNIC (not required) --}}
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Attach to Unit
-            <span class="ml-1 text-xs font-normal text-gray-400">(optional — other-owned units only)</span>
+            CNIC <span class="text-gray-400">(optional)</span>
         </label>
-        <select name="unit_id"
-            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('unit_id') border-red-400 @enderror">
-            <option value="">— No unit / Detach —</option>
-            @foreach($selfUnits as $unit)
-                @php
-                    $currentOccupant = $unit->otherTenant;
-                    $isSelf = isset($otherTenant) && $currentOccupant && $currentOccupant->id === ($otherTenant->id ?? null);
-                    $selected = old('unit_id', $otherTenant->unit_id ?? null) == $unit->id;
-                @endphp
-                <option value="{{ $unit->id }}" {{ $selected ? 'selected' : '' }} {{ $currentOccupant && !$isSelf ? 'disabled' : '' }}>
-                    Unit {{ $unit->unit_number }}
-                    — {{ $unit->floor?->name }} / {{ $unit->block?->name }}
-                    @if($currentOccupant && !$isSelf)
-                        (Occupied by {{ $currentOccupant->name }} — Locked)
-                    @endif
-                </option>
-            @endforeach
-        </select>
-        @error('unit_id')
-            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-        @enderror
-        <p class="mt-1 text-xs text-gray-400">Only unattached units can be selected. You cannot select a unit already attached to another tenant.</p>
-    </div>
-    @endif
-
-    {{-- Address --}}
-    <div class="md:col-span-2">
-        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Address
-        </label>
-        <textarea name="address" rows="3"
-            placeholder="Residential address..."
-            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('address') border-red-400 @enderror">{{ old('address', $otherTenant->address ?? '') }}</textarea>
-        @error('address')
+        <input type="text" name="cnic" id="cnic_input" value="{{ old('cnic', $otherTenant->cnic ?? '') }}"
+            placeholder="35201-1234567-1" maxlength="15"
+            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('cnic') border-red-400 @enderror" />
+        <p class="mt-1 text-xs text-gray-400">Format: 35201-1234567-1</p>
+        @error('cnic')
             <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
         @enderror
     </div>
 
 </div>
+
 
 {{-- Submit --}}
 <div class="mt-6 flex items-center justify-end gap-3">
@@ -136,40 +141,49 @@
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function () {
-                const cnicEl = document.getElementById('cnic_input');
-                if (!cnicEl) return;
-
-                function formatCnic(raw) {
-                    const digits = raw.replace(/\D/g, '').slice(0, 13);
-                    if (digits.length <= 5) return digits;
-                    if (digits.length <= 12) return digits.slice(0, 5) + '-' + digits.slice(5);
-                    return digits.slice(0, 5) + '-' + digits.slice(5, 12) + '-' + digits.slice(12, 13);
+                // Flatpickr for attached_at picker
+                if (typeof flatpickr !== 'undefined') {
+                    flatpickr('#attached_at', {
+                        dateFormat: 'Y-m-d',
+                        defaultDate: '{{ $attachmentDate ?? today()->toDateString() }}',
+                    });
                 }
 
-                cnicEl.addEventListener('input', function (e) {
-                    const pos = this.selectionStart;
-                    const old = this.value;
-                    const fresh = formatCnic(this.value);
-                    this.value = fresh;
+                const cnicEl = document.getElementById('cnic_input');
+                if (cnicEl) {
+                    function formatCnic(raw) {
+                        const digits = raw.replace(/\D/g, '').slice(0, 13);
+                        if (digits.length <= 5) return digits;
+                        if (digits.length <= 12) return digits.slice(0, 5) + '-' + digits.slice(5);
+                        return digits.slice(0, 5) + '-' + digits.slice(5, 12) + '-' + digits.slice(12, 13);
+                    }
 
-                    const added = fresh.length - old.length;
-                    this.setSelectionRange(pos + added, pos + added);
+                    cnicEl.addEventListener('input', function (e) {
+                        const pos = this.selectionStart;
+                        const old = this.value;
+                        const fresh = formatCnic(this.value);
+                        this.value = fresh;
 
-                    const valid = /^\d{5}-\d{7}-\d$/.test(fresh);
-                    this.classList.toggle('border-red-400', !valid && fresh.length > 0);
-                    this.classList.toggle('border-green-400', valid);
-                });
+                        const added = fresh.length - old.length;
+                        this.setSelectionRange(pos + added, pos + added);
 
-                cnicEl.addEventListener('keydown', function (e) {
-                    const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
-                    if (allowed.includes(e.key)) return;
-                    if (!/^\d$/.test(e.key)) e.preventDefault();
-                });
+                        const valid = /^\d{5}-\d{7}-\d$/.test(fresh);
+                        this.classList.toggle('border-red-400', !valid && fresh.length > 0);
+                        this.classList.toggle('border-green-400', valid);
+                    });
 
-                if (cnicEl.value) {
-                    cnicEl.value = formatCnic(cnicEl.value);
+                    cnicEl.addEventListener('keydown', function (e) {
+                        const allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+                        if (allowed.includes(e.key)) return;
+                        if (!/^\d$/.test(e.key)) e.preventDefault();
+                    });
+
+                    if (cnicEl.value) {
+                        cnicEl.value = formatCnic(cnicEl.value);
+                    }
                 }
             });
+
         </script>
     @endpush
 @endonce
