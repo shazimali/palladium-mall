@@ -58,6 +58,41 @@ class UnitController extends Controller
         ]);
     }
 
+    public function print(Request $request): View
+    {
+        $units = Unit::query()
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->type, fn($q) => $q->where('type', $request->type))
+            ->when($request->floor_id, fn($q) => $q->where('floor_id', $request->floor_id))
+            ->when($request->block_id, fn($q) => $q->where('block_id', $request->block_id))
+            ->when($request->area_id, fn($q) => $q->where('area_id', $request->area_id))
+            ->when($request->filled('is_self'), fn($q) => $q->where('is_self', (bool) $request->is_self))
+            ->with(['floor', 'block', 'area', 'landlord'])
+            ->orderBy('unit_number')
+            ->get();
+
+        return view('units.print', [
+            'title' => 'Flat / Shop Master List',
+            'units' => $units,
+        ]);
+    }
+
+    public function printOne(Unit $unit): View
+    {
+        $unit->load([
+            'floor',
+            'block',
+            'area',
+            'landlord',
+            'currentOwnership.landlord',
+        ]);
+
+        return view('units.print_one', [
+            'unit' => $unit,
+        ]);
+    }
+
     public function create(Request $request): View
     {
         $floors = Floor::orderBy('name')->get();

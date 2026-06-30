@@ -29,7 +29,7 @@ Structural and ownership fields managed directly in the Units module.
                 @foreach($landlords as $l)
                     <option value="{{ $l->id }}" 
                         {{ old('landlord_id', $unit->landlord_id ?? $selectedLandlordId ?? '') == $l->id ? 'selected' : '' }}>
-                        {{ $l->name }} (CNIC: {{ $l->cnic ?? '—' }})
+                        {{ $l->name }}
                     </option>
                 @endforeach
             </select>

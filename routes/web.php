@@ -56,6 +56,8 @@ Route::middleware('auth')->group(function () {
 
     // Units — admin + super-admin only
     Route::middleware('permission:units.view')->group(function () {
+        Route::get('units/print', [UnitController::class, 'print'])->name('units.print');
+        Route::get('units/{unit}/print', [UnitController::class, 'printOne'])->name('units.print-one');
         Route::resource('units', UnitController::class)->except(['show']);
         Route::get('units/{unit}', [UnitController::class, 'show'])->name('units.show');
     });
