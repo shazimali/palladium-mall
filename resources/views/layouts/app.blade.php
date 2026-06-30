@@ -46,8 +46,8 @@
             });
 
             Alpine.store('sidebar', {
-                // Initialize based on screen size
-                isExpanded: window.innerWidth >= 1280, // true for desktop, false for mobile
+                // Initialize to always closed/collapsed by default
+                isExpanded: false,
                 isMobileOpen: false,
                 isHovered: false,
 
@@ -94,14 +94,14 @@
 
 </head>
 
-<body x-data="{ 'loaded': true}" x-init="$store.sidebar.isExpanded = window.innerWidth >= 1280;
+<body x-data="{ 'loaded': true}" x-init="$store.sidebar.isExpanded = false;
     const checkMobile = () => {
         if (window.innerWidth < 1280) {
             $store.sidebar.setMobileOpen(false);
             $store.sidebar.isExpanded = false;
         } else {
             $store.sidebar.isMobileOpen = false;
-            $store.sidebar.isExpanded = true;
+            $store.sidebar.isExpanded = false;
         }
     };
     window.addEventListener('resize', checkMobile);">
@@ -122,7 +122,7 @@
             <!-- app header start -->
             @include('layouts.app-header')
             <!-- app header end -->
-            <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+            <div class="p-4 mx-auto @yield('containerClass', 'max-w-(--breakpoint-2xl)') md:p-6">
                 @yield('content')
             </div>
         </div>

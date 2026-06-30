@@ -19,12 +19,13 @@ use Carbon\Carbon;
 
 class PaymentController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request)
     {
+        $monthVal = $request->input('month', Carbon::now()->startOfMonth()->toDateString());
         $month = null;
-        if ($request->filled('month')) {
+        if ($monthVal) {
             try {
-                $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
+                $month = Carbon::parse($monthVal)->startOfMonth()->toDateString();
             } catch (\Exception $e) {
                 // Ignore invalid date formats
             }
@@ -68,6 +69,24 @@ class PaymentController extends Controller
 
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
         $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
+
+        $search = $request->input('search');
+        $highlight = function($text) use ($search) {
+            if (empty($text)) return '';
+            if (empty($search)) {
+                return e($text);
+            }
+            $escapedSearch = preg_quote($search, '/');
+            return preg_replace('/(' . $escapedSearch . ')/i', '<mark class="bg-amber-100 text-amber-900 rounded px-0.5 dark:bg-amber-950/70 dark:text-amber-300 font-medium">$1</mark>', e($text));
+        };
+
+        if ($request->ajax() || $request->has('ajax')) {
+            return view('payments._table', [
+                'payments' => $payments,
+                'highlight' => $highlight,
+                'summary' => $summary,
+            ])->render();
+        }
 
         return view('payments.index', [
             'title' => 'Rent & Payments',
@@ -475,6 +494,67 @@ class PaymentController extends Controller
         return redirect()
             ->route('payments.index')
             ->with('success', "{$created} payment records generated. {$skipped} already existed or skipped.");
+    }
+
+    // -----------------------------------------------------------------------
+    // Bulk edit payments for a month
+    // -----------------------------------------------------------------------
+
+    public function bulkEdit(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'source_month'    => ['required', 'date'],
+            'type'            => ['required', 'in:all,rent,maintenance'],
+            'target_month'    => ['nullable', 'date'],
+            'target_due_date' => ['nullable', 'date'],
+        ]);
+
+        $sourceMonth = Carbon::parse($request->source_month)->startOfMonth()->toDateString();
+        $targetMonth = $request->filled('target_month') 
+            ? Carbon::parse($request->target_month)->startOfMonth()->toDateString() 
+            : null;
+        $targetDueDate = $request->filled('target_due_date') 
+            ? Carbon::parse($request->target_due_date)->toDateString() 
+            : null;
+
+        if (!$targetMonth && !$targetDueDate) {
+            return redirect()
+                ->back()
+                ->with('error', 'You must specify at least a new Month/Year or a new Due Date to update.');
+        }
+
+        $type = $request->type;
+
+        $updatedCount = DB::transaction(function () use ($sourceMonth, $type, $targetMonth, $targetDueDate) {
+            $query = Payment::where('month', $sourceMonth)
+                ->where('status', 'unpaid');
+
+            if ($type !== 'all') {
+                $query->where('type', $type);
+            }
+
+            $payments = $query->get();
+            $count = 0;
+
+            foreach ($payments as $payment) {
+                $updates = [];
+                if ($targetMonth) {
+                    $updates['month'] = $targetMonth;
+                }
+                if ($targetDueDate) {
+                    $updates['due_date'] = $targetDueDate;
+                }
+
+                $payment->update($updates);
+                $count++;
+            }
+
+            return $count;
+        });
+
+        return redirect()
+            ->route('payments.index')
+            ->with('success', "{$updatedCount} unpaid payment records updated successfully.");
     }
 
     // -----------------------------------------------------------------------

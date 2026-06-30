@@ -18,7 +18,7 @@ class OtherTenantController extends Controller
     // Index
     // -----------------------------------------------------------------------
 
-    public function index(Request $request): View
+    public function index(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('other_tenants.view')) {
             abort(403, 'Unauthorized action.');
@@ -71,6 +71,14 @@ class OtherTenantController extends Controller
             ->with(['floor', 'block', 'otherTenant', 'landlord'])
             ->orderBy('unit_number')
             ->get();
+
+        if ($request->ajax() || $request->has('ajax')) {
+            return view('other-tenants._table', [
+                'otherTenants' => $otherTenants,
+                'counts'       => $counts,
+                'selfUnits'    => $selfUnits,
+            ])->render();
+        }
 
         return view('other-tenants.index', [
             'title'        => 'Other Tenants',

@@ -1,7 +1,9 @@
 @extends('layouts.app')
 
+@section('containerClass', 'max-w-none w-full')
+
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Rent & Payments" />
+    <x-common.page-breadcrumb pageTitle="" />
 
     @if(session('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
@@ -19,27 +21,22 @@
     <div class="mb-6 flex flex-wrap gap-2">
         @php
             $activeOwner = request('owner_type', '');
-            $ownerTabs = [
-                ''        => ['label' => 'All Payments',          'icon' => '💳'],
-                'other'   => ['label' => 'Other-Owned Payments',  'icon' => '🏠'],
-                'pm_mall' => ['label' => 'PM Mall Payments',      'icon' => '🏢'],
-            ];
         @endphp
-        @foreach($ownerTabs as $ownerKey => $tab)
-            @php
-                $tabParams = array_merge(request()->query(), ['owner_type' => $ownerKey]);
-                $isActive  = $activeOwner === $ownerKey;
-            @endphp
-            <a href="{{ route('payments.index', $tabParams) }}"
-               class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all
-                      {{ $isActive
-                          ? 'bg-brand-500 text-white shadow-sm'
-                          : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}">
-                <span>{{ $tab['icon'] }}</span>
-                {{ $tab['label'] }}
-            </a>
-        @endforeach
-    </div>
+        <button type="button" onclick="setOwnerFilter('')"
+            class="owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all {{ $activeOwner === '' ? 'bg-brand-500 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}"
+            data-owner="">
+            <span>💳</span> All Payments
+        </button>
+        <button type="button" onclick="setOwnerFilter('other')"
+            class="owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all {{ $activeOwner === 'other' ? 'bg-brand-500 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}"
+            data-owner="other">
+            <span>🏠</span> Other-Owned Payments
+        </button>
+        <button type="button" onclick="setOwnerFilter('pm_mall')"
+            class="owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all {{ $activeOwner === 'pm_mall' ? 'bg-brand-500 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}"
+            data-owner="pm_mall">
+            <span>🏢</span> PM Mall Payments
+        </button>
 
     {{-- Summary cards --}}
     @php
@@ -48,8 +45,7 @@
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
             <p class="text-xs text-gray-400">Total Due ({{ $monthLabel }})</p>
-            <p class="mt-1 text-lg font-bold text-gray-800 dark:text-white">Rs. {{ number_format($summary['total_due']) }}
-            </p>
+            <p class="mt-1 text-lg font-bold text-gray-800 dark:text-white">Rs. {{ number_format($summary['total_due']) }}</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
             <p class="text-xs text-gray-400">Total Collected ({{ $monthLabel }})</p>
@@ -66,29 +62,25 @@
     </div>
 
     @php
-        $cardTitle = match(request('owner_type')) {
+        $cardTitle = match (request('owner_type')) {
             'pm_mall' => 'PM Mall Payments',
             'other' => 'Other-Owned Payments',
             default => 'All Payments',
         };
     @endphp
     <x-common.component-card :title="$cardTitle" desc="Track rent, maintenance and fine payments">
-
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-2 items-center">
                 <span
-                    class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    Total: {{ $payments->total() }}
+                    class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-theme-xs">
+                    Total: <span id="badge-total-count" class="ml-1.5 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-950/50 dark:text-brand-400">{{ $payments->total() }}</span>
                 </span>
             </div>
-
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'status', 'type', 'month', 'unit_id']))
-                    <a href="{{ route('payments.index') }}"
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
-                        Clear
-                    </a>
-                @endif
+                <button type="button" id="clear-filters-btn" onclick="clearFilters()"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors {{ request()->anyFilled(['search', 'status', 'type', 'month', 'unit_id']) ? '' : 'hidden' }}">
+                    Clear
+                </button>
                 {{-- Bulk Generate button --}}
                 @if(auth()->user()->hasPermission('payments.create') || auth()->user()->isSuperAdmin())
                     <button type="button" x-data @click="$dispatch('open-bulk-generate')"
@@ -99,6 +91,17 @@
                         </svg>
                         Bulk Generate
                     </button>
+
+                    @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
+                        <button type="button" x-data @click="$dispatch('open-bulk-edit')"
+                            class="inline-flex items-center gap-2 rounded-lg border border-amber-600 px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Bulk Edit
+                        </button>
+                    @endif
 
                     <a href="{{ route('payments.utilities.create') }}"
                         class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03] transition-colors">
@@ -118,12 +121,12 @@
                 @endif
             </div>
         </div>
-
         <!-- Filters & Search -->
         <div
             class="my-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <form action="{{ route('payments.index') }}" method="GET" class="flex flex-col gap-4 sm:flex-row sm:items-center">
-                <input type="hidden" name="owner_type" value="{{ request('owner_type') }}">
+            <form id="filter-form" action="{{ route('payments.index') }}" method="GET"
+                class="flex flex-col gap-4 sm:flex-row sm:items-center" onsubmit="event.preventDefault();">
+                <input type="hidden" name="owner_type" id="owner-type-filter" value="{{ request('owner_type') }}">
 
                 <!-- Search Input -->
                 <div class="relative flex-1 max-w-md">
@@ -134,13 +137,14 @@
                                 d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
                         </svg>
                     </span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search tenant, unit, ref..."
+                    <input type="text" name="search" id="search-input" value="{{ request('search') }}"
+                        placeholder="Search tenant, unit, ref..." autocomplete="off"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
                 <!-- Unit Filter -->
                 <div class="relative">
-                    <select name="unit_id" onchange="this.form.submit()"
+                    <select name="unit_id" onchange="fetchResults()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="">All Units</option>
                         @foreach($units as $unit)
@@ -153,7 +157,7 @@
 
                 <!-- Status Filter -->
                 <div class="relative">
-                    <select name="status" onchange="this.form.submit()"
+                    <select name="status" onchange="fetchResults()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="">All Statuses</option>
                         <option value="unpaid" {{ request('status') === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
@@ -164,13 +168,15 @@
 
                 <!-- Type Filter -->
                 <div class="relative">
-                    <select name="type" onchange="this.form.submit()"
+                    <select name="type" onchange="fetchResults()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="">All Types</option>
                         <option value="rent" {{ request('type') === 'rent' ? 'selected' : '' }}>Rent</option>
-                        <option value="maintenance" {{ request('type') === 'maintenance' ? 'selected' : '' }}>Maintenance</option>
+                        <option value="maintenance" {{ request('type') === 'maintenance' ? 'selected' : '' }}>Maintenance
+                        </option>
                         <option value="fine" {{ request('type') === 'fine' ? 'selected' : '' }}>Fine</option>
-                        <option value="electricity" {{ request('type') === 'electricity' ? 'selected' : '' }}>Electricity</option>
+                        <option value="electricity" {{ request('type') === 'electricity' ? 'selected' : '' }}>Electricity
+                        </option>
                         <option value="water" {{ request('type') === 'water' ? 'selected' : '' }}>Water</option>
                         <option value="gas" {{ request('type') === 'gas' ? 'selected' : '' }}>Gas</option>
                         <option value="other" {{ request('type') === 'other' ? 'selected' : '' }}>Other</option>
@@ -179,7 +185,8 @@
 
                 <!-- Month & Year Filter Datepicker -->
                 <div class="relative max-w-[180px]">
-                    <input type="text" id="filter_month" name="month" value="{{ request('month') }}" placeholder="Select Month/Year" autocomplete="off"
+                    <input type="text" id="filter_month" name="month" value="{{ request('month', \Carbon\Carbon::now()->startOfMonth()->toDateString()) }}"
+                        placeholder="Select Month/Year" autocomplete="off"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
@@ -187,199 +194,22 @@
             </form>
         </div>
 
-        <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
-            <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                    <tr>
-                        <th class="px-4 py-3">#</th>
-                        <th class="px-4 py-3">Flat/Shop</th>
-                        <th class="px-4 py-3">Tenant</th>
-                        <th class="px-4 py-3">Type</th>
-                        <th class="px-4 py-3">Month</th>
-                        <th class="px-4 py-3">Amount</th>
-                        <th class="px-4 py-3">Paid</th>
-                        <th class="px-4 py-3">Due Date</th>
-                        <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3 text-right">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                    @forelse($payments as $index => $payment)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                            <td class="px-4 py-3 text-gray-400">{{ $payments->firstItem() + $index }}</td>
-                            <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
-                                <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                                    {{ $payment->unit->unit_number }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
-                                @if($payment->tenant)
-                                    {{ $payment->tenant->name }}
-                                @elseif($payment->otherTenant)
-                                    <div class="flex flex-col">
-                                        <span>{{ $payment->otherTenant->name }}</span>
-                                        <span class="inline-flex items-center gap-0.5 mt-0.5 text-[10px] font-medium text-violet-600 dark:text-violet-400">
-                                            Other-Owned
-                                        </span>
-                                    </div>
-                                @else
-                                    <span class="inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
-                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                        Other-Owned
-                                    </span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3">
-                                <span
-                                    class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $payment->type_badge_class }}">
-                                    {{ ucfirst($payment->type) }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-xs">{{ $payment->month->format('M Y') }}</td>
-                            <td class="px-4 py-3 font-medium">Rs. {{ number_format($payment->amount) }}</td>
-                            <td class="px-4 py-3">
-                                <span class="{{ $payment->amount_paid > 0 ? 'text-green-600 font-medium' : 'text-gray-400' }}">
-                                    Rs. {{ number_format($payment->amount_paid) }}
-                                </span>
-                                @if($payment->paymentAccount)
-                                    <div class="text-[10px] text-gray-500 mt-1 dark:text-gray-400 font-medium whitespace-nowrap">
-                                        🏦 {{ $payment->paymentAccount->name }}
-                                    </div>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-xs {{ $payment->isOverdue() ? 'text-red-500 font-semibold' : '' }}">
-                                {{ $payment->due_date->format('d M Y') }}
-                            </td>
-                            <td class="px-4 py-3">
-                                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium {{ $payment->status_badge_class }}">
-                                    <span class="h-1.5 w-1.5 rounded-full {{ $payment->status === 'paid' ? 'bg-green-600' : ($payment->status === 'partial' ? 'bg-orange-500' : 'bg-red-600') }}"></span>
-                                    {{ ucfirst($payment->status) }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <div class="flex flex-col items-end gap-1.5">
-                                    <div class="flex items-center gap-1.5">
-                                        <a href="{{ route('payments.show', $payment) }}"
-                                            class="inline-flex items-center rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                                            title="View">
-                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"
-                                                viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                            </svg>
-                                        </a>
-
-                                        <a href="{{ route('payments.print', $payment) }}" target="_blank"
-                                            class="inline-flex items-center rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                                            title="{{ $payment->type === 'rent' ? 'Print Rent Bill' : (in_array($payment->type, ['maintenance', 'electricity', 'water', 'gas']) ? 'Print Maintenance Bill' : 'Print Receipt') }}">
-                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
-                                            </svg>
-                                        </a>
-
-                                        @if(auth()->user()->hasPermission('payments.whatsapp') || auth()->user()->isSuperAdmin())
-                                            @php
-                                                $phone = $payment->whatsapp_number ?: ($payment->tenant?->whatsapp_number ?: $payment->tenant?->phone);
-                                            @endphp
-                                            @if($phone)
-                                            @php
-                                                $recipientName = $payment->tenant?->name 
-                                                    ?: ($payment->otherTenant?->name 
-                                                        ?: ($payment->unit?->landlord?->name ?: 'Other-Owned Unit'));
-
-                                                $phoneClean = preg_replace('/\D/', '', $phone);
-                                                if (strpos($phoneClean, '0') === 0 && strlen($phoneClean) === 11) {
-                                                    $phoneClean = '92' . substr($phoneClean, 1);
-                                                }
-
-                                                $typeStr = ucfirst($payment->type);
-                                                $monthStr = $payment->month ? $payment->month->format('M Y') : '';
-                                                $amountStr = number_format($payment->amount);
-                                                $paidStr = number_format($payment->amount_paid);
-                                                $dueDateStr = $payment->due_date ? $payment->due_date->format('d M Y') : '';
-                                                $statusStr = ucfirst($payment->status);
-                                                $paymentUrl = $payment->public_url;
-
-                                                $message = "Dear {$recipientName},\n\nThis is a notification for your {$typeStr} payment towards Unit " . ($payment->unit?->unit_number ?? '') . " for {$monthStr}.\n\nBill Details:\n- Type: {$typeStr}\n- Month: {$monthStr}\n- Total Amount: Rs. {$amountStr}\n- Amount Paid: Rs. {$paidStr}\n- Due Date: {$dueDateStr}\n- Status: {$statusStr}\n\nYou can view/print your bill copy here: {$paymentUrl}\n\nRegards,\nPalladium Mall Management";
-                                                $whatsappUrl = "https://api.whatsapp.com/send?phone=" . urlencode($phoneClean) . "&text=" . urlencode($message);
-                                            @endphp
-                                            <a href="{{ $whatsappUrl }}" target="_blank"
-                                                class="inline-flex items-center rounded-lg p-1.5 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
-                                                title="Share Bill on WhatsApp">
-                                                <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                                                    <path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.76.46 3.413 1.258 4.868L2 22l5.29-1.387c1.405.766 3 1.205 4.722 1.205 5.506 0 9.988-4.482 9.988-9.988C22 6.482 17.518 2 12.012 2zm6.262 14.373c-.258.73-1.468 1.413-2.025 1.48-.48.06-1.106.1-3.23-.787-2.716-1.137-4.46-3.906-4.594-4.088-.135-.183-.996-1.328-.996-2.534s.623-1.802.846-2.052c.222-.25.48-.312.642-.312.163 0 .326.01.467.01.147.01.343-.06.538.41.196.48.674 1.638.73 1.75.056.113.093.243.017.393-.075.15-.112.24-.225.37-.113.13-.238.29-.338.39-.11.1-.225.21-.096.43.128.22.57 1.004 1.22 1.58.84.75 1.55.98 1.77 1.1.22.12.35.1.48-.05.13-.15.56-.65.71-.87.15-.22.3-.18.5-.1.21.08 1.32.62 1.55.73.23.11.38.16.44.27.06.1.06.59-.19 1.32z"/>
-                                                </svg>
-                                            </a>
-                                            @endif
-                                        @endif
-
-                                    </div>
-
-                                    @if(auth()->user()->hasPermission('payments.edit') || auth()->user()->hasPermission('payments.delete') || auth()->user()->isSuperAdmin())
-                                        <div class="flex items-center gap-1.5">
-                                            @if(auth()->user()->hasPermission('payments.edit') || auth()->user()->isSuperAdmin())
-                                                <a href="{{ route('payments.edit', $payment) }}"
-                                                    class="inline-flex items-center rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                                    title="Edit">
-                                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"
-                                                        viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </a>
-                                            @endif
-
-                                            @if(auth()->user()->hasPermission('payments.delete') || auth()->user()->isSuperAdmin())
-                                                <form action="{{ route('payments.destroy', $payment) }}" method="POST" x-data
-                                                    @submit.prevent="if(confirm('Delete this payment record?')) $el.submit()">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="inline-flex items-center rounded-lg p-1.5 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                                        title="Delete">
-                                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"
-                                                            viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="px-4 py-12 text-center text-gray-400">
-                                No payment records found.
-                                <a href="{{ route('payments.create') }}" class="text-brand-500 hover:underline">Add one.</a>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div id="table-container" class="transition-opacity duration-200">
+            @include('payments._table')
         </div>
-
-        @if($payments->hasPages())
-            <div class="mt-4 border-t border-gray-100 p-4 dark:border-gray-800">
-                {{ $payments->links() }}
-            </div>
-        @endif
     </x-common.component-card>
 
 
     {{-- Bulk Generate Modal --}}
     <div x-data="{
-                show: false,
-                init() {
-                    window.addEventListener('open-bulk-generate', () => { this.show = true; });
-                }
-            }" x-show="show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900" @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
+                                        show: false,
+                                        init() {
+                                            window.addEventListener('open-bulk-generate', () => { this.show = true; });
+                                        }
+                                    }" x-show="show" x-cloak
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
+            @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
             <h3 class="mb-1 text-base font-semibold text-gray-800 dark:text-white">Bulk Generate Payments</h3>
             <p class="mb-4 text-sm text-gray-500">Creates payment records for all active tenants with active agreements.</p>
             <form action="{{ route('payments.bulk-generate') }}" method="POST">
@@ -422,9 +252,11 @@
                             </div>
 
                             {{-- External owner units note --}}
-                            <div class="rounded-lg border border-blue-200 bg-blue-50/50 px-3.5 py-2.5 dark:border-blue-900/40 dark:bg-blue-950/10">
+                            <div
+                                class="rounded-lg border border-blue-200 bg-blue-50/50 px-3.5 py-2.5 dark:border-blue-900/40 dark:bg-blue-950/10">
                                 <p class="text-xs text-blue-700 dark:text-blue-300">
-                                    <strong>Note:</strong> Other-owned units with active maintenance charges are automatically included when generating <strong>Maintenance</strong> payments.
+                                    <strong>Note:</strong> Other-owned units with active maintenance charges are
+                                    automatically included when generating <strong>Maintenance</strong> payments.
                                 </p>
                             </div>
                         </div>
@@ -446,11 +278,288 @@
         </div>
     </div>
 
+    {{-- Bulk Edit Modal ── --}}
+    @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
+        <div x-data="{
+                                                                show: false,
+                                                                init() {
+                                                                    window.addEventListener('open-bulk-edit', () => { this.show = true; });
+                                                                }
+                                                            }" x-show="show" x-cloak
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
+                @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
+                <h3 class="mb-1 text-base font-semibold text-gray-800 dark:text-white">Bulk Edit Payments</h3>
+                <p class="mb-4 text-sm text-gray-500">Correct the Month/Year or Due Date of bulk payments in one batch.</p>
+                <form action="{{ route('payments.bulk-edit') }}" method="POST"
+                    onsubmit="return confirm('Are you sure you want to bulk edit matching unpaid payments?')">
+                    @csrf
+                    <div class="space-y-4">
+
+                        {{-- Section: Source filter criteria --}}
+                        <div class="border-b border-gray-250 pb-4 dark:border-gray-800">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">1.
+                                Target Wrong Month/Type</span>
+
+                            <div class="mt-3">
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Incorrect Generated Month <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="bulk_edit_source_month" name="source_month"
+                                    placeholder="Select month to fix" autocomplete="off" required
+                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Payment Type <span class="text-red-500">*</span>
+                                </label>
+                                <select name="type" required
+                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
+                                    <option value="all">Both (Rent & Maintenance)</option>
+                                    <option value="rent">Rent Only</option>
+                                    <option value="maintenance">Maintenance Only</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {{-- Section: Target new values --}}
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">2.
+                                Change To Correct Values</span>
+
+                            <div class="mt-3">
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    New Month/Year (Optional)
+                                </label>
+                                <input type="text" id="bulk_edit_target_month" name="target_month"
+                                    placeholder="Leave empty if unchanged" autocomplete="off"
+                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            </div>
+
+                            <div class="mt-3">
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    New Due Date (Optional)
+                                </label>
+                                <input type="text" id="bulk_edit_target_due_date" name="target_due_date"
+                                    placeholder="Leave empty if unchanged" autocomplete="off"
+                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            </div>
+                        </div>
+
+                        <div
+                            class="rounded-lg border border-amber-200 bg-amber-50/50 px-3.5 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/10">
+                            <p class="text-xs text-amber-700 dark:text-amber-300">
+                                <strong>Note:</strong> This bulk update will only affect matching payments with
+                                <strong>Unpaid</strong> status to preserve accounting records.
+                            </p>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-5 flex items-center gap-3">
+                        <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors">
+                            Update Payments
+                        </button>
+                        <button type="button" @click="show = false"
+                            class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endif
+
 @endsection
 
 @push('scripts')
     <script>
+        let ajaxTimeout = null;
+
+        function fetchResults() {
+            const form = document.getElementById('filter-form');
+            if (!form) return;
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+
+            const newUrl = `${window.location.pathname}?${params.toString()}`;
+            window.history.pushState({ path: newUrl }, '', newUrl);
+
+            const container = document.getElementById('table-container');
+            if (container) container.classList.add('opacity-50');
+
+            // Toggle clear button
+            const clearBtn = document.getElementById('clear-filters-btn');
+            if (clearBtn) {
+                const hasFilters = params.get('search') || params.get('status') || params.get('type') || params.get('month') || params.get('unit_id');
+                if (hasFilters) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
+            }
+
+            params.append('ajax', '1');
+
+            fetch(`${window.location.pathname}?${params.toString()}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(res => res.text())
+                .then(html => {
+                    if (container) {
+                        container.classList.remove('opacity-50');
+                        container.innerHTML = html;
+                    }
+                    updateOwnerTabsActiveState();
+                    updateBadgeCount();
+                })
+                .catch(err => {
+                    if (container) container.classList.remove('opacity-50');
+                    console.error('Error fetching search results:', err);
+                });
+        }
+
+        function setOwnerFilter(ownerType) {
+            const input = document.getElementById('owner-type-filter');
+            if (input) input.value = ownerType;
+            fetchResults();
+        }
+
+        function updateOwnerTabsActiveState() {
+            const input = document.getElementById('owner-type-filter');
+            const currentOwner = input ? input.value : '';
+            const buttons = document.querySelectorAll('.owner-type-btn');
+
+            buttons.forEach(btn => {
+                const owner = btn.getAttribute('data-owner');
+                if (owner === currentOwner) {
+                    btn.className = 'owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all bg-brand-500 text-white shadow-sm';
+                } else {
+                    btn.className = 'owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300';
+                }
+            });
+        }
+
+        function updateBadgeCount() {
+            const meta = document.getElementById('ajax-paginator-meta');
+            if (meta) {
+                const total = meta.getAttribute('data-total');
+                const totalBadge = document.getElementById('badge-total-count');
+                if (totalBadge && total !== null) totalBadge.innerText = total;
+            }
+        }
+
+        function clearFilters() {
+            const form = document.getElementById('filter-form');
+            if (form) {
+                form.reset();
+
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) searchInput.value = '';
+
+                const ownerInput = document.getElementById('owner-type-filter');
+                if (ownerInput) ownerInput.value = '';
+
+                const unitSelect = form.querySelector('select[name="unit_id"]');
+                if (unitSelect) unitSelect.value = '';
+
+                const statusSelect = form.querySelector('select[name="status"]');
+                if (statusSelect) statusSelect.value = '';
+
+                const typeSelect = form.querySelector('select[name="type"]');
+                if (typeSelect) typeSelect.value = '';
+
+                const monthInput = document.getElementById('filter_month');
+                if (monthInput) {
+                    const today = new Date();
+                    const currentMonthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
+                    monthInput.value = currentMonthStr;
+                    if (monthInput._flatpickr) monthInput._flatpickr.setDate(currentMonthStr);
+                }
+            }
+
+            const clearBtn = document.getElementById('clear-filters-btn');
+            if (clearBtn) clearBtn.classList.add('hidden');
+
+            fetchResults();
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
+            // Initial active state update for owner type tabs
+            updateOwnerTabsActiveState();
+
+            // Search input typing debounce listener
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(ajaxTimeout);
+                    ajaxTimeout = setTimeout(fetchResults, 300);
+                });
+            }
+
+            // Pagination link click delegation
+            document.addEventListener('click', function (e) {
+                const link = e.target.closest('#table-container .pagination a');
+                if (link) {
+                    e.preventDefault();
+                    const url = new URL(link.href);
+                    const params = new URLSearchParams(url.search);
+
+                    // Sync current input states to query parameters
+                    const form = document.getElementById('filter-form');
+                    if (form) {
+                        const searchVal = document.getElementById('search-input')?.value;
+                        if (searchVal) params.set('search', searchVal);
+
+                        const ownerVal = document.getElementById('owner-type-filter')?.value;
+                        if (ownerVal) params.set('owner_type', ownerVal);
+
+                        const unitVal = form.querySelector('select[name="unit_id"]')?.value;
+                        if (unitVal) params.set('unit_id', unitVal);
+
+                        const statusVal = form.querySelector('select[name="status"]')?.value;
+                        if (statusVal) params.set('status', statusVal);
+
+                        const typeVal = form.querySelector('select[name="type"]')?.value;
+                        if (typeVal) params.set('type', typeVal);
+
+                        const monthVal = document.getElementById('filter_month')?.value;
+                        if (monthVal) params.set('month', monthVal);
+                    }
+
+                    const newUrl = `${window.location.pathname}?${params.toString()}`;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+
+                    const container = document.getElementById('table-container');
+                    if (container) container.classList.add('opacity-50');
+
+                    params.append('ajax', '1');
+
+                    fetch(`${window.location.pathname}?${params.toString()}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(res => res.text())
+                        .then(html => {
+                            if (container) {
+                                container.classList.remove('opacity-50');
+                                container.innerHTML = html;
+                            }
+                            updateBadgeCount();
+                            window.scrollTo({ top: document.getElementById('table-container').offsetTop - 100, behavior: 'smooth' });
+                        })
+                        .catch(err => {
+                            if (container) container.classList.remove('opacity-50');
+                            console.error('Error fetching paginated results:', err);
+                        });
+                }
+            });
+
             flatpickr('#filter_month', {
                 dateFormat: 'Y-m-01',
                 altInput: true,
@@ -465,8 +574,8 @@
                         theme: 'light',
                     })
                 ],
-                onChange: function(selectedDates, dateStr, instance) {
-                    instance.element.form.submit();
+                onChange: function (selectedDates, dateStr, instance) {
+                    fetchResults();
                 }
             });
 
@@ -488,6 +597,47 @@
             });
 
             flatpickr('#bulk_due_date', {
+                dateFormat: 'Y-m-d',
+                allowInput: true,
+                disableMobile: true,
+                static: true,
+            });
+
+            flatpickr('#bulk_edit_source_month', {
+                dateFormat: 'Y-m-01',
+                altInput: true,
+                altFormat: 'F Y',
+                allowInput: false,
+                disableMobile: true,
+                static: true,
+                plugins: [
+                    new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    })
+                ],
+            });
+
+            flatpickr('#bulk_edit_target_month', {
+                dateFormat: 'Y-m-01',
+                altInput: true,
+                altFormat: 'F Y',
+                allowInput: false,
+                disableMobile: true,
+                static: true,
+                plugins: [
+                    new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    })
+                ],
+            });
+
+            flatpickr('#bulk_edit_target_due_date', {
                 dateFormat: 'Y-m-d',
                 allowInput: true,
                 disableMobile: true,

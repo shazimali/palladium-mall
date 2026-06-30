@@ -175,6 +175,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:payments.bulk-generate')->group(function () {
         Route::post('payments/bulk-generate', [PaymentController::class, 'bulkGenerate'])
             ->name('payments.bulk-generate');
+        Route::post('payments/bulk-edit', [PaymentController::class, 'bulkEdit'])
+            ->name('payments.bulk-edit');
     });
 
     Route::middleware('permission:payments.print')->group(function () {
