@@ -364,6 +364,8 @@
                     amountInput.value = agreement.monthly_rent;
                 } else if (type === 'maintenance') {
                     amountInput.value = agreement.maintenance_charge;
+                } else if (type === 'security_deposit') {
+                    amountInput.value = agreement.security_deposit;
                 } else {
                     amountInput.value = '';
                 }

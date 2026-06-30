@@ -140,6 +140,8 @@
                 <option value="rent" {{ old('type', $payment->type ?? '') === 'rent' ? 'selected' : '' }}>Rent</option>
                 <option value="maintenance" {{ old('type', $payment->type ?? '') === 'maintenance' ? 'selected' : '' }}>
                     Maintenance</option>
+                <option value="security_deposit" {{ old('type', $payment->type ?? '') === 'security_deposit' ? 'selected' : '' }}>
+                    Security Deposit</option>
                 <option value="fine" {{ old('type', $payment->type ?? '') === 'fine' ? 'selected' : '' }}>Fine</option>
                 <option value="other" {{ old('type', $payment->type ?? '') === 'other' ? 'selected' : '' }}>Other</option>
             </select>

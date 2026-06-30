@@ -31,17 +31,22 @@ class StorePaymentRequest extends FormRequest
         $isSelf = $this->input('payment_mode') === 'self';
 
         $uniqueRule = null;
-        if (!$isSelf && in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
-            $uniqueRule = Rule::unique('payments', 'month')
-                ->where('unit_id', $this->unit_id)
-                ->where('type', $this->type);
+        if (!$isSelf) {
+            if ($this->type === 'security_deposit') {
+                $uniqueRule = Rule::unique('payments', 'agreement_id')
+                    ->where('type', 'security_deposit');
+            } elseif (in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
+                $uniqueRule = Rule::unique('payments', 'month')
+                    ->where('unit_id', $this->unit_id)
+                    ->where('type', $this->type);
+            }
         }
 
         return [
             'tenant_id'    => $isSelf ? ['nullable'] : ['required', 'exists:tenants,id'],
             'unit_id'      => $isSelf ? ['nullable'] : ['required', 'exists:units,id'],
             'agreement_id' => $isSelf ? ['nullable'] : ['required', 'exists:agreements,id'],
-            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other'],
+            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other,security_deposit'],
             'month' => array_filter([
                 'required',
                 'date',
@@ -57,6 +62,7 @@ class StorePaymentRequest extends FormRequest
     {
         return [
             'month.unique' => 'A payment record for this unit, type, and month already exists.',
+            'agreement_id.unique' => 'A security deposit payment for this agreement has already been created.',
         ];
     }
 }

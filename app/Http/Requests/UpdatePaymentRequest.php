@@ -32,11 +32,17 @@ class UpdatePaymentRequest extends FormRequest
         $isSelf = is_null($payment->tenant_id);
 
         $uniqueRule = null;
-        if (!$isSelf && in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
-            $uniqueRule = Rule::unique('payments', 'month')
-                ->where('unit_id', $this->unit_id)
-                ->where('type', $this->type)
-                ->ignore($payment->id);
+        if (!$isSelf) {
+            if ($this->type === 'security_deposit') {
+                $uniqueRule = Rule::unique('payments', 'agreement_id')
+                    ->where('type', 'security_deposit')
+                    ->ignore($payment->id);
+            } elseif (in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
+                $uniqueRule = Rule::unique('payments', 'month')
+                    ->where('unit_id', $this->unit_id)
+                    ->where('type', $this->type)
+                    ->ignore($payment->id);
+            }
         } elseif ($isSelf) {
             $uniqueRule = Rule::unique('payments', 'month')
                 ->where('unit_id', $this->unit_id)
@@ -48,7 +54,7 @@ class UpdatePaymentRequest extends FormRequest
             'tenant_id'    => $isSelf ? ['nullable'] : ['required', 'exists:tenants,id'],
             'unit_id'      => ['required', 'exists:units,id'],
             'agreement_id' => $isSelf ? ['nullable'] : ['required', 'exists:agreements,id'],
-            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other'],
+            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other,security_deposit'],
             'month' => array_filter([
                 'required',
                 'date',
@@ -64,6 +70,7 @@ class UpdatePaymentRequest extends FormRequest
     {
         return [
             'month.unique' => 'A payment record for this unit, type, and month already exists.',
+            'agreement_id.unique' => 'A security deposit payment for this agreement has already been created.',
         ];
     }
 }

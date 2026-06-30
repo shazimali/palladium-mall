@@ -19,10 +19,11 @@
 @isset($summary)
 <div id="ajax-paginator-meta" class="hidden" 
      data-total="{{ $payments->total() }}"
-     data-due="Rs. {{ number_format($summary['total_due']) }}"
-     data-paid="Rs. {{ number_format($summary['total_paid']) }}"
-     data-unpaid="{{ $summary['unpaid_count'] }}"
-     data-overdue="{{ $summary['overdue_count'] }}"></div>
+     @foreach(['rent', 'maintenance', 'fine', 'electricity', 'water', 'gas', 'other', 'security_deposit'] as $t)
+         data-{{ $t }}-due="Rs. {{ number_format($summary[$t . '_due']) }}"
+         data-{{ $t }}-paid="Rs. {{ number_format($summary[$t . '_paid']) }}"
+         data-{{ $t }}-unpaid="Rs. {{ number_format($summary[$t . '_unpaid']) }}"
+     @endforeach></div>
 @else
 <div id="ajax-paginator-meta" class="hidden" 
      data-total="{{ $payments->total() }}"></div>

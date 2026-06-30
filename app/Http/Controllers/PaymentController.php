@@ -67,6 +67,16 @@ class PaymentController extends Controller
             'overdue_count' => (clone $summaryQuery)->whereIn('status', ['unpaid', 'partial'])->where('due_date', '<', now())->count(),
         ];
 
+        $paymentTypes = ['rent', 'maintenance', 'fine', 'electricity', 'water', 'gas', 'other', 'security_deposit'];
+        foreach ($paymentTypes as $t) {
+            $typeQuery = (clone $summaryQuery)->where('type', $t);
+            $due = (float) (clone $typeQuery)->sum('amount');
+            $paid = (float) (clone $typeQuery)->sum('amount_paid');
+            $summary[$t . '_due'] = $due;
+            $summary[$t . '_paid'] = $paid;
+            $summary[$t . '_unpaid'] = $due - $paid;
+        }
+
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
         $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
 
@@ -398,9 +408,31 @@ class PaymentController extends Controller
 
         DB::transaction(function () use ($agreements, $month, $dueDate, $request, &$created, &$skipped) {
             foreach ($agreements as $agreement) {
-                // Ensure a tenant is attached to the agreement
                 if (!$agreement->tenant_id) {
                     continue;
+                }
+
+                // Auto-generate Security Deposit if new agreement starts in selected month
+                $agreementStartMonth = Carbon::parse($agreement->start_date)->startOfMonth()->toDateString();
+                if ($agreementStartMonth === $month && $agreement->security_deposit > 0) {
+                    $secExists = Payment::where('agreement_id', $agreement->id)
+                        ->where('type', 'security_deposit')
+                        ->exists();
+
+                    if (!$secExists) {
+                        Payment::create([
+                            'tenant_id' => $agreement->tenant_id,
+                            'unit_id' => $agreement->unit_id,
+                            'agreement_id' => $agreement->id,
+                            'type' => 'security_deposit',
+                            'month' => $month,
+                            'amount' => $agreement->security_deposit,
+                            'amount_paid' => 0,
+                            'status' => 'unpaid',
+                            'due_date' => $dueDate,
+                        ]);
+                        $created++;
+                    }
                 }
 
                 foreach ($request->types as $type) {
@@ -578,6 +610,7 @@ class PaymentController extends Controller
                 'id'                 => $agreement->id,
                 'monthly_rent'       => $agreement->monthly_rent,
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
+                'security_deposit'   => $agreement->security_deposit ?? 0,
                 'unit_id'            => $agreement->unit_id,
                 'unit_number'        => $agreement->unit?->unit_number ?? '—',
                 'landlord_name'      => $agreement->unit?->landlord?->name ?? '—',
@@ -643,7 +676,7 @@ class PaymentController extends Controller
         }
 
         $unitsConsumed = (float) ($data['current_reading'] - $data['previous_reading']);
-        $amount = $unitsConsumed * (float) $data['rate_per_unit'];
+        $amount = round($unitsConsumed * (float) $data['rate_per_unit'], 2);
 
         $meterId = $unit->meters()->where('type', $data['type'])->value('id');
 
