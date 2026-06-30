@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Edit Other Tenant" />
+    <x-common.page-breadcrumb pageTitle="" />
 
-    <x-common.component-card title="Edit Other Tenant" desc="Update tenant profile details">
+    <x-common.component-card title="Edit Other Flat/Shop Tenant" desc="Update tenant profile details">
 
-        <form action="{{ route('other-tenants.update', $otherTenant) }}" method="POST">
+        <form action="{{ route('other-tenants.update', $otherTenant) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
             @include('other-tenants._form', [

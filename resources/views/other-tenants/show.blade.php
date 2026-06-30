@@ -17,47 +17,54 @@
 
     {{-- ── Profile Header ── --}}
     <x-common.component-card title="Tenant Profile" desc="Other tenant details and current assignment">
-        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div>
-                <p class="text-xs font-medium uppercase text-gray-400">Full Name</p>
-                <p class="mt-1 text-sm font-semibold text-gray-800 dark:text-white/90">{{ $otherTenant->name }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-medium uppercase text-gray-400">CNIC / INC</p>
-                <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->cnic ?? '—' }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-medium uppercase text-gray-400">Phone</p>
-                <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->phone ?? '—' }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-medium uppercase text-gray-400">WhatsApp</p>
-                <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->whatsapp_number ?? '—' }}</p>
-            </div>
-            <div>
-                <p class="text-xs font-medium uppercase text-gray-400">Status</p>
-                <p class="mt-1">
-                    @if($otherTenant->status === 'active')
-                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
-                    @else
-                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">Inactive</span>
-                    @endif
-                </p>
-            </div>
-            <div>
-                <p class="text-xs font-medium uppercase text-gray-400">Current Unit</p>
-                <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                    @if($otherTenant->unit)
-                        <span class="font-bold text-gray-900 dark:text-white">Unit {{ $otherTenant->unit->unit_number }}</span>
-                        <span class="text-xs text-gray-400">— {{ $otherTenant->unit->floor?->name }} / {{ $otherTenant->unit->block?->name }}</span>
-                    @else
-                        <span class="text-gray-400">Not attached</span>
-                    @endif
-                </p>
-            </div>
-            <div class="sm:col-span-2 lg:col-span-1">
-                <p class="text-xs font-medium uppercase text-gray-400">Address</p>
-                <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->address ?? '—' }}</p>
+        <div class="flex flex-col md:flex-row gap-6">
+            @if($otherTenant->photo)
+                <div class="flex-shrink-0">
+                    <img src="{{ $otherTenant->photo_url }}" alt="{{ $otherTenant->name }}" class="h-28 w-28 rounded-xl object-cover border border-gray-200 dark:border-gray-800 shadow-sm">
+                </div>
+            @endif
+            <div class="flex-1 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                    <p class="text-xs font-medium uppercase text-gray-400">Full Name</p>
+                    <p class="mt-1 text-sm font-semibold text-gray-800 dark:text-white/90">{{ $otherTenant->name }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium uppercase text-gray-400">CNIC / INC</p>
+                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->cnic ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium uppercase text-gray-400">Phone</p>
+                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->phone ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium uppercase text-gray-400">WhatsApp</p>
+                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->whatsapp_number ?? '—' }}</p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium uppercase text-gray-400">Status</p>
+                    <p class="mt-1">
+                        @if($otherTenant->status === 'active')
+                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Active</span>
+                        @else
+                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">Inactive</span>
+                        @endif
+                    </p>
+                </div>
+                <div>
+                    <p class="text-xs font-medium uppercase text-gray-400">Current Unit</p>
+                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">
+                        @if($otherTenant->unit)
+                            <span class="font-bold text-gray-900 dark:text-white">Unit {{ $otherTenant->unit->unit_number }}</span>
+                            <span class="text-xs text-gray-400">— {{ $otherTenant->unit->floor?->name }} / {{ $otherTenant->unit->block?->name }}</span>
+                        @else
+                            <span class="text-gray-400">Not attached</span>
+                        @endif
+                    </p>
+                </div>
+                <div class="sm:col-span-2 lg:col-span-1">
+                    <p class="text-xs font-medium uppercase text-gray-400">Address</p>
+                    <p class="mt-1 text-sm text-gray-700 dark:text-gray-300">{{ $otherTenant->address ?? '—' }}</p>
+                </div>
             </div>
         </div>
 

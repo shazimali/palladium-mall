@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Storage;
 
 class OtherTenantController extends Controller
 {
@@ -23,8 +24,32 @@ class OtherTenantController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        $filterMonth = null;
+        $filterYear = null;
+
+        if ($request->filled('filter_month')) {
+            try {
+                $date = Carbon::parse($request->filter_month);
+                $filterMonth = $date->month;
+                $filterYear = $date->year;
+            } catch (\Exception $e) {
+                // Ignore parse errors
+            }
+        }
+
         $query = OtherTenant::with(['unit.floor', 'unit.block', 'unitHistory'])
-            ->when($request->search, fn($q) => $q->search($request->search));
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($filterYear, function ($q) use ($filterMonth, $filterYear) {
+                return $q->whereHas('unitHistory', function ($historyQ) use ($filterMonth, $filterYear) {
+                    $start = Carbon::create($filterYear, $filterMonth, 1)->startOfMonth()->toDateString();
+                    $end = Carbon::create($filterYear, $filterMonth, 1)->endOfMonth()->toDateString();
+                    return $historyQ->where('attached_at', '<=', $end)
+                        ->where(function ($sub) use ($start) {
+                            $sub->whereNull('detached_at')
+                                ->orWhere('detached_at', '>=', $start);
+                        });
+                });
+            });
 
 
         $counts = [
@@ -43,7 +68,7 @@ class OtherTenantController extends Controller
 
         // Self-owned units for the attach modal
         $selfUnits = Unit::where('is_self', true)
-            ->with(['floor', 'block', 'otherTenant'])
+            ->with(['floor', 'block', 'otherTenant', 'landlord'])
             ->orderBy('unit_number')
             ->get();
 
@@ -97,7 +122,7 @@ class OtherTenantController extends Controller
         }
 
         $selfUnits = Unit::where('is_self', true)
-            ->with(['floor', 'block', 'otherTenant'])
+            ->with(['floor', 'block', 'otherTenant', 'landlord'])
             ->orderBy('unit_number')
             ->get();
 
@@ -124,6 +149,7 @@ class OtherTenantController extends Controller
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
             'attached_at'        => ['nullable', 'date'],
+            'photo'              => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'unit_id'            => [
                 'nullable',
                 'exists:units,id',
@@ -139,6 +165,12 @@ class OtherTenantController extends Controller
             'cnic.unique'   => 'This CNIC is already registered to another tenant.',
         ]);
 
+        if ($request->hasFile('photo')) {
+            $data['photo'] = $request->file('photo')->store('other_tenants/photos', 'public');
+        } else {
+            unset($data['photo']);
+        }
+
         $unitId = $data['unit_id'] ?? null;
         $attachedAt = $data['attached_at'] ?? null;
         unset($data['unit_id'], $data['attached_at']);
@@ -153,8 +185,6 @@ class OtherTenantController extends Controller
 
         return redirect()->route('other-tenants.index')
             ->with('success', 'Other tenant added successfully.');
-
-
     }
 
     // -----------------------------------------------------------------------
@@ -168,7 +198,7 @@ class OtherTenantController extends Controller
         }
 
         $selfUnits = Unit::where('is_self', true)
-            ->with(['floor', 'block', 'otherTenant'])
+            ->with(['floor', 'block', 'otherTenant', 'landlord'])
             ->orderBy('unit_number')
             ->get();
 
@@ -196,6 +226,8 @@ class OtherTenantController extends Controller
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
             'attached_at'        => ['nullable', 'date'],
+            'photo'              => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'delete_photo'       => ['nullable', 'boolean'],
             'unit_id'            => [
                 'nullable',
                 'exists:units,id',
@@ -213,6 +245,20 @@ class OtherTenantController extends Controller
             'cnic.unique'   => 'This CNIC is already registered to another tenant.',
         ]);
 
+        if ($request->boolean('delete_photo')) {
+            if ($otherTenant->photo) {
+                Storage::disk('public')->delete($otherTenant->photo);
+            }
+            $data['photo'] = null;
+        } elseif ($request->hasFile('photo')) {
+            if ($otherTenant->photo) {
+                Storage::disk('public')->delete($otherTenant->photo);
+            }
+            $data['photo'] = $request->file('photo')->store('other_tenants/photos', 'public');
+        } else {
+            unset($data['photo']);
+        }
+        unset($data['delete_photo']);
 
         $newUnitId = $data['unit_id'] ?? null;
         $attachedAt = $data['attached_at'] ?? null;
@@ -240,8 +286,6 @@ class OtherTenantController extends Controller
 
         return redirect()->route('other-tenants.index')
             ->with('success', 'Other tenant updated successfully.');
-
-
     }
 
     // -----------------------------------------------------------------------

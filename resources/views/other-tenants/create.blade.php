@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Add Other Tenant" />
+    <x-common.page-breadcrumb pageTitle="" />
 
     <x-common.component-card title="Add Other Tenant" desc="Create a new tenant profile for an other-owned unit">
-        <form action="{{ route('other-tenants.store') }}" method="POST">
+        <form action="{{ route('other-tenants.store') }}" method="POST" enctype="multipart/form-data">
             @csrf
             @include('other-tenants._form', ['submitLabel' => 'Add Other Tenant', 'selfUnits' => $selfUnits])
         </form>

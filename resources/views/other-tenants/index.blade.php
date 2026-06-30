@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Other Tenants" />
+    <x-common.page-breadcrumb pageTitle="" />
 
     @if($errors->any())
         <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
@@ -25,43 +25,88 @@
         </div>
     @endif
 
+    {{-- Summary Widget Cards --}}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6 md:gap-5">
+        {{-- Total Other Tenants --}}
+        <a href="{{ route('other-tenants.index', ['search' => request('search'), 'filter_month' => request('filter_month')]) }}"
+           class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl block {{ !request('status') ? 'ring-4 ring-offset-2 ring-brand-500 dark:ring-offset-gray-900' : '' }}"
+           style="background: linear-gradient(135deg, #465fff 0%, #2a31d8 100%);">
+            <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
+            <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10 bg-white"></div>
+            <div class="relative">
+                <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
+                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                </div>
+                <p class="text-xs font-semibold uppercase tracking-widest text-white/80">Total Tenants</p>
+                <h4 class="mt-1 text-3xl font-extrabold">{{ number_format($counts['total']) }}</h4>
+                <span class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-white/20">
+                    All Records
+                </span>
+            </div>
+        </a>
+
+        {{-- Attached --}}
+        <a href="{{ route('other-tenants.index', ['status' => 'attached', 'search' => request('search'), 'filter_month' => request('filter_month')]) }}"
+           class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl block {{ request('status') === 'attached' ? 'ring-4 ring-offset-2 ring-green-500 dark:ring-offset-gray-900' : '' }}"
+           style="background: linear-gradient(135deg, #12b76a 0%, #027a48 100%);">
+            <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
+            <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10 bg-white"></div>
+            <div class="relative">
+                <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
+                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <p class="text-xs font-semibold uppercase tracking-widest text-white/80">Attached Tenants</p>
+                <h4 class="mt-1 text-3xl font-extrabold">{{ number_format($counts['attached']) }}</h4>
+                <span class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-white/20">
+                    Active Flat/Shop
+                </span>
+            </div>
+        </a>
+
+        {{-- Detached --}}
+        <a href="{{ route('other-tenants.index', ['status' => 'detached', 'search' => request('search'), 'filter_month' => request('filter_month')]) }}"
+           class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl block {{ request('status') === 'detached' ? 'ring-4 ring-offset-2 ring-amber-500 dark:ring-offset-gray-900' : '' }}"
+           style="background: linear-gradient(135deg, #f79009 0%, #b54708 100%);">
+            <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
+            <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10 bg-white"></div>
+            <div class="relative">
+                <div class="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
+                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                </div>
+                <p class="text-xs font-semibold uppercase tracking-widest text-white/80">Detached Tenants</p>
+                <h4 class="mt-1 text-3xl font-extrabold">{{ number_format($counts['detached']) }}</h4>
+                <span class="mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-white/20">
+                    Unassigned/Inactive
+                </span>
+            </div>
+        </a>
+    </div>
+
     <x-common.component-card title="Other Tenants" desc="Manage Other Tenants ">
 
-        {{-- ── Top bar: Status tabs + Actions ── --}}
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('other-tenants.index', ['search' => request('search')]) }}"
-                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ !request('status') ? 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800' }}">
-                    Total: {{ $counts['total'] }}
+        {{-- ── Top bar: Actions ── --}}
+        <div class="flex items-center justify-end gap-2">
+            @if(request()->anyFilled(['search', 'status', 'filter_month']))
+                <a href="{{ route('other-tenants.index') }}"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
+                    Clear
                 </a>
-                <a href="{{ route('other-tenants.index', ['status' => 'attached', 'search' => request('search')]) }}"
-                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'attached' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:text-green-400 dark:hover:bg-green-950/40' }}">
-                    Attached: {{ $counts['attached'] }}
+            @endif
+            @if(auth()->user()->hasPermission('other_tenants.create') || auth()->user()->isSuperAdmin())
+                <a href="{{ route('other-tenants.create') }}"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Other Tenant
                 </a>
-                <a href="{{ route('other-tenants.index', ['status' => 'detached', 'search' => request('search')]) }}"
-                    class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'detached' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800' }}">
-                    Detached: {{ $counts['detached'] }}
-                </a>
-            </div>
-
-
-            <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'status']))
-                    <a href="{{ route('other-tenants.index') }}"
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
-                        Clear
-                    </a>
-                @endif
-                @if(auth()->user()->hasPermission('other_tenants.create') || auth()->user()->isSuperAdmin())
-                    <a href="{{ route('other-tenants.create') }}"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Other Tenant
-                    </a>
-                @endif
-            </div>
+            @endif
         </div>
 
         {{-- ── Search bar ── --}}
@@ -85,6 +130,12 @@
                     <option value="attached" {{ request('status') === 'attached' ? 'selected' : '' }}>Attached</option>
                     <option value="detached" {{ request('status') === 'detached' ? 'selected' : '' }}>Detached</option>
                 </select>
+
+                <!-- Month/Year Filter -->
+                <div class="relative">
+                    <input type="text" id="filter_month" name="filter_month" value="{{ request('filter_month') }}" placeholder="Select Month/Year" autocomplete="off"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-48 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                </div>
 
                 <button type="submit" class="hidden">Submit</button>
             </form>
@@ -129,10 +180,21 @@
                             </td>
                             {{-- Name --}}
                             <td class="px-4 py-3">
-                                <div class="font-semibold text-gray-800 dark:text-white/90">{{ $ot->name }}</div>
-                                @if($ot->address)
-                                    <div class="text-xs text-gray-400 truncate max-w-[180px]">{{ $ot->address }}</div>
-                                @endif
+                                <div class="flex items-center gap-3">
+                                    @if($ot->photo)
+                                        <img src="{{ $ot->photo_url }}" alt="{{ $ot->name }}" class="h-8 w-8 rounded-full object-cover border border-gray-200 dark:border-gray-700 shadow-xs shrink-0">
+                                    @else
+                                        <div class="h-8 w-8 rounded-full bg-brand-50 dark:bg-brand-950/20 text-brand-500 dark:text-brand-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase">
+                                            {{ substr($ot->name, 0, 1) }}
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">{{ $ot->name }}</div>
+                                        @if($ot->address)
+                                            <div class="text-xs text-gray-400 truncate max-w-[180px]">{{ $ot->address }}</div>
+                                        @endif
+                                    </div>
+                                </div>
                             </td>
 
                             {{-- Phone --}}
@@ -320,6 +382,27 @@
 
     @push('scripts')
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            flatpickr('#filter_month', {
+                dateFormat: 'Y-m-01',
+                altInput: true,
+                altFormat: 'F Y',
+                allowInput: false,
+                disableMobile: true,
+                plugins: [
+                    new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    })
+                ],
+                onChange: function(selectedDates, dateStr, instance) {
+                    instance.element.form.submit();
+                }
+            });
+        });
+
         function attachModal() {
             return {
                 showModal: false,

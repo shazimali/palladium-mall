@@ -24,11 +24,17 @@ class OtherTenant extends Model
         'status',
         'maintenance_charge',
         'unit_id',
+        'photo',
     ];
 
     protected $casts = [
         'maintenance_charge' => 'decimal:2',
     ];
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        return $this->photo ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->photo) : null;
+    }
 
     // -----------------------------------------------------------------------
     // Relationships
