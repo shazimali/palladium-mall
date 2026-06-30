@@ -3,6 +3,18 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="" />
 
+    @php
+        $search = request('search');
+        $highlight = function($text) use ($search) {
+            if (empty($text)) return '';
+            if (empty($search)) {
+                return e($text);
+            }
+            $escapedSearch = preg_quote($search, '/');
+            return preg_replace('/(' . $escapedSearch . ')/i', '<mark class="bg-amber-100 text-amber-900 rounded px-0.5 dark:bg-amber-950/70 dark:text-amber-300 font-medium">$1</mark>', e($text));
+        };
+    @endphp
+
     @if($errors->any())
         <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
             <ul class="list-disc pl-4 space-y-1">
@@ -156,9 +168,10 @@
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @forelse($otherTenants as $index => $ot)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors {{ request('search') ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02] border-l-2 border-l-amber-500/70' : '' }}">
                             <td class="px-4 py-3 text-gray-400">{{ $otherTenants->firstItem() + $index }}</td>
- {{-- Attached Unit --}}
+
+                            {{-- Attached Unit --}}
                             <td class="px-4 py-3">
                                 @if($ot->unit)
                                     @php
@@ -166,7 +179,7 @@
                                     @endphp
                                     <div class="flex flex-col gap-0.5">
                                         <span class="font-bold text-gray-900 dark:text-white text-sm">
-                                            {{ $ot->unit->unit_number }}
+                                            {!! $highlight($ot->unit->unit_number) !!}
                                         </span>
                                         @if($activeHist && $activeHist->attached_at)
                                             <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
@@ -178,6 +191,7 @@
                                     <span class="text-gray-400 text-xs">—</span>
                                 @endif
                             </td>
+
                             {{-- Name --}}
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
@@ -189,18 +203,31 @@
                                         </div>
                                     @endif
                                     <div>
-                                        <div class="font-semibold text-gray-800 dark:text-white/90">{{ $ot->name }}</div>
-                                        @if($ot->address)
-                                            <div class="text-xs text-gray-400 truncate max-w-[180px]">{{ $ot->address }}</div>
-                                        @endif
+                                        <div class="font-semibold text-gray-800 dark:text-white/90">{!! $highlight($ot->name) !!}</div>
+                                        <div class="flex flex-col gap-0.5 mt-0.5">
+                                            @if($ot->cnic)
+                                                <span class="text-xs text-gray-400">CNIC: {!! $highlight($ot->cnic) !!}</span>
+                                            @endif
+                                            @if($ot->address)
+                                                <div class="text-xs text-gray-400 truncate max-w-[180px]">{!! $highlight($ot->address) !!}</div>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             </td>
 
                             {{-- Phone --}}
-                            <td class="px-4 py-3">{{ $ot->phone ?? '—' }}</td>
-
-                        
+                            <td class="px-4 py-3">
+                                @if($ot->phone)
+                                    <div class="text-sm text-gray-800 dark:text-white/90">{!! $highlight($ot->phone) !!}</div>
+                                @endif
+                                @if($ot->whatsapp_number)
+                                    <div class="text-xs text-gray-400 mt-0.5">WA: {!! $highlight($ot->whatsapp_number) !!}</div>
+                                @endif
+                                @if(!$ot->phone && !$ot->whatsapp_number)
+                                    <span class="text-gray-400 text-xs">—</span>
+                                @endif
+                            </td>
 
                             {{-- Occupancy --}}
                             <td class="px-4 py-3">
