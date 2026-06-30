@@ -192,8 +192,8 @@
                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                     <tr>
                         <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Flat/Shop</th>
                         <th class="px-4 py-3">Tenant</th>
-                        <th class="px-4 py-3">Unit</th>
                         <th class="px-4 py-3">Type</th>
                         <th class="px-4 py-3">Month</th>
                         <th class="px-4 py-3">Amount</th>
@@ -207,6 +207,11 @@
                     @forelse($payments as $index => $payment)
                         <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                             <td class="px-4 py-3 text-gray-400">{{ $payments->firstItem() + $index }}</td>
+                            <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
+                                <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                                    {{ $payment->unit->unit_number }}
+                                </span>
+                            </td>
                             <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
                                 @if($payment->tenant)
                                     {{ $payment->tenant->name }}
@@ -223,12 +228,6 @@
                                         Other-Owned
                                     </span>
                                 @endif
-                            </td>
-                            <td class="px-4 py-3">
-                                <span
-                                    class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
-                                    {{ $payment->unit->unit_number }}
-                                </span>
                             </td>
                             <td class="px-4 py-3">
                                 <span

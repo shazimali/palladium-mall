@@ -7,15 +7,30 @@
         mode: '{{ old('payment_mode', 'tenant') }}',
         selfUnitId: '{{ old('unit_id', '') }}',
         selfAmount: '{{ old('amount', '') }}',
+        selfLandlordName: '',
         selfUnits: {{ $selfUnits->map(fn($u) => [
-            'id'      => $u->id,
-            'label'   => $u->unit_number . ($u->floor ? ' — ' . $u->floor->name : '') . ($u->block ? ' / ' . $u->block->name : ''),
-            'charge'  => $u->default_maintenance_charge ?? 0,
+            'id'             => $u->id,
+            'label'          => $u->unit_number,
+            'charge'         => $u->default_maintenance_charge ?? 0,
+            'landlord_name'  => $u->landlord?->name ?? '—',
         ])->values()->toJson() }},
+        init() {
+            if (this.selfUnitId) {
+                const u = this.selfUnits.find(x => x.id == this.selfUnitId);
+                if (u) {
+                    this.selfLandlordName = u.landlord_name;
+                }
+            }
+        },
         selectSelfUnit(id) {
             this.selfUnitId = id;
             const u = this.selfUnits.find(x => x.id == id);
-            if (u && u.charge) this.selfAmount = u.charge;
+            if (u) {
+                if (u.charge) this.selfAmount = u.charge;
+                this.selfLandlordName = u.landlord_name;
+            } else {
+                this.selfLandlordName = '';
+            }
         }
     }">
 
@@ -46,7 +61,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    Other-Owned Unit
+                    Other-Owned Flat/Shop
                 </button>
 
             </div>
@@ -79,45 +94,51 @@
 
         {{-- ── SELF-UNIT MAINTENANCE FORM ───────────────────────────────── --}}
         <div x-show="mode === 'self'" x-cloak>
-            <x-common.component-card title="Other-Owned Unit — Maintenance Payment" desc="Generate a maintenance-only payment for an other-owned unit. No tenant or agreement required.">
+            <x-common.component-card title="Other-Owned Flat/Shop — Maintenance Payment" desc="Generate a maintenance-only payment for an other-owned flat/shop. No tenant or agreement required.">
                 <form action="{{ route('payments.store') }}" method="POST">
                     @csrf
                     <input type="hidden" name="payment_mode" value="self">
 
-                    {{-- Unit Selection --}}
+                    {{-- Flat/Shop Selection --}}
                     <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
                         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                            Unit Selection
+                            Flat/Shop Selection
                         </h4>
 
                         @if($selfUnits->isEmpty())
                             <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-                                No other-owned units found. Go to a Landlord and toggle <strong>Other-Owned</strong> on a unit first.
+                                No other-owned flats/shops found. Go to a Landlord and toggle <strong>Other-Owned</strong> on a flat/shop first.
                             </div>
                         @else
-                            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                                {{-- Unit dropdown --}}
+                            <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                                {{-- Flat/Shop dropdown --}}
                                 <div>
                                     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Select Unit <span class="text-red-500">*</span>
+                                        Select Flat/Shop <span class="text-red-500">*</span>
                                     </label>
                                     <select name="unit_id" id="self_unit_id"
                                         @change="selectSelfUnit($event.target.value)"
                                         class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('unit_id') ? 'border-red-400' : '' }}">
-                                        <option value="">Select unit</option>
+                                        <option value="">Select Flat/Shop</option>
                                         @foreach($selfUnits as $su)
                                             <option value="{{ $su->id }}"
                                                 data-charge="{{ $su->default_maintenance_charge ?? 0 }}"
                                                 {{ old('unit_id') == $su->id ? 'selected' : '' }}>
                                                 {{ $su->unit_number }}
-                                                {{ $su->floor ? '— ' . $su->floor->name : '' }}
-                                                {{ $su->block ? '/ ' . $su->block->name : '' }}
                                             </option>
                                         @endforeach
                                     </select>
                                     @error('unit_id')
                                         <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                                     @enderror
+                                </div>
+
+                                {{-- Landlord name --}}
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Landlord</label>
+                                    <div class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                                        <span x-text="selfLandlordName || 'Select a flat/shop to see landlord'"></span>
+                                    </div>
                                 </div>
 
                                 {{-- Fixed charge info --}}
@@ -137,7 +158,7 @@
                                     </div>
                                     <div x-show="!selfUnitId || !selfAmount"
                                         class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">
-                                        Select a unit to see the charge
+                                        Select a flat/shop to see the charge
                                     </div>
                                 </div>
                             </div>
@@ -296,6 +317,7 @@
                     const tenantId = this.value;
                     if (!tenantId) {
                         document.getElementById('unit_display').textContent = 'Auto-filled when tenant is selected';
+                        document.getElementById('landlord_display').textContent = 'Auto-filled when tenant is selected';
                         document.getElementById('unit_id').value = '';
                         document.getElementById('agreement_id').value = '';
                         document.getElementById('amount').value = '';
@@ -307,11 +329,13 @@
                         .then(data => {
                             if (data.agreement) {
                                 document.getElementById('unit_display').textContent = data.agreement.unit_number;
+                                document.getElementById('landlord_display').textContent = data.agreement.landlord_name;
                                 document.getElementById('unit_id').value = data.agreement.unit_id;
                                 document.getElementById('agreement_id').value = data.agreement.id;
                                 fillAmount(data.agreement);
                             } else {
                                 document.getElementById('unit_display').textContent = 'No active agreement found';
+                                document.getElementById('landlord_display').textContent = 'No active agreement found';
                                 document.getElementById('unit_id').value = '';
                                 document.getElementById('agreement_id').value = '';
                             }

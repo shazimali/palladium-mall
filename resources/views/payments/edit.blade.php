@@ -3,9 +3,9 @@
 @section('content')
     @php
         $isSelf = is_null($payment->tenant_id);
-        $pageTitle = $isSelf ? 'Edit Other-Owned Unit Payment' : 'Edit Tenant Payment';
+        $pageTitle = $isSelf ? 'Edit Other-Owned Flat/Shop Payment' : 'Edit Tenant Payment';
         $descText = $isSelf 
-            ? 'Update maintenance payment details for an other-owned unit' 
+            ? 'Update maintenance payment details for an other-owned flat/shop' 
             : 'Update payment record details linked to a tenant\'s agreement';
     @endphp
 
@@ -16,51 +16,72 @@
         <div x-data="{
             selfUnitId: '{{ old('unit_id', $payment->unit_id) }}',
             selfAmount: '{{ old('amount', $payment->amount) }}',
+            selfLandlordName: '',
             selfUnits: {{ $selfUnits->map(fn($u) => [
-                'id'      => $u->id,
-                'label'   => $u->unit_number . ($u->floor ? ' — ' . $u->floor->name : '') . ($u->block ? ' / ' . $u->block->name : ''),
-                'charge'  => $u->default_maintenance_charge ?? 0,
+                'id'             => $u->id,
+                'label'          => $u->unit_number,
+                'charge'         => $u->default_maintenance_charge ?? 0,
+                'landlord_name'  => $u->landlord?->name ?? '—',
             ])->values()->toJson() }},
+            init() {
+                if (this.selfUnitId) {
+                    const u = this.selfUnits.find(x => x.id == this.selfUnitId);
+                    if (u) {
+                        this.selfLandlordName = u.landlord_name;
+                    }
+                }
+            },
             selectSelfUnit(id) {
                 this.selfUnitId = id;
                 const u = this.selfUnits.find(x => x.id == id);
-                if (u && u.charge) this.selfAmount = u.charge;
+                if (u) {
+                    if (u.charge) this.selfAmount = u.charge;
+                    this.selfLandlordName = u.landlord_name;
+                } else {
+                    this.selfLandlordName = '';
+                }
             }
         }">
-            <x-common.component-card title="Other-Owned Unit — Maintenance Payment" desc="{{ $descText }}">
+            <x-common.component-card title="Other-Owned Flat/Shop — Maintenance Payment" desc="{{ $descText }}">
                 <form action="{{ route('payments.update', $payment) }}" method="POST">
                     @csrf
                     @method('PUT')
 
-                    {{-- Unit Selection --}}
+                    {{-- Flat/Shop Selection --}}
                     <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
                         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                            Unit Selection
+                            Flat/Shop Selection
                         </h4>
 
-                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                            {{-- Unit dropdown --}}
+                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                            {{-- Flat/Shop dropdown --}}
                             <div>
                                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Select Unit <span class="text-red-500">*</span>
+                                    Select Flat/Shop <span class="text-red-500">*</span>
                                 </label>
                                 <select name="unit_id" id="self_unit_id"
                                     @change="selectSelfUnit($event.target.value)"
                                     class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('unit_id') ? 'border-red-400' : '' }}">
-                                    <option value="">Select unit</option>
+                                    <option value="">Select Flat/Shop</option>
                                     @foreach($selfUnits as $su)
                                         <option value="{{ $su->id }}"
                                             data-charge="{{ $su->default_maintenance_charge ?? 0 }}"
                                             {{ old('unit_id', $payment->unit_id) == $su->id ? 'selected' : '' }}>
                                             {{ $su->unit_number }}
-                                            {{ $su->floor ? '— ' . $su->floor->name : '' }}
-                                            {{ $su->block ? '/ ' . $su->block->name : '' }}
                                         </option>
                                     @endforeach
                                 </select>
                                 @error('unit_id')
                                     <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                                 @enderror
+                            </div>
+
+                            {{-- Landlord name --}}
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Landlord</label>
+                                <div class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                                    <span x-text="selfLandlordName || 'Select a flat/shop to see landlord'"></span>
+                                </div>
                             </div>
 
                             {{-- Fixed charge info --}}
@@ -80,7 +101,7 @@
                                 </div>
                                 <div x-show="!selfUnitId || !selfAmount"
                                     class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800">
-                                    Select a unit to see the charge
+                                    Select a flat/shop to see the charge
                                 </div>
                             </div>
                         </div>
@@ -260,6 +281,7 @@
                         const tenantId = this.value;
                         if (!tenantId) {
                             document.getElementById('unit_display').textContent = 'Auto-filled when tenant is selected';
+                            document.getElementById('landlord_display').textContent = 'Auto-filled when tenant is selected';
                             document.getElementById('unit_id').value = '';
                             document.getElementById('agreement_id').value = '';
                             document.getElementById('amount').value = '';
@@ -271,11 +293,13 @@
                             .then(data => {
                                 if (data.agreement) {
                                     document.getElementById('unit_display').textContent = data.agreement.unit_number;
+                                    document.getElementById('landlord_display').textContent = data.agreement.landlord_name;
                                     document.getElementById('unit_id').value = data.agreement.unit_id;
                                     document.getElementById('agreement_id').value = data.agreement.id;
                                     fillAmount(data.agreement);
                                 } else {
                                     document.getElementById('unit_display').textContent = 'No active agreement found';
+                                    document.getElementById('landlord_display').textContent = 'No active agreement found';
                                     document.getElementById('unit_id').value = '';
                                     document.getElementById('agreement_id').value = '';
                                 }

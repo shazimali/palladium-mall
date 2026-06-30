@@ -4,15 +4,13 @@
         Tenant & Agreement
     </h4>
 
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
 
         {{-- Tenant --}}
         @php
             $tenantsJson = $tenants->map(fn($t) => [
                 'id' => $t->id,
                 'name' => $t->name,
-                'unit' => $t->unit->unit_number ?? '',
-                'label' => $t->name . ($t->unit ? ' — ' . $t->unit->unit_number : ''),
             ])->values()->toJson();
         @endphp
         <div>
@@ -28,17 +26,17 @@
                 init() {
                     let match = this.tenants.find(t => t.id == this.selectedId);
                     if (match) {
-                        this.selectedLabel = match.label;
+                        this.selectedLabel = match.name;
                     }
                 },
                 get filteredTenants() {
                     if (!this.search) return this.tenants;
                     let q = this.search.toLowerCase();
-                    return this.tenants.filter(t => t.label.toLowerCase().includes(q));
+                    return this.tenants.filter(t => t.name.toLowerCase().includes(q));
                 },
                 selectTenant(t) {
                     this.selectedId = t.id;
-                    this.selectedLabel = t.label;
+                    this.selectedLabel = t.name;
                     this.open = false;
                     this.search = '';
                     this.$nextTick(() => {
@@ -76,7 +74,7 @@
                         <input x-ref="searchInput"
                                x-model="search"
                                type="text"
-                               placeholder="Type to search tenant name or unit number..."
+                               placeholder="Type to search tenant name..."
                                class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     </div>
 
@@ -88,7 +86,7 @@
                         <template x-for="t in filteredTenants" :key="t.id">
                             <li @click="selectTenant(t)"
                                 class="px-4 py-2 text-sm text-gray-800 dark:text-white/90 hover:bg-brand-50 dark:hover:bg-brand-900/20 cursor-pointer flex justify-between items-center transition-colors">
-                                <span x-text="t.label"></span>
+                                <span x-text="t.name"></span>
                             </li>
                         </template>
                     </ul>
@@ -101,7 +99,7 @@
 
         {{-- Unit (auto-filled) --}}
         <div>
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Unit</label>
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Flat/Shop</label>
             <div id="unit_display"
                 class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                 {{ isset($payment) ? $payment->unit->unit_number : 'Auto-filled when tenant is selected' }}
@@ -109,6 +107,15 @@
             <input type="hidden" id="unit_id" name="unit_id" value="{{ old('unit_id', $payment->unit_id ?? '') }}">
             <input type="hidden" id="agreement_id" name="agreement_id"
                 value="{{ old('agreement_id', $payment->agreement_id ?? '') }}">
+        </div>
+
+        {{-- Landlord (auto-filled) --}}
+        <div>
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Landlord</label>
+            <div id="landlord_display"
+                class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                {{ isset($payment) && $payment->unit?->landlord ? $payment->unit->landlord->name : 'Auto-filled when tenant is selected' }}
+            </div>
         </div>
 
     </div>

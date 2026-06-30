@@ -86,7 +86,7 @@ class PaymentController extends Controller
             ->get();
 
         $selfUnits = Unit::where('is_self', true)
-            ->with(['floor', 'block', 'otherTenant'])
+            ->with(['floor', 'block', 'otherTenant', 'landlord'])
             ->orderBy('unit_number')
             ->get();
 
@@ -180,7 +180,7 @@ class PaymentController extends Controller
 
     public function edit(Payment $payment): View
     {
-        $payment->load(['tenant', 'unit', 'agreement']);
+        $payment->load(['tenant', 'unit.landlord', 'agreement']);
 
         $tenants = Tenant::where('status', 'active')
             ->whereDoesntHave('unit', fn($q) => $q->where('is_self', true))
@@ -193,7 +193,7 @@ class PaymentController extends Controller
                 $q->orWhere('id', $payment->unit_id);
             }
         })
-        ->with(['floor', 'block'])
+        ->with(['floor', 'block', 'landlord'])
         ->orderBy('unit_number')
         ->get();
 
@@ -483,7 +483,7 @@ class PaymentController extends Controller
 
     public function getAgreementByTenant(Request $request): JsonResponse
     {
-        $agreement = Agreement::with('unit')
+        $agreement = Agreement::with('unit.landlord')
             ->where('tenant_id', $request->tenant_id)
             ->where('status', 'active')
             ->latest('updated_at')
@@ -500,6 +500,7 @@ class PaymentController extends Controller
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
                 'unit_id'            => $agreement->unit_id,
                 'unit_number'        => $agreement->unit?->unit_number ?? '—',
+                'landlord_name'      => $agreement->unit?->landlord?->name ?? '—',
             ],
         ]);
     }
