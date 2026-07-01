@@ -32,10 +32,7 @@ class StorePaymentRequest extends FormRequest
 
         $uniqueRule = null;
         if (!$isSelf) {
-            if ($this->type === 'security_deposit') {
-                $uniqueRule = Rule::unique('payments', 'agreement_id')
-                    ->where('type', 'security_deposit');
-            } elseif (in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
+            if (in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
                 $uniqueRule = Rule::unique('payments', 'month')
                     ->where('unit_id', $this->unit_id)
                     ->where('type', $this->type);
@@ -45,7 +42,13 @@ class StorePaymentRequest extends FormRequest
         return [
             'tenant_id'    => $isSelf ? ['nullable'] : ['required', 'exists:tenants,id'],
             'unit_id'      => $isSelf ? ['nullable'] : ['required', 'exists:units,id'],
-            'agreement_id' => $isSelf ? ['nullable'] : ['required', 'exists:agreements,id'],
+            'agreement_id' => array_filter([
+                $isSelf ? 'nullable' : 'required',
+                'exists:agreements,id',
+                (!$isSelf && $this->type === 'security_deposit')
+                    ? Rule::unique('payments', 'agreement_id')->where('type', 'security_deposit')
+                    : null
+            ]),
             'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other,security_deposit'],
             'month' => array_filter([
                 'required',

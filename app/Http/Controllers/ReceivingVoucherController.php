@@ -33,7 +33,7 @@ class ReceivingVoucherController extends Controller
                     ->orWhere('other_name', 'like', "%{$term}%")
                     ->orWhereHas('tenant', function ($t) use ($term) {
                         $t->where('name', 'like', "%{$term}%")
-                          ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
+                            ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
                     })
                     ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
             })
@@ -49,8 +49,8 @@ class ReceivingVoucherController extends Controller
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
         return view('receiving_vouchers.index', [
-            'title'           => 'Receiving Vouchers',
-            'vouchers'        => $vouchers,
+            'title' => 'Receiving Vouchers',
+            'vouchers' => $vouchers,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -69,9 +69,9 @@ class ReceivingVoucherController extends Controller
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
         return view('receiving_vouchers.create', [
-            'title'           => 'New Receiving Voucher',
-            'tenants'         => $tenants,
-            'owners'          => $owners,
+            'title' => 'New Receiving Voucher',
+            'tenants' => $tenants,
+            'owners' => $owners,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -86,13 +86,13 @@ class ReceivingVoucherController extends Controller
         }
 
         $rules = [
-            'date'               => ['required', 'date'],
-            'amount'             => ['required', 'numeric', 'min:0.01'],
+            'date' => ['required', 'date'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
             'received_from_type' => ['required', 'string', 'in:tenant'],
-            'tenant_id'          => ['required', 'exists:tenants,id'],
+            'tenant_id' => ['required', 'exists:tenants,id'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
-            'reference'          => ['nullable', 'string', 'max:255'],
-            'notes'              => ['nullable', 'string', 'max:1000'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:1000'],
         ];
 
         $data = $request->validate($rules);
@@ -132,7 +132,7 @@ class ReceivingVoucherController extends Controller
                 }
 
                 $balanceDue = (float) $payment->balanceDue();
-                
+
                 // Determine allocation for this payment
                 if ($remainingAmount >= $balanceDue) {
                     $allocatedAmount = $balanceDue;
@@ -144,11 +144,11 @@ class ReceivingVoucherController extends Controller
 
                 $payment->update([
                     'amount_paid' => $newAmountPaid,
-                    'status'      => Payment::calculateStatus((float) $payment->amount, $newAmountPaid),
-                    'paid_at'     => $payment->paid_at ?? $data['date'],
+                    'status' => Payment::calculateStatus((float) $payment->amount, $newAmountPaid),
+                    'paid_at' => $payment->paid_at ?? $data['date'],
                     'payment_account_id' => $data['payment_account_id'],
-                    'payment_method'     => $data['payment_method'],
-                    'reference'          => $data['reference'],
+                    'payment_method' => $data['payment_method'],
+                    'reference' => $data['reference'],
                 ]);
 
                 // Attach to receiving voucher payments pivot table
@@ -180,7 +180,7 @@ class ReceivingVoucherController extends Controller
         $receivingVoucher->load(['tenant', 'owner', 'paymentAccount', 'user', 'payments.unit']);
 
         return view('receiving_vouchers.show', [
-            'title'   => 'Voucher details — ' . $receivingVoucher->voucher_no,
+            'title' => 'Voucher details — ' . $receivingVoucher->voucher_no,
             'voucher' => $receivingVoucher,
         ]);
     }
@@ -197,7 +197,7 @@ class ReceivingVoucherController extends Controller
         $receivingVoucher->load(['tenant', 'owner', 'paymentAccount', 'user', 'payments.unit']);
 
         return view('receiving_vouchers.print', [
-            'title'   => 'Print Voucher — ' . $receivingVoucher->voucher_no,
+            'title' => 'Print Voucher — ' . $receivingVoucher->voucher_no,
             'voucher' => $receivingVoucher,
         ]);
     }
@@ -222,19 +222,19 @@ class ReceivingVoucherController extends Controller
                     if ($revertedAmountPaid <= 0) {
                         $payment->update([
                             'amount_paid' => 0.00,
-                            'status'      => 'unpaid',
-                            'paid_at'     => null,
+                            'status' => 'unpaid',
+                            'paid_at' => null,
                             'payment_account_id' => null,
-                            'payment_method'     => null,
+                            'payment_method' => null,
                         ]);
                     } else {
                         $payment->update([
                             'amount_paid' => $revertedAmountPaid,
-                            'status'      => Payment::calculateStatus((float) $payment->amount, $revertedAmountPaid),
+                            'status' => Payment::calculateStatus((float) $payment->amount, $revertedAmountPaid),
                         ]);
                     }
                 }
-                
+
                 // Clear pivot relationships
                 $receivingVoucher->payments()->detach();
             }
@@ -269,13 +269,13 @@ class ReceivingVoucherController extends Controller
             ->get();
 
         $formatted = $payments->map(fn($p) => [
-            'id'             => $p->id,
-            'month'          => $p->month ? $p->month->format('M Y') : '—',
-            'type'           => $p->type_label,
-            'unit_number'    => $p->unit?->unit_number ?? '—',
-            'amount_due'     => (float) $p->amount,
-            'amount_paid'    => (float) $p->amount_paid,
-            'balance'        => (float) $p->balanceDue(),
+            'id' => $p->id,
+            'month' => $p->month ? $p->month->format('M Y') : '—',
+            'type' => $p->type_label,
+            'unit_number' => $p->unit?->unit_number ?? '—',
+            'amount_due' => (float) $p->amount,
+            'amount_paid' => (float) $p->amount_paid,
+            'balance' => (float) $p->balanceDue(),
         ]);
 
         return response()->json(['payments' => $formatted]);

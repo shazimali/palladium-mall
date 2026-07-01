@@ -17,6 +17,40 @@ class Agreement extends Model
 {
     use HasFactory, SoftDeletes, LogsActivity;
 
+    protected static function booted()
+    {
+        static::saved(function ($agreement) {
+            if ($agreement->status === 'active' && (float) $agreement->security_deposit > 0) {
+                $secPayment = Payment::where('agreement_id', $agreement->id)
+                    ->where('type', 'security_deposit')
+                    ->first();
+
+                if (!$secPayment && $agreement->tenant_id) {
+                    $month = $agreement->start_date->copy()->startOfMonth()->toDateString();
+                    $dueDate = $agreement->start_date->toDateString();
+
+                    Payment::create([
+                        'tenant_id'    => $agreement->tenant_id,
+                        'unit_id'      => $agreement->unit_id,
+                        'agreement_id' => $agreement->id,
+                        'type'         => 'security_deposit',
+                        'month'        => $month,
+                        'amount'       => $agreement->security_deposit,
+                        'amount_paid'  => 0,
+                        'status'       => 'unpaid',
+                        'due_date'     => $dueDate,
+                    ]);
+                } else if ($secPayment) {
+                    if ($secPayment->status === 'unpaid' && (float) $secPayment->amount !== (float) $agreement->security_deposit) {
+                        $secPayment->update([
+                            'amount' => $agreement->security_deposit,
+                        ]);
+                    }
+                }
+            }
+        });
+    }
+
     protected $fillable = [
         'tenant_id',
         'unit_id',

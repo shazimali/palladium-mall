@@ -23,11 +23,15 @@
                 selectedId: '{{ old('tenant_id', $payment->tenant_id ?? '') }}',
                 selectedLabel: '',
                 tenants: {{ $tenantsJson }},
+                activeIndex: 0,
                 init() {
                     let match = this.tenants.find(t => t.id == this.selectedId);
                     if (match) {
                         this.selectedLabel = match.name;
                     }
+                    this.$watch('search', () => {
+                        this.activeIndex = 0;
+                    });
                 },
                 get filteredTenants() {
                     if (!this.search) return this.tenants;
@@ -35,6 +39,7 @@
                     return this.tenants.filter(t => t.name.toLowerCase().includes(q));
                 },
                 selectTenant(t) {
+                    if (!t) return;
                     this.selectedId = t.id;
                     this.selectedLabel = t.name;
                     this.open = false;
@@ -43,21 +48,35 @@
                         let el = document.getElementById('tenant_id');
                         el.dispatchEvent(new Event('change', { bubbles: true }));
                     });
+                },
+                scrollIntoView() {
+                    let activeEl = this.$refs.optionsList.querySelector(`[data-index='${this.activeIndex}']`);
+                    if (activeEl) {
+                        activeEl.scrollIntoView({ block: 'nearest' });
+                    }
                 }
-            }" class="relative">
+            }" class="relative"
+               @keydown.escape.stop="open = false; $refs.triggerBtn.focus()"
+               @keydown.arrow-down.prevent="if (!open) { open = true; activeIndex = 0; } else if (filteredTenants.length > 0) { activeIndex = (activeIndex + 1) % filteredTenants.length; $nextTick(() => scrollIntoView()); }"
+               @keydown.arrow-up.prevent="if (open && filteredTenants.length > 0) { activeIndex = (activeIndex - 1 + filteredTenants.length) % filteredTenants.length; $nextTick(() => scrollIntoView()); }"
+               @keydown.enter.prevent="if (open && filteredTenants.length > 0) { selectTenant(filteredTenants[activeIndex]); }">
                 <!-- Hidden Input for Form Submission -->
                 <input type="hidden" id="tenant_id" name="tenant_id" :value="selectedId">
-
+ 
                 <!-- Trigger Button -->
-                <div @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
+                <div x-ref="triggerBtn"
+                     tabindex="0"
+                     @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
                      @click.outside="open = false"
+                     @keydown.enter.prevent.stop="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
+                     @keydown.space.prevent.stop="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
                      class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('tenant_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
                     <span x-text="selectedLabel || 'Select tenant'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
                     <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
                 </div>
-
+ 
                 <!-- Dropdown Menu -->
                 <div x-show="open"
                      x-transition:enter="transition ease-out duration-100"
@@ -77,15 +96,18 @@
                                placeholder="Type to search tenant name..."
                                class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     </div>
-
+ 
                     <!-- Options List -->
-                    <ul class="max-h-60 overflow-y-auto mt-1">
+                    <ul class="max-h-60 overflow-y-auto mt-1" x-ref="optionsList">
                         <template x-if="filteredTenants.length === 0">
                             <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching tenants found.</li>
                         </template>
-                        <template x-for="t in filteredTenants" :key="t.id">
+                        <template x-for="(t, index) in filteredTenants" :key="t.id">
                             <li @click="selectTenant(t)"
-                                class="px-4 py-2 text-sm text-gray-800 dark:text-white/90 hover:bg-brand-50 dark:hover:bg-brand-900/20 cursor-pointer flex justify-between items-center transition-colors">
+                                @mouseenter="activeIndex = index"
+                                :data-index="index"
+                                :class="activeIndex === index ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400' : 'text-gray-800 dark:text-white/90'"
+                                class="px-4 py-2 text-sm cursor-pointer flex justify-between items-center transition-colors">
                                 <span x-text="t.name"></span>
                             </li>
                         </template>
