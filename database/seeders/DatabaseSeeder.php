@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             FloorBlockAreaSeeder::class,
             DemoDataSeeder::class,
+            SecurityDepositPaymentSeeder::class,
         ]);
     }
 }
