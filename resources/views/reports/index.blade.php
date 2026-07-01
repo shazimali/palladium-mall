@@ -1,47 +1,131 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Reports" />
-
-    {{-- ── Report Type Tabs ──────────────────────────────────────────────── --}}
-    <div class="mb-6 flex flex-wrap gap-2">
-        @php
-            $activeType = $filters['report_type'] ?? '';
-            $tabs = [
-                ''                  => ['label' => 'All Data',             'icon' => '📊'],
-                'rent'              => ['label' => 'Rent Collected',       'icon' => '🏠'],
-                'maintinance'       => ['label' => 'Maintenance',          'icon' => '🛠️'],
-                'utilities'         => ['label' => 'Utilities Paid',       'icon' => '⚡'],
-                'fines'             => ['label' => 'Fines',                'icon' => '⚠️'],
-                'other_owned'       => ['label' => 'Other Owned',          'icon' => '🔑'],
-                'occupide'          => ['label' => 'Occupied (Ext)',       'icon' => '👥'],
-                'non_occupide'      => ['label' => 'Vacant (Ext)',         'icon' => '🚪'],
-                'monthly_matrix'    => ['label' => 'Monthly Matrix',       'icon' => '📅'],
-                'potential_revenue' => ['label' => 'Fully Rented Forecast','icon' => '📈'],
-            ];
-        @endphp
-        @foreach($tabs as $typeKey => $tab)
-            @php
-                $tabParams = array_merge($filters, ['report_type' => $typeKey]);
-                $isActive  = $activeType === $typeKey;
-            @endphp
-            <a href="{{ route('reports.index', $tabParams) }}"
-               class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all
-                      {{ $isActive
-                          ? 'bg-brand-500 text-white shadow-sm'
-                          : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}">
-                <span>{{ $tab['icon'] }}</span>
-                {{ $tab['label'] }}
-            </a>
-        @endforeach
-    </div>
+<div x-data="{ isFilterModalOpen: false }">
 
     {{-- ── Filter Panel ───────────────────────────────────────────────────── --}}
-    <x-common.component-card title="Report Filters" desc="Apply filters to generate your report">
-        <form method="GET" action="{{ route('reports.index') }}" id="reportForm">
-            <input type="hidden" name="report_type" value="{{ $filters['report_type'] ?? '' }}">
+    @php
+        $appliedFilters = [];
+
+        // Report Type
+        $reportType = $filters['report_type'] ?? '';
+        $reportTypeLabel = match($reportType) {
+            'rent' => 'Rent Collected',
+            'maintinance' => 'Maintenance',
+            'utilities' => 'Utilities Paid',
+            'fines' => 'Fines',
+            'other_owned' => 'Other Owned',
+            'occupide' => 'Occupied (Ext)',
+            'non_occupide' => 'Vacant (Ext)',
+            'monthly_matrix' => 'Monthly Matrix',
+            'potential_revenue' => 'Fully Rented Forecast',
+            default => 'All Data',
+        };
+
+        // Dates
+        if (!empty($filters['date_from'])) {
+            $appliedFilters[] = "<strong>From:</strong> " . \Carbon\Carbon::parse($filters['date_from'])->format('d M Y');
+        }
+        if (!empty($filters['date_to'])) {
+            $appliedFilters[] = "<strong>To:</strong> " . \Carbon\Carbon::parse($filters['date_to'])->format('d M Y');
+        }
+
+        // Unit
+        if (!empty($filters['unit_id'])) {
+            $selectedUnit = $units->firstWhere('id', $filters['unit_id']);
+            if ($selectedUnit) {
+                $appliedFilters[] = "<strong>Unit:</strong> " . $selectedUnit->unit_number;
+            }
+        }
+
+        // Unit Status
+        if (!empty($filters['unit_status'])) {
+            $appliedFilters[] = "<strong>Unit Status:</strong> " . ucfirst($filters['unit_status']);
+        }
+
+        // Tenant
+        if (!empty($filters['tenant_id'])) {
+            $selectedTenant = $tenants->firstWhere('id', $filters['tenant_id']);
+            if ($selectedTenant) {
+                $appliedFilters[] = "<strong>Tenant:</strong> " . $selectedTenant->name;
+            }
+        }
+
+        // Status
+        if (!empty($filters['status'])) {
+            $appliedFilters[] = "<strong>Status:</strong> " . ucfirst($filters['status']);
+        }
+
+        // Landlord
+        if (!empty($filters['landlord_id'])) {
+            $selectedLandlord = $landlords->firstWhere('id', $filters['landlord_id']);
+            if ($selectedLandlord) {
+                $appliedFilters[] = "<strong>Landlord:</strong> " . $selectedLandlord->name;
+            }
+        }
+
+        // Owner Type
+        if (!empty($filters['owner_type'])) {
+            $appliedFilters[] = "<strong>Owner Type:</strong> " . ($filters['owner_type'] === 'pm_mall' ? 'PM Mall Owners' : 'Other Owners');
+        }
+
+        // Payment Method
+        if (!empty($filters['payment_method'])) {
+            $appliedFilters[] = "<strong>Payment Method:</strong> " . ucfirst(str_replace('_', ' ', $filters['payment_method']));
+        }
+
+        // Payment Account
+        if (!empty($filters['payment_account_id'])) {
+            $selectedAccount = $paymentAccounts->firstWhere('id', $filters['payment_account_id']);
+            if ($selectedAccount) {
+                $appliedFilters[] = "<strong>Account:</strong> " . $selectedAccount->name;
+            }
+        }
+    @endphp
+
+    <!-- Filters Modal Backdrop & Modal Card -->
+    <div x-show="isFilterModalOpen" 
+         class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 sm:p-0"
+         x-cloak
+         style="display: none;">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-gray-950/50 backdrop-blur-xs transition-opacity z-40" @click="isFilterModalOpen = false"></div>
+        
+        <!-- Modal Body -->
+        <div class="relative z-50 transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all dark:bg-gray-900 w-full max-w-4xl p-6 border border-gray-100 dark:border-gray-800">
+            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4 mb-5">
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white">
+                    Modify Report Filters
+                </h3>
+                <button type="button" @click="isFilterModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    ✕
+                </button>
+            </div>
+            
+            <form method="GET" action="{{ route('reports.index') }}" id="reportForm">
+                <input type="hidden" name="no_sidebar" value="1">
 
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+                {{-- Report Type --}}
+                <div>
+                    <label for="report_type" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Report Type
+                    </label>
+                    <select id="report_type" name="report_type"
+                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="" {{ ($filters['report_type'] ?? '') === '' ? 'selected' : '' }}>All Data</option>
+                        <option value="rent" {{ ($filters['report_type'] ?? '') === 'rent' ? 'selected' : '' }}>Rent Collected</option>
+                        <option value="maintenance" {{ ($filters['report_type'] ?? '') === 'maintenance' || ($filters['report_type'] ?? '') === 'maintinance' ? 'selected' : '' }}>Maintenance</option>
+                        <option value="utilities" {{ ($filters['report_type'] ?? '') === 'utilities' ? 'selected' : '' }}>Utilities Paid</option>
+                        <option value="fines" {{ ($filters['report_type'] ?? '') === 'fines' ? 'selected' : '' }}>Fines</option>
+                        <option value="other_owned" {{ ($filters['report_type'] ?? '') === 'other_owned' ? 'selected' : '' }}>Other Owned</option>
+                        <option value="occupied" {{ ($filters['report_type'] ?? '') === 'occupied' || ($filters['report_type'] ?? '') === 'occupide' ? 'selected' : '' }}>Occupied (Ext)</option>
+                        <option value="non_occupied" {{ ($filters['report_type'] ?? '') === 'non_occupied' || ($filters['report_type'] ?? '') === 'non_occupide' ? 'selected' : '' }}>Vacant (Ext)</option>
+                        <option value="monthly_matrix" {{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'selected' : '' }}>Monthly Matrix</option>
+                        <option value="potential_revenue" {{ ($filters['report_type'] ?? '') === 'potential_revenue' ? 'selected' : '' }}>Fully Rented Forecast</option>
+                    </select>
+                </div>
 
                 {{-- Date From --}}
                 <div class="{{ ($filters['report_type'] ?? '') === 'potential_revenue' ? 'hidden' : '' }}">
@@ -228,8 +312,18 @@
                 @endif
 
             </div>
-        </form>
-    </x-common.component-card>
+            </form>
+            <!-- Modal Footer Actions -->
+            <div class="mt-6 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
+                <button type="button" @click="isFilterModalOpen = false" class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05]">
+                    Cancel
+                </button>
+                <button type="submit" class="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
+                    Apply Filters
+                </button>
+            </div>
+        </div>
+    </div>
 
     {{-- ── Results ──────────────────────────────────────────────────────────── --}}
     @if($hasQuery)
@@ -239,157 +333,239 @@
                 : \Carbon\Carbon::now()->format('F Y');
         @endphp
 
-        @if(($filters['report_type'] ?? '') === 'monthly_matrix')
-            <div class="mb-4 rounded-xl border border-brand-100 bg-brand-50 p-4 dark:border-brand-900/20 dark:bg-brand-950/10">
-                <div class="flex items-center gap-3">
-                    <span class="text-xl">📅</span>
-                    <div>
-                        <h4 class="text-sm font-semibold text-brand-900 dark:text-brand-200">Monthly Matrix Report</h4>
-                        <p class="text-xs text-brand-600 dark:text-brand-400">Showing flat status and collections breakdown for the billing month of <strong class="font-bold text-brand-700 dark:text-brand-300">{{ $selectedMonth }}</strong></p>
-                    </div>
-                </div>
-            </div>
-        @endif
 
-        {{-- Summary Cards --}}
+
+        {{-- Dynamic Summary Widgets --}}
         @if($summary)
             @php
                 $isMatrix = ($filters['report_type'] ?? '') === 'monthly_matrix';
                 $totalDue = $isMatrix ? ($summary['total_amount'] ?? 0) : ($summary['total_due'] ?? 0);
                 $totalPaid = $isMatrix ? ($summary['total_received'] ?? 0) : ($summary['total_paid'] ?? 0);
                 $outstanding = $isMatrix ? ($summary['total_pending'] ?? 0) : ($summary['outstanding'] ?? 0);
-
-                if ($isMatrix) {
-                    $card5Label = '🏠 Rent Due';
-                    $card5Value = $summary['total_rent'] ?? 0;
-                    $card5Class = 'text-blue-600';
-                    $card6Label = '🛠️ Services Due';
-                    $card6Value = $summary['total_serv'] ?? 0;
-                    $card6Class = 'text-purple-600';
-                } else {
-                    $reportType = $filters['report_type'] ?? '';
-                    if ($reportType === 'rent') {
-                        $card5Label = '🏠 Rent Collected';
-                        $card5Value = $summary['rent_collected'] ?? 0;
-                        $card5Class = 'text-blue-600';
-                        $card6Label = '🏠 Rent Outstanding';
-                        $card6Value = $outstanding;
-                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
-                    } elseif ($reportType === 'maintinance' || $reportType === 'maintenance') {
-                        $card5Label = '🛠️ Maintenance Collected';
-                        $card5Value = $summary['maintenance_collected'] ?? 0;
-                        $card5Class = 'text-purple-600';
-                        $card6Label = '🛠️ Maintenance Outstanding';
-                        $card6Value = $outstanding;
-                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
-                    } elseif ($reportType === 'utilities') {
-                        $card5Label = '⚡ Utilities Paid';
-                        $card5Value = $summary['utilities_paid'] ?? 0;
-                        $card5Class = 'text-yellow-600';
-                        $card6Label = '⚡ Utilities Outstanding';
-                        $card6Value = $outstanding;
-                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
-                    } elseif ($reportType === 'fines') {
-                        $card5Label = '⚠️ Fines Collected';
-                        $card5Value = $summary['fines_collected'] ?? 0;
-                        $card5Class = 'text-red-600';
-                        $card6Label = '⚠️ Fines Outstanding';
-                        $card6Value = $outstanding;
-                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
-                    } elseif ($reportType === 'other_owned' || $reportType === 'occupied' || $reportType === 'occupide' || $reportType === 'non_occupied' || $reportType === 'non_occupide') {
-                        $card5Label = match ($reportType) {
-                            'occupied', 'occupide' => '👥 Occupied (Ext) Collected',
-                            'non_occupied', 'non_occupide' => '🚪 Vacant (Ext) Collected',
-                            default => '🔑 Other Owned Collected',
-                        };
-                        $card5Value = $summary['maintenance_collected'] ?? 0;
-                        $card5Class = 'text-purple-600';
-                        $card6Label = match ($reportType) {
-                            'occupied', 'occupide' => '👥 Occupied (Ext) Outstanding',
-                            'non_occupied', 'non_occupide' => '🚪 Vacant (Ext) Outstanding',
-                            default => '🔑 Other Owned Outstanding',
-                        };
-                        $card6Value = $outstanding;
-                        $card6Class = $outstanding > 0 ? 'text-red-500' : 'text-green-600';
-                    } else {
-                        $card5Label = '🏠 Rent Collected';
-                        $card5Value = $summary['rent_collected'] ?? 0;
-                        $card5Class = 'text-blue-600';
-                        $card6Label = '🛠️ Maintenance Collected';
-                        $card6Value = $summary['maintenance_collected'] ?? 0;
-                        $card6Class = 'text-purple-600';
-                    }
-                }
             @endphp
+
             @if(($filters['report_type'] ?? '') === 'potential_revenue')
-                <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">Total Flats/Shops</p>
-                        <p class="mt-1 text-lg font-bold text-gray-800 dark:text-white leading-tight">{{ number_format($summary['count']) }}</p>
+                <!-- Potential Revenue Grid -->
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 mb-6">
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Total Flats/Shops</p>
+                        <h4 class="mt-2 text-2xl font-bold text-gray-800 dark:text-white leading-tight">{{ number_format($summary['count']) }}</h4>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">Potential Rent</p>
-                        <p class="mt-1 text-lg font-bold text-blue-600">Rs. {{ number_format($summary['total_rent']) }}</p>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Potential Rent</p>
+                        <h4 class="mt-2 text-2xl font-bold text-blue-600">Rs. {{ number_format($summary['total_rent']) }}</h4>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">Potential Maint.</p>
-                        <p class="mt-1 text-lg font-bold text-purple-600">Rs. {{ number_format($summary['total_maintenance']) }}</p>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Potential Maint.</p>
+                        <h4 class="mt-2 text-2xl font-bold text-purple-600">Rs. {{ number_format($summary['total_maintenance']) }}</h4>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">Combined Potential</p>
-                        <p class="mt-1 text-lg font-bold text-emerald-600">Rs. {{ number_format($summary['total_combined']) }}</p>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Combined Potential</p>
+                        <h4 class="mt-2 text-2xl font-bold text-emerald-600">Rs. {{ number_format($summary['total_combined']) }}</h4>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">Rented (Agreement)</p>
-                        <p class="mt-1 text-lg font-bold text-brand-600">{{ number_format($summary['rented_count']) }}</p>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Rented (Agreement)</p>
+                        <h4 class="mt-2 text-2xl font-bold text-brand-600">{{ number_format($summary['rented_count']) }}</h4>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">Vacant/Other (Default)</p>
-                        <p class="mt-1 text-lg font-bold text-orange-500">{{ number_format($summary['vacant_count']) }}</p>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Vacant/Other (Default)</p>
+                        <h4 class="mt-2 text-2xl font-bold text-orange-500">{{ number_format($summary['vacant_count']) }}</h4>
                     </div>
-
                 </div>
             @else
-                <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">{{ $isMatrix ? 'Report Month' : 'Records Found' }}</p>
-                        <p class="mt-1 text-base font-bold text-gray-800 dark:text-white leading-tight">{{ $isMatrix ? $selectedMonth : number_format($summary['count']) }}</p>
+                <!-- General Summary Metrics Row -->
+                <div class="grid grid-cols-2 gap-4 md:grid-cols-4 mb-6">
+                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ $isMatrix ? 'Total Units' : 'Total Records' }}</span>
+                        <h4 class="mt-2 text-2xl font-bold text-gray-800 dark:text-white leading-none">
+                            {{ number_format($summary['count']) }}
+                        </h4>
+                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $isMatrix ? 'Report billing month' : 'Processed entries' }}</p>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">Total Due</p>
-                        <p class="mt-1 text-lg font-bold text-orange-500">Rs. {{ number_format($totalDue) }}</p>
+                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Total Billed Due</span>
+                        <h4 class="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-500 leading-none">
+                            Rs. {{ number_format($totalDue) }}
+                        </h4>
+                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500 font-medium">Billed amount</p>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Received' : 'Total Collected' }}</p>
-                        <p class="mt-1 text-lg font-bold text-green-600">Rs. {{ number_format($totalPaid) }}</p>
+                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Total Collected</span>
+                        <h4 class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-500 leading-none">
+                            Rs. {{ number_format($totalPaid) }}
+                        </h4>
+                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500 font-medium">Received payments</p>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">{{ $isMatrix ? 'Total Pending' : 'Outstanding' }}</p>
-                        <p class="mt-1 text-lg font-bold {{ $outstanding > 0 ? 'text-red-500' : 'text-green-600' }}">
+                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Outstanding Due</span>
+                        <h4 class="mt-2 text-2xl font-bold {{ $outstanding > 0 ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-500' }} leading-none">
                             Rs. {{ number_format($outstanding) }}
-                        </p>
+                        </h4>
+                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500 font-medium">Pending collections</p>
+                    </div>
+                </div>
+
+                <!-- Category Wise Collections Row -->
+                @if($isMatrix)
+                    @php
+                        $rentSum = $summary['total_rent_paid'] ?? 0;
+                        $rentCount = $summary['rent_count'] ?? 0;
+
+                        $maintSum = $summary['total_serv_paid'] ?? 0;
+                        $maintCount = $summary['serv_count'] ?? 0;
+
+                        $secSum = $summary['total_sec_paid'] ?? 0;
+                        $secCount = $summary['sec_count'] ?? 0;
+
+                        $extraSum = $summary['total_extra_paid'] ?? 0;
+                        $extraCount = $summary['extra_count'] ?? 0;
+                    @endphp
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 mt-8">Category Wise Collections</h3>
+                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-4 mb-6">
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🏠 Rent Collected</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($rentSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $rentCount }} payments</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🛠️ Serv (Maint)</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($maintSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $maintCount }} payments</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🔒 Sec. Deposit</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($secSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $secCount }} payments</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🔑 Extra</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($extraSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $extraCount }} payments</p>
+                        </div>
+                    </div>
+                @else
+                    @php
+                        $rentSum = $entries->where('type', 'rent')->sum('amount_paid');
+                        $rentCount = $entries->where('type', 'rent')->count();
+
+                        $maintSum = $entries->where('type', 'maintenance')->sum('amount_paid');
+                        $maintCount = $entries->where('type', 'maintenance')->count();
+
+                        $utilSum = $entries->where('category', 'utility')->sum('amount_paid');
+                        $utilCount = $entries->where('category', 'utility')->count();
+
+                        $fineSum = $entries->where('type', 'fine')->sum('amount_paid');
+                        $fineCount = $entries->where('type', 'fine')->count();
+
+                        $otherSum = $entries->where('type', 'other')->sum('amount_paid');
+                        $otherCount = $entries->where('type', 'other')->count();
+                    @endphp
+                    <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 mt-8">Category Wise Collections</h3>
+                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🏠 Rent Collected</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($rentSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $rentCount }} payments</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🛠️ Maintenance</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($maintSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $maintCount }} payments</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">⚡ Utilities</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($utilSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $utilCount }} payments</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">⚠️ Fines</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($fineSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $fineCount }} payments</p>
+                        </div>
+                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🔑 Other</span>
+                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($otherSum) }}</h4>
+                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $otherCount }} payments</p>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- Payment Accounts & Methods Breakdown -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 mb-6">
+                    <!-- Payment Accounts -->
+                    <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Account Breakdown</h3>
+                        <div class="space-y-3">
+                            @php $hasAccountData = false; @endphp
+                            @foreach($paymentAccounts as $account)
+                                @php
+                                    $accSum = $isMatrix 
+                                        ? ($summary['accounts_total'][$account->name] ?? 0.0)
+                                        : $entries->where('payment_account', $account->name)->sum('amount_paid');
+                                    $accCount = $isMatrix
+                                        ? ($accSum > 0 ? 1 : 0)
+                                        : $entries->where('payment_account', $account->name)->count();
+                                @endphp
+                                @if($accSum > 0)
+                                    @php $hasAccountData = true; @endphp
+                                    <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-2xs dark:border-gray-800 dark:bg-white/[0.03]">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-lg">🏦</span>
+                                            <div>
+                                                <h5 class="text-sm font-semibold text-gray-800 dark:text-white">{{ $account->name }}</h5>
+                                                @if(!$isMatrix)
+                                                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ $accCount }} transactions</p>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <span class="text-base font-bold text-emerald-600 dark:text-emerald-500">Rs. {{ number_format($accSum) }}</span>
+                                    </div>
+                                @endif
+                            @endforeach
+                            @if(!$hasAccountData)
+                                <p class="text-sm text-gray-400 py-2">No account transactions recorded</p>
+                            @endif
+                        </div>
                     </div>
 
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">{{ $card5Label }}</p>
-                        <p class="mt-1 text-lg font-bold {{ $card5Class }}">Rs. {{ number_format($card5Value) }}</p>
+                    <!-- Payment Methods -->
+                    <div>
+                        <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Method Breakdown</h3>
+                        <div class="space-y-3">
+                            @php
+                                $methodsList = [
+                                    'cash' => ['label' => 'Cash', 'icon' => '💵'],
+                                    'bank_transfer' => ['label' => 'Bank Transfer', 'icon' => '📱'],
+                                    'cheque' => ['label' => 'Cheque', 'icon' => '✍️'],
+                                    'other' => ['label' => 'Other', 'icon' => '🔑'],
+                                ];
+                                $hasMethodData = false;
+                            @endphp
+                            @foreach($methodsList as $mKey => $mCfg)
+                                @php
+                                    $mName = ucfirst(str_replace('_', ' ', $mKey));
+                                    $mSum = $entries->where('payment_method', $mName)->sum('amount_paid');
+                                    $mCount = $entries->where('payment_method', $mName)->count();
+                                @endphp
+                                @if($mCount > 0)
+                                    @php $hasMethodData = true; @endphp
+                                    <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-2xs dark:border-gray-800 dark:bg-white/[0.03]">
+                                        <div class="flex items-center gap-2.5">
+                                            <span class="text-lg">{{ $mCfg['icon'] }}</span>
+                                            <div>
+                                                <h5 class="text-sm font-semibold text-gray-800 dark:text-white">{{ $mCfg['label'] }}</h5>
+                                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ $mCount }} transactions</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-base font-bold text-emerald-600 dark:text-emerald-500">Rs. {{ number_format($mSum) }}</span>
+                                    </div>
+                                @endif
+                            @endforeach
+                            @if(!$hasMethodData)
+                                <p class="text-sm text-gray-400 py-2">No method transactions recorded</p>
+                            @endif
+                        </div>
                     </div>
-
-                    <div class="col-span-1 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400">{{ $card6Label }}</p>
-                        <p class="mt-1 text-lg font-bold {{ $card6Class }}">Rs. {{ number_format($card6Value) }}</p>
-                    </div>
-
                 </div>
             @endif
         @endif
@@ -400,6 +576,28 @@
                 title="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix - ' . $selectedMonth : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Fully Rented Potential Revenue Forecast' : 'Report Results') }}"
                 desc="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Grid matrix for flat status and collections' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Potential monthly revenue snapshot for all flats and shops' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found') }}">
 
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4 mb-4">
+                    <div>
+                        @if(count($appliedFilters) > 0)
+                            <p class="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                                {!! implode('<span class="text-gray-300 dark:text-gray-700">|</span>', $appliedFilters) !!}
+                            </p>
+                        @else
+                            <p class="text-sm text-gray-500 dark:text-gray-400">
+                                Showing all records (No filters applied)
+                            </p>
+                        @endif
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" @click="isFilterModalOpen = true" class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 transition-colors shadow-xs">
+                            🔍 Filter
+                        </button>
+                        <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors shadow-xs">
+                            ✕ Exit
+                        </a>
+                    </div>
+                </div>
+
                 @if($entries->isEmpty())
                     <div class="py-12 text-center text-gray-400">
                         <svg class="mx-auto mb-3 h-10 w-10 opacity-40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -409,12 +607,14 @@
                         <p class="mt-1 text-xs text-gray-300 dark:text-gray-600">Try adjusting the date range or removing filters.</p>
                     </div>
                 @else
+
+
                     @if(($filters['report_type'] ?? '') === 'monthly_matrix')
                         @include('reports.partials.matrix_table')
                     @elseif(($filters['report_type'] ?? '') === 'potential_revenue')
                         @include('reports.partials.potential_revenue_table')
                     @else
-                        <div class="max-h-[calc(100vh-320px)] overflow-auto rounded-lg border border-gray-200 dark:border-gray-800">
+                        <div class="rounded-lg border border-gray-200 dark:border-gray-800">
                             <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
                                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
                                     <tr>
@@ -426,6 +626,7 @@
                                         <th class="px-4 py-3">Type</th>
                                         <th class="px-4 py-3">Payment Method</th>
                                         <th class="px-4 py-3">Payment Account</th>
+                                        <th class="px-4 py-3">Security Deposit</th>
                                         <th class="px-4 py-3">Amount Due</th>
                                         <th class="px-4 py-3">Amount Paid</th>
                                         <th class="px-4 py-3">Balance</th>
@@ -481,6 +682,10 @@
                                                 {{ $entry['payment_account'] }}
                                             </td>
 
+                                            <td data-order="{{ $entry['security_deposit'] }}" class="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400 text-xs">
+                                                {{ $entry['security_deposit'] > 0 ? ('Rs. ' . number_format($entry['security_deposit'])) : '—' }}
+                                            </td>
+
                                             <td data-order="{{ $entry['amount_due'] }}" class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
                                                 Rs. {{ number_format($entry['amount_due']) }}
                                             </td>
@@ -521,7 +726,7 @@
                                 </tbody>
                                 <tfoot>
                                     <tr class="bg-gray-50 dark:bg-gray-800 font-semibold text-sm">
-                                        <td colspan="8" class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                        <td colspan="9" class="px-4 py-3 text-gray-700 dark:text-gray-300">
                                             Totals ({{ $summary['count'] }} records)
                                         </td>
                                         <td class="px-4 py-3 text-gray-800 dark:text-white">
@@ -551,10 +756,19 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
             <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No report generated yet</p>
-            <p class="mt-1 text-xs text-gray-400 dark:text-gray-600">Select a report type using the tabs above, apply filters and click <strong>Generate Report</strong></p>
+            <p class="mt-1 mb-6 text-xs text-gray-400 dark:text-gray-600">Open the filters panel to configure and generate your report.</p>
+            <div class="flex items-center justify-center gap-3">
+                <button type="button" @click="isFilterModalOpen = true" class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors shadow-xs">
+                    🔍 Open Filters
+                </button>
+                <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors shadow-xs">
+                    ✕ Exit
+                </a>
+            </div>
         </div>
     @endif
 
+</div>
 @endsection
 
 @push('scripts')
@@ -727,6 +941,16 @@
         background-color: #1f2937 !important; /* dark:bg-gray-800 */
         box-shadow: inset 0 -1px 0 #374151, 0 1px 2px rgba(0,0,0,0.2) !important;
     }
+    
+    #reportTable th,
+    #reportTable td {
+        padding-top: 0.875rem !important;
+        padding-bottom: 0.875rem !important;
+    }
+    
+    [x-cloak] {
+        display: none !important;
+    }
 </style>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.tailwindcss.min.js"></script>
@@ -769,23 +993,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // DataTable
-    const table = document.getElementById('reportTable');
-    if (table) {
-        new DataTable('#reportTable', {
-            pageLength: 100,
-            lengthMenu: [10, 25, 50, 100, 200],
-            order: [[1, 'asc']],
-            columnDefs: [{ orderable: false, targets: [0] }],
-            language: {
-                search: '',
-                searchPlaceholder: 'Search records…',
-                lengthMenu: 'Show _MENU_ per page',
-                info: 'Showing _START_ to _END_ of _TOTAL_ records',
-                emptyTable: 'No records found',
-            },
-        });
-    }
+
 });
 </script>
 

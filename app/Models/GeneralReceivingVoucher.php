@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\LogsActivity;
 
-class PaymentVoucher extends Model
+class GeneralReceivingVoucher extends Model
 {
     use HasFactory, SoftDeletes, LogsActivity;
 
@@ -16,11 +16,7 @@ class PaymentVoucher extends Model
         'voucher_no',
         'date',
         'amount',
-        'paid_to_type',
-        'owner_id',
         'party_id',
-        'other_name',
-        'is_advance',
         'payment_method',
         'payment_account_id',
         'reference',
@@ -31,28 +27,22 @@ class PaymentVoucher extends Model
     protected $casts = [
         'date' => 'date',
         'amount' => 'decimal:2',
-        'is_advance' => 'boolean',
     ];
 
     protected static function booted(): void
     {
         static::creating(function ($voucher) {
             if (empty($voucher->voucher_no)) {
-                $voucher->voucher_no = 'TEMP-PV-' . \Illuminate\Support\Str::random(12);
+                $voucher->voucher_no = 'TEMP-GRV-' . \Illuminate\Support\Str::random(12);
             }
         });
 
         static::created(function ($voucher) {
-            if (strpos($voucher->voucher_no, 'TEMP-PV-') === 0) {
-                $voucher->voucher_no = 'PM-PV-' . str_pad($voucher->id, 5, '0', STR_PAD_LEFT);
+            if (strpos($voucher->voucher_no, 'TEMP-GRV-') === 0) {
+                $voucher->voucher_no = 'PM-GRV-' . str_pad($voucher->id, 5, '0', STR_PAD_LEFT);
                 $voucher->saveQuietly();
             }
         });
-    }
-
-    public function owner(): BelongsTo
-    {
-        return $this->belongsTo(Owner::class)->withTrashed();
     }
 
     public function party(): BelongsTo

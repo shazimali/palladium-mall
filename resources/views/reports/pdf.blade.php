@@ -485,6 +485,7 @@
                     <th>Type</th>
                     <th>Landlord</th>
                     <th>Tenant</th>
+                    <th>Security Deposit</th>
                     <th>Amount Due</th>
                     <th>Amount Paid</th>
                     <th>Balance</th>
@@ -507,6 +508,7 @@
                         </td>
                         <td>{{ $entry['landlord'] ?? '—' }}</td>
                         <td>{{ $entry['tenant'] ?? '—' }}</td>
+                        <td style="font-weight:600;">{{ $entry['security_deposit'] > 0 ? ('Rs. ' . number_format($entry['security_deposit'], 2)) : '—' }}</td>
                         <td style="font-weight:600;">Rs. {{ number_format($entry['amount_due'], 2) }}</td>
                         <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['amount_paid'], 2) }}</td>
                         <td style="font-weight:700;color:{{ $entry['balance'] > 0 ? '#DC2626' : '#059669' }};">
@@ -528,7 +530,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="13" style="text-align:center;padding:16px;color:#94A3B8;">
+                        <td colspan="14" style="text-align:center;padding:16px;color:#94A3B8;">
                             No records found for the selected filters.
                         </td>
                     </tr>
@@ -536,7 +538,7 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="7" style="color:#1D3461;">
+                    <td colspan="8" style="color:#1D3461;">
                         Totals — {{ number_format($summary['count']) }} records
                     </td>
                     <td style="color:#1D3461;">Rs. {{ number_format($summary['total_due'], 2) }}</td>

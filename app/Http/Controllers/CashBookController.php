@@ -2,20 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Payment;
 use App\Models\Expense;
+use App\Models\Payment;
+use App\Models\ReceivingVoucher;
+use App\Models\PaymentVoucher;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Carbon\Carbon;
 
-class DayBookController extends Controller
+class CashBookController extends Controller
 {
     /**
-     * Show the Day Book report.
+     * Show the Cash Book report.
      */
     public function index(Request $request): View
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.daybook')) {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.cashbook')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -32,24 +34,42 @@ class DayBookController extends Controller
             $endDate = Carbon::today()->endOfDay();
         }
 
-        // Fetch Inflows (Receiving Vouchers)
-        $inflows = \App\Models\ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
+        // Fetch Inflows (Receiving Vouchers) filtered by cash
+        $inflows = ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->orderBy('date', 'asc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        // Fetch General Inflows
+        // Fetch General Inflows filtered by cash
         $generalInflows = \App\Models\GeneralReceivingVoucher::with(['party', 'paymentAccount'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
             ->get();
 
-        // Fetch Outflows (Expenses)
+        // Fetch Outflows (Expenses) filtered by cash
         $expenses = Expense::with(['expenseHead', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
             ->get();
 
-        // Fetch Outflows (Payment Vouchers)
-        $paymentVouchers = \App\Models\PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
+        // Fetch Outflows (Payment Vouchers) filtered by cash
+        $paymentVouchers = PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
             ->get();
 
         // Combine outflows
@@ -93,7 +113,7 @@ class DayBookController extends Controller
         }
 
         foreach ($outflows as $outflow) {
-            $isExpense = $outflow instanceof \App\Models\Expense;
+            $isExpense = $outflow instanceof Expense;
             $details = $isExpense
                 ? '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense')
                 : ($outflow->is_advance
@@ -136,8 +156,8 @@ class DayBookController extends Controller
         $totalOutflows = $outflows->sum('amount');
         $netFlow = $totalInflows - $totalOutflows;
 
-        return view('reports.day_book', [
-            'title'         => 'Daily Transactions Book Report',
+        return view('reports.cash_book', [
+            'title'         => 'Cash Book Report',
             'ledgerEntries' => $ledgerEntries,
             'totalInflows'  => $totalInflows,
             'totalOutflows' => $totalOutflows,
@@ -149,11 +169,11 @@ class DayBookController extends Controller
     }
 
     /**
-     * Print the Day Book report in a new window.
+     * Print the Cash Book report in a new window.
      */
     public function print(Request $request): View
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.daybook')) {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.cashbook')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -170,24 +190,42 @@ class DayBookController extends Controller
             $endDate = Carbon::today()->endOfDay();
         }
 
-        // Fetch Inflows (Receiving Vouchers)
-        $inflows = \App\Models\ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
+        // Fetch Inflows (Receiving Vouchers) filtered by cash
+        $inflows = ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->orderBy('date', 'asc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        // Fetch General Inflows
+        // Fetch General Inflows filtered by cash
         $generalInflows = \App\Models\GeneralReceivingVoucher::with(['party', 'paymentAccount'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
             ->get();
 
-        // Fetch Outflows (Expenses)
+        // Fetch Outflows (Expenses) filtered by cash
         $expenses = Expense::with(['expenseHead', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
             ->get();
 
-        // Fetch Outflows (Payment Vouchers)
-        $paymentVouchers = \App\Models\PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
+        // Fetch Outflows (Payment Vouchers) filtered by cash
+        $paymentVouchers = PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
             ->get();
 
         // Combine outflows
@@ -231,7 +269,7 @@ class DayBookController extends Controller
         }
 
         foreach ($outflows as $outflow) {
-            $isExpense = $outflow instanceof \App\Models\Expense;
+            $isExpense = $outflow instanceof Expense;
             $details = $isExpense
                 ? '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense')
                 : ($outflow->is_advance
@@ -285,12 +323,10 @@ class DayBookController extends Controller
         ];
 
         return view('ledgers.print_page', [
-            'pageTitle'    => 'Daily Transactions Book Ledger Statement',
+            'pageTitle'    => 'Cash Book Ledger Statement',
             'filterChips'  => $filterChips,
             'columns'      => $columns,
             'rows'         => $ledgerEntries->toArray(),
         ]);
     }
 }
-
-

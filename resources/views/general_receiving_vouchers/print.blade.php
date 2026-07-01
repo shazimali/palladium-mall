@@ -1,16 +1,9 @@
-@php
-    if ($voucher->paid_to_type === 'owner') {
-        $payeeName = $voucher->owner->name ?? 'Partner';
-    } else {
-        $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
-    }
-@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment Voucher - {{ $voucher->voucher_no }}</title>
+    <title>General Receipt Voucher - {{ $voucher->voucher_no }}</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -74,7 +67,7 @@
         <div class="border-b border-gray-100 pb-8 mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6 print-border">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight text-brand-950">PALLADIUM MALL</h1>
-                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">Management Office Payment Voucher</p>
+                <p class="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">General Receipt Voucher</p>
                 <div class="text-xs text-gray-400 mt-3 space-y-0.5">
                     <p>Main G.T. Road, Palladium Mall, Islamabad</p>
                     <p>Contact: +92-51-1234567 | info@palladiummall.com</p>
@@ -92,18 +85,18 @@
             </div>
         </div>
 
-        <!-- Voucher Particulars -->
+        <!-- Receipt Particulars -->
         <div class="space-y-6 mb-8 text-sm">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-4 print-border">
-                <div class="text-gray-450 font-medium">Paid To (Payee):</div>
-                <div class="md:col-span-2 font-bold text-gray-900 text-base">{{ $payeeName }} 
-                    <span class="text-xs font-semibold text-gray-450">({{ $voucher->paid_to_type === 'owner' ? 'Managing Owner / Partner' : 'Other Payee' }})</span>
+                <div class="text-gray-450 font-medium">Received From Party:</div>
+                <div class="md:col-span-2 font-bold text-gray-900 text-base">
+                    {{ $voucher->party ? $voucher->party->name : 'N/A' }} 
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-4 print-border">
-                <div class="text-gray-450 font-medium">Amount Paid:</div>
-                <div class="md:col-span-2 font-bold text-red-600 text-lg">Rs. {{ number_format($voucher->amount, 2) }}/-</div>
+                <div class="text-gray-450 font-medium">Amount Received:</div>
+                <div class="md:col-span-2 font-bold text-green-600 text-lg">Rs. {{ number_format($voucher->amount, 0) }}/-</div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-4 print-border">
@@ -115,20 +108,9 @@
                 <div class="text-gray-450 font-medium">Payment Mode & Account:</div>
                 <div class="md:col-span-2 font-medium text-gray-800">
                     {{ $voucher->payment_method ? ucfirst(str_replace('_',' ',$voucher->payment_method)) : '—' }} 
-                    @if($voucher->reference) (Ref/Cheque: {{ $voucher->reference }}) @endif
-                    <span class="text-xs text-gray-450 font-normal">paid from</span> 
+                    @if($voucher->reference) (Ref: {{ $voucher->reference }}) @endif
+                    <span class="text-xs text-gray-450 font-normal">deposited in</span> 
                     <strong>{{ $voucher->paymentAccount->name ?? '—' }}</strong>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-4 print-border">
-                <div class="text-gray-450 font-medium">Advance Payout?</div>
-                <div class="md:col-span-2 font-semibold">
-                    @if($voucher->is_advance)
-                        <span class="text-amber-600">Yes (Advance Payment)</span>
-                    @else
-                        <span class="text-green-600">No (Standard Payout)</span>
-                    @endif
                 </div>
             </div>
         </div>
@@ -145,7 +127,7 @@
             <div class="flex flex-col justify-end">
                 <div class="space-y-1.5 text-xs text-right text-gray-500">
                     <p><span class="text-gray-400">Created By:</span> {{ $voucher->user->name ?? '—' }}</p>
-                    <p>Receiver and Office Signatures Required Below</p>
+                    <p>Management Signature Required Below</p>
                 </div>
             </div>
         </div>
@@ -154,7 +136,7 @@
         <div class="mt-20 pt-8 border-t border-gray-100 flex justify-between text-center text-xs text-gray-400 print-border">
             <div class="w-36">
                 <div class="border-b border-gray-200 h-10 mb-2"></div>
-                <p>Receiver's Signature</p>
+                <p>Depositor's Signature</p>
             </div>
             <div class="w-36">
                 <div class="border-b border-gray-200 h-10 mb-2"></div>
@@ -166,7 +148,7 @@
 
     <!-- Printed footer -->
     <div class="text-center text-xs text-gray-400 mt-8 no-print">
-        <p>This is a computer-generated payment voucher copy. Printed on {{ now()->format('d M Y H:i:s') }}</p>
+        <p>This is a computer-generated general receipt voucher copy. Printed on {{ now()->format('d M Y H:i:s') }}</p>
     </div>
 
     <!-- Script to convert number to words -->

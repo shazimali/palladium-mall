@@ -491,6 +491,28 @@ class LedgerController extends Controller
             ]);
         }
 
+        // 1b. General Credits (Inflows): GeneralReceivingVouchers
+        $generalReceipts = \App\Models\GeneralReceivingVoucher::with('party')
+            ->where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($generalReceipts as $receipt) {
+            $desc = 'Party: ' . ($receipt->party ? $receipt->party->name : 'N/A');
+            if ($receipt->notes) {
+                $desc .= ' • ' . $receipt->notes;
+            }
+            $entries->push([
+                'date' => $receipt->date,
+                'voucher_no' => $receipt->voucher_no,
+                'type' => 'Receipt (General)',
+                'description' => $desc,
+                'debit' => (float)$receipt->amount,
+                'credit' => 0.00,
+            ]);
+        }
+
         // 2. Debits (Outflows): PaymentVouchers
         $payouts = PaymentVoucher::where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))

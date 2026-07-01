@@ -20,13 +20,14 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
+        $query = PaymentVoucher::with(['owner', 'party', 'paymentAccount', 'user'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
                 $q->where('voucher_no', 'like', "%{$term}%")
                     ->orWhere('reference', 'like', "%{$term}%")
                     ->orWhere('other_name', 'like', "%{$term}%")
-                    ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
+                    ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"))
+                    ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"));
             })
             ->when($request->paid_to_type, fn($q) => $q->where('paid_to_type', $request->paid_to_type))
             ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
@@ -62,11 +63,13 @@ class PaymentVoucherController extends Controller
         }
 
         $owners = Owner::orderBy('name')->get();
+        $parties = \App\Models\Party::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
         return view('payment_vouchers.create', [
             'title'           => 'New Payment Voucher',
             'owners'          => $owners,
+            'parties'         => $parties,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -93,7 +96,7 @@ class PaymentVoucherController extends Controller
         if ($request->input('paid_to_type') === 'owner') {
             $rules['owner_id'] = ['required', 'exists:owners,id'];
         } else {
-            $rules['other_name'] = ['required', 'string', 'max:255'];
+            $rules['party_id'] = ['required', 'exists:parties,id'];
         }
 
         $data = $request->validate($rules);
@@ -102,6 +105,11 @@ class PaymentVoucherController extends Controller
         $data['payment_method'] = $paymentAccount->type;
         $data['user_id'] = auth()->id() ?? 1;
         $data['is_advance'] = $request->has('is_advance');
+
+        if ($request->input('paid_to_type') === 'other') {
+            $party = \App\Models\Party::findOrFail($data['party_id']);
+            $data['other_name'] = $party->name;
+        }
 
         PaymentVoucher::create($data);
 
@@ -118,7 +126,7 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $paymentVoucher->load(['owner', 'paymentAccount', 'user']);
+        $paymentVoucher->load(['owner', 'party', 'paymentAccount', 'user']);
 
         return view('payment_vouchers.show', [
             'title'   => 'Voucher details — ' . $paymentVoucher->voucher_no,
@@ -135,7 +143,7 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $paymentVoucher->load(['owner', 'paymentAccount', 'user']);
+        $paymentVoucher->load(['owner', 'party', 'paymentAccount', 'user']);
 
         return view('payment_vouchers.print', [
             'title'   => 'Print Voucher — ' . $paymentVoucher->voucher_no,

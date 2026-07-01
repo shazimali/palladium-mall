@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Daily Transactions Book Report" />
+    <x-common.page-breadcrumb pageTitle="Cash Book Report" />
 
     {{-- Date Range Selector Panel --}}
     <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-        <form action="{{ route('reports.day-book') }}" method="GET" class="flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
+        <form action="{{ route('reports.cash-book') }}" method="GET" class="flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
             <div class="flex flex-col sm:flex-row gap-4 flex-1">
                 @php
                     $dateInput = 'dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 w-full sm:w-48';
@@ -24,7 +24,7 @@
                         Apply Filter
                     </button>
                     @if($ledgerEntries->isNotEmpty())
-                        <a href="{{ route('reports.day-book.print', request()->all()) }}"
+                        <a href="{{ route('reports.cash-book.print', request()->all()) }}"
                            onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
                            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors w-full sm:w-auto">
                             🖨️ Print
@@ -35,15 +35,15 @@
             </div>
 
             <div class="flex gap-2">
-                <a href="{{ route('reports.day-book', ['start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d')]) }}"
+                <a href="{{ route('reports.cash-book', ['start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d')]) }}"
                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                     Today
                 </a>
-                <a href="{{ route('reports.day-book', ['start_date' => date('Y-m-d', strtotime('-1 day')), 'end_date' => date('Y-m-d', strtotime('-1 day'))]) }}"
+                <a href="{{ route('reports.cash-book', ['start_date' => date('Y-m-d', strtotime('-1 day')), 'end_date' => date('Y-m-d', strtotime('-1 day'))]) }}"
                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                     Yesterday
                 </a>
-                <a href="{{ route('reports.day-book', ['start_date' => date('Y-m-01'), 'end_date' => date('Y-m-t')]) }}"
+                <a href="{{ route('reports.cash-book', ['start_date' => date('Y-m-01'), 'end_date' => date('Y-m-t')]) }}"
                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                     This Month
                 </a>
@@ -57,7 +57,7 @@
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Inflows (Receipts)</p>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cash Inflows (Receipts)</p>
                     <h4 class="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">
                         Rs. {{ number_format($totalInflows, 2) }}
                     </h4>
@@ -74,7 +74,7 @@
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Outflows (Expenses)</p>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Cash Outflows (Expenses)</p>
                     <h4 class="mt-2 text-2xl font-bold text-red-600 dark:text-red-400">
                         Rs. {{ number_format($totalOutflows, 2) }}
                     </h4>
@@ -91,7 +91,7 @@
         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Net Position / Balance</p>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Net Position / Cash Balance</p>
                     <h4 class="mt-2 text-2xl font-bold {{ $netFlow >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400' }}">
                         Rs. {{ number_format($netFlow, 2) }}
                     </h4>
@@ -109,10 +109,10 @@
     <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] mb-6">
         <div class="mb-4 flex items-center justify-between">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white/90">
-                Ledger Statement / Transaction History
+                Ledger Statement / Cash Transaction History
             </h3>
             <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                {{ $ledgerEntries->count() }} Transactions Found
+                {{ $ledgerEntries->count() }} Cash Transactions Found
             </span>
         </div>
 
@@ -157,7 +157,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
-                                No ledger transactions logged for this period.
+                                No ledger cash transactions logged for this period.
                             </td>
                         </tr>
                     @endforelse
@@ -206,5 +206,3 @@
         });
     </script>
 @endpush
-
-

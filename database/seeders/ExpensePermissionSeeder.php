@@ -26,8 +26,11 @@ class ExpensePermissionSeeder extends Seeder
             ['name' => 'expenses.edit', 'display_name' => 'Edit Recorded Expenses', 'group' => 'Expenses Management'],
             ['name' => 'expenses.delete', 'display_name' => 'Delete Recorded Expenses', 'group' => 'Expenses Management'],
 
-            // Day Book
-            ['name' => 'reports.daybook', 'display_name' => 'View Day Book Report', 'group' => 'Reports'],
+            // Daily Transactions Book
+            ['name' => 'reports.daybook', 'display_name' => 'View Daily Transactions Book Report', 'group' => 'Reports'],
+
+            // Cash Book
+            ['name' => 'reports.cashbook', 'display_name' => 'View Cash Book Report', 'group' => 'Reports'],
         ];
 
         foreach ($permissions as $p) {

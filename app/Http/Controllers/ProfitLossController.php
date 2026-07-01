@@ -138,6 +138,12 @@ class ProfitLossController extends Controller
             ->whereBetween('date', [$from, $to])
             ->sum('amount');
 
+        // B2. Inflows from General Receiving Vouchers
+        $generalVoucherIncome = (float) \App\Models\GeneralReceivingVoucher::whereBetween('date', [$from, $to])
+            ->sum('amount');
+
+        $miscIncome += $generalVoucherIncome;
+
         $totalIncome = $totalBillingIncome + $miscIncome;
 
         // 2. Expenses

@@ -95,6 +95,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('parties.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Party Heads',
+                'path' => '/parties',
+            ];
+        }
+
         if (auth()->check() && $user->can('owners.view')) {
             $mainItems[] = [
                 'icon' => 'user-profile',
@@ -145,6 +153,9 @@ class MenuHelper
             if ($user->can('receiving_vouchers.view')) {
                 $voucherSubItems[] = ['name' => 'Receiving Vouchers', 'path' => '/receiving-vouchers'];
             }
+            if ($user->can('general_receiving_vouchers.view')) {
+                $voucherSubItems[] = ['name' => 'General Receiving Vouchers', 'path' => '/general-receiving-vouchers'];
+            }
             if ($user->can('payment_vouchers.view')) {
                 $voucherSubItems[] = ['name' => 'Payment Vouchers', 'path' => '/payment-vouchers'];
             }
@@ -167,6 +178,7 @@ class MenuHelper
             $ledgerSubItems[] = ['name' => 'Owner Ledger', 'path' => '/ledgers/owner'];
             $ledgerSubItems[] = ['name' => 'Account Ledger', 'path' => '/ledgers/payment-account'];
             $ledgerSubItems[] = ['name' => 'Expense Ledger', 'path' => '/ledgers/expense'];
+            $ledgerSubItems[] = ['name' => 'Party Ledger', 'path' => '/ledgers/party'];
         }
 
         if (!empty($ledgerSubItems)) {
@@ -236,8 +248,16 @@ class MenuHelper
         if (auth()->check() && $user->can('reports.daybook')) {
             $mainItems[] = [
                 'icon' => 'charts',
-                'name' => 'Day Book',
+                'name' => 'Daily Transactions Book',
                 'path' => '/reports/day-book',
+            ];
+        }
+
+        if (auth()->check() && $user->can('reports.cashbook')) {
+            $mainItems[] = [
+                'icon' => 'charts',
+                'name' => 'Cash Book',
+                'path' => '/reports/cash-book',
             ];
         }
 

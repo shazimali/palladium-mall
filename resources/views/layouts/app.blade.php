@@ -110,17 +110,28 @@
     <x-common.preloader />
     {{-- preloader end --}}
 
-    <div class="min-h-screen xl:flex">
-        @include('layouts.backdrop')
-        @include('layouts.sidebar')
+    @php
+        $hideSidebar = request()->has('no_sidebar') || request()->routeIs('reports.index');
+    @endphp
 
-        <div class="flex-1 min-w-0 overflow-x-hidden transition-all duration-300 ease-in-out" :class="{
-                'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
-                'xl:ml-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isHovered,
-                'ml-0': $store.sidebar.isMobileOpen
-            }">
+    <div class="min-h-screen xl:flex">
+        @if(!$hideSidebar)
+            @include('layouts.backdrop')
+            @include('layouts.sidebar')
+        @endif
+
+        <div class="flex-1 min-w-0 overflow-x-clip transition-all duration-300 ease-in-out"
+             @if(!$hideSidebar)
+             :class="{
+                 'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
+                 'xl:ml-[90px]': !$store.sidebar.isExpanded && !$store.sidebar.isHovered,
+                 'ml-0': $store.sidebar.isMobileOpen
+             }"
+             @endif>
             <!-- app header start -->
-            @include('layouts.app-header')
+            @if(!$hideSidebar)
+                @include('layouts.app-header')
+            @endif
             <!-- app header end -->
             <div class="p-4 mx-auto @yield('containerClass', 'max-w-(--breakpoint-2xl)') md:p-6">
                 @yield('content')

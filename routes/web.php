@@ -112,6 +112,15 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:landlords.view')->group(function () {
         Route::resource('landlords', LandlordController::class);
     });
+
+    Route::middleware('permission:parties.view')->group(function () {
+        Route::resource('parties', \App\Http\Controllers\PartyController::class);
+    });
+
+    Route::middleware('permission:general_receiving_vouchers.view')->group(function () {
+        Route::resource('general-receiving-vouchers', \App\Http\Controllers\GeneralReceivingVoucherController::class)->except(['edit', 'update']);
+        Route::get('general-receiving-vouchers/{general_receiving_voucher}/print', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'print'])->name('general-receiving-vouchers.print');
+    });
  
     Route::middleware('permission:payment_accounts.view')->group(function () {
         Route::resource('payment-accounts', PaymentAccountController::class);
@@ -244,6 +253,12 @@ Route::middleware('auth')->group(function () {
         Route::get('ledgers/expense/pdf', [\App\Http\Controllers\LedgerController::class, 'exportExpensePdf'])->name('ledgers.expense.pdf');
         Route::get('ledgers/expense/excel', [\App\Http\Controllers\LedgerController::class, 'exportExpenseExcel'])->name('ledgers.expense.excel');
         Route::get('ledgers/expense/print', [\App\Http\Controllers\LedgerController::class, 'printExpense'])->name('ledgers.expense.print');
+
+        // Party Ledger Routes
+        Route::get('ledgers/party', [\App\Http\Controllers\PartyLedgerController::class, 'index'])->name('ledgers.party');
+        Route::post('ledgers/party/dues', [\App\Http\Controllers\PartyLedgerController::class, 'storeDue'])->name('ledgers.party.dues.store');
+        Route::delete('ledgers/party/dues/{due}', [\App\Http\Controllers\PartyLedgerController::class, 'destroyDue'])->name('ledgers.party.dues.destroy');
+        Route::get('ledgers/party/print', [\App\Http\Controllers\PartyLedgerController::class, 'print'])->name('ledgers.party.print');
     });
 
 
@@ -258,6 +273,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:reports.daybook')->group(function () {
         Route::get('reports/day-book', [\App\Http\Controllers\DayBookController::class, 'index'])->name('reports.day-book');
         Route::get('reports/day-book/print', [\App\Http\Controllers\DayBookController::class, 'print'])->name('reports.day-book.print');
+    });
+
+    Route::middleware('permission:reports.cashbook')->group(function () {
+        Route::get('reports/cash-book', [\App\Http\Controllers\CashBookController::class, 'index'])->name('reports.cash-book');
+        Route::get('reports/cash-book/print', [\App\Http\Controllers\CashBookController::class, 'print'])->name('reports.cash-book.print');
     });
 
 

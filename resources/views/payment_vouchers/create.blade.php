@@ -42,12 +42,108 @@
                         @error('owner_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- Other Payee Name --}}
-                    <div x-show="paidToType === 'other'" x-transition x-cloak>
-                        <label class="{{ $label }}">Payee Name <span class="text-red-500">*</span></label>
-                        <input type="text" name="other_name" value="{{ old('other_name') }}" placeholder="e.g. Contractor Name, Vendor" 
-                               class="{{ $input }} {{ $errors->has('other_name') ? 'border-red-400' : '' }}" :required="paidToType === 'other'">
-                        @error('other_name') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    {{-- Other Payee Name (Searchable Party Head Dropdown) --}}
+                    <div x-show="paidToType === 'other'" x-transition x-cloak
+                         x-data="{
+                            open: false,
+                            search: '',
+                            selectedId: '{{ old('party_id') }}',
+                            selectedLabel: '{{ old('party_name') }}',
+                            highlightedIndex: -1,
+                            parties: [
+                                @foreach($parties as $party)
+                                    { id: {{ $party->id }}, name: '{{ addslashes($party->name) }}', phone: '{{ addslashes($party->phone ?? '—') }}' },
+                                @endforeach
+                            ],
+                            get filteredParties() {
+                                if (!this.search) return this.parties;
+                                let q = this.search.toLowerCase();
+                                return this.parties.filter(p => p.name.toLowerCase().includes(q) || p.phone.toLowerCase().includes(q));
+                            },
+                            selectParty(p) {
+                                this.selectedId = p.id;
+                                this.selectedLabel = p.name;
+                                this.open = false;
+                                this.search = '';
+                                this.highlightedIndex = -1;
+                            },
+                            moveHighlight(direction) {
+                                let list = this.filteredParties;
+                                if (list.length === 0) return;
+                                this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                            },
+                            selectHighlighted() {
+                                let list = this.filteredParties;
+                                if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                                    this.selectParty(list[this.highlightedIndex]);
+                                }
+                            }
+                         }">
+                        <label class="{{ $label }}">Party Head <span class="text-red-500">*</span></label>
+                        
+                        {{-- Hidden form field --}}
+                        <input type="hidden" name="party_id" :value="selectedId" :required="paidToType === 'other'">
+                        <input type="hidden" name="party_name" :value="selectedLabel">
+
+                        <div class="relative">
+                            {{-- Trigger --}}
+                            <div tabindex="0"
+                                 @click="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
+                                 @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
+                                 @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
+                                 @click.outside="open = false"
+                                 class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('party_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
+                                <span x-text="selectedLabel || 'Select Registered Party Head'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
+                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+
+                            {{-- Dropdown --}}
+                            <div x-show="open"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="opacity-0 transform scale-95"
+                                 x-transition:enter-end="opacity-100 transform scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="opacity-100 transform scale-100"
+                                 x-transition:leave-end="opacity-0 transform scale-95"
+                                 class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                                 style="display: none;">
+                                
+                                <!-- Search Input -->
+                                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                    <input x-ref="partySearchInput"
+                                           x-model="search"
+                                           @keydown.arrow-down.prevent="moveHighlight(1)"
+                                           @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                           @keydown.enter.prevent="selectHighlighted()"
+                                           @keydown.escape.prevent="open = false; highlightedIndex = -1"
+                                           type="text"
+                                           placeholder="Type to search party head..."
+                                           class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                </div>
+
+                                <!-- Options List -->
+                                <ul class="max-h-60 overflow-y-auto mt-1">
+                                    <template x-if="filteredParties.length === 0">
+                                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching party heads found.</li>
+                                    </template>
+                                    <template x-for="(p, index) in filteredParties" :key="p.id">
+                                        <li @click="selectParty(p)"
+                                            @mouseenter="highlightedIndex = index"
+                                            :class="{
+                                                'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                            }"
+                                            class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
+                                            <span x-text="p.name" class="font-medium"></span>
+                                            <span x-text="p.phone" class="text-[10px] text-gray-400"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                        @error('party_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 
                     {{-- Date --}}

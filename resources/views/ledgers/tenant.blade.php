@@ -10,6 +10,7 @@
                 unitId: '{{ $unitId ?? '' }}',
                 search: '',
                 open: false,
+                highlightedIndex: -1,
                 options: [
                     @foreach($units as $unit)
                     {
@@ -42,14 +43,27 @@
                     this.unitId = opt.id;
                     this.open = false;
                     this.search = '';
+                    this.highlightedIndex = -1;
                     this.$nextTick(() => {
                         document.getElementById('ledger-filter-form').submit();
                     });
+                },
+                moveHighlight(dir) {
+                    let list = this.filteredOptions;
+                    if (list.length === 0) return;
+                    this.highlightedIndex = (this.highlightedIndex + dir + list.length) % list.length;
+                },
+                selectHighlighted() {
+                    let list = this.filteredOptions;
+                    if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                        this.selectOption(list[this.highlightedIndex]);
+                    }
                 },
                 clearSelection() {
                     this.unitId = '';
                     this.open = false;
                     this.search = '';
+                    this.highlightedIndex = -1;
                 }
             }">
 
@@ -57,13 +71,13 @@
             <div class="grid grid-cols-1 gap-5 md:grid-cols-4 items-end mb-6">
                 
                 <!-- Unit Selector Dropdown -->
-                <div class="md:col-span-2 relative" @click.away="open = false">
+                <div class="md:col-span-2 relative" @click.away="open = false; highlightedIndex = -1">
                     <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         Select Flat / Shop <span class="text-red-500">*</span>
                     </label>
                     
                     {{-- Trigger Button --}}
-                    <button type="button" @click="open = !open"
+                    <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
                         class="w-full flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 text-left focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <template x-if="unitId">
                             <span class="flex items-center gap-1.5">
@@ -75,7 +89,7 @@
                             <span class="text-gray-400 dark:text-gray-500">Choose a Flat / Shop</span>
                         </template>
                         <svg class="h-4 w-4 text-gray-500 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
 
@@ -89,13 +103,16 @@
                         {{-- Search field --}}
                         <div class="p-2 border-b border-gray-100 dark:border-gray-800">
                             <div class="relative">
-                                <input type="text" x-model="search" placeholder="Type to search..."
-                                    @keydown.escape="open = false"
+                                <input type="text" x-ref="searchInput" x-model="search" placeholder="Type to search..."
+                                    @keydown.arrow-down.prevent="moveHighlight(1)"
+                                    @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                    @keydown.enter.prevent="selectHighlighted()"
+                                    @keydown.escape.prevent="open = false; highlightedIndex = -1"
                                     class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 pl-8 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:bg-white focus:outline-none dark:border-gray-850 dark:bg-gray-900/50 dark:text-white/90">
                                 <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
                                     🔍
                                 </span>
-                                <button type="button" x-show="search" @click="search = ''" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xs">
+                                <button type="button" x-show="search" @click="search = ''; highlightedIndex = -1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xs">
                                     Clear
                                 </button>
                             </div>
@@ -108,10 +125,11 @@
                                 Clear Selection
                             </button>
                             
-                            <template x-for="opt in filteredOptions" :key="opt.id">
+                            <template x-for="(opt, index) in filteredOptions" :key="opt.id">
                                 <button type="button" @click="selectOption(opt)"
+                                    @mouseenter="highlightedIndex = index"
                                     class="w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between"
-                                    :class="unitId == opt.id ? 'bg-brand-500 text-white font-semibold' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'">
+                                    :class="unitId == opt.id ? 'bg-brand-500 text-white font-semibold' : (highlightedIndex === index ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5')">
                                     <template x-if="true">
                                         <span class="flex items-center gap-1.5 flex-1 min-w-0">
                                             <span x-text="opt.unit" class="font-bold"></span>
