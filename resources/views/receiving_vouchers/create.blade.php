@@ -228,12 +228,12 @@
                             </div>
                             <div class="text-right flex flex-col items-end">
                                 <span class="text-xs text-gray-500 font-medium">Total Outstanding:</span>
-                                <span class="text-lg font-bold" x-text="totalBalance > 0 ? 'Rs. ' + totalBalance.toLocaleString() : 'No Outstanding Balance'"></span>
+                                <span class="text-lg font-bold" x-text="totalBalance > 0 ? 'Rs. ' + Math.round(totalBalance).toLocaleString() : 'No Outstanding Balance'"></span>
                                 
                                 <template x-if="voucherAmount > 0">
                                     <div class="mt-1 flex flex-col items-end text-xs font-semibold text-green-600 dark:text-green-400">
                                         <span>Remaining Balance:</span>
-                                        <span class="text-sm font-bold" x-text="'Rs. ' + Math.max(0, totalBalance - voucherAmount).toLocaleString()"></span>
+                                        <span class="text-sm font-bold" x-text="'Rs. ' + Math.round(Math.max(0, totalBalance - voucherAmount)).toLocaleString()"></span>
                                     </div>
                                 </template>
                             </div>
@@ -258,9 +258,9 @@
                                             <tr class="hover:bg-orange-50/20 dark:hover:bg-orange-950/10">
                                                 <td class="px-4 py-2.5 font-mono" x-text="p.month"></td>
                                                 <td class="px-4 py-2.5 font-semibold" x-text="p.type"></td>
-                                                <td class="px-4 py-2.5 text-right" x-text="'Rs. ' + p.amount_due.toLocaleString()"></td>
-                                                <td class="px-4 py-2.5 text-right" x-text="'Rs. ' + p.amount_paid.toLocaleString()"></td>
-                                                <td class="px-4 py-2.5 text-right font-bold text-orange-600 dark:text-orange-400" x-text="'Rs. ' + p.balance.toLocaleString()"></td>
+                                                <td class="px-4 py-2.5 text-right" x-text="'Rs. ' + Math.round(p.amount_due).toLocaleString()"></td>
+                                                <td class="px-4 py-2.5 text-right" x-text="'Rs. ' + Math.round(p.amount_paid).toLocaleString()"></td>
+                                                <td class="px-4 py-2.5 text-right font-bold text-orange-600 dark:text-orange-400" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></td>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -352,7 +352,7 @@
                     {{-- Over-allocation warnings --}}
                     <div x-show="totalBalance > 0 && voucherAmount > totalBalance" x-cloak
                         class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 dark:bg-red-950/10 dark:border-red-900/30 text-sm">
-                        ❌ <strong>Voucher amount exceeds the outstanding balance</strong> of Rs. <span x-text="totalBalance.toLocaleString()"></span>. Please reduce the amount.
+                        ❌ <strong>Voucher amount exceeds the outstanding balance</strong> of Rs. <span x-text="Math.round(totalBalance).toLocaleString()"></span>. Please reduce the amount.
                     </div>
 
                     <div x-show="totalBalance === 0" x-cloak

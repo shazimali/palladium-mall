@@ -229,7 +229,7 @@
 </div>
 
 @if($payments->hasPages())
-    <div class="mt-4 border-t border-gray-100 p-4 dark:border-gray-800">
+    <div class="mt-4 border-t border-gray-100 p-4 dark:border-gray-800 pagination">
         {{ $payments->links() }}
     </div>
 @endif

@@ -13,7 +13,22 @@ class SecurityDepositPaymentSeeder extends Seeder
      */
     public function run(): void
     {
-        $agreements = Agreement::where('security_deposit', '>', 0)
+        // 1. Clean up any security deposit payments linked to non-active/draft agreements or missing agreements
+        $invalidPayments = Payment::where('type', 'security_deposit')
+            ->where(function ($query) {
+                $query->whereHas('agreement', function ($q) {
+                    $q->where('status', '!=', 'active');
+                })->orWhereNull('agreement_id');
+            })
+            ->get();
+
+        foreach ($invalidPayments as $p) {
+            $p->forceDelete();
+        }
+
+        // 2. Seed missing security deposit payments for active agreements
+        $agreements = Agreement::where('status', 'active')
+            ->where('security_deposit', '>', 0)
             ->whereNotNull('tenant_id')
             ->get();
 

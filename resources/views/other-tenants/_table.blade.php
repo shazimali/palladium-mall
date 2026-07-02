@@ -173,7 +173,7 @@
 
     {{-- Pagination --}}
     @if($otherTenants->hasPages())
-        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-800">
+        <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-800 pagination">
             {{ $otherTenants->links() }}
         </div>
     @endif
