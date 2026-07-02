@@ -281,23 +281,18 @@ class ReportController extends Controller
             $query->whereIn('type', ['electricity', 'water', 'gas']);
         } elseif ($reportType === 'maintinance' || $reportType === 'maintenance') {
             $query->where('type', 'maintenance');
+        } elseif ($reportType === 'security_deposit') {
+            $query->where('type', 'security_deposit');
         } else {
-            $query->whereIn('type', ['rent', 'fine', 'maintenance', 'electricity', 'water', 'gas', 'other']);
+            $query->whereIn('type', ['rent', 'fine', 'maintenance', 'electricity', 'water', 'gas', 'other', 'security_deposit']);
         }
 
         $dbPayments = $query->get();
 
         $agreements = \App\Models\Agreement::where('status', 'active')->get();
 
-        $entries = $dbPayments->map(function ($p) use ($agreements) {
-            $entryMonthStr = $p->month ? $p->month->format('Y-m') : '';
-            $matchingAgreement = $agreements->first(function ($a) use ($p, $entryMonthStr) {
-                return $a->unit_id == $p->unit_id 
-                    && $a->tenant_id == $p->tenant_id 
-                    && $a->start_date 
-                    && $a->start_date->format('Y-m') === $entryMonthStr;
-            });
-            $securityDeposit = $matchingAgreement ? (float) $matchingAgreement->security_deposit : 0.0;
+        $entries = $dbPayments->map(function ($p) {
+            $securityDeposit = ($p->type === 'security_deposit') ? (float) $p->amount : 0.0;
 
             return [
                 'created_date'    => $p->created_at,

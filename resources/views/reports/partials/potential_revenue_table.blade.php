@@ -1,4 +1,4 @@
-<div class="rounded-lg border border-gray-200 dark:border-gray-800">
+<div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
     <table id="reportTable" class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
         <thead class="text-[11px] uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white sticky top-0 z-10">
             <tr>

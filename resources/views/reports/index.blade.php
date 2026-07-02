@@ -1,11 +1,29 @@
 @extends('layouts.app')
 
+@section('containerClass', 'w-full max-w-full')
+
 @section('content')
 <div x-data="{ isFilterModalOpen: false }">
 
     {{-- ── Filter Panel ───────────────────────────────────────────────────── --}}
     @php
         $appliedFilters = [];
+
+        $badge = function($label, $value, $color) {
+            $classes = match($color) {
+                'blue' => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-900/50',
+                'purple' => 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300 dark:border-purple-900/50',
+                'pink' => 'bg-pink-50 text-pink-700 border-pink-200 dark:bg-pink-950/30 dark:text-pink-300 dark:border-pink-900/50',
+                'teal' => 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-950/30 dark:text-teal-300 dark:border-teal-900/50',
+                'amber' => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/50',
+                'emerald' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300 dark:border-emerald-900/50',
+                'indigo' => 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/30 dark:text-indigo-300 dark:border-indigo-900/50',
+                default => 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-950/30 dark:text-gray-300 dark:border-gray-900/50',
+            };
+            return '<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold border ' . $classes . '">' .
+                '<span class="opacity-75 mr-1">' . e($label) . ':</span>' . e($value) .
+                '</span>';
+        };
 
         // Report Type
         $reportType = $filters['report_type'] ?? '';
@@ -24,61 +42,61 @@
 
         // Dates
         if (!empty($filters['date_from'])) {
-            $appliedFilters[] = "<strong>From:</strong> " . \Carbon\Carbon::parse($filters['date_from'])->format('d M Y');
+            $appliedFilters[] = $badge('From', \Carbon\Carbon::parse($filters['date_from'])->format('d M Y'), 'blue');
         }
         if (!empty($filters['date_to'])) {
-            $appliedFilters[] = "<strong>To:</strong> " . \Carbon\Carbon::parse($filters['date_to'])->format('d M Y');
+            $appliedFilters[] = $badge('To', \Carbon\Carbon::parse($filters['date_to'])->format('d M Y'), 'blue');
         }
 
         // Unit
         if (!empty($filters['unit_id'])) {
             $selectedUnit = $units->firstWhere('id', $filters['unit_id']);
             if ($selectedUnit) {
-                $appliedFilters[] = "<strong>Unit:</strong> " . $selectedUnit->unit_number;
+                $appliedFilters[] = $badge('Unit', $selectedUnit->unit_number, 'purple');
             }
         }
 
         // Unit Status
         if (!empty($filters['unit_status'])) {
-            $appliedFilters[] = "<strong>Unit Status:</strong> " . ucfirst($filters['unit_status']);
+            $appliedFilters[] = $badge('Unit Status', ucfirst($filters['unit_status']), 'purple');
         }
 
         // Tenant
         if (!empty($filters['tenant_id'])) {
             $selectedTenant = $tenants->firstWhere('id', $filters['tenant_id']);
             if ($selectedTenant) {
-                $appliedFilters[] = "<strong>Tenant:</strong> " . $selectedTenant->name;
+                $appliedFilters[] = $badge('Tenant', $selectedTenant->name, 'pink');
             }
         }
 
         // Status
         if (!empty($filters['status'])) {
-            $appliedFilters[] = "<strong>Status:</strong> " . ucfirst($filters['status']);
+            $appliedFilters[] = $badge('Status', ucfirst($filters['status']), 'amber');
         }
 
         // Landlord
         if (!empty($filters['landlord_id'])) {
             $selectedLandlord = $landlords->firstWhere('id', $filters['landlord_id']);
             if ($selectedLandlord) {
-                $appliedFilters[] = "<strong>Landlord:</strong> " . $selectedLandlord->name;
+                $appliedFilters[] = $badge('Landlord', $selectedLandlord->name, 'teal');
             }
         }
 
         // Owner Type
         if (!empty($filters['owner_type'])) {
-            $appliedFilters[] = "<strong>Owner Type:</strong> " . ($filters['owner_type'] === 'pm_mall' ? 'PM Mall Owners' : 'Other Owners');
+            $appliedFilters[] = $badge('Owner Type', $filters['owner_type'] === 'pm_mall' ? 'PM Mall Owners' : 'Other Owners', 'emerald');
         }
 
         // Payment Method
         if (!empty($filters['payment_method'])) {
-            $appliedFilters[] = "<strong>Payment Method:</strong> " . ucfirst(str_replace('_', ' ', $filters['payment_method']));
+            $appliedFilters[] = $badge('Payment Method', ucfirst(str_replace('_', ' ', $filters['payment_method'])), 'indigo');
         }
 
         // Payment Account
         if (!empty($filters['payment_account_id'])) {
             $selectedAccount = $paymentAccounts->firstWhere('id', $filters['payment_account_id']);
             if ($selectedAccount) {
-                $appliedFilters[] = "<strong>Account:</strong> " . $selectedAccount->name;
+                $appliedFilters[] = $badge('Account', $selectedAccount->name, 'indigo');
             }
         }
     @endphp
@@ -579,9 +597,11 @@
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4 mb-4">
                     <div>
                         @if(count($appliedFilters) > 0)
-                            <p class="text-sm text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                                {!! implode('<span class="text-gray-300 dark:text-gray-700">|</span>', $appliedFilters) !!}
-                            </p>
+                            <div class="flex flex-wrap items-center gap-2">
+                                @foreach($appliedFilters as $filterBadge)
+                                    {!! $filterBadge !!}
+                                @endforeach
+                            </div>
                         @else
                             <p class="text-sm text-gray-500 dark:text-gray-400">
                                 Showing all records (No filters applied)
@@ -614,7 +634,7 @@
                     @elseif(($filters['report_type'] ?? '') === 'potential_revenue')
                         @include('reports.partials.potential_revenue_table')
                     @else
-                        <div class="rounded-lg border border-gray-200 dark:border-gray-800">
+                        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
                             <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
                                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
                                     <tr>
@@ -772,190 +792,86 @@
 @endsection
 
 @push('scripts')
-<link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.tailwindcss.min.css">
 <style>
-    /* DataTables Tailwind Custom Theme Integration */
-    .dt-container {
-        padding: 1.25rem 0 !important;
-        background-color: transparent;
-    }
-    .dt-layout-row {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        margin-bottom: 1.25rem;
-    }
-    @media (min-width: 640px) {
-        .dt-layout-row {
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: center;
-        }
-    }
-    .dt-search {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-    .dt-search label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #667085;
-    }
-    .dark .dt-search label {
-        color: #98a2b3;
-    }
-    .dt-search input {
-        border-radius: 0.5rem !important;
-        border: 1px solid #d0d5dd !important;
-        background-color: #ffffff !important;
-        padding: 0.5rem 0.75rem !important;
-        font-size: 0.875rem !important;
-        color: #1d2939 !important;
-        outline: none !important;
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .dark .dt-search input {
-        border-color: #344054 !important;
-        background-color: #0c111d !important;
-        color: rgba(255, 255, 255, 0.9) !important;
-    }
-    .dt-search input:focus {
-        border-color: #465fff !important;
-        box-shadow: 0 0 0 1px #465fff !important;
-    }
-    .dt-length select {
-        border-radius: 0.5rem !important;
-        border: 1px solid #d0d5dd !important;
-        background-color: #ffffff !important;
-        padding: 0.5rem 2rem 0.5rem 0.75rem !important;
-        font-size: 0.875rem !important;
-        color: #1d2939 !important;
-        outline: none !important;
-        margin-right: 0.5rem !important;
-    }
-    .dark .dt-length select {
-        border-color: #344054 !important;
-        background-color: #0c111d !important;
-        color: rgba(255, 255, 255, 0.9) !important;
-    }
-    .dt-length select:focus {
-        border-color: #465fff !important;
-        box-shadow: 0 0 0 1px #465fff !important;
-    }
-    .dt-length label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #667085;
-    }
-    .dark .dt-length label {
-        color: #98a2b3;
-    }
-    .dt-info {
-        font-size: 0.875rem !important;
-        color: #667085 !important;
-    }
-    .dark .dt-info {
-        color: #98a2b3 !important;
-    }
-    .dt-paging {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        margin-top: 0.5rem;
-    }
-    @media (min-width: 640px) {
-        .dt-paging {
-            margin-top: 0;
-        }
-    }
-    .dt-paging-button {
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 0.5rem !important;
-        border: 1px solid #e4e7ec !important;
-        background-color: #ffffff !important;
-        padding: 0.4rem 0.75rem !important;
-        font-size: 0.875rem !important;
-        font-weight: 500 !important;
-        color: #344054 !important;
-        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-        cursor: pointer;
-    }
-    .dark .dt-paging-button {
-        border-color: #1d2939 !important;
-        background-color: #0c111d !important;
-        color: #d0d5dd !important;
-    }
-    .dt-paging-button:hover:not(.disabled) {
-        background-color: #f9fafb !important;
-        color: #111827 !important;
-    }
-    .dark .dt-paging-button:hover:not(.disabled) {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        color: #ffffff !important;
-    }
-    .dt-paging-button.current {
-        background-color: #465fff !important;
-        border-color: #465fff !important;
-        color: #ffffff !important;
-    }
-    .dark .dt-paging-button.current {
-        background-color: #465fff !important;
-        border-color: #465fff !important;
-        color: #ffffff !important;
-    }
-    .dt-paging-button.disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
-    /* Sorting active headers */
-    table.dataTable thead th.dt-orderable-asc:hover,
-    table.dataTable thead th.dt-orderable-desc:hover {
-        background-color: #f2f4f7;
-    }
-    .dark table.dataTable thead th.dt-orderable-asc:hover,
-    .dark table.dataTable thead th.dt-orderable-desc:hover {
-        background-color: #1d2939;
-    }
-    .dark th,
-    .dark table thead th,
-    .dark #reportTable thead th,
-    .dark table.dataTable thead th {
-        color: #ffffff !important;
-    }
-    /* Sticky table header headings */
-    #reportTable thead th {
-        position: sticky !important;
-        top: 0 !important; /* Aligns to the top of the scroll container */
-        z-index: 20 !important;
-        background-color: #f9fafb !important; /* bg-gray-50 */
-        box-shadow: inset 0 -1px 0 #e5e7eb, 0 1px 2px rgba(0,0,0,0.05) !important;
-    }
-    .dark #reportTable thead th {
-        background-color: #1f2937 !important; /* dark:bg-gray-800 */
-        box-shadow: inset 0 -1px 0 #374151, 0 1px 2px rgba(0,0,0,0.2) !important;
-    }
-    
     #reportTable th,
     #reportTable td {
         padding-top: 0.875rem !important;
         padding-bottom: 0.875rem !important;
     }
-    
     [x-cloak] {
         display: none !important;
     }
 </style>
-<script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/2.1.8/js/dataTables.tailwindcss.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const table = document.getElementById('reportTable');
+    if (table) {
+        const headers = table.querySelectorAll('thead th');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        if (rows.length > 0) {
+            headers.forEach((header, index) => {
+                // Skip the serial number column
+                if (index === 0) return;
+
+                header.style.cursor = 'pointer';
+                header.classList.add('select-none', 'hover:bg-gray-100', 'dark:hover:bg-gray-800/50');
+                
+                let asc = true;
+
+                header.addEventListener('click', () => {
+                    // Remove indicators from all headers
+                    headers.forEach((h) => {
+                        const arrow = h.querySelector('.sort-arrow');
+                        if (arrow) arrow.remove();
+                    });
+
+                    // Append sorting direction indicator to active header
+                    const arrow = document.createElement('span');
+                    arrow.className = 'sort-arrow ml-1 text-gray-400 font-bold';
+                    arrow.textContent = asc ? ' ▲' : ' ▼';
+                    header.appendChild(arrow);
+
+                    // Sort row elements
+                    const sortedRows = rows.sort((a, b) => {
+                        const cellA = a.cells[index]?.innerText || a.cells[index]?.textContent || '';
+                        const cellB = b.cells[index]?.innerText || b.cells[index]?.textContent || '';
+
+                        const cleanNum = (str) => {
+                            let s = str.replace(/[^\d.-]/g, '');
+                            return s ? parseFloat(s) : NaN;
+                        };
+
+                        const valA = cleanNum(cellA);
+                        const valB = cleanNum(cellB);
+
+                        if (!isNaN(valA) && !isNaN(valB)) {
+                            return asc ? valA - valB : valB - valA;
+                        }
+
+                        return asc 
+                            ? cellA.localeCompare(cellB, undefined, { numeric: true, sensitivity: 'base' })
+                            : cellB.localeCompare(cellA, undefined, { numeric: true, sensitivity: 'base' });
+                    });
+
+                    // Re-append sorted rows to body
+                    tbody.innerHTML = '';
+                    sortedRows.forEach(row => tbody.appendChild(row));
+
+                    // Re-index the SR column
+                    sortedRows.forEach((row, i) => {
+                        const srCell = row.cells[0];
+                        if (srCell) {
+                            srCell.textContent = i + 1;
+                        }
+                    });
+
+                    asc = !asc;
+                });
+            });
+        }
+    }
 
     // Date pickers
     if (typeof flatpickr !== 'undefined') {
@@ -992,8 +908,6 @@ document.addEventListener('DOMContentLoaded', function () {
             disableMobile: true,
         });
     }
-
-
 });
 </script>
 
