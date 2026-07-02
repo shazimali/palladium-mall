@@ -26,6 +26,12 @@ class TenantController extends Controller
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->landlord_id, function ($q) use ($request) {
                 $q->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+            })
+            ->when($request->date_from, function ($q) use ($request) {
+                $q->whereHas('agreements', fn($qa) => $qa->where('start_date', '>=', $request->date_from));
+            })
+            ->when($request->date_to, function ($q) use ($request) {
+                $q->whereHas('agreements', fn($qa) => $qa->where('end_date', '<=', $request->date_to));
             });
 
         // Calculate counts based on current filters (excluding status)

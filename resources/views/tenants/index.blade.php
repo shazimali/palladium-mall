@@ -19,26 +19,26 @@
 
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('tenants.index', ['search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                <a href="{{ route('tenants.index', ['search' => request('search'), 'landlord_id' => request('landlord_id'), 'date_from' => request('date_from'), 'date_to' => request('date_to')]) }}"
                     class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ !request('status') ? 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800' }}">
                     Total: {{ $counts['total'] }}
                 </a>
-                <a href="{{ route('tenants.index', ['status' => 'active', 'search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                <a href="{{ route('tenants.index', ['status' => 'active', 'search' => request('search'), 'landlord_id' => request('landlord_id'), 'date_from' => request('date_from'), 'date_to' => request('date_to')]) }}"
                     class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'active' ? 'bg-green-600 text-white dark:bg-green-700' : 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-950/20 dark:text-green-400 dark:hover:bg-green-950/40' }}">
                     Active: {{ $counts['active'] }}
                 </a>
-                <a href="{{ route('tenants.index', ['status' => 'inactive', 'search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                <a href="{{ route('tenants.index', ['status' => 'inactive', 'search' => request('search'), 'landlord_id' => request('landlord_id'), 'date_from' => request('date_from'), 'date_to' => request('date_to')]) }}"
                     class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'inactive' ? 'bg-red-600 text-white dark:bg-red-700' : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-950/40' }}">
                     Inactive: {{ $counts['inactive'] }}
                 </a>
-                <a href="{{ route('tenants.index', ['status' => 'draft', 'search' => request('search'), 'landlord_id' => request('landlord_id')]) }}"
+                <a href="{{ route('tenants.index', ['status' => 'draft', 'search' => request('search'), 'landlord_id' => request('landlord_id'), 'date_from' => request('date_from'), 'date_to' => request('date_to')]) }}"
                     class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-medium transition-colors {{ request('status') === 'draft' ? 'bg-yellow-500 text-white dark:bg-yellow-600' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 dark:bg-yellow-950/20 dark:text-yellow-400 dark:hover:bg-yellow-950/40' }}">
                     Drafts: {{ $counts['draft'] }}
                 </a>
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'status', 'landlord_id']))
+                @if(request()->anyFilled(['search', 'status', 'landlord_id', 'date_from', 'date_to']))
                     <a href="{{ route('tenants.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
                         Clear
@@ -96,6 +96,15 @@
                             </option>
                         @endforeach
                     </select>
+                </div>
+
+                <!-- Date Picker Fields -->
+                <div class="flex items-center gap-2">
+                    <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="Date From" autocomplete="off"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-36 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+                    <span class="text-xs text-gray-400">to</span>
+                    <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="Date To" autocomplete="off"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-36 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
                 
                 <button type="submit" class="hidden">Submit</button>
@@ -259,3 +268,37 @@
         @endif
     </x-common.component-card>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr('#date_from', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true,
+                    onChange: function(selectedDates, dateStr, instance) {
+                        if (dateStr) {
+                            instance.element.form.submit();
+                        }
+                    }
+                });
+
+                flatpickr('#date_to', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true,
+                    onChange: function(selectedDates, dateStr, instance) {
+                        if (dateStr) {
+                            instance.element.form.submit();
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+@endpush
