@@ -45,15 +45,38 @@ class PaymentController extends Controller
         $baseQuery->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
                   ->when($ownerType === 'other',    fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
 
-        $payments = (clone $baseQuery)->with(['tenant', 'unit', 'agreement', 'paymentAccount', 'otherTenant'])
+        $filterQuery = (clone $baseQuery)
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->type, fn($q) => $q->ofType($request->type))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id))
-            ->when($month, fn($q) => $q->forMonth($month))
+            ->when($month, fn($q) => $q->forMonth($month));
+
+        // Paginate by unit + month combinations to ensure they are never split across pages
+        $payments = (clone $filterQuery)->select('unit_id', 'month')
+            ->groupBy('unit_id', 'month')
             ->latest('month')
             ->paginate(20)
             ->withQueryString();
+
+        // Fetch all matching payments for the current page groups
+        $pagePayments = collect();
+        if ($payments->isNotEmpty()) {
+            $pagePayments = (clone $filterQuery)->with(['tenant', 'unit', 'agreement', 'paymentAccount', 'otherTenant'])
+                ->where(function ($query) use ($payments) {
+                    foreach ($payments as $group) {
+                        $query->orWhere(function ($q) use ($group) {
+                            $q->where('unit_id', $group->unit_id)
+                              ->where('month', $group->month);
+                        });
+                    }
+                })
+                ->get();
+        }
+
+        $groupedPayments = $pagePayments->groupBy(function ($payment) {
+            return $payment->unit_id . '_' . ($payment->month ? $payment->month->format('Y-m') : 'no-month');
+        });
 
         // Summary counts for selected month and unit (defaults to current month)
         $targetMonth = $month ?: Carbon::now()->startOfMonth()->toDateString();
@@ -93,6 +116,7 @@ class PaymentController extends Controller
         if ($request->ajax() || $request->has('ajax')) {
             return view('payments._table', [
                 'payments' => $payments,
+                'groupedPayments' => $groupedPayments,
                 'highlight' => $highlight,
                 'summary' => $summary,
             ])->render();
@@ -101,6 +125,7 @@ class PaymentController extends Controller
         return view('payments.index', [
             'title' => 'Rent & Payments',
             'payments' => $payments,
+            'groupedPayments' => $groupedPayments,
             'summary' => $summary,
             'paymentAccounts' => $paymentAccounts,
             'units' => $units,

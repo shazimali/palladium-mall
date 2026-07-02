@@ -11,7 +11,7 @@
     };
 
     // Group payments by unit_id and month
-    $groupedPayments = $payments->groupBy(function($payment) {
+    $groupedPayments = $groupedPayments ?? $payments->groupBy(function($payment) {
         return $payment->unit_id . '_' . ($payment->month ? $payment->month->format('Y-m') : 'no-month');
     });
 @endphp
