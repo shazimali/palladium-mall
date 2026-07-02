@@ -124,14 +124,14 @@ class ReceivingVoucherController extends Controller
             // Create the Receiving Voucher
             $voucher = ReceivingVoucher::create($data);
 
-            $remainingAmount = $amount;
+            $remainingAmount = round($amount, 2);
 
             foreach ($payments as $payment) {
                 if ($remainingAmount <= 0) {
                     break;
                 }
 
-                $balanceDue = (float) $payment->balanceDue();
+                $balanceDue = round((float) $payment->balanceDue(), 2);
 
                 // Determine allocation for this payment
                 if ($remainingAmount >= $balanceDue) {
@@ -140,7 +140,7 @@ class ReceivingVoucherController extends Controller
                     $allocatedAmount = $remainingAmount;
                 }
 
-                $newAmountPaid = (float) $payment->amount_paid + $allocatedAmount;
+                $newAmountPaid = round((float) $payment->amount_paid + $allocatedAmount, 2);
 
                 $payment->update([
                     'amount_paid' => $newAmountPaid,
@@ -154,7 +154,7 @@ class ReceivingVoucherController extends Controller
                 // Attach to receiving voucher payments pivot table
                 $voucher->payments()->attach($payment->id, ['amount_allocated' => $allocatedAmount]);
 
-                $remainingAmount -= $allocatedAmount;
+                $remainingAmount = round($remainingAmount - $allocatedAmount, 2);
             }
 
             DB::commit();

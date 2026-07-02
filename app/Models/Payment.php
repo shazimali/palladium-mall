@@ -168,7 +168,7 @@ class Payment extends Model
 
     public function balanceDue(): float
     {
-        return max(0, (float) $this->amount - (float) $this->amount_paid);
+        return round(max(0, (float) $this->amount - (float) $this->amount_paid), 2);
     }
 
     public function getStatusBadgeClassAttribute(): string
@@ -238,6 +238,9 @@ class Payment extends Model
 
     public static function calculateStatus(float $amount, float $amountPaid): string
     {
+        $amount = round($amount, 2);
+        $amountPaid = round($amountPaid, 2);
+
         if ($amountPaid <= 0) {
             return 'unpaid';
         }
