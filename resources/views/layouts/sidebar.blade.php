@@ -69,7 +69,7 @@
     <div class="pt-8 pb-7 flex items-center" :class="(!$store.sidebar.isExpanded && !$store.sidebar.isHovered && !$store.sidebar.isMobileOpen) ?
         'xl:justify-center' :
         'justify-start pl-6'">
-        <a href="/">
+        <a href="/" target="_blank">
             <span x-show="$store.sidebar.isExpanded || $store.sidebar.isHovered || $store.sidebar.isMobileOpen"
                 class="text-xl font-bold text-gray-800 dark:text-white/90">
                 Palladium Mall
@@ -156,7 +156,7 @@
                                             <ul class="mt-2 space-y-1 ml-9">
                                                 @foreach ($item['subItems'] as $subItem)
                                                     <li>
-                                                        <a href="{{ $subItem['path'] }}" class="menu-dropdown-item" :class="isActive('{{ $subItem['path'] }}') ?
+                                                        <a href="{{ $subItem['path'] }}" target="_blank" class="menu-dropdown-item" :class="isActive('{{ $subItem['path'] }}') ?
                                                                                 'menu-dropdown-item-active' :
                                                                                 'menu-dropdown-item-inactive'">
                                                             {{ $subItem['name'] }}
@@ -185,7 +185,7 @@
                                         </div>
                                     @else
                                         <!-- Simple Menu Item -->
-                                        <a href="{{ $item['path'] }}" class="menu-item group" :class="[
+                                        <a href="{{ $item['path'] }}" target="_blank" class="menu-item group" :class="[
                                                             isActive('{{ $item['path'] }}') ? 'menu-item-active' :
                                                             'menu-item-inactive',
                                                             (!$store.sidebar.isExpanded && !$store.sidebar.isHovered && !$store.sidebar.isMobileOpen) ?
