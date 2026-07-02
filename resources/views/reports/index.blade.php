@@ -3,7 +3,7 @@
 @section('containerClass', 'w-full max-w-full')
 
 @section('content')
-<div x-data="{ isFilterModalOpen: false }">
+<div>
 
     {{-- ── Filter Panel ───────────────────────────────────────────────────── --}}
     @php
@@ -101,36 +101,19 @@
         }
     @endphp
 
-    <!-- Filters Modal Backdrop & Modal Card -->
-    <div x-show="isFilterModalOpen" 
-         class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 sm:p-0"
-         x-cloak
-         style="display: none;">
-        <!-- Backdrop -->
-        <div class="fixed inset-0 bg-gray-950/50 backdrop-blur-xs transition-opacity z-40" @click="isFilterModalOpen = false"></div>
-        
-        <!-- Modal Body -->
-        <div class="relative z-50 transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all dark:bg-gray-900 w-full max-w-4xl p-6 border border-gray-100 dark:border-gray-800">
-            <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-4 mb-5">
-                <h3 class="text-lg font-bold text-gray-800 dark:text-white">
-                    Modify Report Filters
-                </h3>
-                <button type="button" @click="isFilterModalOpen = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-                    ✕
-                </button>
-            </div>
-            
-            <form method="GET" action="{{ route('reports.index') }}" id="reportForm">
-                <input type="hidden" name="no_sidebar" value="1">
+    <!-- Filters Panel -->
+    <div class="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-gray-100 dark:bg-gray-900 dark:border-gray-800">
+        <form method="GET" action="{{ route('reports.index') }}" id="reportForm">
+            <input type="hidden" name="no_sidebar" value="1">
 
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 items-end">
 
                 {{-- Report Type --}}
                 <div>
                     <label for="report_type" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Report Type
                     </label>
-                    <select id="report_type" name="report_type"
+                    <select id="report_type" name="report_type" onchange="this.form.submit()"
                         class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="" {{ ($filters['report_type'] ?? '') === '' ? 'selected' : '' }}>All Data</option>
                         <option value="rent" {{ ($filters['report_type'] ?? '') === 'rent' ? 'selected' : '' }}>Rent Collected</option>
@@ -330,18 +313,7 @@
                 @endif
 
             </div>
-            </form>
-            <!-- Modal Footer Actions -->
-            <div class="mt-6 flex justify-end gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
-                <button type="button" @click="isFilterModalOpen = false" class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05]">
-                    Cancel
-                </button>
-                <button type="submit" class="rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600">
-                    Apply Filters
-                </button>
-            </div>
         </div>
-    </div>
 
     {{-- ── Results ──────────────────────────────────────────────────────────── --}}
     @if($hasQuery)
@@ -353,13 +325,84 @@
 
 
 
+        <div class="mb-6 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-800 dark:text-white">
+                Report Summary
+            </h2>
+        </div>
+
         {{-- Dynamic Summary Widgets --}}
         @if($summary)
             @php
                 $isMatrix = ($filters['report_type'] ?? '') === 'monthly_matrix';
-                $totalDue = $isMatrix ? ($summary['total_amount'] ?? 0) : ($summary['total_due'] ?? 0);
-                $totalPaid = $isMatrix ? ($summary['total_received'] ?? 0) : ($summary['total_paid'] ?? 0);
-                $outstanding = $isMatrix ? ($summary['total_pending'] ?? 0) : ($summary['outstanding'] ?? 0);
+
+                // Calculate widget data
+                $wGrandDue = 0; $wGrandPaid = 0; $wGrandUnpaid = 0;
+                $wRentDue = 0; $wRentPaid = 0; $wRentUnpaid = 0;
+                $wServDue = 0; $wServPaid = 0; $wServUnpaid = 0;
+                $wSecDue = 0;  $wSecPaid = 0;  $wSecUnpaid = 0;
+
+                if ($isMatrix) {
+                    $wGrandDue = $summary['total_amount'] ?? 0;
+                    $wGrandPaid = $summary['total_received'] ?? 0;
+                    $wGrandUnpaid = $summary['total_pending'] ?? 0;
+
+                    $wRentDue = $summary['total_rent'] ?? 0;
+                    $wRentPaid = $summary['total_rent_paid'] ?? 0;
+                    $wRentUnpaid = max(0, $wRentDue - $wRentPaid);
+
+                    $wServDue = ($summary['total_serv'] ?? 0) + ($summary['total_extra'] ?? 0);
+                    $wServPaid = ($summary['total_serv_paid'] ?? 0) + ($summary['total_extra_paid'] ?? 0);
+                    $wServUnpaid = max(0, $wServDue - $wServPaid);
+
+                    $wSecDue = $summary['total_security_deposit'] ?? 0;
+                    $wSecPaid = $summary['total_sec_paid'] ?? 0;
+                    $wSecUnpaid = max(0, $wSecDue - $wSecPaid);
+                } elseif (isset($entries) && $entries instanceof \Illuminate\Support\Collection) {
+                    $wGrandDue = $summary['total_due'] ?? 0;
+                    $wGrandPaid = $summary['total_paid'] ?? 0;
+                    $wGrandUnpaid = $summary['outstanding'] ?? 0;
+
+                    $wRentDue = $entries->where('type', 'rent')->sum('amount_due');
+                    $wRentPaid = $entries->where('type', 'rent')->sum('amount_paid');
+                    $wRentUnpaid = max(0, $wRentDue - $wRentPaid);
+
+                    $servTypes = ['maintenance', 'utility', 'fine', 'other'];
+                    $wServDue = $entries->whereIn('type', $servTypes)->sum('amount_due');
+                    $wServPaid = $entries->whereIn('type', $servTypes)->sum('amount_paid');
+                    $wServUnpaid = max(0, $wServDue - $wServPaid);
+
+                    $wSecDue = $entries->where('type', 'security_deposit')->sum('amount_due');
+                    $wSecPaid = $entries->where('type', 'security_deposit')->sum('amount_paid');
+                    $wSecUnpaid = max(0, $wSecDue - $wSecPaid);
+                }
+
+                $historyWidgets = [
+                    'grand_total' => [
+                        'label' => 'Grand Total Summary',
+                        'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
+                        'icon' => '📊',
+                        'due' => $wGrandDue, 'paid' => $wGrandPaid, 'unpaid' => $wGrandUnpaid,
+                    ],
+                    'rent' => [
+                        'label' => 'Rent Summary',
+                        'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
+                        'icon' => '🔑',
+                        'due' => $wRentDue, 'paid' => $wRentPaid, 'unpaid' => $wRentUnpaid,
+                    ],
+                    'services' => [
+                        'label' => 'Services Summary',
+                        'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
+                        'icon' => '🛠️',
+                        'due' => $wServDue, 'paid' => $wServPaid, 'unpaid' => $wServUnpaid,
+                    ],
+                    'security_deposit' => [
+                        'label' => 'Security Deposit',
+                        'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
+                        'icon' => '🛡️',
+                        'due' => $wSecDue, 'paid' => $wSecPaid, 'unpaid' => $wSecUnpaid,
+                    ],
+                ];
             @endphp
 
             @if(($filters['report_type'] ?? '') === 'potential_revenue')
@@ -391,199 +434,40 @@
                     </div>
                 </div>
             @else
-                <!-- General Summary Metrics Row -->
-                <div class="grid grid-cols-2 gap-4 md:grid-cols-4 mb-6">
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{{ $isMatrix ? 'Total Units' : 'Total Records' }}</span>
-                        <h4 class="mt-2 text-2xl font-bold text-gray-800 dark:text-white leading-none">
-                            {{ number_format($summary['count']) }}
-                        </h4>
-                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $isMatrix ? 'Report billing month' : 'Processed entries' }}</p>
-                    </div>
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Total Billed Due</span>
-                        <h4 class="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-500 leading-none">
-                            Rs. {{ number_format($totalDue) }}
-                        </h4>
-                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500 font-medium">Billed amount</p>
-                    </div>
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Total Collected</span>
-                        <h4 class="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-500 leading-none">
-                            Rs. {{ number_format($totalPaid) }}
-                        </h4>
-                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500 font-medium">Received payments</p>
-                    </div>
-                    <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Outstanding Due</span>
-                        <h4 class="mt-2 text-2xl font-bold {{ $outstanding > 0 ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-500' }} leading-none">
-                            Rs. {{ number_format($outstanding) }}
-                        </h4>
-                        <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500 font-medium">Pending collections</p>
-                    </div>
-                </div>
+                <!-- Dynamic Billing History Style Widgets -->
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                    @foreach($historyWidgets as $wKey => $cfg)
+                        <div class="group relative overflow-hidden rounded-2xl p-4 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
+                            style="background: {{ $cfg['gradient'] }}; min-height: 140px;">
+                            <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
+                            <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10 bg-white"></div>
 
-                <!-- Category Wise Collections Row -->
-                @if($isMatrix)
-                    @php
-                        $rentSum = $summary['total_rent_paid'] ?? 0;
-                        $rentCount = $summary['rent_count'] ?? 0;
-
-                        $maintSum = $summary['total_serv_paid'] ?? 0;
-                        $maintCount = $summary['serv_count'] ?? 0;
-
-                        $secSum = $summary['total_sec_paid'] ?? 0;
-                        $secCount = $summary['sec_count'] ?? 0;
-
-                        $extraSum = $summary['total_extra_paid'] ?? 0;
-                        $extraCount = $summary['extra_count'] ?? 0;
-                    @endphp
-                    <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 mt-8">Category Wise Collections</h3>
-                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-4 mb-6">
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🏠 Rent Collected</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($rentSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $rentCount }} payments</p>
+                            <div class="relative flex justify-between items-center mb-2">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-white/75">{{ $cfg['label'] }}</p>
+                                <span class="text-sm">{{ $cfg['icon'] }}</span>
+                            </div>
+                            <div class="relative mt-2 space-y-1">
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-[10px] uppercase text-white/70">Expected Total</span>
+                                    <span class="font-bold text-white text-sm sm:text-base">
+                                        Rs. {{ number_format($cfg['due']) }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-[10px] uppercase text-white/70">Received</span>
+                                    <span class="font-bold text-emerald-300 text-sm sm:text-base">
+                                        Rs. {{ number_format($cfg['paid']) }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between items-baseline border-t border-white/10 pt-1.5 mt-1">
+                                    <span class="text-[10px] uppercase text-white/70">Pending</span>
+                                    <span class="font-bold text-rose-300 text-sm sm:text-base">
+                                        Rs. {{ number_format($cfg['unpaid']) }}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🛠️ Serv (Maint)</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($maintSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $maintCount }} payments</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🔒 Sec. Deposit</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($secSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $secCount }} payments</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🔑 Extra</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($extraSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $extraCount }} payments</p>
-                        </div>
-                    </div>
-                @else
-                    @php
-                        $rentSum = $entries->where('type', 'rent')->sum('amount_paid');
-                        $rentCount = $entries->where('type', 'rent')->count();
-
-                        $maintSum = $entries->where('type', 'maintenance')->sum('amount_paid');
-                        $maintCount = $entries->where('type', 'maintenance')->count();
-
-                        $utilSum = $entries->where('category', 'utility')->sum('amount_paid');
-                        $utilCount = $entries->where('category', 'utility')->count();
-
-                        $fineSum = $entries->where('type', 'fine')->sum('amount_paid');
-                        $fineCount = $entries->where('type', 'fine')->count();
-
-                        $otherSum = $entries->where('type', 'other')->sum('amount_paid');
-                        $otherCount = $entries->where('type', 'other')->count();
-                    @endphp
-                    <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3 mt-8">Category Wise Collections</h3>
-                    <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🏠 Rent Collected</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($rentSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $rentCount }} payments</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🛠️ Maintenance</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($maintSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $maintCount }} payments</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">⚡ Utilities</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($utilSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $utilCount }} payments</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">⚠️ Fines</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($fineSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $fineCount }} payments</p>
-                        </div>
-                        <div class="rounded-2xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                            <span class="text-xs font-semibold text-gray-400 dark:text-gray-500">🔑 Other</span>
-                            <h4 class="mt-2 text-xl font-bold text-gray-800 dark:text-white leading-none">Rs. {{ number_format($otherSum) }}</h4>
-                            <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{{ $otherCount }} payments</p>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- Payment Accounts & Methods Breakdown -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 mb-6">
-                    <!-- Payment Accounts -->
-                    <div>
-                        <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Account Breakdown</h3>
-                        <div class="space-y-3">
-                            @php $hasAccountData = false; @endphp
-                            @foreach($paymentAccounts as $account)
-                                @php
-                                    $accSum = $isMatrix 
-                                        ? ($summary['accounts_total'][$account->name] ?? 0.0)
-                                        : $entries->where('payment_account', $account->name)->sum('amount_paid');
-                                    $accCount = $isMatrix
-                                        ? ($accSum > 0 ? 1 : 0)
-                                        : $entries->where('payment_account', $account->name)->count();
-                                @endphp
-                                @if($accSum > 0)
-                                    @php $hasAccountData = true; @endphp
-                                    <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-2xs dark:border-gray-800 dark:bg-white/[0.03]">
-                                        <div class="flex items-center gap-2.5">
-                                            <span class="text-lg">🏦</span>
-                                            <div>
-                                                <h5 class="text-sm font-semibold text-gray-800 dark:text-white">{{ $account->name }}</h5>
-                                                @if(!$isMatrix)
-                                                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ $accCount }} transactions</p>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <span class="text-base font-bold text-emerald-600 dark:text-emerald-500">Rs. {{ number_format($accSum) }}</span>
-                                    </div>
-                                @endif
-                            @endforeach
-                            @if(!$hasAccountData)
-                                <p class="text-sm text-gray-400 py-2">No account transactions recorded</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Payment Methods -->
-                    <div>
-                        <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Method Breakdown</h3>
-                        <div class="space-y-3">
-                            @php
-                                $methodsList = [
-                                    'cash' => ['label' => 'Cash', 'icon' => '💵'],
-                                    'bank_transfer' => ['label' => 'Bank Transfer', 'icon' => '📱'],
-                                    'cheque' => ['label' => 'Cheque', 'icon' => '✍️'],
-                                    'other' => ['label' => 'Other', 'icon' => '🔑'],
-                                ];
-                                $hasMethodData = false;
-                            @endphp
-                            @foreach($methodsList as $mKey => $mCfg)
-                                @php
-                                    $mName = ucfirst(str_replace('_', ' ', $mKey));
-                                    $mSum = $entries->where('payment_method', $mName)->sum('amount_paid');
-                                    $mCount = $entries->where('payment_method', $mName)->count();
-                                @endphp
-                                @if($mCount > 0)
-                                    @php $hasMethodData = true; @endphp
-                                    <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-white p-4 shadow-2xs dark:border-gray-800 dark:bg-white/[0.03]">
-                                        <div class="flex items-center gap-2.5">
-                                            <span class="text-lg">{{ $mCfg['icon'] }}</span>
-                                            <div>
-                                                <h5 class="text-sm font-semibold text-gray-800 dark:text-white">{{ $mCfg['label'] }}</h5>
-                                                <p class="text-xs text-gray-400 dark:text-gray-500">{{ $mCount }} transactions</p>
-                                            </div>
-                                        </div>
-                                        <span class="text-base font-bold text-emerald-600 dark:text-emerald-500">Rs. {{ number_format($mSum) }}</span>
-                                    </div>
-                                @endif
-                            @endforeach
-                            @if(!$hasMethodData)
-                                <p class="text-sm text-gray-400 py-2">No method transactions recorded</p>
-                            @endif
-                        </div>
-                    </div>
+                    @endforeach
                 </div>
             @endif
         @endif
@@ -609,9 +493,6 @@
                         @endif
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" @click="isFilterModalOpen = true" class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 transition-colors shadow-xs">
-                            🔍 Filter
-                        </button>
                         <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors shadow-xs">
                             ✕ Exit
                         </a>
@@ -776,11 +657,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
             <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No report generated yet</p>
-            <p class="mt-1 mb-6 text-xs text-gray-400 dark:text-gray-600">Open the filters panel to configure and generate your report.</p>
+            <p class="mt-1 mb-6 text-xs text-gray-400 dark:text-gray-600">Configure filters above and click Generate Report.</p>
             <div class="flex items-center justify-center gap-3">
-                <button type="button" @click="isFilterModalOpen = true" class="inline-flex items-center gap-2 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors shadow-xs">
-                    🔍 Open Filters
-                </button>
                 <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors shadow-xs">
                     ✕ Exit
                 </a>

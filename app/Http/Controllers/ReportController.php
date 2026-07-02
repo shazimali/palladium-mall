@@ -598,6 +598,13 @@ class ReportController extends Controller
             ->get()
             ->groupBy('unit_id');
 
+        $previousUnpaidBalances = Payment::where('month', '<', $monthStr)
+            ->whereIn('status', ['unpaid', 'partial'])
+            ->selectRaw('unit_id, SUM(amount - amount_paid) as prev_unpaid')
+            ->groupBy('unit_id')
+            ->pluck('prev_unpaid', 'unit_id')
+            ->map(fn($val) => (float) $val);
+
         $matrixEntries = collect();
 
         foreach ($units as $index => $unit) {
@@ -670,9 +677,12 @@ class ReportController extends Controller
             $extra_due = (float) $extraPayments->sum('amount');
             $extra_paid = (float) $extraPayments->sum('amount_paid');
 
+            // Previous unpaid balance
+            $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
+
             $total_due = $serv_due + $extra_due + $sec_due + $rent_due;
             $total_received = $serv_paid + $extra_paid + $sec_paid + $rent_paid;
-            $pending = max(0.0, $total_due - $total_received);
+            $pending = max(0.0, $total_due - $total_received) + $prevUnpaid;
 
             $accountsBreakdown = [];
             foreach ($paymentAccounts as $account) {
@@ -699,12 +709,20 @@ class ReportController extends Controller
             $datesString = !empty($dates) ? implode(', ', array_unique($dates)) : '';
             $vouchersString = !empty($vouchers) ? implode('/', array_unique($vouchers)) : '';
 
+            $firstPayment = $unitPayments->first();
+            if ($unit->is_self) {
+                $tenantName = $unit->otherTenant?->name ?? '—';
+            } else {
+                $tenantName = $agreement?->tenant?->name ?? ($firstPayment?->tenant?->name ?? '—');
+            }
+
             $matrixEntries->push([
                 'sr'               => $index + 1,
                 'date'             => $datesString,
                 'rsv'              => $vouchersString,
                 'flat_no'          => $unit->unit_number,
                 'owner'            => $unit->landlord?->name ?? '—',
+                'tenant'           => $tenantName,
                 'status'           => $status,
                 'serv'             => $serv_due,
                 'serv_paid'        => $serv_paid,
@@ -717,6 +735,7 @@ class ReportController extends Controller
                 'total_amount'     => $total_due,
                 'received'         => $total_received,
                 'payment_accounts' => $accountsBreakdown,
+                'prev_unpaid'      => $prevUnpaid,
                 'pending'          => $pending,
                 'is_self'          => (bool) $unit->is_self,
             ]);
@@ -768,6 +787,7 @@ class ReportController extends Controller
             'total_amount'           => $matrixEntries->sum('total_amount'),
             'total_received'         => $matrixEntries->sum('received'),
             'accounts_total'         => $accountsTotal,
+            'total_prev_unpaid'      => $matrixEntries->sum('prev_unpaid'),
             'total_pending'          => $matrixEntries->sum('pending'),
             'count'                  => $matrixEntries->count(),
             'rent_count'             => $matrixEntries->where('rent_paid', '>', 0)->count(),

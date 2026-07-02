@@ -67,7 +67,7 @@ class PaymentController extends Controller
                     foreach ($payments as $group) {
                         $query->orWhere(function ($q) use ($group) {
                             $q->where('unit_id', $group->unit_id)
-                              ->where('month', $group->month);
+                              || $q->where('month', $group->month);
                         });
                     }
                 })
@@ -128,6 +128,116 @@ class PaymentController extends Controller
             'groupedPayments' => $groupedPayments,
             'summary' => $summary,
             'paymentAccounts' => $paymentAccounts,
+            'units' => $units,
+        ]);
+    }
+
+    public function history(Request $request)
+    {
+        $year = (int) $request->input('year', Carbon::now()->year);
+
+        // Base query with tenant constraints for other-owned units
+        $baseQuery = Payment::where(function ($q) {
+            $q->whereHas('unit', function ($qu) {
+                $qu->where('is_self', true)->whereHas('otherTenant');
+            })->orWhereHas('unit', function ($qu) {
+                $qu->where('is_self', false);
+            });
+        });
+
+        // Filter by owner_type
+        $ownerType = $request->owner_type;
+        $baseQuery->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
+                  ->when($ownerType === 'other',    fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
+
+        // Filter by unit_id and year
+        $payments = (clone $baseQuery)
+            ->whereYear('month', $year)
+            ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id))
+            ->get();
+
+        $monthlySummaries = [];
+
+        // Group payments by Y-m
+        $grouped = $payments->groupBy(function ($payment) {
+            return $payment->month ? $payment->month->format('Y-m') : 'no-month';
+        });
+
+        // Remove the no-month group if it exists
+        $grouped->forget('no-month');
+
+        // Sort keys descending (latest month first)
+        $grouped = $grouped->sortKeysDesc();
+
+        foreach ($grouped as $monthStr => $monthPayments) {
+            $rentPayments = $monthPayments->where('type', 'rent');
+            $depositPayments = $monthPayments->where('type', 'security_deposit');
+            $servicePayments = $monthPayments->whereNotIn('type', ['rent', 'security_deposit']);
+
+            // Rent sums
+            $rentDue = (float) $rentPayments->sum('amount');
+            $rentPaid = (float) $rentPayments->sum('amount_paid');
+
+            // Security Deposit sums
+            $depositDue = (float) $depositPayments->sum('amount');
+            $depositPaid = (float) $depositPayments->sum('amount_paid');
+
+            // Services sums (maintenance, utilities, fine, other combined)
+            $servicesDue = (float) $servicePayments->sum('amount');
+            $servicesPaid = (float) $servicePayments->sum('amount_paid');
+
+            // Grand Total sums
+            $grandDue = (float) $monthPayments->sum('amount');
+            $grandPaid = (float) $monthPayments->sum('amount_paid');
+
+            // Parse month for nice display (e.g. "June 2026")
+            $displayMonth = Carbon::parse($monthStr . '-01')->format('F Y');
+
+            $monthlySummaries[$monthStr] = [
+                'display_month' => $displayMonth,
+                'widgets' => [
+                    'grand_total' => [
+                        'label' => 'Grand Total Summary',
+                        'due' => $grandDue,
+                        'paid' => $grandPaid,
+                        'unpaid' => $grandDue - $grandPaid,
+                    ],
+                    'rent' => [
+                        'label' => 'Rent Summary',
+                        'due' => $rentDue,
+                        'paid' => $rentPaid,
+                        'unpaid' => $rentDue - $rentPaid,
+                    ],
+                    'services' => [
+                        'label' => 'Services Summary',
+                        'due' => $servicesDue,
+                        'paid' => $servicesPaid,
+                        'unpaid' => $servicesDue - $servicesPaid,
+                    ],
+                    'security_deposit' => [
+                        'label' => 'Security Deposit',
+                        'due' => $depositDue,
+                        'paid' => $depositPaid,
+                        'unpaid' => $depositDue - $depositPaid,
+                    ],
+                ]
+            ];
+        }
+
+        $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
+        $years = range(Carbon::now()->year + 1, Carbon::now()->year - 4);
+
+        if ($request->ajax() || $request->has('ajax')) {
+            return view('payments.partials.history_widgets', [
+                'monthlySummaries' => $monthlySummaries,
+            ])->render();
+        }
+
+        return view('payments.history', [
+            'title' => 'Billing & Payment History',
+            'monthlySummaries' => $monthlySummaries,
+            'years' => $years,
+            'selectedYear' => $year,
             'units' => $units,
         ]);
     }

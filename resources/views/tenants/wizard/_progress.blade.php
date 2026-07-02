@@ -9,7 +9,11 @@
     ];
 
     $tenant = $tenantId ? \App\Models\Tenant::find($tenantId) : null;
-    $draftAgreement = $tenant ? $tenant->agreements()->where('status', 'draft')->latest()->first() : null;
+    $draftAgreement = null;
+    if ($tenant) {
+        $draftAgreement = $tenant->agreements()->where('status', 'active')->latest()->first() 
+            ?: $tenant->agreements()->where('status', 'draft')->latest()->first();
+    }
 
     $stepFilled = [
         1 => $tenant !== null,

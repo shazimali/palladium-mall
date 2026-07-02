@@ -338,20 +338,22 @@
             <thead>
                 <tr>
                     <th style="text-align:center;">SR</th>
-                    <th>Date</th>
-                    <th>RSV</th>
                     <th>Flat No</th>
                     <th>Owner</th>
+                    <th>Tenant</th>
                     <th>Status</th>
                     <th>Serv</th>
                     <th>Extra</th>
+                    <th>Sec. Dep</th>
+                    <th>Expected Total</th>
                     <th>Rent</th>
                     <th>Total Amount</th>
                     <th>Received</th>
                     @foreach($paymentAccounts as $account)
                         <th>{{ $account->name }}</th>
                     @endforeach
-                    <th>Total</th>
+                    <th>Accounts Total</th>
+                    <th>Prev. Unpaid</th>
                     <th>Pending</th>
                 </tr>
             </thead>
@@ -360,13 +362,14 @@
                     @php
                         $isVacant = $entry['status'] === 'VACANT';
                         $isPending = $entry['pending'] > 0;
+                        $expectedTotal = ($entry['prev_unpaid'] ?? 0) + ($entry['rent'] ?? 0) + ($entry['serv'] ?? 0) + ($entry['extra'] ?? 0) + ($entry['security_deposit'] ?? 0);
+                        $accountsTotal = array_sum($entry['payment_accounts'] ?? []);
                     @endphp
                     <tr style="{{ $isVacant ? 'background-color: #F8FAFF; color: #94A3B8; font-style: italic;' : '' }}">
                         <td style="text-align:center;">{{ $entry['sr'] }}</td>
-                        <td>{{ $entry['date'] ?: '—' }}</td>
-                        <td>{{ $entry['rsv'] ?: '—' }}</td>
                         <td style="font-weight:600;">{{ $entry['flat_no'] }}</td>
                         <td>{{ $entry['owner'] }}</td>
+                        <td>{{ $entry['tenant'] }}</td>
                         <td>
                             <span class="badge {{ $entry['status'] === 'RENTED' || $entry['status'] === 'OCCUPIED' ? 'badge-paid' : ($entry['status'] === 'VACANT' ? 'badge-unpaid' : 'badge-pending') }}">
                                 {{ $entry['status'] }}
@@ -380,6 +383,8 @@
                         </td>
                         <td>Rs. {{ number_format($entry['serv'], 2) }}</td>
                         <td>Rs. {{ number_format($entry['extra'], 2) }}</td>
+                        <td>Rs. {{ number_format($entry['security_deposit'], 2) }}</td>
+                        <td style="font-weight:600;color:#3730A3;">Rs. {{ number_format($expectedTotal, 2) }}</td>
                         <td>Rs. {{ number_format($entry['rent'], 2) }}</td>
                         <td style="font-weight:600;">Rs. {{ number_format($entry['total_amount'], 2) }}</td>
                         <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['received'], 2) }}</td>
@@ -392,14 +397,15 @@
                                 @endif
                             </td>
                         @endforeach
-                        <td style="color:#059669;font-weight:600;">Rs. {{ number_format($entry['received'], 2) }}</td>
+                        <td style="color:#059669;font-weight:600;">Rs. {{ number_format($accountsTotal, 2) }}</td>
+                        <td>Rs. {{ number_format($entry['prev_unpaid'], 2) }}</td>
                         <td style="font-weight:700;color:{{ $isPending ? '#DC2626' : '#059669' }};">
                             Rs. {{ number_format($entry['pending'], 2) }}
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ 13 + count($paymentAccounts) }}" style="text-align:center;padding:16px;color:#94A3B8;">
+                        <td colspan="{{ 16 + count($paymentAccounts) }}" style="text-align:center;padding:16px;color:#94A3B8;">
                             No records found.
                         </td>
                     </tr>
@@ -407,16 +413,19 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="6" style="color:#1D3461;text-align:right;">Totals</td>
+                    <td colspan="5" style="color:#1D3461;text-align:right;">Totals</td>
                     <td style="color:#1D3461;">Rs. {{ number_format($summary['total_serv'], 2) }}</td>
                     <td style="color:#1D3461;">Rs. {{ number_format($summary['total_extra'], 2) }}</td>
+                    <td style="color:#1D3461;">Rs. {{ number_format($summary['total_security_deposit'] ?? 0, 2) }}</td>
+                    <td style="color:#1D3461;font-weight:bold;">Rs. {{ number_format(($summary['total_prev_unpaid'] ?? 0) + ($summary['total_rent'] ?? 0) + ($summary['total_serv'] ?? 0) + ($summary['total_extra'] ?? 0) + ($summary['total_security_deposit'] ?? 0), 2) }}</td>
                     <td style="color:#1D3461;">Rs. {{ number_format($summary['total_rent'], 2) }}</td>
                     <td style="color:#1D3461;">Rs. {{ number_format($summary['total_amount'], 2) }}</td>
                     <td style="color:#059669;">Rs. {{ number_format($summary['total_received'], 2) }}</td>
                     @foreach($paymentAccounts as $account)
                         <td style="color:#1D3461;">Rs. {{ number_format($summary['accounts_total'][$account->name] ?? 0, 2) }}</td>
                     @endforeach
-                    <td style="color:#059669;">Rs. {{ number_format($summary['total_received'], 2) }}</td>
+                    <td style="color:#059669;font-weight:bold;">Rs. {{ number_format(array_sum($summary['accounts_total'] ?? []), 2) }}</td>
+                    <td style="color:#1D3461;">Rs. {{ number_format($summary['total_prev_unpaid'] ?? 0, 2) }}</td>
                     <td style="color:{{ $summary['total_pending'] > 0 ? '#DC2626' : '#059669' }};">
                         Rs. {{ number_format($summary['total_pending'], 2) }}
                     </td>

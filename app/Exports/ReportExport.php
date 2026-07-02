@@ -43,9 +43,11 @@ class ReportExport implements
                     'RSV' => $e['rsv'],
                     'Flat No' => $e['flat_no'],
                     'Owner' => $e['owner'],
+                    'Tenant' => $e['tenant'],
                     'Status' => $e['status'],
                     'Serv' => number_format((float) $e['serv'], 2),
                     'Extra' => number_format((float) $e['extra'], 2),
+                    'Sec. Dep' => number_format((float) $e['security_deposit'], 2),
                     'Rent' => number_format((float) $e['rent'], 2),
                     'Total Amount' => number_format((float) $e['total_amount'], 2),
                     'Received' => number_format((float) $e['received'], 2),
@@ -56,6 +58,7 @@ class ReportExport implements
                 }
 
                 $row['Total'] = number_format((float) $e['received'], 2);
+                $row['Prev. Unpaid'] = number_format((float) $e['prev_unpaid'], 2);
                 $row['Pending'] = number_format((float) $e['pending'], 2);
 
                 return $row;
@@ -117,9 +120,11 @@ class ReportExport implements
                 'RSV',
                 'Flat No',
                 'Owner',
+                'Tenant',
                 'Status',
                 'Serv (Rs.)',
                 'Extra (Rs.)',
+                'Sec. Dep (Rs.)',
                 'Rent (Rs.)',
                 'Total Amount (Rs.)',
                 'Received (Rs.)',
@@ -131,6 +136,7 @@ class ReportExport implements
             }
 
             $headers[] = 'Total (Rs.)';
+            $headers[] = 'Prev. Unpaid (Rs.)';
             $headers[] = 'Pending (Rs.)';
 
             return $headers;
@@ -183,19 +189,25 @@ class ReportExport implements
             $sheet->setCellValue("B" . ($summaryRow + 1), number_format($this->summary['total_serv'], 2));
             $sheet->setCellValue("A" . ($summaryRow + 2), 'Total Extra (Rs.)');
             $sheet->setCellValue("B" . ($summaryRow + 2), number_format($this->summary['total_extra'], 2));
-            $sheet->setCellValue("A" . ($summaryRow + 3), 'Total Rent (Rs.)');
-            $sheet->setCellValue("B" . ($summaryRow + 3), number_format($this->summary['total_rent'], 2));
-            $sheet->setCellValue("A" . ($summaryRow + 4), 'Total Amount (Rs.)');
-            $sheet->setCellValue("B" . ($summaryRow + 4), number_format($this->summary['total_amount'], 2));
-            $sheet->setCellValue("A" . ($summaryRow + 5), 'Total Received (Rs.)');
-            $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['total_received'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 3), 'Total Security Deposit (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 3), number_format($this->summary['total_security_deposit'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 4), 'Total Rent (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 4), number_format($this->summary['total_rent'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 5), 'Total Amount (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['total_amount'], 2));
+            $sheet->setCellValue("A" . ($summaryRow + 6), 'Total Received (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + 6), number_format($this->summary['total_received'], 2));
 
-            $idx = 6;
+            $idx = 7;
             foreach ($this->summary['accounts_total'] as $accName => $total) {
                 $sheet->setCellValue("A" . ($summaryRow + $idx), "Received in {$accName} (Rs.)");
                 $sheet->setCellValue("B" . ($summaryRow + $idx), number_format($total, 2));
                 $idx++;
             }
+
+            $sheet->setCellValue("A" . ($summaryRow + $idx), 'Total Prev. Unpaid (Rs.)');
+            $sheet->setCellValue("B" . ($summaryRow + $idx), number_format($this->summary['total_prev_unpaid'], 2));
+            $idx++;
 
             $sheet->setCellValue("A" . ($summaryRow + $idx), 'Total Pending (Rs.)');
             $sheet->setCellValue("B" . ($summaryRow + $idx), number_format($this->summary['total_pending'], 2));

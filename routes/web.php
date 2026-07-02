@@ -171,6 +171,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:payments.view')->group(function () {
+        Route::get('payments/history', [PaymentController::class, 'history'])->name('payments.history');
         Route::resource('payments', PaymentController::class);
     });
 
