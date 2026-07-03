@@ -335,6 +335,7 @@ Route::middleware('auth')->group(function () {
     // AJAX
 
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/units-detail', [DashboardController::class, 'unitsDetail'])->name('dashboard.units-detail');
 });
 
 /*

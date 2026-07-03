@@ -8,130 +8,177 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\Landlord;
 use App\Models\ActivityLog;
+use App\Models\Floor;
+use App\Models\Block;
 use Illuminate\View\View;
+use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $currentMonth = Carbon::now()->startOfMonth()->toDateString();
+        $monthInput = $request->input('month');
+        if ($monthInput) {
+            try {
+                $parsedDate = Carbon::parse($monthInput)->startOfMonth();
+            } catch (\Exception $e) {
+                $parsedDate = Carbon::now()->startOfMonth();
+            }
+        } else {
+            $parsedDate = Carbon::now()->startOfMonth();
+        }
+        $currentMonth = $parsedDate->toDateString();
+        $currentMonthLabel = $parsedDate->format('F Y');
+        $selectedMonthVal = $parsedDate->format('Y-m');
+
         $today = Carbon::today();
 
-        // ── Stat cards ────────────────────────────────────────────────
-        $totalUnits = Unit::count();
-        $rentedUnits = Unit::where('status', 'rented')->count();
-        $vacantUnits = Unit::where('status', 'vacant')->count();
-        $otherUnits = Unit::where('is_self', true)->count();
-        $rentDue = Payment::where('month', $currentMonth)
-            ->where('type', 'rent')
-            ->whereIn('status', ['unpaid', 'partial'])
-            ->sum(\DB::raw('amount - amount_paid'));
+        // 1. Calculate Financial Widgets (Current Month)
+        $currentMonthPayments = Payment::where('month', $currentMonth)->get();
 
-        // ── Monthly rent chart — last 6 months ────────────────────────
-        $chartMonths = [];
-        $chartDue = [];
-        $chartPaid = [];
+        $rentPayments = $currentMonthPayments->where('type', 'rent');
+        $depositPayments = $currentMonthPayments->where('type', 'security_deposit');
+        $servicePayments = $currentMonthPayments->whereNotIn('type', ['rent', 'security_deposit']);
 
-        for ($i = 5; $i >= 0; $i--) {
-            $month = Carbon::now()->subMonths($i)->startOfMonth();
-            $monthKey = $month->toDateString();
-            $label = $month->format('M Y');
+        // Rent sums
+        $rentDue = (float) $rentPayments->sum('amount');
+        $rentPaid = (float) $rentPayments->sum('amount_paid');
 
-            $chartMonths[] = $label;
-            $chartDue[] = (float) Payment::where('month', $monthKey)
-                ->where('type', 'rent')
-                ->sum('amount');
-            $chartPaid[] = (float) Payment::where('month', $monthKey)
-                ->where('type', 'rent')
-                ->sum('amount_paid');
-        }
+        // Security Deposit sums
+        $depositDue = (float) $depositPayments->sum('amount');
+        $depositPaid = (float) $depositPayments->sum('amount_paid');
 
-        // ── Occupancy donut ───────────────────────────────────────────
-        $selfUnits = Unit::where('status', 'self')->count();
+        // Services sums
+        $servicesDue = (float) $servicePayments->sum('amount');
+        $servicesPaid = (float) $servicePayments->sum('amount_paid');
 
-        // ── Recent payments ───────────────────────────────────────────
-        $recentPayments = Payment::with(['tenant', 'unit'])
-            ->latest('updated_at')
-            ->take(8)
-            ->get();
+        // Grand Total sums
+        $grandDue = (float) $currentMonthPayments->sum('amount');
+        $grandPaid = (float) $currentMonthPayments->sum('amount_paid');
 
-        // ── Expiring agreements (next 30 days) ────────────────────────
-        $expiringAgreements = Agreement::with(['tenant', 'unit'])
-            ->where('status', 'active')
-            ->whereBetween('end_date', [$today, $today->copy()->addDays(30)])
-            ->orderBy('end_date')
-            ->take(5)
-            ->get();
+        $financialWidgets = [
+            'grand_total' => [
+                'label' => 'Grand Total Summary',
+                'due' => $grandDue,
+                'paid' => $grandPaid,
+                'unpaid' => $grandDue - $grandPaid,
+                'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
+                'icon' => '📊',
+            ],
+            'rent' => [
+                'label' => 'Rent Summary',
+                'due' => $rentDue,
+                'paid' => $rentPaid,
+                'unpaid' => $rentDue - $rentPaid,
+                'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
+                'icon' => '🔑',
+            ],
+            'services' => [
+                'label' => 'Services Summary',
+                'due' => $servicesDue,
+                'paid' => $servicesPaid,
+                'unpaid' => $servicesDue - $servicesPaid,
+                'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
+                'icon' => '🛠️',
+            ],
+            'security_deposit' => [
+                'label' => 'Security Deposit',
+                'due' => $depositDue,
+                'paid' => $depositPaid,
+                'unpaid' => $depositDue - $depositPaid,
+                'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
+                'icon' => '🛡️',
+            ],
+        ];
 
-        // ── Overdue payments ──────────────────────────────────────────
-        $overduePayments = Payment::with(['tenant', 'unit'])
-            ->whereIn('status', ['unpaid', 'partial'])
-            ->where('due_date', '<', $today)
-            ->orderBy('due_date')
-            ->take(6)
-            ->get();
+        // 2. Calculate Flat/Shop Status Grids (3 Rows)
+        // Row 1: Overall
+        $overallTotal = Unit::count();
+        $overallRented = Unit::where('status', 'rented')->count();
+        $overallVacant = Unit::where('status', 'vacant')->count();
 
-        // ── Utility summary this month ────────────────────────────────
-        $utilitiesDue = Payment::where('month', $currentMonth)
-            ->whereIn('type', ['electricity', 'water', 'gas'])
-            ->whereIn('status', ['unpaid', 'partial'])
-            ->sum(\DB::raw('amount - amount_paid'));
+        // Row 2: PM Mall Managed (is_self = false)
+        $pmMallTotal = Unit::where('is_self', false)->count();
+        $pmMallRented = Unit::where('is_self', false)->where('status', 'rented')->count();
+        $pmMallVacant = Unit::where('is_self', false)->where('status', 'vacant')->count();
 
-        // ── Landlord portfolios ───────────────────────────────────────
-        $landlords = Landlord::with('units')
-            ->withCount('units')
-            ->get()
-            ->map(function ($landlord) {
-                $unitIds = $landlord->units->pluck('id')->toArray();
-                $earnings = Payment::whereIn('unit_id', $unitIds)
-                    ->whereIn('status', ['paid', 'partial'])
-                    ->sum('amount_paid');
-                
-                return [
-                    'id' => $landlord->id,
-                    'name' => $landlord->name,
-                    'units_count' => $landlord->units_count,
-                    'earnings' => (float) $earnings,
-                ];
-            })
-            ->sortByDesc('units_count')
-            ->take(5)
-            ->values();
-
-        // ── Recent activity logs ──────────────────────────────────────
-        $recentActivities = ActivityLog::with('user')
-            ->latest()
-            ->take(5)
-            ->get();
+        // Row 3: Other Owned Units (is_self = true)
+        $otherOwnedTotal = Unit::where('is_self', true)->count();
+        $otherOwnedRented = Unit::where('is_self', true)->where('status', 'rented')->count();
+        $otherOwnedVacant = Unit::where('is_self', true)->where('status', 'vacant')->count();
 
         return view('dashboard.index', [
             'title' => 'Dashboard',
-            // Stat cards
-            'totalUnits' => $totalUnits,
-            'rentedUnits' => $rentedUnits,
-            'vacantUnits' => $vacantUnits,
-            'otherUnits' => $otherUnits,
-            'rentDue' => $rentDue,
-            'utilitiesDue' => $utilitiesDue,
-            // Chart data
-            'chartMonths' => $chartMonths,
-            'chartDue' => $chartDue,
-            'chartPaid' => $chartPaid,
-            // Donut
-            'rentedUnits' => $rentedUnits,
-            'vacantUnits' => $vacantUnits,
-            'selfUnits' => $selfUnits,
-            // Tables
-            'recentPayments' => $recentPayments,
-            'expiringAgreements' => $expiringAgreements,
-            'overduePayments' => $overduePayments,
-            'landlords' => $landlords,
-            'recentActivities' => $recentActivities,
-            // Occupancy rate
-            'occupancyRate' => $totalUnits > 0
-                ? round(($rentedUnits / $totalUnits) * 100, 1)
-                : 0,
+            'financialWidgets' => $financialWidgets,
+            'currentMonthLabel' => $currentMonthLabel,
+            'selectedMonth' => $selectedMonthVal,
+            
+            'overall' => [
+                'total' => $overallTotal,
+                'rented' => $overallRented,
+                'vacant' => $overallVacant,
+            ],
+            'pmMall' => [
+                'total' => $pmMallTotal,
+                'rented' => $pmMallRented,
+                'vacant' => $pmMallVacant,
+            ],
+            'otherOwned' => [
+                'total' => $otherOwnedTotal,
+                'rented' => $otherOwnedRented,
+                'vacant' => $otherOwnedVacant,
+            ],
+        ]);
+    }
+
+    /**
+     * Show the detailed view of flats and shops grouped by floor and block.
+     */
+    public function unitsDetail(Request $request): View
+    {
+        $type = $request->input('type', 'pm_mall'); // 'pm_mall' or 'other_owned'
+        $isSelf = $type === 'other_owned';
+
+        // Fetch all units of this ownership type with floor, block, and area preloaded
+        $units = Unit::where('is_self', $isSelf)
+            ->with(['floor', 'block', 'area'])
+            ->get();
+
+        $stats = [
+            'total' => $units->count(),
+            'rented' => $units->where('status', 'rented')->count(),
+            'vacant' => $units->where('status', 'vacant')->count(),
+        ];
+
+        // Retrieve floors and blocks in order to populate combos
+        $floors = Floor::orderBy('id')->get();
+        $blocks = Block::orderBy('id')->get();
+
+        $structuredGrouped = [];
+        foreach ($floors as $floor) {
+            foreach ($blocks as $block) {
+                $filtered = $units->filter(fn($u) => $u->floor_id == $floor->id && $u->block_id == $block->id);
+                if ($filtered->isNotEmpty()) {
+                    $structuredGrouped[$floor->name][$block->name] = $filtered->sortBy('unit_number');
+                }
+            }
+        }
+
+        // Add fallback for units without floor or block
+        $noFloorOrBlock = $units->filter(fn($u) => is_null($u->floor_id) || is_null($u->block_id));
+        if ($noFloorOrBlock->isNotEmpty()) {
+            $structuredGrouped['Other']['Other'] = $noFloorOrBlock->sortBy('unit_number');
+        }
+
+        $typeLabel = $type === 'pm_mall' ? 'Palladium Mall Managed' : 'Other-Owned';
+
+        return view('dashboard.units_detail', [
+            'title' => $typeLabel . ' — Detail List',
+            'typeLabel' => $typeLabel,
+            'type' => $type,
+            'grouped' => $structuredGrouped,
+            'stats' => $stats,
         ]);
     }
 }
