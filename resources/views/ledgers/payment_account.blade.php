@@ -113,7 +113,7 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
                         @forelse($ledgerData['entries'] as $entry)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                            <tr class="{{ !empty($entry['is_opening']) ? 'bg-amber-50/20 dark:bg-amber-950/5 font-medium' : '' }} hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                 <td class="px-5 py-3.5 text-xs font-mono">
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>

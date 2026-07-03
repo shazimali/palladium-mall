@@ -169,6 +169,17 @@
                                         </svg>
                                     </a>
 
+                                    {{-- Edit --}}
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <a href="{{ route('receiving-vouchers.edit', $voucher) }}"
+                                            class="inline-flex items-center rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 transition-colors"
+                                            title="Edit Voucher">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </a>
+                                    @endif
+
                                     {{-- Delete/Cancel --}}
                                     @if(auth()->user()->hasPermission('receiving_vouchers.delete') || auth()->user()->isSuperAdmin())
                                         <form action="{{ route('receiving-vouchers.destroy', $voucher) }}" method="POST" x-data

@@ -64,7 +64,13 @@ class PaymentVoucherController extends Controller
 
         $owners = Owner::orderBy('name')->get();
         $parties = \App\Models\Party::orderBy('name')->get();
-        $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
+        $paymentAccounts = PaymentAccount::where('is_active', true)
+            ->withSum('receivingVouchers', 'amount')
+            ->withSum('generalReceivingVouchers', 'amount')
+            ->withSum('paymentVouchers', 'amount')
+            ->withSum('expenses', 'amount')
+            ->orderBy('name')
+            ->get();
 
         return view('payment_vouchers.create', [
             'title'           => 'New Payment Voucher',
@@ -164,5 +170,79 @@ class PaymentVoucherController extends Controller
 
         return redirect()->route('payment-vouchers.index')
             ->with('success', 'Payment voucher cancelled/deleted successfully.');
+    }
+
+    /**
+     * Show the form for editing the specified payment voucher.
+     */
+    public function edit(PaymentVoucher $paymentVoucher): View
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        }
+
+        $owners = Owner::orderBy('name')->get();
+        $parties = \App\Models\Party::orderBy('name')->get();
+        $paymentAccounts = PaymentAccount::where('is_active', true)
+            ->withSum('receivingVouchers', 'amount')
+            ->withSum('generalReceivingVouchers', 'amount')
+            ->withSum('paymentVouchers', 'amount')
+            ->withSum('expenses', 'amount')
+            ->orderBy('name')
+            ->get();
+
+        return view('payment_vouchers.edit', [
+            'title'           => 'Edit Payment Voucher — ' . $paymentVoucher->voucher_no,
+            'voucher'         => $paymentVoucher,
+            'owners'          => $owners,
+            'parties'         => $parties,
+            'paymentAccounts' => $paymentAccounts,
+        ]);
+    }
+
+    /**
+     * Update the specified payment voucher in storage.
+     */
+    public function update(Request $request, PaymentVoucher $paymentVoucher): RedirectResponse
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        }
+
+        $rules = [
+            'date'               => ['required', 'date'],
+            'amount'             => ['required', 'numeric', 'min:0.01'],
+            'paid_to_type'       => ['required', 'string', 'in:owner,other'],
+            'payment_account_id' => ['required', 'exists:payment_accounts,id'],
+            'reference'          => ['nullable', 'string', 'max:255'],
+            'notes'              => ['nullable', 'string', 'max:1000'],
+            'is_advance'         => ['nullable', 'boolean'],
+        ];
+
+        if ($request->input('paid_to_type') === 'owner') {
+            $rules['owner_id'] = ['required', 'exists:owners,id'];
+        } else {
+            $rules['party_id'] = ['required', 'exists:parties,id'];
+        }
+
+        $data = $request->validate($rules);
+
+        $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
+        $data['payment_method'] = $paymentAccount->type;
+        $data['is_advance'] = $request->has('is_advance');
+
+        if ($request->input('paid_to_type') === 'owner') {
+            $data['party_id'] = null;
+            $data['other_name'] = null;
+        } else {
+            $data['owner_id'] = null;
+            $party = \App\Models\Party::findOrFail($data['party_id']);
+            $data['other_name'] = $party->name;
+        }
+
+        $paymentVoucher->update($data);
+
+        return redirect()->route('payment-vouchers.index')
+            ->with('success', 'Payment voucher updated successfully.');
     }
 }

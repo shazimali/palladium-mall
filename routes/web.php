@@ -12,6 +12,8 @@ use App\Http\Controllers\MeterController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LandlordController;
+use App\Http\Controllers\LandlordLedgerController;
+use App\Http\Controllers\LandlordPayableController;
 use App\Http\Controllers\AjaxUnitController;
 use App\Http\Controllers\PaymentAccountController;
 use App\Http\Controllers\InspectionPersonController;
@@ -111,6 +113,13 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:landlords.view')->group(function () {
         Route::resource('landlords', LandlordController::class);
+        
+        // Landlord Ledgers
+        Route::get('landlord-ledgers', [LandlordLedgerController::class, 'index'])->name('landlord_ledgers.index');
+        Route::get('landlord-ledgers/{landlord}', [LandlordLedgerController::class, 'show'])->name('landlord_ledgers.show');
+        
+        // Landlord Payables
+        Route::resource('landlord-payables', LandlordPayableController::class)->except(['show', 'create', 'edit']);
     });
 
     Route::middleware('permission:parties.view')->group(function () {
@@ -118,7 +127,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:general_receiving_vouchers.view')->group(function () {
-        Route::resource('general-receiving-vouchers', \App\Http\Controllers\GeneralReceivingVoucherController::class)->except(['edit', 'update']);
+        Route::resource('general-receiving-vouchers', \App\Http\Controllers\GeneralReceivingVoucherController::class);
         Route::get('general-receiving-vouchers/{general_receiving_voucher}/print', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'print'])->name('general-receiving-vouchers.print');
     });
  
@@ -214,14 +223,14 @@ Route::middleware('auth')->group(function () {
 
     // Receiving Vouchers
     Route::middleware('permission:receiving_vouchers.view')->group(function () {
-        Route::resource('receiving-vouchers', ReceivingVoucherController::class)->except(['edit', 'update']);
+        Route::resource('receiving-vouchers', ReceivingVoucherController::class);
         Route::get('receiving-vouchers/{receiving_voucher}/print', [ReceivingVoucherController::class, 'print'])
             ->name('receiving-vouchers.print');
     });
 
     // Payment Vouchers
     Route::middleware('permission:payment_vouchers.view')->group(function () {
-        Route::resource('payment-vouchers', PaymentVoucherController::class)->except(['edit', 'update']);
+        Route::resource('payment-vouchers', PaymentVoucherController::class);
         Route::get('payment-vouchers/{payment_voucher}/print', [PaymentVoucherController::class, 'print'])
             ->name('payment-vouchers.print');
     });

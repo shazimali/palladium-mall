@@ -21,10 +21,12 @@ class PaymentAccount extends Model
         'is_active',
         'notes',
         'type',
+        'opening_balance',
     ];
  
     protected $casts = [
         'is_active' => 'boolean',
+        'opening_balance' => 'decimal:2',
     ];
  
     /**
@@ -33,5 +35,51 @@ class PaymentAccount extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function receivingVouchers(): HasMany
+    {
+        return $this->hasMany(ReceivingVoucher::class);
+    }
+
+    public function generalReceivingVouchers(): HasMany
+    {
+        return $this->hasMany(GeneralReceivingVoucher::class);
+    }
+
+    public function paymentVouchers(): HasMany
+    {
+        return $this->hasMany(PaymentVoucher::class);
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    /**
+     * Get the computed current balance of the payment account.
+     */
+    public function getCurrentBalanceAttribute(): float
+    {
+        $opening = (float) $this->opening_balance;
+
+        $inflowRVs = array_key_exists('receiving_vouchers_sum_amount', $this->attributes)
+            ? (float) $this->attributes['receiving_vouchers_sum_amount']
+            : ($this->relationLoaded('receivingVouchers') ? (float) $this->receivingVouchers->sum('amount') : (float) $this->receivingVouchers()->sum('amount'));
+
+        $inflowGRVs = array_key_exists('general_receiving_vouchers_sum_amount', $this->attributes)
+            ? (float) $this->attributes['general_receiving_vouchers_sum_amount']
+            : ($this->relationLoaded('generalReceivingVouchers') ? (float) $this->generalReceivingVouchers->sum('amount') : (float) $this->generalReceivingVouchers()->sum('amount'));
+
+        $outflowPVs = array_key_exists('payment_vouchers_sum_amount', $this->attributes)
+            ? (float) $this->attributes['payment_vouchers_sum_amount']
+            : ($this->relationLoaded('paymentVouchers') ? (float) $this->paymentVouchers->sum('amount') : (float) $this->paymentVouchers()->sum('amount'));
+
+        $outflowExpenses = array_key_exists('expenses_sum_amount', $this->attributes)
+            ? (float) $this->attributes['expenses_sum_amount']
+            : ($this->relationLoaded('expenses') ? (float) $this->expenses->sum('amount') : (float) $this->expenses()->sum('amount'));
+
+        return $opening + $inflowRVs + $inflowGRVs - $outflowPVs - $outflowExpenses;
     }
 }

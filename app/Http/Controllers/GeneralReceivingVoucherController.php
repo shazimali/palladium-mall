@@ -151,4 +151,54 @@ class GeneralReceivingVoucherController extends Controller
         return redirect()->route('general-receiving-vouchers.index')
             ->with('success', 'General receiving voucher deleted successfully.');
     }
+
+    /**
+     * Show the form for editing the specified general receiving voucher.
+     */
+    public function edit(GeneralReceivingVoucher $generalReceivingVoucher): View
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        }
+
+        $parties = Party::orderBy('name')->get();
+        $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
+
+        return view('general_receiving_vouchers.edit', [
+            'title'           => 'Edit General Receiving Voucher — ' . $generalReceivingVoucher->voucher_no,
+            'voucher'         => $generalReceivingVoucher,
+            'parties'         => $parties,
+            'paymentAccounts' => $paymentAccounts,
+        ]);
+    }
+
+    /**
+     * Update the specified general receiving voucher in storage.
+     */
+    public function update(Request $request, GeneralReceivingVoucher $generalReceivingVoucher): RedirectResponse
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        }
+
+        $rules = [
+            'date'               => ['required', 'date'],
+            'amount'             => ['required', 'numeric', 'min:1'],
+            'party_id'           => ['required', 'exists:parties,id'],
+            'payment_account_id' => ['required', 'exists:payment_accounts,id'],
+            'reference'          => ['nullable', 'string', 'max:255'],
+            'notes'              => ['nullable', 'string', 'max:1000'],
+        ];
+
+        $data = $request->validate($rules);
+
+        $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
+        $data['payment_method'] = $paymentAccount->type;
+        $data['amount'] = round((float) $data['amount']);
+
+        $generalReceivingVoucher->update($data);
+
+        return redirect()->route('general-receiving-vouchers.index')
+            ->with('success', 'General receiving voucher updated successfully.');
+    }
 }

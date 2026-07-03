@@ -5,25 +5,37 @@
         <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <a href="{{ route('payment-vouchers.index') }}" class="hover:text-brand-500">Payment Vouchers</a>
             <span>/</span>
-            <span class="text-gray-800 dark:text-white/90">New Payment Voucher</span>
+            <span class="text-gray-800 dark:text-white/90">Edit Payment Voucher</span>
         </div>
 
-        <x-common.component-card title="Record Payment Voucher" desc="Record a payout from mall accounts to a managing owner/partner or a miscellaneous recipient">
-            <form action="{{ route('payment-vouchers.store') }}" method="POST" class="space-y-6" 
+        <x-common.component-card :title="'Edit Payment Voucher: ' . $voucher->voucher_no" desc="Modify payout details. Restricted to Super Administrators only.">
+            <form action="{{ route('payment-vouchers.update', $voucher) }}" method="POST" class="space-y-6" 
                 x-data="{ 
-                    paidToType: '{{ old('paid_to_type', 'owner') }}',
+                    paidToType: '{{ old('paid_to_type', $voucher->paid_to_type) }}',
                     selectedBalance: null,
                     selectedAccountName: '',
-                    amount: '{{ old('amount') }}'
+                    amount: '{{ old('amount', $voucher->amount) }}',
+                    originalAccountId: '{{ $voucher->payment_account_id }}',
+                    originalAmount: '{{ $voucher->amount }}',
+                    get adjustedBalance() {
+                        if (this.selectedBalance === null || this.selectedBalance === '') return 0;
+                        let balance = parseFloat(this.selectedBalance);
+                        let opt = document.querySelector('select[name=payment_account_id]').selectedOptions[0];
+                        if (opt && opt.value === this.originalAccountId) {
+                            balance += parseFloat(this.originalAmount);
+                        }
+                        return balance;
+                    }
                 }"
                 @submit="
-                    if (selectedBalance !== null && selectedBalance !== '' && parseFloat(amount) > parseFloat(selectedBalance)) {
-                        if (!confirm('This account (' + selectedAccountName + ') has insufficient funds. \n\nAvailable balance: Rs. ' + Number(selectedBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\nPayment amount: Rs. ' + Number(amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\n\nThe account balance will become negative. Do you want to proceed?')) {
+                    if (adjustedBalance !== null && parseFloat(amount) > adjustedBalance) {
+                        if (!confirm('This account (' + selectedAccountName + ') has insufficient funds. \n\nAvailable balance (adjusted): Rs. ' + adjustedBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\nPayment amount: Rs. ' + Number(amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\n\nThe account balance will become negative. Do you want to proceed?')) {
                             $event.preventDefault();
                         }
                     }
                 ">
                 @csrf
+                @method('PUT')
 
                 @php
                     $input = 'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600';
@@ -35,8 +47,8 @@
                     <div>
                         <label class="{{ $label }}">Paid To Type <span class="text-red-500">*</span></label>
                         <select name="paid_to_type" x-model="paidToType" class="{{ $input }} {{ $errors->has('paid_to_type') ? 'border-red-400' : '' }}" required>
-                            <option value="owner" {{ old('paid_to_type', 'owner') === 'owner' ? 'selected' : '' }}>Managing Owner (Partner)</option>
-                            <option value="other" {{ old('paid_to_type') === 'other' ? 'selected' : '' }}>Other (Miscellaneous)</option>
+                            <option value="owner" {{ old('paid_to_type', $voucher->paid_to_type) === 'owner' ? 'selected' : '' }}>Managing Owner (Partner)</option>
+                            <option value="other" {{ old('paid_to_type', $voucher->paid_to_type) === 'other' ? 'selected' : '' }}>Other (Miscellaneous)</option>
                         </select>
                         @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
@@ -47,7 +59,7 @@
                         <select name="owner_id" class="{{ $input }} {{ $errors->has('owner_id') ? 'border-red-400' : '' }}" :required="paidToType === 'owner'">
                             <option value="">Select Owner</option>
                             @foreach($owners as $owner)
-                                <option value="{{ $owner->id }}" {{ old('owner_id') == $owner->id ? 'selected' : '' }}>
+                                <option value="{{ $owner->id }}" {{ old('owner_id', $voucher->owner_id) == $owner->id ? 'selected' : '' }}>
                                     {{ $owner->name }}
                                 </option>
                             @endforeach
@@ -60,8 +72,8 @@
                          x-data="{
                             open: false,
                             search: '',
-                            selectedId: '{{ old('party_id') }}',
-                            selectedLabel: '{{ old('party_name') }}',
+                            selectedId: '{{ old('party_id', $voucher->party_id) }}',
+                            selectedLabel: '{{ old('party_name', $voucher->other_name) }}',
                             highlightedIndex: -1,
                             parties: [
                                 @foreach($parties as $party)
@@ -83,7 +95,7 @@
                             moveHighlight(direction) {
                                 let list = this.filteredParties;
                                 if (list.length === 0) return;
-                                this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                                    this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
                             },
                             selectHighlighted() {
                                 let list = this.filteredParties;
@@ -162,7 +174,7 @@
                     {{-- Date --}}
                     <div>
                         <label class="{{ $label }}">Voucher Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="date" value="{{ old('date', date('Y-m-d')) }}" 
+                        <input type="date" name="date" value="{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}" 
                                class="{{ $input }} {{ $errors->has('date') ? 'border-red-400' : '' }}" required>
                         @error('date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
@@ -195,7 +207,7 @@
                             ">
                             <option value="" data-balance="" data-name="">Select Account</option>
                             @foreach($paymentAccounts as $account)
-                                <option value="{{ $account->id }}" data-balance="{{ $account->current_balance }}" data-name="{{ $account->name }}" {{ old('payment_account_id') == $account->id ? 'selected' : '' }}>
+                                <option value="{{ $account->id }}" data-balance="{{ $account->current_balance }}" data-name="{{ $account->name }}" {{ old('payment_account_id', $voucher->payment_account_id) == $account->id ? 'selected' : '' }}>
                                     {{ $account->name }} ({{ $account->bank_name ?? 'Cash' }}) — Type: {{ ucfirst($account->type) }}
                                 </option>
                             @endforeach
@@ -205,7 +217,7 @@
                         <template x-if="selectedBalance !== null && selectedBalance !== ''">
                             <div class="mt-2 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/30 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700/60 flex justify-between items-center">
                                 <span>Available Balance:</span>
-                                <span :class="parseFloat(selectedBalance) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" class="font-bold text-sm" x-text="'Rs. ' + Number(selectedBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                                <span :class="adjustedBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" class="font-bold text-sm" x-text="'Rs. ' + adjustedBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
                             </div>
                         </template>
                     </div>
@@ -213,7 +225,7 @@
                     {{-- Reference/Cheque Number --}}
                     <div>
                         <label class="{{ $label }}">Reference / Cheque Number</label>
-                        <input type="text" name="reference" value="{{ old('reference') }}" placeholder="e.g. Online Ref #, Cheque #01848" 
+                        <input type="text" name="reference" value="{{ old('reference', $voucher->reference) }}" placeholder="e.g. Online Ref #, Cheque #01848" 
                                class="{{ $input }} {{ $errors->has('reference') ? 'border-red-400' : '' }}">
                         @error('reference') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
@@ -221,7 +233,7 @@
                     {{-- Is Advance Payment Checkbox --}}
                     <div class="sm:col-span-2 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
                         <div class="flex h-5 items-center">
-                            <input id="is_advance" name="is_advance" type="checkbox" value="1" {{ old('is_advance') ? 'checked' : '' }}
+                            <input id="is_advance" name="is_advance" type="checkbox" value="1" {{ old('is_advance', $voucher->is_advance) ? 'checked' : '' }}
                                    class="h-4 w-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800">
                         </div>
                         <div class="text-sm">
@@ -234,7 +246,7 @@
                     <div class="sm:col-span-2">
                         <label class="{{ $label }}">Description / Notes</label>
                         <textarea name="notes" placeholder="Enter voucher details, breakdown, or reasons here..." rows="3"
-                                  class="{{ $input }} {{ $errors->has('notes') ? 'border-red-400' : '' }}">{{ old('notes') }}</textarea>
+                                  class="{{ $input }} {{ $errors->has('notes') ? 'border-red-400' : '' }}">{{ old('notes', $voucher->notes) }}</textarea>
                         @error('notes') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
                 </div>
@@ -247,7 +259,7 @@
                     </a>
                     <button type="submit"
                             class="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors">
-                        Save Payment Voucher
+                        Save Changes
                     </button>
                 </div>
             </form>

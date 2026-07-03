@@ -19,11 +19,22 @@
 @isset($summary)
 <div id="ajax-paginator-meta" class="hidden" 
      data-total="{{ $payments->total() }}"
-     @foreach(['rent', 'maintenance', 'fine', 'electricity', 'water', 'gas', 'other', 'security_deposit'] as $t)
-         data-{{ $t }}-due="Rs. {{ number_format($summary[$t . '_due']) }}"
-         data-{{ $t }}-paid="Rs. {{ number_format($summary[$t . '_paid']) }}"
-         data-{{ $t }}-unpaid="Rs. {{ number_format($summary[$t . '_unpaid']) }}"
-     @endforeach></div>
+     data-grand_total-due="Rs. {{ number_format($summary['total_due'] ?? 0) }}"
+     data-grand_total-paid="Rs. {{ number_format($summary['total_paid'] ?? 0) }}"
+     data-grand_total-unpaid="Rs. {{ number_format(($summary['total_due'] ?? 0) - ($summary['total_paid'] ?? 0)) }}"
+     data-rent-due="Rs. {{ number_format($summary['rent_due'] ?? 0) }}"
+     data-rent-paid="Rs. {{ number_format($summary['rent_paid'] ?? 0) }}"
+     data-rent-unpaid="Rs. {{ number_format($summary['rent_unpaid'] ?? 0) }}"
+     @php
+         $servDue = ($summary['maintenance_due'] ?? 0) + ($summary['fine_due'] ?? 0) + ($summary['electricity_due'] ?? 0) + ($summary['water_due'] ?? 0) + ($summary['gas_due'] ?? 0) + ($summary['other_due'] ?? 0);
+         $servPaid = ($summary['maintenance_paid'] ?? 0) + ($summary['fine_paid'] ?? 0) + ($summary['electricity_paid'] ?? 0) + ($summary['water_paid'] ?? 0) + ($summary['gas_paid'] ?? 0) + ($summary['other_paid'] ?? 0);
+     @endphp
+     data-services-due="Rs. {{ number_format($servDue) }}"
+     data-services-paid="Rs. {{ number_format($servPaid) }}"
+     data-services-unpaid="Rs. {{ number_format($servDue - $servPaid) }}"
+     data-security_deposit-due="Rs. {{ number_format($summary['security_deposit_due'] ?? 0) }}"
+     data-security_deposit-paid="Rs. {{ number_format($summary['security_deposit_paid'] ?? 0) }}"
+     data-security_deposit-unpaid="Rs. {{ number_format($summary['security_deposit_unpaid'] ?? 0) }}"></div>
 @else
 <div id="ajax-paginator-meta" class="hidden" 
      data-total="{{ $payments->total() }}"></div>

@@ -28,6 +28,7 @@ class UpdatePaymentAccountRequest extends FormRequest
             'is_active' => ['nullable', 'boolean'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'type' => ['required', 'in:cash,bank_transfer,cheque,other'],
+            'opening_balance' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }

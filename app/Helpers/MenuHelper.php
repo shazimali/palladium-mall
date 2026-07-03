@@ -91,7 +91,11 @@ class MenuHelper
             $mainItems[] = [
                 'icon' => 'user-profile',
                 'name' => 'Landlords',
-                'path' => '/landlords',
+                'subItems' => [
+                    ['name' => 'All Landlords', 'path' => '/landlords', 'pro' => false],
+                    ['name' => 'Landlord Payables', 'path' => '/landlord-payables', 'pro' => false],
+                    ['name' => 'Landlord Ledgers', 'path' => '/landlord-ledgers', 'pro' => false],
+                ],
             ];
         }
 

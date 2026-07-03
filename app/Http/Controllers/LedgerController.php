@@ -474,7 +474,37 @@ class LedgerController extends Controller
         $account = PaymentAccount::findOrFail($accountId);
         $entries = collect();
 
-        // 1. Credits (Inflows): ReceivingVouchers
+        // 1. Calculate prior inflows and outflows to compute carried forward opening balance
+        $priorInflowRVs = (float) ReceivingVoucher::where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
+            ->sum('amount');
+
+        $priorInflowGRVs = (float) \App\Models\GeneralReceivingVoucher::where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
+            ->sum('amount');
+
+        $priorOutflowPVs = (float) PaymentVoucher::where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
+            ->sum('amount');
+
+        $priorOutflowExpenses = (float) Expense::where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
+            ->sum('amount');
+
+        $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs - $priorOutflowPVs - $priorOutflowExpenses;
+
+        // Prepend carried forward opening balance row
+        $entries->push([
+            'date' => $dateFrom ? Carbon::parse($dateFrom)->subDay() : ($account->created_at ?? Carbon::now()),
+            'voucher_no' => '—',
+            'type' => 'Opening Balance',
+            'description' => $dateFrom ? 'Opening Balance (Carried Forward)' : 'Opening Balance',
+            'debit' => $carriedForwardBalance >= 0 ? $carriedForwardBalance : 0.00,
+            'credit' => $carriedForwardBalance < 0 ? abs($carriedForwardBalance) : 0.00,
+            'is_opening' => true,
+        ]);
+
+        // 2. Credits (Inflows) in the selected period: ReceivingVouchers
         $receipts = ReceivingVoucher::where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
@@ -491,7 +521,7 @@ class LedgerController extends Controller
             ]);
         }
 
-        // 1b. General Credits (Inflows): GeneralReceivingVouchers
+        // 2b. General Credits (Inflows) in the selected period: GeneralReceivingVouchers
         $generalReceipts = \App\Models\GeneralReceivingVoucher::with('party')
             ->where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
@@ -513,7 +543,7 @@ class LedgerController extends Controller
             ]);
         }
 
-        // 2. Debits (Outflows): PaymentVouchers
+        // 3. Debits (Outflows) in the selected period: PaymentVouchers
         $payouts = PaymentVoucher::where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
@@ -530,7 +560,7 @@ class LedgerController extends Controller
             ]);
         }
 
-        // 3. Debits (Outflows): Expense Vouchers
+        // 4. Debits (Outflows) in the selected period: Expense Vouchers
         $expenses = Expense::where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
@@ -547,17 +577,23 @@ class LedgerController extends Controller
             ]);
         }
 
-        // Sort chronologically
-        $entries = $entries->sortBy(fn($e) => $e['date']->format('Y-m-d'))->values();
+        // Sort chronologically, with opening balance row always first
+        $entries = $entries->sortBy(function ($e) {
+            return ($e['is_opening'] ?? false) ? '0000-00-00' : $e['date']->format('Y-m-d');
+        })->values();
 
         $runningBalance = 0.00;
         $totalInflow = 0.00;
         $totalOutflow = 0.00;
 
         $entries = $entries->map(function ($entry) use (&$runningBalance, &$totalInflow, &$totalOutflow) {
-            $totalInflow += $entry['debit'];
-            $totalOutflow += $entry['credit'];
-            $runningBalance += ($entry['debit'] - $entry['credit']);
+            if (empty($entry['is_opening'])) {
+                $totalInflow += $entry['debit'];
+                $totalOutflow += $entry['credit'];
+                $runningBalance += ($entry['debit'] - $entry['credit']);
+            } else {
+                $runningBalance = $entry['debit'] - $entry['credit'];
+            }
             $entry['running_balance'] = $runningBalance;
             return $entry;
         });

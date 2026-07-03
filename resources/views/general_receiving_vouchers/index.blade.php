@@ -152,6 +152,12 @@
                                         class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                                         Print
                                     </a>
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <a href="{{ route('general-receiving-vouchers.edit', $voucher) }}"
+                                            class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 dark:border-blue-900/30 dark:bg-blue-950/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors">
+                                            Edit
+                                        </a>
+                                    @endif
                                     @if(auth()->user()->hasPermission('general_receiving_vouchers.delete') || auth()->user()->isSuperAdmin())
                                         <form action="{{ route('general-receiving-vouchers.destroy', $voucher) }}" method="POST"
                                             onsubmit="return confirm('Are you sure you want to delete this general receiving voucher?');"

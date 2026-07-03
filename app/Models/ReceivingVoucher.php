@@ -78,4 +78,14 @@ class ReceivingVoucher extends Model
             ->withPivot('amount_allocated')
             ->withTimestamps();
     }
+
+    /**
+     * Landlord Payables paid off/allocated by this receiving voucher.
+     */
+    public function landlordPayables(): BelongsToMany
+    {
+        return $this->belongsToMany(LandlordPayable::class, 'receiving_voucher_landlord_payables')
+            ->withPivot('amount_allocated')
+            ->withTimestamps();
+    }
 }

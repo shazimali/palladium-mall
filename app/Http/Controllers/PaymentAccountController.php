@@ -17,6 +17,10 @@ class PaymentAccountController extends Controller
             ->withSum(['payments as total_received' => function ($q) {
                 $q->whereIn('status', ['paid', 'partial']);
             }], 'amount_paid')
+            ->withSum('receivingVouchers', 'amount')
+            ->withSum('generalReceivingVouchers', 'amount')
+            ->withSum('paymentVouchers', 'amount')
+            ->withSum('expenses', 'amount')
             ->when($request->search, function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
                     ->orWhere('bank_name', 'like', "%{$request->search}%")
@@ -55,7 +59,11 @@ class PaymentAccountController extends Controller
     {
         $paymentAccount->loadSum(['payments as total_received' => function ($q) {
             $q->whereIn('status', ['paid', 'partial']);
-        }], 'amount_paid');
+        }], 'amount_paid')
+        ->loadSum('receivingVouchers', 'amount')
+        ->loadSum('generalReceivingVouchers', 'amount')
+        ->loadSum('paymentVouchers', 'amount')
+        ->loadSum('expenses', 'amount');
  
         $payments = $paymentAccount->payments()
             ->with(['tenant', 'unit'])

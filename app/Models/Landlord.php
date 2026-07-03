@@ -53,4 +53,20 @@ class Landlord extends Model
     {
         return $this->hasMany(UnitOwnership::class)->where('is_current', true);
     }
+
+    /**
+     * Payables/Installments due from this landlord.
+     */
+    public function payables(): HasMany
+    {
+        return $this->hasMany(LandlordPayable::class)->orderBy('due_date', 'asc');
+    }
+
+    /**
+     * Get the remaining opening balance (Opening Balance - Payables).
+     */
+    public function getRemainingOpeningBalanceAttribute(): float
+    {
+        return (float) ($this->ownerships->sum('credit_amount') - $this->payables->sum('amount'));
+    }
 }

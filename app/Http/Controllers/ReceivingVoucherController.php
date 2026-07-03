@@ -253,30 +253,181 @@ class ReceivingVoucherController extends Controller
     }
 
     /**
+     * Show the form for editing the specified receiving voucher.
+     */
+    public function edit(ReceivingVoucher $receivingVoucher): View
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        }
+
+        $tenants = Tenant::where('status', 'active')->orWhere('id', $receivingVoucher->tenant_id)->orderBy('name')->get();
+        $owners = Owner::orderBy('name')->get();
+        $paymentAccounts = PaymentAccount::where('is_active', true)->orWhere('id', $receivingVoucher->payment_account_id)->orderBy('name')->get();
+
+        return view('receiving_vouchers.edit', [
+            'title' => 'Edit Receiving Voucher — ' . $receivingVoucher->voucher_no,
+            'voucher' => $receivingVoucher,
+            'tenants' => $tenants,
+            'owners' => $owners,
+            'paymentAccounts' => $paymentAccounts,
+        ]);
+    }
+
+    /**
+     * Update the specified receiving voucher in storage.
+     */
+    public function update(Request $request, ReceivingVoucher $receivingVoucher): RedirectResponse
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        }
+
+        $rules = [
+            'date' => ['required', 'date'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'received_from_type' => ['required', 'string', 'in:tenant'],
+            'tenant_id' => ['required', 'exists:tenants,id'],
+            'payment_account_id' => ['required', 'exists:payment_accounts,id'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:1000'],
+        ];
+
+        $data = $request->validate($rules);
+
+        $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
+        $data['payment_method'] = $paymentAccount->type;
+        $data['user_id'] = auth()->id() ?? 1;
+
+        DB::beginTransaction();
+        try {
+            // 1. Revert old allocations
+            if ($receivingVoucher->received_from_type === 'tenant') {
+                foreach ($receivingVoucher->payments as $payment) {
+                    $allocatedAmount = $payment->pivot->amount_allocated;
+                    $revertedAmountPaid = max(0.00, (float) $payment->amount_paid - (float) $allocatedAmount);
+
+                    if ($revertedAmountPaid <= 0) {
+                        $payment->update([
+                            'amount_paid' => 0.00,
+                            'status' => 'unpaid',
+                            'paid_at' => null,
+                            'payment_account_id' => null,
+                            'payment_method' => null,
+                            'reference' => null,
+                        ]);
+                    } else {
+                        $payment->update([
+                            'amount_paid' => $revertedAmountPaid,
+                            'status' => Payment::calculateStatus((float) $payment->amount, $revertedAmountPaid),
+                        ]);
+                    }
+                }
+                $receivingVoucher->payments()->detach();
+            }
+
+            // 2. Fetch new outstanding balance
+            $payments = Payment::where('tenant_id', $data['tenant_id'])
+                ->whereIn('status', ['unpaid', 'partial'])
+                ->orderBy('month', 'asc')
+                ->lockForUpdate()
+                ->get();
+
+            $totalBalance = $payments->sum(fn($p) => (float) $p->balanceDue());
+            $amount = (float) $data['amount'];
+
+            if ($amount > $totalBalance + 0.01) {
+                throw new \Exception('Voucher amount exceeds the total outstanding balance (Rs. ' . number_format($totalBalance, 2) . ').');
+            }
+
+            // 3. Update Voucher
+            $receivingVoucher->update($data);
+
+            // 4. Apply new allocations
+            $remainingAmount = round($amount, 2);
+
+            foreach ($payments as $payment) {
+                if ($remainingAmount <= 0) {
+                    break;
+                }
+
+                $balanceDue = round((float) $payment->balanceDue(), 2);
+
+                if ($remainingAmount >= $balanceDue) {
+                    $allocatedAmount = $balanceDue;
+                } else {
+                    $allocatedAmount = $remainingAmount;
+                }
+
+                $newAmountPaid = round((float) $payment->amount_paid + $allocatedAmount, 2);
+
+                $payment->update([
+                    'amount_paid' => $newAmountPaid,
+                    'status' => Payment::calculateStatus((float) $payment->amount, $newAmountPaid),
+                    'paid_at' => $payment->paid_at ?? $data['date'],
+                    'payment_account_id' => $data['payment_account_id'],
+                    'payment_method' => $data['payment_method'],
+                    'reference' => $data['reference'],
+                ]);
+
+                $receivingVoucher->payments()->attach($payment->id, ['amount_allocated' => $allocatedAmount]);
+
+                $remainingAmount = round($remainingAmount - $allocatedAmount, 2);
+            }
+
+            DB::commit();
+
+            return redirect()->route('receiving-vouchers.index')
+                ->with('success', 'Receiving voucher updated and auto-allocated successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->withErrors(['amount' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Fetch unpaid/partial payments for a tenant. (AJAX endpoint)
      */
     public function getTenantPendingPayments(Request $request): JsonResponse
     {
         $tenantId = $request->query('tenant_id');
+        $excludeVoucherId = $request->query('exclude_voucher_id');
         if (!$tenantId) {
             return response()->json(['payments' => []]);
         }
 
-        $payments = Payment::with(['unit'])
+        $payments = Payment::with(['unit', 'receivingVouchers'])
             ->where('tenant_id', $tenantId)
-            ->whereIn('status', ['unpaid', 'partial'])
+            ->where(function ($query) use ($excludeVoucherId) {
+                $query->whereIn('status', ['unpaid', 'partial']);
+                if ($excludeVoucherId) {
+                    $query->orWhereHas('receivingVouchers', function ($q) use ($excludeVoucherId) {
+                        $q->where('receiving_vouchers.id', $excludeVoucherId);
+                    });
+                }
+            })
             ->orderBy('month', 'asc')
             ->get();
 
-        $formatted = $payments->map(fn($p) => [
-            'id' => $p->id,
-            'month' => $p->month ? $p->month->format('M Y') : '—',
-            'type' => $p->type_label,
-            'unit_number' => $p->unit?->unit_number ?? '—',
-            'amount_due' => (float) $p->amount,
-            'amount_paid' => (float) $p->amount_paid,
-            'balance' => (float) $p->balanceDue(),
-        ]);
+        $formatted = $payments->map(function ($p) use ($excludeVoucherId) {
+            $allocated = 0.00;
+            if ($excludeVoucherId) {
+                $voucherLink = $p->receivingVouchers->where('id', $excludeVoucherId)->first();
+                if ($voucherLink && $voucherLink->pivot) {
+                    $allocated = (float) $voucherLink->pivot->amount_allocated;
+                }
+            }
+            return [
+                'id' => $p->id,
+                'month' => $p->month ? $p->month->format('M Y') : '—',
+                'type' => $p->type_label,
+                'unit_number' => $p->unit?->unit_number ?? '—',
+                'amount_due' => (float) $p->amount,
+                'amount_paid' => (float) $p->amount_paid - $allocated,
+                'balance' => (float) $p->balanceDue() + $allocated,
+            ];
+        });
 
         return response()->json(['payments' => $formatted]);
     }

@@ -3,27 +3,15 @@
 @section('content')
     <div class="mx-auto max-w-3xl px-4 py-6">
         <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <a href="{{ route('payment-vouchers.index') }}" class="hover:text-brand-500">Payment Vouchers</a>
+            <a href="{{ route('general-receiving-vouchers.index') }}" class="hover:text-brand-500">General Receiving Vouchers</a>
             <span>/</span>
-            <span class="text-gray-800 dark:text-white/90">New Payment Voucher</span>
+            <span class="text-gray-800 dark:text-white/90">Edit General Voucher</span>
         </div>
 
-        <x-common.component-card title="Record Payment Voucher" desc="Record a payout from mall accounts to a managing owner/partner or a miscellaneous recipient">
-            <form action="{{ route('payment-vouchers.store') }}" method="POST" class="space-y-6" 
-                x-data="{ 
-                    paidToType: '{{ old('paid_to_type', 'owner') }}',
-                    selectedBalance: null,
-                    selectedAccountName: '',
-                    amount: '{{ old('amount') }}'
-                }"
-                @submit="
-                    if (selectedBalance !== null && selectedBalance !== '' && parseFloat(amount) > parseFloat(selectedBalance)) {
-                        if (!confirm('This account (' + selectedAccountName + ') has insufficient funds. \n\nAvailable balance: Rs. ' + Number(selectedBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\nPayment amount: Rs. ' + Number(amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\n\nThe account balance will become negative. Do you want to proceed?')) {
-                            $event.preventDefault();
-                        }
-                    }
-                ">
+        <x-common.component-card :title="'Edit General Receiving Voucher: ' . $voucher->voucher_no" desc="Modify details of this general receipt voucher. Restricted to Super Administrators only.">
+            <form action="{{ route('general-receiving-vouchers.update', $voucher) }}" method="POST" class="space-y-6">
                 @csrf
+                @method('PUT')
 
                 @php
                     $input = 'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600';
@@ -31,37 +19,12 @@
                 @endphp
 
                 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    {{-- Paid To Type --}}
-                    <div>
-                        <label class="{{ $label }}">Paid To Type <span class="text-red-500">*</span></label>
-                        <select name="paid_to_type" x-model="paidToType" class="{{ $input }} {{ $errors->has('paid_to_type') ? 'border-red-400' : '' }}" required>
-                            <option value="owner" {{ old('paid_to_type', 'owner') === 'owner' ? 'selected' : '' }}>Managing Owner (Partner)</option>
-                            <option value="other" {{ old('paid_to_type') === 'other' ? 'selected' : '' }}>Other (Miscellaneous)</option>
-                        </select>
-                        @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Owner Selection --}}
-                    <div x-show="paidToType === 'owner'" x-transition>
-                        <label class="{{ $label }}">Managing Owner / Partner <span class="text-red-500">*</span></label>
-                        <select name="owner_id" class="{{ $input }} {{ $errors->has('owner_id') ? 'border-red-400' : '' }}" :required="paidToType === 'owner'">
-                            <option value="">Select Owner</option>
-                            @foreach($owners as $owner)
-                                <option value="{{ $owner->id }}" {{ old('owner_id') == $owner->id ? 'selected' : '' }}>
-                                    {{ $owner->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('owner_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Other Payee Name (Searchable Party Head Dropdown) --}}
-                    <div x-show="paidToType === 'other'" x-transition x-cloak
-                         x-data="{
+                    {{-- Party Dropdown (Searchable via Alpine) --}}
+                    <div x-data="{
                             open: false,
                             search: '',
-                            selectedId: '{{ old('party_id') }}',
-                            selectedLabel: '{{ old('party_name') }}',
+                            selectedId: '{{ old('party_id', $voucher->party_id) }}',
+                            selectedLabel: '{{ old('party_name', $voucher->party?->name) }}',
                             highlightedIndex: -1,
                             parties: [
                                 @foreach($parties as $party)
@@ -95,8 +58,7 @@
                         <label class="{{ $label }}">Party Head <span class="text-red-500">*</span></label>
                         
                         {{-- Hidden form field --}}
-                        <input type="hidden" name="party_id" :value="selectedId" :required="paidToType === 'other'">
-                        <input type="hidden" name="party_name" :value="selectedLabel">
+                        <input type="hidden" name="party_id" :value="selectedId" required>
 
                         <div class="relative">
                             {{-- Trigger --}}
@@ -106,7 +68,7 @@
                                  @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
                                  @click.outside="open = false"
                                  class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('party_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
-                                <span x-text="selectedLabel || 'Select Registered Party Head'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
+                                <span x-text="selectedLabel || 'Select Party Head'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
                                 <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
@@ -162,7 +124,7 @@
                     {{-- Date --}}
                     <div>
                         <label class="{{ $label }}">Voucher Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="date" value="{{ old('date', date('Y-m-d')) }}" 
+                        <input type="date" name="date" value="{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}" 
                                class="{{ $input }} {{ $errors->has('date') ? 'border-red-400' : '' }}" required>
                         @error('date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
@@ -170,84 +132,51 @@
                     {{-- Amount --}}
                     <div>
                         <label class="{{ $label }}">Amount (Rs.) <span class="text-red-500">*</span></label>
-                        <input type="number" step="0.01" min="0.01" name="amount" x-model="amount" placeholder="0.00" 
+                        <input type="number" step="1" min="1" name="amount" value="{{ old('amount', $voucher->amount) }}" placeholder="e.g. 5000" 
                                class="{{ $input }} {{ $errors->has('amount') ? 'border-red-400' : '' }}" required>
                         @error('amount') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- Paid From (Payment Account) --}}
+                    {{-- Paid To (Payment Account) --}}
                     <div>
-                        <label class="{{ $label }}">Paid From (Payment Account) <span class="text-red-500">*</span></label>
-                        <select name="payment_account_id" class="{{ $input }} {{ $errors->has('payment_account_id') ? 'border-red-400' : '' }}" required
-                            x-init="
-                                $nextTick(() => {
-                                    let opt = $el.selectedOptions[0];
-                                    if (opt) {
-                                        selectedBalance = opt.getAttribute('data-balance');
-                                        selectedAccountName = opt.getAttribute('data-name');
-                                    }
-                                })
-                            "
-                            @change="
-                                let opt = $event.target.selectedOptions[0];
-                                selectedBalance = opt.getAttribute('data-balance');
-                                selectedAccountName = opt.getAttribute('data-name');
-                            ">
-                            <option value="" data-balance="" data-name="">Select Account</option>
+                        <label class="{{ $label }}">Received In (Payment Account) <span class="text-red-500">*</span></label>
+                        <select name="payment_account_id" class="{{ $input }} {{ $errors->has('payment_account_id') ? 'border-red-400' : '' }}" required>
+                            <option value="">Select Account</option>
                             @foreach($paymentAccounts as $account)
-                                <option value="{{ $account->id }}" data-balance="{{ $account->current_balance }}" data-name="{{ $account->name }}" {{ old('payment_account_id') == $account->id ? 'selected' : '' }}>
+                                <option value="{{ $account->id }}" {{ old('payment_account_id', $voucher->payment_account_id) == $account->id ? 'selected' : '' }}>
                                     {{ $account->name }} ({{ $account->bank_name ?? 'Cash' }}) — Type: {{ ucfirst($account->type) }}
                                 </option>
                             @endforeach
                         </select>
                         @error('payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-
-                        <template x-if="selectedBalance !== null && selectedBalance !== ''">
-                            <div class="mt-2 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/30 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700/60 flex justify-between items-center">
-                                <span>Available Balance:</span>
-                                <span :class="parseFloat(selectedBalance) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" class="font-bold text-sm" x-text="'Rs. ' + Number(selectedBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
-                            </div>
-                        </template>
                     </div>
 
                     {{-- Reference/Cheque Number --}}
                     <div>
-                        <label class="{{ $label }}">Reference / Cheque Number</label>
-                        <input type="text" name="reference" value="{{ old('reference') }}" placeholder="e.g. Online Ref #, Cheque #01848" 
+                        <label class="{{ $label }}">Reference / Instrument Number</label>
+                        <input type="text" name="reference" value="{{ old('reference', $voucher->reference) }}" placeholder="e.g. Online Ref #, Cheque #01848" 
                                class="{{ $input }} {{ $errors->has('reference') ? 'border-red-400' : '' }}">
                         @error('reference') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Is Advance Payment Checkbox --}}
-                    <div class="sm:col-span-2 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
-                        <div class="flex h-5 items-center">
-                            <input id="is_advance" name="is_advance" type="checkbox" value="1" {{ old('is_advance') ? 'checked' : '' }}
-                                   class="h-4 w-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800">
-                        </div>
-                        <div class="text-sm">
-                            <label for="is_advance" class="font-semibold text-gray-800 dark:text-white/90">Is Advance Payment?</label>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Check this option if this is an advance payout to the owner or contractor rather than a final distribution/settlement.</p>
-                        </div>
                     </div>
 
                     {{-- Notes/Description --}}
                     <div class="sm:col-span-2">
                         <label class="{{ $label }}">Description / Notes</label>
-                        <textarea name="notes" placeholder="Enter voucher details, breakdown, or reasons here..." rows="3"
-                                  class="{{ $input }} {{ $errors->has('notes') ? 'border-red-400' : '' }}">{{ old('notes') }}</textarea>
+                        <textarea name="notes" placeholder="Enter voucher details, remarks, or breakdown here..." rows="3"
+                                  class="{{ $input }} {{ $errors->has('notes') ? 'border-red-400' : '' }}">{{ old('notes', $voucher->notes) }}</textarea>
                         @error('notes') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
                 </div>
 
                 {{-- Action Buttons --}}
                 <div class="flex items-center justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
-                    <a href="{{ route('payment-vouchers.index') }}"
+                    <a href="{{ route('general-receiving-vouchers.index') }}"
                        class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                         Cancel
                     </a>
                     <button type="submit"
                             class="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors">
-                        Save Payment Voucher
+                        Save Changes
                     </button>
                 </div>
             </form>

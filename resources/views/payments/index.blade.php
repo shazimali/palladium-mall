@@ -42,74 +42,84 @@
         @php
             $monthLabel = request('month') ? Carbon\Carbon::parse(request('month'))->format('F Y') : 'This Month';
         @endphp
-        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-8">
+        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             @php
-                $widgetTypes = [
-                    'rent' => [
-                        'label' => 'Rent',
+                $historyWidgets = [
+                    'grand_total' => [
+                        'label' => 'Grand Total Summary',
                         'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
-                        'paidColor' => 'text-emerald-300',
+                        'icon' => '📊',
                     ],
-                    'maintenance' => [
-                        'label' => 'Maintenance',
-                        'gradient' => 'linear-gradient(135deg, #12b76a 0%, #027a48 100%)',
-                        'paidColor' => 'text-emerald-200',
+                    'rent' => [
+                        'label' => 'Rent Summary',
+                        'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
+                        'icon' => '🔑',
+                    ],
+                    'services' => [
+                        'label' => 'Services Summary',
+                        'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
+                        'icon' => '🛠️',
                     ],
                     'security_deposit' => [
                         'label' => 'Security Deposit',
-                        'gradient' => 'linear-gradient(135deg, #6366f1 0%, #312e81 100%)',
-                        'paidColor' => 'text-emerald-200',
-                    ],
-                    'fine' => [
-                        'label' => 'Fine',
-                        'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
-                        'paidColor' => 'text-emerald-200',
-                    ],
-                    'electricity' => [
-                        'label' => 'Electricity',
-                        'gradient' => 'linear-gradient(135deg, #f79009 0%, #b54708 100%)',
-                        'paidColor' => 'text-emerald-200',
-                    ],
-                    'water' => [
-                        'label' => 'Water',
-                        'gradient' => 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                        'paidColor' => 'text-emerald-200',
-                    ],
-                    'gas' => [
-                        'label' => 'Gas',
                         'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
-                        'paidColor' => 'text-emerald-200',
-                    ],
-                    'other' => [
-                        'label' => 'Other',
-                        'gradient' => 'linear-gradient(135deg, #64748b 0%, #334155 100%)',
-                        'paidColor' => 'text-emerald-200',
+                        'icon' => '🛡️',
                     ],
                 ];
+                
+                $widgetData = [
+                    'grand_total' => [
+                        'due' => $summary['total_due'] ?? 0,
+                        'paid' => $summary['total_paid'] ?? 0,
+                        'unpaid' => ($summary['total_due'] ?? 0) - ($summary['total_paid'] ?? 0),
+                    ],
+                    'rent' => [
+                        'due' => $summary['rent_due'] ?? 0,
+                        'paid' => $summary['rent_paid'] ?? 0,
+                        'unpaid' => $summary['rent_unpaid'] ?? 0,
+                    ],
+                    'services' => [
+                        'due' => ($summary['maintenance_due'] ?? 0) + ($summary['fine_due'] ?? 0) + ($summary['electricity_due'] ?? 0) + ($summary['water_due'] ?? 0) + ($summary['gas_due'] ?? 0) + ($summary['other_due'] ?? 0),
+                        'paid' => ($summary['maintenance_paid'] ?? 0) + ($summary['fine_paid'] ?? 0) + ($summary['electricity_paid'] ?? 0) + ($summary['water_paid'] ?? 0) + ($summary['gas_paid'] ?? 0) + ($summary['other_paid'] ?? 0),
+                    ],
+                    'security_deposit' => [
+                        'due' => $summary['security_deposit_due'] ?? 0,
+                        'paid' => $summary['security_deposit_paid'] ?? 0,
+                        'unpaid' => $summary['security_deposit_unpaid'] ?? 0,
+                    ],
+                ];
+                $widgetData['services']['unpaid'] = $widgetData['services']['due'] - $widgetData['services']['paid'];
             @endphp
-            @foreach($widgetTypes as $key => $cfg)
+            @foreach($historyWidgets as $key => $cfg)
+                @php
+                    $data = $widgetData[$key];
+                @endphp
                 <div class="group relative overflow-hidden rounded-2xl p-4 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
-                    style="background: {{ $cfg['gradient'] }}; min-height: 110px;">
-                    <div class="absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-10 bg-white"></div>
-                    <div class="absolute -bottom-4 -left-2 h-12 w-12 rounded-full opacity-10 bg-white"></div>
+                    style="background: {{ $cfg['gradient'] }}; min-height: 140px;">
+                    <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
+                    <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10 bg-white"></div>
 
-                    <div class="relative">
+                    <div class="relative flex justify-between items-center mb-2">
                         <p class="text-[10px] font-bold uppercase tracking-wider text-white/75">{{ $cfg['label'] }}</p>
-                        <p class="mt-1 text-base font-extrabold text-white" id="widget-{{ $key }}-unpaid">
-                            Rs. {{ number_format($summary[$key . '_unpaid']) }}
-                        </p>
+                        <span class="text-sm">{{ $cfg['icon'] }}</span>
                     </div>
-                    <div class="relative mt-3 space-y-2 text-white/80 border-t border-white/10 pt-2">
-                        <div>
-                            <span class="block text-[8px] uppercase tracking-wider text-white/60">Total</span>
-                            <span class="font-bold text-white text-xs sm:text-[13px]" id="widget-{{ $key }}-due">
-                                Rs. {{ number_format($summary[$key . '_due']) }}
+                    <div class="relative mt-2 space-y-1">
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-[10px] uppercase text-white/70">Expected Total</span>
+                            <span class="font-bold text-white text-sm sm:text-base" id="widget-{{ $key }}-due">
+                                Rs. {{ number_format($data['due']) }}
                             </span>
                         </div>
-                        <div>
-                            <span class="block text-[8px] uppercase tracking-wider text-white/60">Paid</span>
-                            <span class="font-bold {{ $cfg['paidColor'] }} text-xs sm:text-[13px]" id="widget-{{ $key }}-paid">
-                                Rs. {{ number_format($summary[$key . '_paid']) }}
+                        <div class="flex justify-between items-baseline">
+                            <span class="text-[10px] uppercase text-white/70">Received</span>
+                            <span class="font-bold text-emerald-300 text-sm sm:text-base" id="widget-{{ $key }}-paid">
+                                Rs. {{ number_format($data['paid']) }}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-baseline border-t border-white/10 pt-1.5 mt-1">
+                            <span class="text-[10px] uppercase text-white/70">Pending</span>
+                            <span class="font-black text-white text-base sm:text-lg" id="widget-{{ $key }}-unpaid">
+                                Rs. {{ number_format($data['unpaid']) }}
                             </span>
                         </div>
                     </div>
@@ -535,7 +545,7 @@
                     const totalBadge = document.getElementById('badge-total-count');
                     if (totalBadge && total !== null) totalBadge.innerText = total;
 
-                    const types = ['rent', 'maintenance', 'fine', 'electricity', 'water', 'gas', 'other', 'security_deposit'];
+                    const types = ['grand_total', 'rent', 'services', 'security_deposit'];
                     types.forEach(key => {
                         const dueVal = meta.getAttribute(`data-${key}-due`);
                         const paidVal = meta.getAttribute(`data-${key}-paid`);

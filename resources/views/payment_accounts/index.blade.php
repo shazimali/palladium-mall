@@ -78,7 +78,8 @@
                         <th class="px-4 py-3">Bank</th>
                         <th class="px-4 py-3">Account Number</th>
                         <th class="px-4 py-3">Holder Name</th>
-                        <th class="px-4 py-3 text-right">Total Received</th>
+                        <th class="px-4 py-3 text-right">Opening Balance</th>
+                        <th class="px-4 py-3 text-right">Current Balance</th>
                         <th class="px-4 py-3 text-center">Status</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -93,8 +94,11 @@
                             <td class="px-4 py-3">{{ $account->bank_name ?? '—' }}</td>
                             <td class="px-4 py-3 font-mono text-xs">{{ $account->account_number ?? '—' }}</td>
                             <td class="px-4 py-3">{{ $account->account_holder ?? '—' }}</td>
-                            <td class="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">
-                                Rs. {{ number_format($account->total_received ?? 0) }}
+                            <td class="px-4 py-3 text-right text-gray-700 dark:text-gray-300">
+                                Rs. {{ number_format($account->opening_balance, 2) }}
+                            </td>
+                            <td class="px-4 py-3 text-right font-bold {{ $account->current_balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                Rs. {{ number_format($account->current_balance, 2) }}
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if($account->is_active)
