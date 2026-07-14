@@ -21,6 +21,7 @@ use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\ReceivingVoucherController;
 use App\Http\Controllers\PaymentVoucherController;
 use App\Http\Controllers\ProfitLossController;
+use App\Http\Controllers\OwnerDuesReportController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -240,7 +241,14 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/profit-loss', [ProfitLossController::class, 'index'])->name('reports.profit-loss');
         Route::get('reports/profit-loss/pdf', [ProfitLossController::class, 'exportPdf'])->name('reports.profit-loss.pdf');
         Route::get('reports/profit-loss/excel', [ProfitLossController::class, 'exportExcel'])->name('reports.profit-loss.excel');
+
+        // Owner Dues Report
+        Route::get('reports/owner-dues', [OwnerDuesReportController::class, 'index'])->name('reports.owner-dues');
+        Route::get('reports/owner-dues/pdf', [OwnerDuesReportController::class, 'exportPdf'])->name('reports.owner-dues.pdf');
     });
+
+    // AJAX: owner pending balance (used in Payment Voucher form)
+    Route::get('ajax/owner-pending-balance', [OwnerDuesReportController::class, 'getOwnerBalance'])->name('ajax.owner-pending-balance');
 
     // Ledgers
     Route::middleware('permission:ledgers.view')->group(function () {

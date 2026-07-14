@@ -17,6 +17,18 @@
                     amount: '{{ old('amount', $voucher->amount) }}',
                     originalAccountId: '{{ $voucher->payment_account_id }}',
                     originalAmount: '{{ $voucher->amount }}',
+                    ownerPendingBalance: null,
+                    ownerName: '',
+                    fetchOwnerBalance(ownerId) {
+                        if (!ownerId) { this.ownerPendingBalance = null; this.ownerName = ''; return; }
+                        fetch('{{ route('ajax.owner-pending-balance') }}?owner_id=' + ownerId)
+                            .then(r => r.json())
+                            .then(d => {
+                                // Add back current voucher amount so edit does not block
+                                this.ownerPendingBalance = parseFloat(d.pending_balance) + parseFloat(this.originalAmount);
+                                this.ownerName = d.owner_name;
+                            });
+                    },
                     get adjustedBalance() {
                         if (this.selectedBalance === null || this.selectedBalance === '') return 0;
                         let balance = parseFloat(this.selectedBalance);
@@ -54,9 +66,11 @@
                     </div>
 
                     {{-- Owner Selection --}}
-                    <div x-show="paidToType === 'owner'" x-transition>
+                    <div x-show="paidToType === 'owner'" x-transition
+                         x-init="if ('{{ old('paid_to_type', $voucher->paid_to_type) }}' === 'owner' && '{{ old('owner_id', $voucher->owner_id) }}') { fetchOwnerBalance('{{ old('owner_id', $voucher->owner_id) }}') }">
                         <label class="{{ $label }}">Managing Owner / Partner <span class="text-red-500">*</span></label>
-                        <select name="owner_id" class="{{ $input }} {{ $errors->has('owner_id') ? 'border-red-400' : '' }}" :required="paidToType === 'owner'">
+                        <select name="owner_id" class="{{ $input }} {{ $errors->has('owner_id') ? 'border-red-400' : '' }}" :required="paidToType === 'owner'"
+                            @change="fetchOwnerBalance($event.target.value)">
                             <option value="">Select Owner</option>
                             @foreach($owners as $owner)
                                 <option value="{{ $owner->id }}" {{ old('owner_id', $voucher->owner_id) == $owner->id ? 'selected' : '' }}>
@@ -65,6 +79,22 @@
                             @endforeach
                         </select>
                         @error('owner_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+
+                        {{-- Pending Balance Info Box --}}
+                        <template x-if="ownerPendingBalance !== null">
+                            <div class="mt-2 rounded-lg border p-2.5 text-xs font-semibold flex justify-between items-center"
+                                 :class="ownerPendingBalance > 0
+                                     ? 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/10'
+                                     : 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/10'">
+                                <span :class="ownerPendingBalance > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-green-700 dark:text-green-400'">
+                                    Available Balance (incl. this voucher):
+                                </span>
+                                <span class="font-bold text-sm"
+                                      :class="ownerPendingBalance > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-green-600 dark:text-green-400'"
+                                      x-text="'Rs. ' + Number(ownerPendingBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})">
+                                </span>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Other Payee Name (Searchable Party Head Dropdown) --}}

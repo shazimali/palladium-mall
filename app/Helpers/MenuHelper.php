@@ -247,6 +247,11 @@ class MenuHelper
                 'name' => 'Profit & Loss',
                 'path' => '/reports/profit-loss',
             ];
+            $mainItems[] = [
+                'icon' => 'charts',
+                'name' => 'Owner Dues Report',
+                'path' => '/reports/owner-dues',
+            ];
         }
 
         if (auth()->check() && $user->can('reports.daybook')) {

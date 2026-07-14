@@ -117,6 +117,19 @@ class PaymentVoucherController extends Controller
             $data['other_name'] = $party->name;
         }
 
+        // ── Owner balance guard ───────────────────────────────────────────────
+        if ($request->input('paid_to_type') === 'owner' && isset($data['owner_id'])) {
+            $owner          = Owner::findOrFail($data['owner_id']);
+            $pendingBalance = $owner->pendingBalance();
+            if ((float) $data['amount'] > $pendingBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds '
+                        . $owner->name . '\'s pending income balance of Rs. ' . number_format($pendingBalance, 2) . '.',
+                ]);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         PaymentVoucher::create($data);
 
         return redirect()->route('payment-vouchers.index')
@@ -239,6 +252,20 @@ class PaymentVoucherController extends Controller
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
         }
+
+        // ── Owner balance guard (exclude current voucher amount from paid total) ──
+        if ($request->input('paid_to_type') === 'owner' && isset($data['owner_id'])) {
+            $owner            = \App\Models\Owner::findOrFail($data['owner_id']);
+            $currentVoucherAmount = (float) $paymentVoucher->amount;
+            $pendingBalance   = round($owner->pendingBalance() + $currentVoucherAmount, 2); // add back current to re-evaluate
+            if ((float) $data['amount'] > $pendingBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds '
+                        . $owner->name . '\'s available income balance of Rs. ' . number_format($pendingBalance, 2) . '.'
+                ]);
+            }
+        }
+        // ────────────────────────────────────────────────────────────────
 
         $paymentVoucher->update($data);
 

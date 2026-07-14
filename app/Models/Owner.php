@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Traits\LogsActivity;
+use Illuminate\Support\Facades\DB;
 
 class Owner extends Model
 {
@@ -30,5 +31,38 @@ class Owner extends Model
     public function vouchers(): HasMany
     {
         return $this->hasMany(ReceivingVoucher::class);
+    }
+
+    /**
+     * Total income share DUE to this owner (all time).
+     * = Total income collected (Tenant RVs + General RVs) × partnership %
+     * Excludes owner capital deposits (received_from_type = 'owner').
+     */
+    public function totalIncomeDue(): float
+    {
+        $tenantIncome = (float) ReceivingVoucher::where('received_from_type', 'tenant')->sum('amount');
+        $partyIncome  = (float) GeneralReceivingVoucher::sum('amount');
+        $totalIncome  = $tenantIncome + $partyIncome;
+
+        return round($totalIncome * ((float) $this->partnership_percentage / 100), 2);
+    }
+
+    /**
+     * Total amount already paid out to this owner via Payment Vouchers.
+     */
+    public function totalPaid(): float
+    {
+        return (float) PaymentVoucher::where('paid_to_type', 'owner')
+            ->where('owner_id', $this->id)
+            ->sum('amount');
+    }
+
+    /**
+     * Remaining pending balance owed to this owner.
+     * = totalIncomeDue − totalPaid
+     */
+    public function pendingBalance(): float
+    {
+        return max(0.00, round($this->totalIncomeDue() - $this->totalPaid(), 2));
     }
 }
