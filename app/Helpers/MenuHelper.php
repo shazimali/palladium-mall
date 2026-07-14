@@ -135,7 +135,11 @@ class MenuHelper
             $mainItems[] = [
                 'icon' => 'user-profile',
                 'name' => 'Managing Owners',
-                'path' => '/owners',
+                'subItems' => [
+                    ['name' => 'All Managing Owners', 'path' => '/owners', 'pro' => false],
+                    ['name' => 'Owner Payables', 'path' => '/owner-payables', 'pro' => false],
+                    ['name' => 'Owner Receivables', 'path' => '/owner-receivables', 'pro' => false],
+                ],
             ];
         }
 

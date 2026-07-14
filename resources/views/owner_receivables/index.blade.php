@@ -1,0 +1,269 @@
+@extends('layouts.app')
+
+@section('content')
+    <x-common.page-breadcrumb pageTitle="Owner Receivable Vouchers" />
+
+    @if(session('success'))
+        <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
+            class="mb-4 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+            <svg class="h-4 w-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+            {{ session('success') }}
+        </div>
+    @endif
+
+    {{-- Summary Widget Cards --}}
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+        <!-- Total Received Card -->
+        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Inflow (Filtered)</p>
+                    <h4 class="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">
+                        Rs. {{ number_format($totalAmount, 2) }}
+                    </h4>
+                </div>
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-green-500 dark:bg-green-950/20 dark:text-green-400">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Count Card -->
+        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Vouchers Count</p>
+                    <h4 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white/90">
+                        {{ $receivables->total() }}
+                    </h4>
+                </div>
+                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/20 dark:text-blue-400">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <x-common.component-card title="Owner Receivable Ledger Book" desc="View and manage all capital deposits, investment injections, or loans received from managing owners">
+
+        {{-- Top bar --}}
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+            <div class="flex flex-wrap gap-2">
+                <span class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    Showing Page: {{ $receivables->currentPage() }} of {{ $receivables->lastPage() }}
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                @if(request()->anyFilled(['search', 'owner_id', 'payment_account_id', 'start_date', 'end_date']))
+                    <a href="{{ route('owner-receivables.index') }}"
+                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
+                        Clear Filters
+                    </a>
+                @endif
+                <a href="{{ route('owner-receivables.create') }}"
+                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Record Receivable Voucher
+                </a>
+            </div>
+        </div>
+
+        <!-- Filters Form -->
+        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+            <form action="{{ route('owner-receivables.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-5 items-end">
+                @php
+                    $filterInput = 'dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
+                    $filterLabel = 'mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400';
+                @endphp
+
+                <!-- Search Input -->
+                <div class="sm:col-span-2 relative">
+                    <label class="{{ $filterLabel }}">Search details / ref</label>
+                    <div class="relative">
+                        <span class="absolute -translate-y-1/2 pointer-events-none left-3.5 top-1/2 text-gray-400">
+                            <svg class="fill-current" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                                <path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
+                            </svg>
+                        </span>
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Voucher #, notes, reference..."
+                            class="{{ $filterInput }} pl-10">
+                    </div>
+                </div>
+
+                <!-- Managing Owner -->
+                <div>
+                    <label class="{{ $filterLabel }}">Managing Owner</label>
+                    <select name="owner_id" class="{{ $filterInput }}">
+                        <option value="">All Owners</option>
+                        @foreach($owners as $o)
+                            <option value="{{ $o->id }}" {{ request('owner_id') == $o->id ? 'selected' : '' }}>
+                                {{ $o->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Payment Account -->
+                <div>
+                    <label class="{{ $filterLabel }}">Payment Account</label>
+                    <select name="payment_account_id" class="{{ $filterInput }}">
+                        <option value="">All Accounts</option>
+                        @foreach($paymentAccounts as $pa)
+                            <option value="{{ $pa->id }}" {{ request('payment_account_id') == $pa->id ? 'selected' : '' }}>
+                                {{ $pa->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Date Range -->
+                <div class="grid grid-cols-2 gap-2 sm:col-span-1">
+                    <div>
+                        <label class="{{ $filterLabel }}">From</label>
+                        <input type="text" id="start_date" name="start_date" value="{{ request('start_date') }}" placeholder="Date" autocomplete="off"
+                            class="{{ $filterInput }}">
+                    </div>
+                    <div>
+                        <label class="{{ $filterLabel }}">To</label>
+                        <input type="text" id="end_date" name="end_date" value="{{ request('end_date') }}" placeholder="Date" autocomplete="off"
+                            class="{{ $filterInput }}">
+                    </div>
+                </div>
+
+                <div class="sm:col-span-5 flex justify-end">
+                    <button type="submit"
+                        class="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors shadow-sm cursor-pointer">
+                        Filter Ledger
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {{-- Table --}}
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+                <thead class="border-b border-gray-100 bg-gray-50/50 text-xs uppercase text-gray-500 dark:border-gray-800 dark:bg-gray-900/50">
+                    <tr>
+                        <th class="px-4 py-3">Voucher #</th>
+                        <th class="px-4 py-3">Date</th>
+                        <th class="px-4 py-3">Owner (Depositor)</th>
+                        <th class="px-4 py-3">Received In Account</th>
+                        <th class="px-4 py-3">Reference / Remarks</th>
+                        <th class="px-4 py-3 text-right">Amount</th>
+                        <th class="px-4 py-3 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-800/80">
+                    @forelse($receivables as $receivable)
+                        <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                            <td class="px-4 py-3.5 font-semibold text-gray-900 dark:text-white/90">
+                                {{ $receivable->voucher_no }}
+                            </td>
+                            <td class="px-4 py-3.5 whitespace-nowrap">
+                                {{ $receivable->date ? $receivable->date->format('d M Y') : '—' }}
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <span class="font-medium text-gray-800 dark:text-white/80">
+                                    {{ $receivable->owner->name ?? '—' }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                @if($receivable->paymentAccount)
+                                    <div class="text-gray-800 dark:text-white/80 font-medium">{{ $receivable->paymentAccount->name }}</div>
+                                    <div class="text-[10px] text-gray-400 uppercase tracking-wide">{{ $receivable->paymentAccount->type }}</div>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3.5 max-w-[16rem] truncate" title="{{ $receivable->notes }}">
+                                @if($receivable->reference)
+                                    <span class="font-medium text-gray-700 dark:text-gray-300">Ref: {{ $receivable->reference }}</span>
+                                @endif
+                                @if($receivable->notes)
+                                    <div class="text-xs text-gray-400 truncate">{{ $receivable->notes }}</div>
+                                @endif
+                                @if(!$receivable->reference && !$receivable->notes)
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3.5 text-right font-bold text-green-600 dark:text-green-400">
+                                Rs. {{ number_format($receivable->amount, 2) }}
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="{{ route('owner-receivables.show', $receivable) }}"
+                                        class="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5" title="View details">
+                                        <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </a>
+                                    <a href="{{ route('owner-receivables.edit', $receivable) }}"
+                                        class="rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20" title="Edit">
+                                        <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </a>
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <form action="{{ route('owner-receivables.destroy', $receivable) }}" method="POST"
+                                            @submit.prevent="confirmAction($el, 'Are you sure you want to delete Owner Receivable Voucher {{ $receivable->voucher_no }} for Rs. {{ number_format($receivable->amount, 2) }}?', 'Delete Voucher?', 'Yes, Delete')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer" title="Delete">
+                                                <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="py-12 text-center text-gray-400 dark:text-gray-600">
+                                No owner receivables matching filters.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            {{ $receivables->links() }}
+        </div>
+    </x-common.component-card>
+@endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr('#start_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true
+                });
+                flatpickr('#end_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true
+                });
+            }
+        });
+    </script>
+@endpush

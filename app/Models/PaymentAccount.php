@@ -57,6 +57,16 @@ class PaymentAccount extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function ownerPayables(): HasMany
+    {
+        return $this->hasMany(OwnerPayable::class);
+    }
+
+    public function ownerReceivables(): HasMany
+    {
+        return $this->hasMany(OwnerReceivable::class);
+    }
+
     /**
      * Get the computed current balance of the payment account.
      */
@@ -72,6 +82,10 @@ class PaymentAccount extends Model
             ? (float) $this->attributes['general_receiving_vouchers_sum_amount']
             : ($this->relationLoaded('generalReceivingVouchers') ? (float) $this->generalReceivingVouchers->sum('amount') : (float) $this->generalReceivingVouchers()->sum('amount'));
 
+        $inflowORVs = array_key_exists('owner_receivables_sum_amount', $this->attributes)
+            ? (float) $this->attributes['owner_receivables_sum_amount']
+            : ($this->relationLoaded('ownerReceivables') ? (float) $this->ownerReceivables->sum('amount') : (float) $this->ownerReceivables()->sum('amount'));
+
         $outflowPVs = array_key_exists('payment_vouchers_sum_amount', $this->attributes)
             ? (float) $this->attributes['payment_vouchers_sum_amount']
             : ($this->relationLoaded('paymentVouchers') ? (float) $this->paymentVouchers->sum('amount') : (float) $this->paymentVouchers()->sum('amount'));
@@ -80,6 +94,10 @@ class PaymentAccount extends Model
             ? (float) $this->attributes['expenses_sum_amount']
             : ($this->relationLoaded('expenses') ? (float) $this->expenses->sum('amount') : (float) $this->expenses()->sum('amount'));
 
-        return $opening + $inflowRVs + $inflowGRVs - $outflowPVs - $outflowExpenses;
+        $outflowOPVs = array_key_exists('owner_payables_sum_amount', $this->attributes)
+            ? (float) $this->attributes['owner_payables_sum_amount']
+            : ($this->relationLoaded('ownerPayables') ? (float) $this->ownerPayables->sum('amount') : (float) $this->ownerPayables()->sum('amount'));
+
+        return $opening + $inflowRVs + $inflowGRVs + $inflowORVs - $outflowPVs - $outflowExpenses - $outflowOPVs;
     }
 }

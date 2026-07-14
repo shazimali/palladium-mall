@@ -424,6 +424,24 @@ class LedgerController extends Controller
             ]);
         }
 
+        // 1b. Outflows: OwnerPayables as DEBITS
+        $ownerPayables = \App\Models\OwnerPayable::where('owner_id', $ownerId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($ownerPayables as $opv) {
+            $entries->push([
+                'date' => $opv->date,
+                'voucher_no' => $opv->voucher_no,
+                'account' => $opv->paymentAccount->name ?? '—',
+                'reference' => $opv->reference ?? '—',
+                'notes' => $opv->notes ?? 'Owner Payout (OPV)',
+                'debit' => (float)$opv->amount,
+                'credit' => 0.00,
+            ]);
+        }
+
         // 2. Inflows: ReceivingVouchers (type = 'owner') as CREDITS
         $deposits = ReceivingVoucher::where('received_from_type', 'owner')
             ->where('owner_id', $ownerId)
@@ -440,6 +458,24 @@ class LedgerController extends Controller
                 'notes' => $deposit->notes ?? 'Capital Deposit',
                 'debit' => 0.00,
                 'credit' => (float)$deposit->amount,
+            ]);
+        }
+
+        // 2b. Inflows: OwnerReceivables as CREDITS
+        $ownerReceivables = \App\Models\OwnerReceivable::where('owner_id', $ownerId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($ownerReceivables as $orv) {
+            $entries->push([
+                'date' => $orv->date,
+                'voucher_no' => $orv->voucher_no,
+                'account' => $orv->paymentAccount->name ?? '—',
+                'reference' => $orv->reference ?? '—',
+                'notes' => $orv->notes ?? 'Owner Deposit (ORV)',
+                'debit' => 0.00,
+                'credit' => (float)$orv->amount,
             ]);
         }
 
@@ -483,6 +519,10 @@ class LedgerController extends Controller
             ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
             ->sum('amount');
 
+        $priorInflowORVs = (float) \App\Models\OwnerReceivable::where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
+            ->sum('amount');
+
         $priorOutflowPVs = (float) PaymentVoucher::where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
             ->sum('amount');
@@ -491,7 +531,11 @@ class LedgerController extends Controller
             ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
             ->sum('amount');
 
-        $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs - $priorOutflowPVs - $priorOutflowExpenses;
+        $priorOutflowOPVs = (float) \App\Models\OwnerPayable::where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
+            ->sum('amount');
+
+        $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs + $priorInflowORVs - $priorOutflowPVs - $priorOutflowExpenses - $priorOutflowOPVs;
 
         // Prepend carried forward opening balance row
         $entries->push([
@@ -543,6 +587,28 @@ class LedgerController extends Controller
             ]);
         }
 
+        // 2c. Owner Credits (Inflows) in the selected period: OwnerReceivables (ORVs)
+        $ownerReceipts = \App\Models\OwnerReceivable::with('owner')
+            ->where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($ownerReceipts as $receipt) {
+            $desc = 'Owner Deposit: ' . ($receipt->owner->name ?? 'N/A');
+            if ($receipt->notes) {
+                $desc .= ' • ' . $receipt->notes;
+            }
+            $entries->push([
+                'date' => $receipt->date,
+                'voucher_no' => $receipt->voucher_no,
+                'type' => 'Receipt (Owner)',
+                'description' => $desc,
+                'debit' => (float)$receipt->amount,
+                'credit' => 0.00,
+            ]);
+        }
+
         // 3. Debits (Outflows) in the selected period: PaymentVouchers
         $payouts = PaymentVoucher::where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
@@ -555,6 +621,28 @@ class LedgerController extends Controller
                 'voucher_no' => $payout->voucher_no,
                 'type' => 'Payout',
                 'description' => $payout->notes ?? 'Owner Payout / Advance',
+                'debit' => 0.00,
+                'credit' => (float)$payout->amount,
+            ]);
+        }
+
+        // 3b. Debits (Outflows) in the selected period: OwnerPayables (OPVs)
+        $ownerPayouts = \App\Models\OwnerPayable::with('owner')
+            ->where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($ownerPayouts as $payout) {
+            $desc = 'Owner Payout: ' . ($payout->owner->name ?? 'N/A');
+            if ($payout->notes) {
+                $desc .= ' • ' . $payout->notes;
+            }
+            $entries->push([
+                'date' => $payout->date,
+                'voucher_no' => $payout->voucher_no,
+                'type' => 'Payout (Owner)',
+                'description' => $desc,
                 'debit' => 0.00,
                 'credit' => (float)$payout->amount,
             ]);

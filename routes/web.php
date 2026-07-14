@@ -221,6 +221,14 @@ Route::middleware('auth')->group(function () {
     // Owners
     Route::middleware('permission:owners.view')->group(function () {
         Route::resource('owners', OwnerController::class);
+        
+        Route::resource('owner-payables', \App\Http\Controllers\OwnerPayableController::class);
+        Route::get('owner-payables/{owner_payable}/print', [\App\Http\Controllers\OwnerPayableController::class, 'print'])
+            ->name('owner-payables.print');
+
+        Route::resource('owner-receivables', \App\Http\Controllers\OwnerReceivableController::class);
+        Route::get('owner-receivables/{owner_receivable}/print', [\App\Http\Controllers\OwnerReceivableController::class, 'print'])
+            ->name('owner-receivables.print');
     });
 
     // Receiving Vouchers

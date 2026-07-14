@@ -34,8 +34,24 @@ class Owner extends Model
     }
 
     /**
+     * Get the payables logged for this owner.
+     */
+    public function payables(): HasMany
+    {
+        return $this->hasMany(OwnerPayable::class);
+    }
+
+    /**
+     * Get the receivables logged for this owner.
+     */
+    public function receivables(): HasMany
+    {
+        return $this->hasMany(OwnerReceivable::class);
+    }
+
+    /**
      * Total income share DUE to this owner (all time).
-     * = Total income collected (Tenant RVs + General RVs) × partnership %
+     * = (Total income collected × partnership %) + Owner Receivables (Capital Deposits / Loans Inflow)
      * Excludes owner capital deposits (received_from_type = 'owner').
      */
     public function totalIncomeDue(): float
@@ -44,17 +60,25 @@ class Owner extends Model
         $partyIncome  = (float) GeneralReceivingVoucher::sum('amount');
         $totalIncome  = $tenantIncome + $partyIncome;
 
-        return round($totalIncome * ((float) $this->partnership_percentage / 100), 2);
+        $share = $totalIncome * ((float) $this->partnership_percentage / 100);
+        $receivables = (float) $this->receivables()->sum('amount');
+
+        return round($share + $receivables, 2);
     }
 
     /**
-     * Total amount already paid out to this owner via Payment Vouchers.
+     * Total amount already paid out to this owner.
+     * = Payment Vouchers + Owner Payables (cash outflows to owner)
      */
     public function totalPaid(): float
     {
-        return (float) PaymentVoucher::where('paid_to_type', 'owner')
+        $vouchers = (float) PaymentVoucher::where('paid_to_type', 'owner')
             ->where('owner_id', $this->id)
             ->sum('amount');
+
+        $payables = (float) $this->payables()->sum('amount');
+
+        return round($vouchers + $payables, 2);
     }
 
     /**
