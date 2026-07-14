@@ -30,11 +30,12 @@ class FixPrecision extends Command
         $this->info("Starting database precision fix...");
 
         $tables = [
-            'payments' => ['amount', 'amount_paid'],
-            'receiving_vouchers' => ['amount'],
-            'receiving_voucher_payments' => ['amount_allocated'],
-            'payment_vouchers' => ['amount'],
-            'expenses' => ['amount']
+            'agreements'                  => ['monthly_rent', 'maintenance_charge', 'security_deposit', 'fine_per_day'],
+            'payments'                    => ['amount', 'amount_paid'],
+            'receiving_vouchers'          => ['amount'],
+            'receiving_voucher_payments'  => ['amount_allocated'],
+            'payment_vouchers'            => ['amount'],
+            'expenses'                    => ['amount'],
         ];
 
         foreach ($tables as $table => $columns) {

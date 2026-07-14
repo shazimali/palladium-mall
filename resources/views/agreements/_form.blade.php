@@ -1,3 +1,37 @@
+<div x-data="{
+    monthlyRent: '{{ old('monthly_rent', $agreement->monthly_rent ?? '') }}',
+    displayMonthlyRent: '',
+    securityDeposit: '{{ old('security_deposit', $agreement->security_deposit ?? '') }}',
+    displaySecurityDeposit: '',
+    finePerDay: '{{ old('fine_per_day', $agreement->fine_per_day ?? 0) }}',
+    displayFinePerDay: '',
+    formatAmount(val, field) {
+        let clean = val.replace(/[^\d.]/g, '');
+        let parts = clean.split('.');
+        if (parts.length > 2) {
+            parts = [parts[0], parts.slice(1).join('')];
+        }
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        let formatted = parts.join('.');
+        
+        if (field === 'rent') {
+            this.displayMonthlyRent = formatted;
+            this.monthlyRent = clean;
+        } else if (field === 'deposit') {
+            this.displaySecurityDeposit = formatted;
+            this.securityDeposit = clean;
+        } else if (field === 'fine') {
+            this.displayFinePerDay = formatted;
+            this.finePerDay = clean;
+        }
+    },
+    init() {
+        if (this.monthlyRent) this.formatAmount(String(this.monthlyRent), 'rent');
+        if (this.securityDeposit) this.formatAmount(String(this.securityDeposit), 'deposit');
+        if (this.finePerDay) this.formatAmount(String(this.finePerDay), 'fine');
+    }
+}" class="space-y-6">
+
 {{-- ── Tenant & Unit ──────────────────────────────────────────────── --}}
 <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02]">
     <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
@@ -89,9 +123,12 @@
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Monthly Rent (Rs.) <span class="text-red-500">*</span>
             </label>
-            <input type="number" name="monthly_rent" min="0" step="0.01"
-                value="{{ old('monthly_rent', $agreement->monthly_rent ?? '') }}" placeholder="e.g. 45000"
-                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('monthly_rent') ? 'border-red-400' : '' }}">
+            <input type="text"
+                x-model="displayMonthlyRent"
+                @input="formatAmount($event.target.value, 'rent')"
+                placeholder="e.g. 45,000"
+                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('monthly_rent') ? 'border-red-400' : '' }}" required>
+            <input type="hidden" name="monthly_rent" x-model="monthlyRent">
             @error('monthly_rent')
                 <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
             @enderror
@@ -102,9 +139,12 @@
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Security Deposit (Rs.)
             </label>
-            <input type="number" name="security_deposit" min="0" step="0.01"
-                value="{{ old('security_deposit', $agreement->security_deposit ?? '') }}" placeholder="e.g. 90000"
+            <input type="text"
+                x-model="displaySecurityDeposit"
+                @input="formatAmount($event.target.value, 'deposit')"
+                placeholder="e.g. 90,000"
                 class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+            <input type="hidden" name="security_deposit" x-model="securityDeposit">
         </div>
 
         {{-- Grace Period --}}
@@ -126,9 +166,12 @@
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Fine Per Day (Rs.) <span class="text-red-500">*</span>
             </label>
-            <input type="number" name="fine_per_day" min="0" step="0.01"
-                value="{{ old('fine_per_day', $agreement->fine_per_day ?? 0) }}" placeholder="e.g. 500"
-                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('fine_per_day') ? 'border-red-400' : '' }}">
+            <input type="text"
+                x-model="displayFinePerDay"
+                @input="formatAmount($event.target.value, 'fine')"
+                placeholder="e.g. 500"
+                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('fine_per_day') ? 'border-red-400' : '' }}" required>
+            <input type="hidden" name="fine_per_day" x-model="finePerDay">
             @error('fine_per_day')
                 <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
             @enderror
@@ -203,4 +246,5 @@
             <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
         @enderror
     </div>
+</div>
 </div>

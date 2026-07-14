@@ -47,6 +47,46 @@
             $a = $agreement;
             @endphp
 
+            <div x-data="{
+                monthlyRent: '{{ old('monthly_rent', $a?->monthly_rent ?? '') }}',
+                displayMonthlyRent: '',
+                maintenanceCharge: '{{ old('maintenance_charge', $a?->maintenance_charge ?? '') }}',
+                displayMaintenanceCharge: '',
+                securityDeposit: '{{ old('security_deposit', $a?->security_deposit ?? '') }}',
+                displaySecurityDeposit: '',
+                finePerDay: '{{ old('fine_per_day', $a?->fine_per_day ?? '') }}',
+                displayFinePerDay: '',
+                formatAmount(val, field) {
+                    let clean = val.replace(/[^\d.]/g, '');
+                    let parts = clean.split('.');
+                    if (parts.length > 2) {
+                        parts = [parts[0], parts.slice(1).join('')];
+                    }
+                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    let formatted = parts.join('.');
+                    
+                    if (field === 'rent') {
+                        this.displayMonthlyRent = formatted;
+                        this.monthlyRent = clean;
+                    } else if (field === 'maintenance') {
+                        this.displayMaintenanceCharge = formatted;
+                        this.maintenanceCharge = clean;
+                    } else if (field === 'deposit') {
+                        this.displaySecurityDeposit = formatted;
+                        this.securityDeposit = clean;
+                    } else if (field === 'fine') {
+                        this.displayFinePerDay = formatted;
+                        this.finePerDay = clean;
+                    }
+                },
+                init() {
+                    if (this.monthlyRent) this.formatAmount(String(this.monthlyRent), 'rent');
+                    if (this.maintenanceCharge) this.formatAmount(String(this.maintenanceCharge), 'maintenance');
+                    if (this.securityDeposit) this.formatAmount(String(this.securityDeposit), 'deposit');
+                    if (this.finePerDay) this.formatAmount(String(this.finePerDay), 'fine');
+                }
+            }" class="space-y-6">
+
             {{-- ── Read-only Flat Detail ──────────────────────────────────── --}}
             <div class="rounded-xl border border-brand-100 bg-brand-50 p-5 dark:border-brand-900/30 dark:bg-brand-900/10">
                 <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-brand-700 dark:text-brand-400">Assigned Flat / Shop</h4>
@@ -145,21 +185,30 @@
 
                     <div>
                         <label class="{{ $label }}">Monthly Rent (PKR) <span class="text-red-500">*</span></label>
-                        <input type="number" name="monthly_rent" value="{{ old('monthly_rent', $a?->monthly_rent ?? '') }}"
-                               placeholder="e.g. 25000" min="0" step="0.01" class="{{ $input }} {{ $errors->has('monthly_rent') ? 'border-red-400' : '' }}">
+                        <input type="text"
+                               x-model="displayMonthlyRent"
+                               @input="formatAmount($event.target.value, 'rent')"
+                               placeholder="e.g. 25,000" class="{{ $input }} {{ $errors->has('monthly_rent') ? 'border-red-400' : '' }}" required>
+                        <input type="hidden" name="monthly_rent" x-model="monthlyRent">
                         @error('monthly_rent') <p class="{{ $error }}">{{ $message }}</p> @enderror
                     </div>
 
                     <div>
                         <label class="{{ $label }}">Maintenance Charge (PKR)</label>
-                        <input type="number" name="maintenance_charge" value="{{ old('maintenance_charge', $a?->maintenance_charge ?? '') }}"
-                               placeholder="e.g. 2000" min="0" step="0.01" class="{{ $input }}">
+                        <input type="text"
+                               x-model="displayMaintenanceCharge"
+                               @input="formatAmount($event.target.value, 'maintenance')"
+                               placeholder="e.g. 2,000" class="{{ $input }}">
+                        <input type="hidden" name="maintenance_charge" x-model="maintenanceCharge">
                     </div>
 
                     <div>
                         <label class="{{ $label }}">Security Deposit (PKR) <span class="text-red-500">*</span></label>
-                        <input type="number" name="security_deposit" value="{{ old('security_deposit', $a?->security_deposit ?? '') }}"
-                               placeholder="e.g. 50000" min="0" step="0.01" class="{{ $input }} {{ $errors->has('security_deposit') ? 'border-red-400' : '' }}">
+                        <input type="text"
+                               x-model="displaySecurityDeposit"
+                               @input="formatAmount($event.target.value, 'deposit')"
+                               placeholder="e.g. 50,000" class="{{ $input }} {{ $errors->has('security_deposit') ? 'border-red-400' : '' }}" required>
+                        <input type="hidden" name="security_deposit" x-model="securityDeposit">
                         @error('security_deposit') <p class="{{ $error }}">{{ $message }}</p> @enderror
                     </div>
 
@@ -178,9 +227,11 @@
 
                     <div>
                         <label class="{{ $label }}">Fine Per Day (PKR) <span class="text-red-500">*</span></label>
-                        <input type="number" name="fine_per_day" value="{{ old('fine_per_day', $a?->fine_per_day ?? '') }}"
-                               placeholder="e.g. 500" min="0" step="0.01"
-                               class="{{ $input }} {{ $errors->has('fine_per_day') ? 'border-red-400' : '' }}">
+                        <input type="text"
+                               x-model="displayFinePerDay"
+                               @input="formatAmount($event.target.value, 'fine')"
+                               placeholder="e.g. 500" class="{{ $input }} {{ $errors->has('fine_per_day') ? 'border-red-400' : '' }}" required>
+                        <input type="hidden" name="fine_per_day" x-model="finePerDay">
                         @error('fine_per_day') <p class="{{ $error }}">{{ $message }}</p> @enderror
                     </div>
 
@@ -228,6 +279,7 @@
                 </div>
             </div>
 
+            </div>
         </form>
     </div>
 </div>

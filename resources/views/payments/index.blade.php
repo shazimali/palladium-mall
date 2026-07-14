@@ -25,7 +25,7 @@
         <button type="button" onclick="setOwnerFilter('')"
             class="owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all {{ $activeOwner === '' ? 'bg-brand-500 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}"
             data-owner="">
-            <span>💳</span> All Payments
+            <span>💳</span> All Billings
         </button>
         <button type="button" onclick="setOwnerFilter('other')"
             class="owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all {{ $activeOwner === 'other' ? 'bg-brand-500 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}"
@@ -66,7 +66,7 @@
                         'icon' => '🛡️',
                     ],
                 ];
-                
+
                 $widgetData = [
                     'grand_total' => [
                         'due' => $summary['total_due'] ?? 0,
@@ -129,9 +129,9 @@
 
         @php
             $cardTitle = match (request('owner_type')) {
-                'pm_mall' => 'PM Mall Payments',
-                'other' => 'Other-Owned Payments',
-                default => 'All Payments',
+                'pm_mall' => 'PM Mall Billings',
+                'other' => 'Other-Owned Billings',
+                default => 'All Billings',
             };
         @endphp
         <x-common.component-card :title="$cardTitle" desc="Track rent, maintenance and fine payments">
@@ -286,11 +286,11 @@
 
         {{-- Bulk Generate Modal --}}
         <div x-data="{
-                                                                                show: false,
-                                                                                init() {
-                                                                                    window.addEventListener('open-bulk-generate', () => { this.show = true; });
-                                                                                }
-                                                                            }" x-show="show" x-cloak
+                                                                                            show: false,
+                                                                                            init() {
+                                                                                                window.addEventListener('open-bulk-generate', () => { this.show = true; });
+                                                                                            }
+                                                                                        }" x-show="show" x-cloak
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
                 @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
@@ -366,11 +366,11 @@
         {{-- Bulk Edit Modal ── --}}
         @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
             <div x-data="{
-                                                                                                                                                show: false,
-                                                                                                                                                init() {
-                                                                                                                                                    window.addEventListener('open-bulk-edit', () => { this.show = true; });
-                                                                                                                                                }
-                                                                                                                                            }"
+                                                                                                                                                                        show: false,
+                                                                                                                                                                        init() {
+                                                                                                                                                                            window.addEventListener('open-bulk-edit', () => { this.show = true; });
+                                                                                                                                                                        }
+                                                                                                                                                                    }"
                 x-show="show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                 <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
                     @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
