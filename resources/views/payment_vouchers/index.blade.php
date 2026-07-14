@@ -235,7 +235,7 @@
                                     {{-- Delete/Cancel --}}
                                     @if(auth()->user()->hasPermission('payment_vouchers.delete') || auth()->user()->isSuperAdmin())
                                         <form action="{{ route('payment-vouchers.destroy', $voucher) }}" method="POST" x-data
-                                            @submit.prevent="if(confirm('Are you sure you want to delete and cancel this payment voucher of Rs. {{ number_format($voucher->amount) }}? This will undo any balance changes.')) $el.submit()">
+                                            @submit.prevent="confirmAction($el, 'Are you sure you want to delete and cancel this payment voucher of Rs. {{ number_format($voucher->amount) }}? This will undo any balance changes.', 'Cancel / Delete?', 'Yes, Delete')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"

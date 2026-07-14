@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Owner;
 use App\Models\PaymentAccount;
-use App\Models\LandlordPayable;
 use App\Models\ReceivingVoucher;
 use App\Models\GeneralReceivingVoucher;
 use Barryvdh\Dompdf\Facade\Pdf;
@@ -110,13 +109,9 @@ class OwnerDuesReportController extends Controller
 
         $totalCashBalance = $accounts->sum(fn($a) => $a->current_balance);
 
-        // ── Pending landlord payables ─────────────────────────────────────────
-        $pendingLandlordDues = (float) LandlordPayable::whereIn('status', ['unpaid', 'partial'])
-            ->sum(DB::raw('amount - amount_paid'));
-
         // ── Disposable Amount ─────────────────────────────────────────────────
-        // = Cash in accounts − pending owner dues − pending landlord dues
-        $disposableAmount = $totalCashBalance - $totalOwnersPending - $pendingLandlordDues;
+        // = Cash in accounts − pending owner dues
+        $disposableAmount = $totalCashBalance - $totalOwnersPending;
 
         return [
             'ownerRows'           => $ownerRows,
@@ -127,7 +122,6 @@ class OwnerDuesReportController extends Controller
             'totalOwnersPaid'     => $totalOwnersPaid,
             'totalOwnersPending'  => $totalOwnersPending,
             'totalCashBalance'    => $totalCashBalance,
-            'pendingLandlordDues' => $pendingLandlordDues,
             'disposableAmount'    => $disposableAmount,
             'accounts'            => $accounts,
             'generatedAt'         => now(),

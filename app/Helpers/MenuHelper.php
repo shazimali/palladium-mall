@@ -85,36 +85,10 @@ class MenuHelper
     {
         $user = auth()->user();
 
+        // 1. Dashboard (Always first)
         $mainItems = self::getMainNavItems();
 
-        if (auth()->check() && $user->can('landlords.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Landlords',
-                'subItems' => [
-                    ['name' => 'All Landlords', 'path' => '/landlords', 'pro' => false],
-                    ['name' => 'Landlord Payables', 'path' => '/landlord-payables', 'pro' => false],
-                    ['name' => 'Landlord Ledgers', 'path' => '/landlord-ledgers', 'pro' => false],
-                ],
-            ];
-        }
-
-        if (auth()->check() && $user->can('parties.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Party Heads',
-                'path' => '/parties',
-            ];
-        }
-
-        if (auth()->check() && $user->can('owners.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Managing Owners',
-                'path' => '/owners',
-            ];
-        }
-
+        // 2. Asset Management & Leasing
         if (auth()->check() && $user->can('units.view')) {
             $mainItems[] = [
                 'icon' => 'tables',
@@ -126,7 +100,7 @@ class MenuHelper
         if (auth()->check() && $user->can('tenants.view')) {
             $mainItems[] = [
                 'icon' => 'forms',
-                'name' => 'Tenants and Agreements',
+                'name' => 'Tenants & Agreements',
                 'path' => '/tenants',
             ];
             $mainItems[] = [
@@ -144,6 +118,44 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('landlords.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Landlords',
+                'subItems' => [
+                    ['name' => 'All Landlords', 'path' => '/landlords', 'pro' => false],
+                    ['name' => 'Landlord Payables', 'path' => '/landlord-payables', 'pro' => false],
+                    ['name' => 'Landlord Ledgers', 'path' => '/landlord-ledgers', 'pro' => false],
+                ],
+            ];
+        }
+
+        // 3. People & Directories
+        if (auth()->check() && $user->can('owners.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Managing Owners',
+                'path' => '/owners',
+            ];
+        }
+
+        if (auth()->check() && $user->can('parties.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Party Heads',
+                'path' => '/parties',
+            ];
+        }
+
+        if (auth()->check() && $user->can('inspection_persons.view')) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Inspection Persons',
+                'path' => '/inspection-persons',
+            ];
+        }
+
+        // 4. Billings & Cash Flows
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [
                 'icon' => 'ecommerce',
@@ -176,6 +188,23 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('payment_accounts.view')) {
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Payment Accounts',
+                'path' => '/payment-accounts',
+            ];
+        }
+
+        if (auth()->check() && $user->can('expense_heads.view')) {
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Expense Heads',
+                'path' => '/expense-heads',
+            ];
+        }
+
+        // 5. Ledgers
         $ledgerSubItems = [];
         if (auth()->check() && $user->can('ledgers.view')) {
             $ledgerSubItems[] = ['name' => 'Tenant Ledger', 'path' => '/ledgers/tenant'];
@@ -193,6 +222,7 @@ class MenuHelper
             ];
         }
 
+        // 6. Inventory & Warehousing
         $inventorySubItems = [];
         if (auth()->check()) {
             if ($user->can('inventory.view')) {
@@ -212,61 +242,26 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('payment_accounts.view')) {
-            $mainItems[] = [
-                'icon' => 'task',
-                'name' => 'Payment Accounts',
-                'path' => '/payment-accounts',
-            ];
-        }
-
-        if (auth()->check() && $user->can('expense_heads.view')) {
-            $mainItems[] = [
-                'icon' => 'task',
-                'name' => 'Expense Heads',
-                'path' => '/expense-heads',
-            ];
-        }
-
-        if (auth()->check() && $user->can('inspection_persons.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Inspection Persons',
-                'path' => '/inspection-persons',
-            ];
-        }
-
+        // 7. Reports & Analytics
+        $reportsSubItems = [];
         if (auth()->check() && $user->can('reports.view')) {
-            $mainItems[] = [
-                'icon' => 'charts',
-                'name' => 'Reports',
-                'path' => '/reports',
-            ];
-            $mainItems[] = [
-                'icon' => 'charts',
-                'name' => 'Profit & Loss',
-                'path' => '/reports/profit-loss',
-            ];
-            $mainItems[] = [
-                'icon' => 'charts',
-                'name' => 'Owner Dues Report',
-                'path' => '/reports/owner-dues',
-            ];
+            $reportsSubItems[] = ['name' => 'All Reports Overview', 'path' => '/reports'];
+            $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
+            $reportsSubItems[] = ['name' => 'Owner Dues Report', 'path' => '/reports/owner-dues'];
+            $reportsSubItems[] = ['name' => 'Party Dues Report', 'path' => '/reports/party-dues'];
         }
-
         if (auth()->check() && $user->can('reports.daybook')) {
-            $mainItems[] = [
-                'icon' => 'charts',
-                'name' => 'Daily Transactions Book',
-                'path' => '/reports/day-book',
-            ];
+            $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];
+        }
+        if (auth()->check() && $user->can('reports.cashbook')) {
+            $reportsSubItems[] = ['name' => 'Cash Book', 'path' => '/reports/cash-book'];
         }
 
-        if (auth()->check() && $user->can('reports.cashbook')) {
+        if (!empty($reportsSubItems)) {
             $mainItems[] = [
                 'icon' => 'charts',
-                'name' => 'Cash Book',
-                'path' => '/reports/cash-book',
+                'name' => 'Reports & Statements',
+                'subItems' => $reportsSubItems,
             ];
         }
 

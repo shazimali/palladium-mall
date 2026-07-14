@@ -183,7 +183,7 @@
                                     {{-- Delete/Cancel --}}
                                     @if(auth()->user()->hasPermission('receiving_vouchers.delete') || auth()->user()->isSuperAdmin())
                                         <form action="{{ route('receiving-vouchers.destroy', $voucher) }}" method="POST" x-data
-                                            @submit.prevent="if(confirm('Cancel / delete this voucher? This will roll back any tenant paid balances associated with it.')) $el.submit()">
+                                            @submit.prevent="confirmAction($el, 'Are you sure you want to cancel and delete this receiving voucher? This will roll back any tenant paid balances associated with it.', 'Cancel / Delete?', 'Yes, Delete')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"

@@ -131,7 +131,7 @@
                                     {{-- Delete --}}
                                     @if(auth()->user()->hasPermission('owners.delete') || auth()->user()->isSuperAdmin())
                                         <form action="{{ route('owners.destroy', $owner) }}" method="POST" x-data
-                                            @submit.prevent="if(confirm('Remove owner {{ $owner->name }}?')) $el.submit()">
+                                            @submit.prevent="confirmAction($el, 'Remove owner {{ $owner->name }}?', 'Delete Owner?', 'Yes, Remove')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"

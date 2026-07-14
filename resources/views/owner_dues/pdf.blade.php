@@ -69,7 +69,6 @@
         <div class="disposable-title">Disposable Amount Breakdown</div>
         <div class="disposable-line">Cash in Accounts: <strong>Rs. {{ number_format($totalCashBalance, 2) }}</strong></div>
         <div class="disposable-line">− Pending Owner Dues: <strong style="color:#ea580c;">Rs. {{ number_format($totalOwnersPending, 2) }}</strong></div>
-        <div class="disposable-line">− Pending Landlord Dues: <strong style="color:#dc2626;">Rs. {{ number_format($pendingLandlordDues, 2) }}</strong></div>
         <div class="disposable-total {{ $disposableAmount >= 0 ? 'green' : '' }}" style="{{ $disposableAmount < 0 ? 'color:#dc2626' : '' }}">
             = Disposable Amount: Rs. {{ number_format($disposableAmount, 2) }}
         </div>

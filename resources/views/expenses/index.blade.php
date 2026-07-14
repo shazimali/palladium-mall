@@ -227,7 +227,7 @@
                                     {{-- Delete/Cancel --}}
                                     @if(auth()->user()->hasPermission('expenses.delete') || auth()->user()->isSuperAdmin())
                                         <form action="{{ route('expenses.destroy', $expense) }}" method="POST" x-data
-                                            @submit.prevent="if(confirm('Are you sure you want to cancel and delete this Expense Voucher of Rs. {{ number_format($expense->amount) }}? This will reverse any balances.')) $el.submit()">
+                                            @submit.prevent="confirmAction($el, 'Are you sure you want to cancel and delete this Expense Voucher of Rs. {{ number_format($expense->amount) }}? This will reverse any balances.', 'Cancel / Delete?', 'Yes, Delete')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"

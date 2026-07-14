@@ -109,9 +109,9 @@
                                         </a>
                                     @endif
                                     @if(auth()->user()->hasPermission('parties.delete') || auth()->user()->isSuperAdmin())
-                                        <form action="{{ route('parties.destroy', $party) }}" method="POST"
-                                            onsubmit="return confirm('Are you sure you want to delete this party head?');"
-                                            class="inline">
+                                        <form action="{{ route('parties.destroy', $party) }}" method="POST" x-data
+                                             @submit.prevent="confirmAction($el, 'Are you sure you want to delete this party head?', 'Delete Party Head?', 'Yes, Delete')"
+                                             class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"

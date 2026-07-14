@@ -37,7 +37,6 @@
             <p class="font-semibold text-gray-800 dark:text-white/90">Disposable Amount Breakdown</p>
             <p>Cash in Accounts: <strong class="text-gray-800 dark:text-white/80">Rs. {{ number_format($totalCashBalance, 2) }}</strong></p>
             <p>− Pending Owner Dues: <strong class="text-orange-600">Rs. {{ number_format($totalOwnersPending, 2) }}</strong></p>
-            <p>− Pending Landlord Dues: <strong class="text-red-500">Rs. {{ number_format($pendingLandlordDues, 2) }}</strong></p>
             <p class="border-t border-gray-200 dark:border-gray-700 pt-1 font-semibold {{ $disposableAmount >= 0 ? 'text-green-600' : 'text-red-600' }}">
                 = Disposable Amount: Rs. {{ number_format($disposableAmount, 2) }}
             </p>

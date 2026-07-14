@@ -22,6 +22,7 @@ use App\Http\Controllers\ReceivingVoucherController;
 use App\Http\Controllers\PaymentVoucherController;
 use App\Http\Controllers\ProfitLossController;
 use App\Http\Controllers\OwnerDuesReportController;
+use App\Http\Controllers\PartyDuesReportController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -245,6 +246,10 @@ Route::middleware('auth')->group(function () {
         // Owner Dues Report
         Route::get('reports/owner-dues', [OwnerDuesReportController::class, 'index'])->name('reports.owner-dues');
         Route::get('reports/owner-dues/pdf', [OwnerDuesReportController::class, 'exportPdf'])->name('reports.owner-dues.pdf');
+
+        // Party Dues Report
+        Route::get('reports/party-dues', [PartyDuesReportController::class, 'index'])->name('reports.party-dues');
+        Route::get('reports/party-dues/pdf', [PartyDuesReportController::class, 'exportPdf'])->name('reports.party-dues.pdf');
     });
 
     // AJAX: owner pending balance (used in Payment Voucher form)
@@ -310,6 +315,8 @@ Route::middleware('auth')->group(function () {
             'store'   => 'expenses.store',
             'show'    => 'expenses.show',
             'destroy' => 'expenses.destroy',
+        ])->parameters([
+            'expense-vouchers' => 'expense',
         ]);
         Route::get('expense-vouchers/{expense}/print', [\App\Http\Controllers\ExpenseController::class, 'print'])
             ->name('expenses.print');

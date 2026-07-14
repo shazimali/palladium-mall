@@ -16,7 +16,7 @@
 
             @if(auth()->user()->hasPermission('payment_vouchers.delete') || auth()->user()->isSuperAdmin())
                 <form action="{{ route('payment-vouchers.destroy', $voucher) }}" method="POST" x-data
-                    @submit.prevent="if(confirm('Are you sure you want to cancel and delete this Payment Voucher of Rs. {{ number_format($voucher->amount) }}? This action is irreversible.')) $el.submit()">
+                    @submit.prevent="confirmAction($el, 'Are you sure you want to cancel and delete this Payment Voucher of Rs. {{ number_format($voucher->amount) }}? This action is irreversible.', 'Cancel Voucher?', 'Yes, Cancel')">
                     @csrf
                     @method('DELETE')
                     <button type="submit"

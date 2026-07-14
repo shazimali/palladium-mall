@@ -44,8 +44,12 @@
                     {{-- Date --}}
                     <div>
                         <label class="{{ $label }}">Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="date" value="{{ old('date', $expense->date->format('Y-m-d')) }}" 
-                               class="{{ $input }} {{ $errors->has('date') ? 'border-red-400' : '' }}" required>
+                        <x-form.date-picker 
+                            id="date" 
+                            name="date"
+                            placeholder="Select Date" 
+                            defaultDate="{{ old('date', $expense->date ? $expense->date->format('Y-m-d') : date('Y-m-d')) }}" 
+                        />
                         @error('date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 

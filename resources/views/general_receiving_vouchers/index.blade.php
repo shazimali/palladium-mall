@@ -159,8 +159,8 @@
                                         </a>
                                     @endif
                                     @if(auth()->user()->hasPermission('general_receiving_vouchers.delete') || auth()->user()->isSuperAdmin())
-                                        <form action="{{ route('general-receiving-vouchers.destroy', $voucher) }}" method="POST"
-                                            onsubmit="return confirm('Are you sure you want to delete this general receiving voucher?');"
+                                        <form action="{{ route('general-receiving-vouchers.destroy', $voucher) }}" method="POST" x-data
+                                            @submit.prevent="confirmAction($el, 'Are you sure you want to delete this general receiving voucher?', 'Delete Voucher?', 'Yes, Delete')"
                                             class="inline">
                                             @csrf
                                             @method('DELETE')
