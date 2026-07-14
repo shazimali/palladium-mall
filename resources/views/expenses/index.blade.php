@@ -157,11 +157,8 @@
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Category (Head)</th>
                         <th class="px-4 py-3 text-right">Amount</th>
-                        <th class="px-4 py-3">Method</th>
                         <th class="px-4 py-3">Paid From (Account)</th>
-                        <th class="px-4 py-3">Ref/Cheque</th>
                         <th class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem]">Description</th>
-                        <th class="px-4 py-3 text-center">Receipt</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -180,28 +177,11 @@
                             <td class="px-4 py-3 font-bold text-red-600 dark:text-red-400 text-right">
                                 Rs. {{ number_format($expense->amount, 2) }}
                             </td>
-                            <td class="px-4 py-3 font-mono text-xs capitalize">
-                                {{ $expense->payment_method }}
-                            </td>
                             <td class="px-4 py-3">
                                 {{ $expense->paymentAccount ? $expense->paymentAccount->name : '—' }}
                             </td>
-                            <td class="px-4 py-3 font-mono text-xs">{{ $expense->reference ?? '—' }}</td>
                             <td class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem] truncate" title="{{ $expense->notes }}">
                                 {{ $expense->notes ?? '—' }}
-                            </td>
-                            <td class="px-4 py-3 text-center">
-                                @if($expense->receipt)
-                                    <a href="{{ $expense->receipt_url }}" target="_blank"
-                                       class="inline-flex items-center justify-center p-1 rounded-md text-brand-500 bg-brand-50 hover:bg-brand-100 dark:bg-brand-950/20 dark:hover:bg-brand-950/40 transition-colors"
-                                       title="View Receipt File">
-                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                        </svg>
-                                    </a>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-end gap-2">

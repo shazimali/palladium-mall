@@ -143,7 +143,8 @@
                     {{-- Date --}}
                     <div>
                         <label class="{{ $label }}">Voucher Date <span class="text-red-500">*</span></label>
-                        <input type="date" name="date" value="{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}" 
+                        <input type="text" id="voucher_date" name="date" value="{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}" 
+                               placeholder="YYYY-MM-DD" autocomplete="off"
                                class="{{ $input }} {{ $errors->has('date') ? 'border-red-400' : '' }}" required>
                         @error('date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
@@ -206,3 +207,19 @@
         </x-common.component-card>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr('#voucher_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true
+                });
+            }
+        });
+    </script>
+@endpush
