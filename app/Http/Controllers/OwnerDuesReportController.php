@@ -103,10 +103,8 @@ class OwnerDuesReportController extends Controller
         $accounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
-            ->withSum('ownerReceivables', 'amount')
             ->withSum('paymentVouchers', 'amount')
             ->withSum('expenses', 'amount')
-            ->withSum('ownerPayables', 'amount')
             ->get();
 
         $totalCashBalance = $accounts->sum(fn($a) => $a->current_balance);
