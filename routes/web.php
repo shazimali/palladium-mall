@@ -21,8 +21,7 @@ use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\ReceivingVoucherController;
 use App\Http\Controllers\PaymentVoucherController;
 use App\Http\Controllers\ProfitLossController;
-use App\Http\Controllers\OwnerDuesReportController;
-use App\Http\Controllers\PartyDuesReportController;
+use App\Http\Controllers\ReceivablePayableReportController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -243,17 +242,13 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/profit-loss/pdf', [ProfitLossController::class, 'exportPdf'])->name('reports.profit-loss.pdf');
         Route::get('reports/profit-loss/excel', [ProfitLossController::class, 'exportExcel'])->name('reports.profit-loss.excel');
 
-        // Owner Dues Report
-        Route::get('reports/owner-dues', [OwnerDuesReportController::class, 'index'])->name('reports.owner-dues');
-        Route::get('reports/owner-dues/pdf', [OwnerDuesReportController::class, 'exportPdf'])->name('reports.owner-dues.pdf');
-
-        // Party Dues Report
-        Route::get('reports/party-dues', [PartyDuesReportController::class, 'index'])->name('reports.party-dues');
-        Route::get('reports/party-dues/pdf', [PartyDuesReportController::class, 'exportPdf'])->name('reports.party-dues.pdf');
+        // Consolidated Receivables & Payables Summary Report
+        Route::get('reports/receivables-payables', [ReceivablePayableReportController::class, 'index'])->name('reports.receivables-payables');
+        Route::get('reports/receivables-payables/pdf', [ReceivablePayableReportController::class, 'exportPdf'])->name('reports.receivables-payables.pdf');
     });
 
     // AJAX: owner pending balance (used in Payment Voucher form)
-    Route::get('ajax/owner-pending-balance', [OwnerDuesReportController::class, 'getOwnerBalance'])->name('ajax.owner-pending-balance');
+    Route::get('ajax/owner-pending-balance', [ReceivablePayableReportController::class, 'getOwnerBalance'])->name('ajax.owner-pending-balance');
 
     // Ledgers
     Route::middleware('permission:ledgers.view')->group(function () {

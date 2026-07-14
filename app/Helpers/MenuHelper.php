@@ -247,8 +247,7 @@ class MenuHelper
         if (auth()->check() && $user->can('reports.view')) {
             $reportsSubItems[] = ['name' => 'All Reports Overview', 'path' => '/reports'];
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
-            $reportsSubItems[] = ['name' => 'Owner Dues Report', 'path' => '/reports/owner-dues'];
-            $reportsSubItems[] = ['name' => 'Party Dues Report', 'path' => '/reports/party-dues'];
+            $reportsSubItems[] = ['name' => 'Receivables & Payables Summary', 'path' => '/reports/receivables-payables'];
         }
         if (auth()->check() && $user->can('reports.daybook')) {
             $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];
