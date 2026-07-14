@@ -137,12 +137,21 @@ class ExpenseController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Expense $expense): View
     {
-        abort(403, 'Editing expense vouchers is disabled to maintain financial integrity.');
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('expenses.edit')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $expenseHeads = ExpenseHead::orderBy('name')->get();
+        $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
+
+        return view('expenses.edit', [
+            'title'           => 'Edit recorded expense — ' . $expense->voucher_no,
+            'expense'         => $expense,
+            'expenseHeads'    => $expenseHeads,
+            'paymentAccounts' => $paymentAccounts,
+        ]);
     }
 
     /**
@@ -150,7 +159,32 @@ class ExpenseController extends Controller
      */
     public function update(Request $request, Expense $expense): RedirectResponse
     {
-        abort(403, 'Editing expense vouchers is disabled to maintain financial integrity.');
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('expenses.edit')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $data = $request->validate([
+            'expense_head_id'    => ['required', 'exists:expense_heads,id'],
+            'amount'             => ['required', 'numeric', 'min:0.01'],
+            'date'               => ['required', 'date'],
+            'payment_method'     => ['required', 'string', 'max:50'],
+            'payment_account_id' => ['nullable', 'exists:payment_accounts,id'],
+            'reference'          => ['nullable', 'string', 'max:255'],
+            'notes'              => ['nullable', 'string', 'max:1000'],
+            'receipt'            => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], // Max 5MB
+        ]);
+
+        if ($request->hasFile('receipt')) {
+            if ($expense->receipt) {
+                Storage::disk('public')->delete($expense->receipt);
+            }
+            $data['receipt'] = $request->file('receipt')->store('expenses/receipts', 'public');
+        }
+
+        $expense->update($data);
+
+        return redirect()->route('expenses.index')
+            ->with('success', 'Expense updated successfully.');
     }
 
     /**

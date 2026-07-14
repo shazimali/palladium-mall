@@ -160,7 +160,7 @@
                         <th class="px-4 py-3">Method</th>
                         <th class="px-4 py-3">Paid From (Account)</th>
                         <th class="px-4 py-3">Ref/Cheque</th>
-                        <th class="px-4 py-3">Description</th>
+                        <th class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem]">Description</th>
                         <th class="px-4 py-3 text-center">Receipt</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -187,7 +187,7 @@
                                 {{ $expense->paymentAccount ? $expense->paymentAccount->name : '—' }}
                             </td>
                             <td class="px-4 py-3 font-mono text-xs">{{ $expense->reference ?? '—' }}</td>
-                            <td class="px-4 py-3 max-w-xs truncate" title="{{ $expense->notes }}">
+                            <td class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem] truncate" title="{{ $expense->notes }}">
                                 {{ $expense->notes ?? '—' }}
                             </td>
                             <td class="px-4 py-3 text-center">
@@ -223,6 +223,17 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </a>
+
+                                    {{-- Edit --}}
+                                    @if(auth()->user()->hasPermission('expenses.edit') || auth()->user()->isSuperAdmin())
+                                        <a href="{{ route('expenses.edit', $expense) }}"
+                                            class="inline-flex items-center rounded-lg p-1.5 text-blue-500 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 transition-colors"
+                                            title="Edit Voucher">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </a>
+                                    @endif
 
                                     {{-- Delete/Cancel --}}
                                     @if(auth()->user()->hasPermission('expenses.delete') || auth()->user()->isSuperAdmin())

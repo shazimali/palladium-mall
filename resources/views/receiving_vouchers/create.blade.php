@@ -9,6 +9,7 @@
             x-data="{
                 tenantId: '{{ old('tenant_id', '') }}',
                 voucherAmount: '{{ old('amount', '') }}',
+                displayAmount: '',
                 pendingPayments: [],
                 totalBalance: 0,
                 loading: false,
@@ -39,6 +40,21 @@
                     if (this.tenantId) {
                         this.fetchPendingPayments(this.tenantId);
                     }
+
+                    if (this.voucherAmount) {
+                        this.formatAmount(String(this.voucherAmount));
+                    }
+                },
+
+                formatAmount(val) {
+                    let clean = val.replace(/[^\d.]/g, '');
+                    let parts = clean.split('.');
+                    if (parts.length > 2) {
+                        parts = [parts[0], parts.slice(1).join('')];
+                    }
+                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                    this.displayAmount = parts.join('.');
+                    this.voucherAmount = clean ? parseFloat(clean) : '';
                 },
 
                 fetchPendingPayments(tenantId) {
@@ -284,9 +300,13 @@
                                 <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                     Voucher Amount (Rs.) <span class="text-red-500">*</span>
                                 </label>
-                                <input type="number" name="amount" x-model.number="voucherAmount" required min="0.01" step="0.01" :max="totalBalance > 0 ? totalBalance : 99999999"
-                                    placeholder="0.00"
-                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                <input type="text" 
+                                       x-model="displayAmount"
+                                       @input="formatAmount($event.target.value)"
+                                       required
+                                       placeholder="0.00"
+                                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                <input type="hidden" name="amount" x-model="voucherAmount">
                                 @error('amount')
                                     <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                                 @enderror

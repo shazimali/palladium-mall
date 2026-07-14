@@ -15,6 +15,7 @@
                     selectedBalance: null,
                     selectedAccountName: '',
                     amount: '{{ old('amount') }}',
+                    displayAmount: '',
                     ownerPendingBalance: null,
                     ownerName: '',
                     fetchOwnerBalance(ownerId) {
@@ -22,6 +23,21 @@
                         fetch('{{ route('ajax.owner-pending-balance') }}?owner_id=' + ownerId)
                             .then(r => r.json())
                             .then(d => { this.ownerPendingBalance = d.pending_balance; this.ownerName = d.owner_name; });
+                    },
+                    formatAmount(val) {
+                        let clean = val.replace(/[^\d.]/g, '');
+                        let parts = clean.split('.');
+                        if (parts.length > 2) {
+                            parts = [parts[0], parts.slice(1).join('')];
+                        }
+                        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        this.displayAmount = parts.join('.');
+                        this.amount = clean;
+                    },
+                    init() {
+                        if (this.amount) {
+                            this.formatAmount(String(this.amount));
+                        }
                     }
                 }"
                 @submit="
@@ -199,8 +215,12 @@
                     {{-- Amount --}}
                     <div>
                         <label class="{{ $label }}">Amount (Rs.) <span class="text-red-500">*</span></label>
-                        <input type="number" step="0.01" min="0.01" name="amount" x-model="amount" placeholder="0.00" 
+                        <input type="text" 
+                               x-model="displayAmount"
+                               @input="formatAmount($event.target.value)"
+                               placeholder="0.00" 
                                class="{{ $input }} {{ $errors->has('amount') ? 'border-red-400' : '' }}" required>
+                        <input type="hidden" name="amount" x-model="amount">
                         @error('amount') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 

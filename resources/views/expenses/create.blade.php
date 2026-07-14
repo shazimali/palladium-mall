@@ -9,7 +9,26 @@
         </div>
 
         <x-common.component-card title="Record Expense Voucher" desc="Log a new operational or business payment into the ledger book">
-            <form action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+            <form action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6"
+                x-data="{
+                    amount: '{{ old('amount') }}',
+                    displayAmount: '',
+                    formatAmount(val) {
+                        let clean = val.replace(/[^\d.]/g, '');
+                        let parts = clean.split('.');
+                        if (parts.length > 2) {
+                            parts = [parts[0], parts.slice(1).join('')];
+                        }
+                        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                        this.displayAmount = parts.join('.');
+                        this.amount = clean;
+                    },
+                    init() {
+                        if (this.amount) {
+                            this.formatAmount(String(this.amount));
+                        }
+                    }
+                }">
                 @csrf
 
                 @php
@@ -35,8 +54,12 @@
                     {{-- Amount --}}
                     <div>
                         <label class="{{ $label }}">Amount (Rs.) <span class="text-red-500">*</span></label>
-                        <input type="number" step="0.01" min="0.01" name="amount" value="{{ old('amount') }}" placeholder="0.00" 
+                        <input type="text" 
+                               x-model="displayAmount"
+                               @input="formatAmount($event.target.value)"
+                               placeholder="0.00" 
                                class="{{ $input }} {{ $errors->has('amount') ? 'border-red-400' : '' }}" required>
+                        <input type="hidden" name="amount" x-model="amount">
                         @error('amount') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 

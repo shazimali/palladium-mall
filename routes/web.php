@@ -309,11 +309,13 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:expenses.view')->group(function () {
-        Route::resource('expense-vouchers', \App\Http\Controllers\ExpenseController::class)->except(['edit', 'update'])->names([
+        Route::resource('expense-vouchers', \App\Http\Controllers\ExpenseController::class)->names([
             'index'   => 'expenses.index',
             'create'  => 'expenses.create',
             'store'   => 'expenses.store',
             'show'    => 'expenses.show',
+            'edit'    => 'expenses.edit',
+            'update'  => 'expenses.update',
             'destroy' => 'expenses.destroy',
         ])->parameters([
             'expense-vouchers' => 'expense',
