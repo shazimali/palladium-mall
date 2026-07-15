@@ -50,122 +50,114 @@
     {{-- Summary Widgets Cards --}}
     <table class="summary-table">
         <tr>
-            <td class="summary-td">
+            <td class="summary-td" style="width: 25%;">
                 <div class="summary-card" style="border-left: 3px solid #1D3461;">
                     <div class="label">Cash Balance</div>
                     <div class="value">Rs. {{ number_format($totalCashBalance, 2) }}</div>
                 </div>
             </td>
-            <td class="summary-td">
-                <div class="summary-card" style="border-left: 3px solid #3B82F6;">
-                    <div class="label">Disposable Cash</div>
-                    <div class="value" style="color: #3B82F6;">Rs. {{ number_format($disposableAmount, 2) }}</div>
-                </div>
-            </td>
-            <td class="summary-td">
+            <td class="summary-td" style="width: 25%;">
                 <div class="summary-card" style="border-left: 3px solid #EF4444;">
-                    <div class="label">Owed to Partners</div>
-                    <div class="value" style="color: #EF4444;">Rs. {{ number_format($totalOwnersPending, 2) }}</div>
+                    <div class="label">Total Payables</div>
+                    <div class="value" style="color: #EF4444;">Rs. {{ number_format($totalPayables, 2) }}</div>
                 </div>
             </td>
-            <td class="summary-td">
-                <div class="summary-card" style="border-left: 3px solid #F59E0B;">
-                    <div class="label">Owed to Parties</div>
-                    <div class="value" style="color: #F59E0B;">Rs. {{ number_format($partyTotals['net_pay'], 2) }}</div>
-                </div>
-            </td>
-            <td class="summary-td">
+            <td class="summary-td" style="width: 25%;">
                 <div class="summary-card" style="border-left: 3px solid #10B981;">
-                    <div class="label">Owed by Parties</div>
-                    <div class="value" style="color: #10B981;">Rs. {{ number_format($partyTotals['net_rec'], 2) }}</div>
+                    <div class="label">Total Receivables</div>
+                    <div class="value" style="color: #10B981;">Rs. {{ number_format($totalReceivables, 2) }}</div>
+                </div>
+            </td>
+            <td class="summary-td" style="width: 25%;">
+                <div class="summary-card" style="border-left: 3px solid {{ $netPosition >= 0 ? '#10B981' : '#EF4444' }};">
+                    <div class="label">Net Position</div>
+                    <div class="value" style="color: {{ $netPosition >= 0 ? '#10B981' : '#EF4444' }};">Rs. {{ number_format($netPosition, 2) }}</div>
                 </div>
             </td>
         </tr>
     </table>
 
-    {{-- SECTION 1: Partner Dues --}}
-    <div class="section-title">Section 1: Managing Owners (Partners) Accounts</div>
-    <div class="section-desc">Summary of collected earnings, payouts, and outstanding balances due to partners.</div>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width: 30%;">Partner Name</th>
-                <th style="width: 15%; text-align: center;">Share Pct</th>
-                <th style="width: 18%;" class="text-right">Total Earned</th>
-                <th style="width: 18%;" class="text-right">Total Paid</th>
-                <th style="width: 19%;" class="text-right">Net Pending Dues</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($ownerRows as $row)
+    @if($type === 'payables')
+        {{-- SECTION 1: Payables --}}
+        <div class="section-title">Payables Summary (Owed/Held by Building)</div>
+        <div class="section-desc">List of collections (e.g. tenant security deposits, general party receipts) that are held or owed by the building.</div>
+        <table class="data-table">
+            <thead>
                 <tr>
-                    <td style="font-weight: bold;">{{ $row['owner']->name }}</td>
-                    <td class="text-center font-mono">{{ number_format($row['percentage'], 2) }}%</td>
-                    <td class="text-right">Rs. {{ number_format($row['due'], 2) }}</td>
-                    <td class="text-right text-red">Rs. {{ number_format($row['paid'], 2) }}</td>
-                    <td class="text-right font-mono" style="font-weight: bold;">Rs. {{ number_format($row['pending'], 2) }}</td>
+                    <th style="width: 30%;">Entity Name</th>
+                    <th style="width: 20%;">Category</th>
+                    <th style="width: 20%;">Details</th>
+                    <th style="width: 10%;" class="text-right">Owed/Held</th>
+                    <th style="width: 10%;" class="text-right">Paid/Settled</th>
+                    <th style="width: 10%;" class="text-right">Net Payable</th>
                 </tr>
-            @endforeach
-        </tbody>
-        <tfoot>
-            <tr>
-                <td>Total Stakeholders Dues</td>
-                <td></td>
-                <td class="text-right">Rs. {{ number_format($totalOwnersDue, 2) }}</td>
-                <td class="text-right">Rs. {{ number_format($totalOwnersPaid, 2) }}</td>
-                <td class="text-right font-mono">Rs. {{ number_format($totalOwnersPending, 2) }}</td>
-            </tr>
-        </tfoot>
-    </table>
-
-    {{-- SECTION 2: Party Heads --}}
-    <div class="section-title" style="page-break-before: auto;">Section 2: Party Heads Ledger Summary</div>
-    <div class="section-desc">Outstanding balances owed by third parties (Receivables) and to third parties (Payables).</div>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th style="width: 28%;" rowspan="2">Party Head Name</th>
-                <th style="width: 36%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2);" colspan="3">Receivables (Owed to Mall)</th>
-                <th style="width: 36%; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2);" colspan="3">Payables (Owed by Mall)</th>
-            </tr>
-            <tr>
-                <th class="text-right">Billed</th>
-                <th class="text-right">Collected</th>
-                <th class="text-right">Net Receivable</th>
-                <th class="text-right">Owed</th>
-                <th class="text-right">Paid</th>
-                <th class="text-right">Net Payable</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($partyRows as $row)
+            </thead>
+            <tbody>
+                @forelse($payables as $row)
+                    <tr>
+                        <td style="font-weight: bold;">{{ $row['name'] }}</td>
+                        <td>{{ $row['category'] }}</td>
+                        <td style="color: #64748B;">{{ $row['details'] }}</td>
+                        <td class="text-right">Rs. {{ number_format($row['due'], 2) }}</td>
+                        <td class="text-right text-red">Rs. {{ number_format($row['paid'], 2) }}</td>
+                        <td class="text-right font-mono" style="font-weight: bold;">Rs. {{ number_format($row['net'], 2) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center" style="color: #94A3B8; padding: 15px 0;">No active payables found matching filters.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
                 <tr>
-                    <td style="font-weight: bold;">{{ $row['party']->name }}</td>
-                    <td class="text-right">Rs. {{ number_format($row['rec_due'], 2) }}</td>
-                    <td class="text-right text-green">Rs. {{ number_format($row['rec_paid'], 2) }}</td>
-                    <td class="text-right font-mono" style="font-weight: bold;">
-                        {{ $row['net_rec'] > 0.01 ? 'Rs. ' . number_format($row['net_rec'], 2) : '—' }}
-                    </td>
-                    <td class="text-right">Rs. {{ number_format($row['pay_due'], 2) }}</td>
-                    <td class="text-right text-red">Rs. {{ number_format($row['pay_paid'], 2) }}</td>
-                    <td class="text-right font-mono" style="font-weight: bold;">
-                        {{ $row['net_pay'] > 0.01 ? 'Rs. ' . number_format($row['net_pay'], 2) : '—' }}
-                    </td>
+                    <td colspan="3">Total Building Payables</td>
+                    <td class="text-right">Rs. {{ number_format(collect($payables)->sum('due'), 2) }}</td>
+                    <td class="text-right">Rs. {{ number_format(collect($payables)->sum('paid'), 2) }}</td>
+                    <td class="text-right font-mono">Rs. {{ number_format($totalPayables, 2) }}</td>
                 </tr>
-            @endforeach
-        </tbody>
-        <tfoot>
-            <tr>
-                <td>Total Party Balances</td>
-                <td class="text-right">Rs. {{ number_format($partyTotals['rec_due'], 2) }}</td>
-                <td class="text-right">Rs. {{ number_format($partyTotals['rec_paid'], 2) }}</td>
-                <td class="text-right font-mono">Rs. {{ number_format($partyTotals['net_rec'], 2) }}</td>
-                <td class="text-right">Rs. {{ number_format($partyTotals['pay_due'], 2) }}</td>
-                <td class="text-right">Rs. {{ number_format($partyTotals['pay_paid'], 2) }}</td>
-                <td class="text-right font-mono">Rs. {{ number_format($partyTotals['net_pay'], 2) }}</td>
-            </tr>
-        </tfoot>
-    </table>
+            </tfoot>
+        </table>
+    @else
+        {{-- SECTION 2: Receivables --}}
+        <div class="section-title">Receivables Summary (Owed to Building)</div>
+        <div class="section-desc">List of dues (e.g. tenant rent, landlord credits, party receivable invoices) owed to the building.</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 30%;">Entity Name</th>
+                    <th style="width: 20%;">Category</th>
+                    <th style="width: 20%;">Details</th>
+                    <th style="width: 10%;" class="text-right">Due/Credit</th>
+                    <th style="width: 10%;" class="text-right">Paid/Received</th>
+                    <th style="width: 10%;" class="text-right">Net Receivable</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($receivables as $row)
+                    <tr>
+                        <td style="font-weight: bold;">{{ $row['name'] }}</td>
+                        <td>{{ $row['category'] }}</td>
+                        <td style="color: #64748B;">{{ $row['details'] }}</td>
+                        <td class="text-right">Rs. {{ number_format($row['due'], 2) }}</td>
+                        <td class="text-right text-green">Rs. {{ number_format($row['paid'], 2) }}</td>
+                        <td class="text-right font-mono" style="font-weight: bold;">Rs. {{ number_format($row['net'], 2) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="6" class="text-center" style="color: #94A3B8; padding: 15px 0;">No active receivables found matching filters.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3">Total Building Receivables</td>
+                    <td class="text-right">Rs. {{ number_format(collect($receivables)->sum('due'), 2) }}</td>
+                    <td class="text-right">Rs. {{ number_format(collect($receivables)->sum('paid'), 2) }}</td>
+                    <td class="text-right font-mono">Rs. {{ number_format($totalReceivables, 2) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    @endif
 
     <div class="footer">
         Palladium Mall Summary Report &bull; Page 1 of 1

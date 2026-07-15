@@ -355,6 +355,11 @@ class ReportController extends Controller
                     $existingKeys[$key] = true;
                 }
 
+                // Pluck all agreement IDs that already have a security deposit payment record in the DB
+                $existingSecurityDepositAgreementIds = \App\Models\Payment::where('type', 'security_deposit')
+                    ->pluck('agreement_id')
+                    ->toArray();
+
                 $projectSelfUnits = collect();
                 if ($ownerType !== 'pm_mall' && (
                     $reportType === 'all' || 
@@ -404,7 +409,8 @@ class ReportController extends Controller
                             if (!isset($existingKeys[$rentKey])) {
                                 $rentMonthStr = $month->format('Y-m');
                                 $startMonthStr = $agreement->start_date ? $agreement->start_date->format('Y-m') : '';
-                                $securityDeposit = ($rentMonthStr === $startMonthStr) ? (float) $agreement->security_deposit : 0.0;
+                                $hasExistingPayment = in_array($agreement->id, $existingSecurityDepositAgreementIds);
+                                $securityDeposit = ($rentMonthStr === $startMonthStr && !$hasExistingPayment) ? (float) $agreement->security_deposit : 0.0;
 
                                 $entries->push([
                                     'created_date'    => null,
@@ -605,6 +611,10 @@ class ReportController extends Controller
             ->pluck('prev_unpaid', 'unit_id')
             ->map(fn($val) => (float) $val);
 
+        $existingSecurityDepositAgreementIds = Payment::where('type', 'security_deposit')
+            ->pluck('agreement_id')
+            ->toArray();
+
         $matrixEntries = collect();
 
         foreach ($units as $index => $unit) {
@@ -661,7 +671,8 @@ class ReportController extends Controller
             } elseif ($agreement) {
                 $agreementStartMonth = $agreement->start_date ? $agreement->start_date->format('Y-m') : '';
                 $selectedMonthStr = $month->format('Y-m');
-                if ($agreementStartMonth === $selectedMonthStr) {
+                $hasExistingPayment = in_array($agreement->id, $existingSecurityDepositAgreementIds);
+                if ($agreementStartMonth === $selectedMonthStr && !$hasExistingPayment) {
                     $sec_due = (float) $agreement->security_deposit;
                 } else {
                     $sec_due = 0.0;

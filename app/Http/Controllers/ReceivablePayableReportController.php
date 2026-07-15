@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Owner;
 use App\Models\Party;
 use App\Models\PaymentAccount;
+use App\Models\PaymentVoucher;
 use App\Models\ReceivingVoucher;
 use App\Models\GeneralReceivingVoucher;
-use App\Models\PaymentVoucher;
+use App\Models\Payment;
+use App\Models\Landlord;
+use App\Models\LandlordPayable;
+use App\Models\Owner;
 use Barryvdh\Dompdf\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -70,118 +73,187 @@ class ReceivablePayableReportController extends Controller
      */
     private function buildReportData(Request $request): array
     {
-        $search   = $request->query('search');
-        $dateFrom = $request->query('date_from');
-        $dateTo   = $request->query('date_to');
+        $dateFrom   = $request->query('date_from');
+        $dateTo     = $request->query('date_to');
+        $type       = $request->query('type', 'receivables'); // 'receivables' or 'payables'
+        $categories = $request->query('categories', []); // selected category checkboxes
 
-        // ── 1. Managing Owners calculations ──────────────────────────────────
-        $owners = Owner::orderBy('name')->get();
+        $payables = [];
+        $receivables = [];
 
-        $totalTenantIncome = (float) ReceivingVoucher::where('received_from_type', 'tenant')
-            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
-            ->sum('amount');
+        // ── 1. Tenant Security Deposits & Tenant Rent/Maintenance/Utility Dues ──
+        $paymentsQuery = Payment::query()
+            ->with(['tenant', 'unit'])
+            ->when($dateFrom, fn($q) => $q->where('due_date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('due_date', '<=', $dateTo));
 
-        $totalPartyIncome  = (float) GeneralReceivingVoucher::when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
-            ->sum('amount');
+        $allPayments = $paymentsQuery->get();
 
-        $totalIncome = $totalTenantIncome + $totalPartyIncome;
+        if ($type === 'payables') {
+            // 1a. Security Deposits (collected amount is a Payable)
+            $securityPayments = $allPayments->where('type', 'security_deposit');
+            $groupedSecurity = $securityPayments->groupBy(function($p) {
+                return ($p->tenant_id ?? 0) . '_' . ($p->unit_id ?? 0);
+            });
 
-        $ownerRows          = [];
-        $totalOwnersDue     = 0.00;
-        $totalOwnersPaid    = 0.00;
-        $totalOwnersPending = 0.00;
-
-        foreach ($owners as $owner) {
-            // Re-evaluate owner totals scoped within the filtered period if needed,
-            // but the client prefers standard cumulative dues vs payouts. We can keep it standard
-            // or filter if dates are selected. Let's keep it standard since owner totals are cumulative all-time.
-            $due     = $owner->totalIncomeDue();
-            $paid    = $owner->totalPaid();
-            $pending = max(0.00, round($due - $paid, 2));
-
-            // If search is set, filter owners by name
-            if ($search && !str_contains(strtolower($owner->name), strtolower($search))) {
-                continue;
+            foreach ($groupedSecurity as $key => $group) {
+                $first = $group->first();
+                $totalCollected = (float) $group->sum('amount_paid');
+                
+                if ($totalCollected > 0.01) {
+                    $tenantName = $first->tenant ? $first->tenant->name : 'Unknown';
+                    $unitNo = $first->unit ? $first->unit->unit_number : '';
+                    $payables[] = [
+                        'category' => 'Tenant Security Deposit',
+                        'name' => $tenantName . ($unitNo ? " (Unit {$unitNo})" : ""),
+                        'details' => 'Security deposit collected and held by building',
+                        'due' => $totalCollected,
+                        'paid' => 0.00,
+                        'net' => $totalCollected,
+                    ];
+                }
             }
+        } else {
+            // 1b. Tenant Rent, Maintenance, Utilities, Fines, and Uncollected Security Deposits (Receivables)
+            $groupedDues = $allPayments->groupBy(function($p) {
+                return ($p->tenant_id ?? 0) . '_' . ($p->unit_id ?? 0);
+            });
 
-            $ownerRows[] = [
-                'owner'      => $owner,
-                'percentage' => (float) $owner->partnership_percentage,
-                'due'        => $due,
-                'paid'       => $paid,
-                'pending'    => $pending,
-            ];
+            foreach ($groupedDues as $key => $group) {
+                $first = $group->first();
+                $totalDue = (float) $group->sum('amount');
+                $totalPaid = (float) $group->sum('amount_paid');
+                $netReceivable = round($totalDue - $totalPaid, 2);
 
-            $totalOwnersDue     += $due;
-            $totalOwnersPaid    += $paid;
-            $totalOwnersPending += $pending;
+                if ($netReceivable > 0.01) {
+                    $tenantName = $first->tenant ? $first->tenant->name : 'Unknown';
+                    $unitNo = $first->unit ? $first->unit->unit_number : '';
+                    $receivables[] = [
+                        'category' => 'Tenant Rent & Charges',
+                        'name' => $tenantName . ($unitNo ? " (Unit {$unitNo})" : ""),
+                        'details' => 'Outstanding rent, maintenance, utility bills, or fines',
+                        'due' => $totalDue,
+                        'paid' => $totalPaid,
+                        'net' => $netReceivable,
+                    ];
+                }
+            }
         }
 
-        // ── 2. Party Heads calculations ─────────────────────────────────────
-        $partyQuery = Party::query()
-            ->withSum(['dues as total_receivable_due' => function ($q) use ($dateFrom, $dateTo) {
-                $q->where('type', 'receivable');
-                if ($dateFrom) $q->where('date', '>=', $dateFrom);
-                if ($dateTo)   $q->where('date', '<=', $dateTo);
-            }], 'amount')
-            ->withSum(['dues as total_payable_due' => function ($q) use ($dateFrom, $dateTo) {
-                $q->where('type', 'payable');
-                if ($dateFrom) $q->where('date', '>=', $dateFrom);
-                if ($dateTo)   $q->where('date', '<=', $dateTo);
-            }], 'amount')
-            ->withSum(['receivingVouchers as total_received' => function ($q) use ($dateFrom, $dateTo) {
-                if ($dateFrom) $q->where('date', '>=', $dateFrom);
-                if ($dateTo)   $q->where('date', '<=', $dateTo);
-            }], 'amount')
-            ->withSum(['paymentVouchers as total_paid' => function ($q) use ($dateFrom, $dateTo) {
-                $q->where('paid_to_type', 'other'); // standard payment voucher path
-                if ($dateFrom) $q->where('date', '>=', $dateFrom);
-                if ($dateTo)   $q->where('date', '<=', $dateTo);
-            }], 'amount')
-            ->when($search, function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%");
-            })
-            ->orderBy('name');
+        // ── 2. Party Balances (Payables and Receivables) ───────────────────────
+        $parties = Party::with(['receivingVouchers', 'paymentVouchers', 'dues'])->get();
 
-        $parties = $partyQuery->get();
+        foreach ($parties as $party) {
+            // Filter relationships by date if set
+            $vQuery = $party->receivingVouchers();
+            if ($dateFrom) $vQuery->where('date', '>=', $dateFrom);
+            if ($dateTo) $vQuery->where('date', '<=', $dateTo);
+            $totalReceived = (float) $vQuery->sum('amount'); // General Receiving
 
-        $partyRows = $parties->map(function ($party) {
-            $recDue  = (float) $party->total_receivable_due;
-            $recPaid = (float) $party->total_received;
-            $netRec  = round($recDue - $recPaid, 2);
+            $pvQuery = $party->paymentVouchers()->where('paid_to_type', 'other');
+            if ($dateFrom) $pvQuery->where('date', '>=', $dateFrom);
+            if ($dateTo)   $pvQuery->where('date', '<=', $dateTo);
+            $totalPaid = (float) $pvQuery->sum('amount'); // Payment Vouchers
 
-            $payDue  = (float) $party->total_payable_due;
-            $payPaid = (float) $party->total_paid;
-            $netPay  = round($payDue - $payPaid, 2);
+            $dQueryPayable = $party->dues()->where('type', 'payable');
+            if ($dateFrom) $dQueryPayable->where('date', '>=', $dateFrom);
+            if ($dateTo)   $dQueryPayable->where('date', '<=', $dateTo);
+            $totalPayableDue = (float) $dQueryPayable->sum('amount');
 
-            return [
-                'party'    => $party,
-                'rec_due'  => $recDue,
-                'rec_paid' => $recPaid,
-                'net_rec'  => $netRec,
-                'pay_due'  => $payDue,
-                'pay_paid' => $payPaid,
-                'net_pay'  => $netPay,
-            ];
-        });
+            $dQueryReceivable = $party->dues()->where('type', 'receivable');
+            if ($dateFrom) $dQueryReceivable->where('date', '>=', $dateFrom);
+            if ($dateTo)   $dQueryReceivable->where('date', '<=', $dateTo);
+            $totalReceivableDue = (float) $dQueryReceivable->sum('amount');
 
-        // Keep active parties with pending balances
-        $partyRows = $partyRows->filter(function ($row) {
-            return abs($row['net_rec']) > 0.01 || abs($row['net_pay']) > 0.01;
-        })->values();
+            if ($type === 'payables') {
+                // Payables Side calculation: GRV + payable_dues - PV
+                $netPayable = round(($totalReceived + $totalPayableDue) - $totalPaid, 2);
 
-        $partyTotals = [
-            'rec_due'  => $partyRows->sum('rec_due'),
-            'rec_paid' => $partyRows->sum('rec_paid'),
-            'net_rec'  => $partyRows->sum('net_rec'),
-            'pay_due'  => $partyRows->sum('pay_due'),
-            'pay_paid' => $partyRows->sum('pay_paid'),
-            'net_pay'  => $partyRows->sum('net_pay'),
-        ];
+                if ($netPayable > 0.01) {
+                    $payables[] = [
+                        'category' => 'Party Payable',
+                        'name' => $party->name,
+                        'details' => 'Owed to contractor/vendor (GRVs collected minus payouts)',
+                        'due' => $totalReceived + $totalPayableDue,
+                        'paid' => $totalPaid,
+                        'net' => $netPayable,
+                    ];
+                }
+            } else {
+                // Receivables Side calculation: dues_receivable + max(0, total_paid - total_received - dues_payable)
+                $excessPaid = max(0.00, $totalPaid - ($totalReceived + $totalPayableDue));
+                $netReceivable = round($totalReceivableDue + $excessPaid, 2);
 
-        // ── 3. General cash book metrics ────────────────────────────────────
+                if ($netReceivable > 0.01) {
+                    $receivables[] = [
+                        'category' => 'Party Receivable',
+                        'name' => $party->name,
+                        'details' => 'Owed by party (invoiced receivables or advance payouts)',
+                        'due' => $totalReceivableDue + $totalPaid,
+                        'paid' => $totalReceived + $totalPayableDue,
+                        'net' => $netReceivable,
+                    ];
+                }
+            }
+        }
+
+        // ── 3. Landlord Credit & Landlord Payables ────────────────────────────
+        if ($type === 'receivables') {
+            $landlords = Landlord::with(['ownerships'])->get();
+
+            foreach ($landlords as $landlord) {
+                // Receivables side (Opening Credit remaining)
+                $openingBalance = (float) $landlord->ownerships->sum('credit_amount'); // credit remaining on purchase
+
+                $rvQuery = ReceivingVoucher::where('owner_id', $landlord->id);
+                if ($dateFrom) $rvQuery->where('date', '>=', $dateFrom);
+                if ($dateTo)   $rvQuery->where('date', '<=', $dateTo);
+                $totalReceived = (float) $rvQuery->sum('amount');
+
+                $netReceivable = round($openingBalance - $totalReceived, 2);
+
+                if ($netReceivable > 0.01) {
+                    $receivables[] = [
+                        'category' => 'Landlord Credit',
+                        'name' => $landlord->name,
+                        'details' => 'Outstanding unit purchase credit balance due from landlord',
+                        'due' => $openingBalance,
+                        'paid' => $totalReceived,
+                        'net' => $netReceivable,
+                    ];
+                }
+            }
+        } else {
+            // Payables side (LandlordPayable installments building owes)
+            $landlordPayablesQuery = LandlordPayable::query()
+                ->with(['landlord', 'unit'])
+                ->when($dateFrom, fn($q) => $q->where('due_date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('due_date', '<=', $dateTo));
+
+            $landlordPayables = $landlordPayablesQuery->get();
+
+            foreach ($landlordPayables as $lp) {
+                $netPayable = round($lp->amount - $lp->amount_paid, 2);
+                if ($netPayable > 0.01) {
+                    $payables[] = [
+                        'category' => 'Landlord Payable',
+                        'name' => $lp->landlord->name . ($lp->unit ? " (Unit {$lp->unit->unit_number})" : ""),
+                        'details' => 'Landlord installment/payable: ' . $lp->title,
+                        'due' => (float)$lp->amount,
+                        'paid' => (float)$lp->amount_paid,
+                        'net' => $netPayable,
+                    ];
+                }
+            }
+        }
+
+        // Apply category filter checkboxes if set
+        if (!empty($categories)) {
+            $payables = collect($payables)->filter(fn($p) => in_array($p['category'], $categories))->values()->all();
+            $receivables = collect($receivables)->filter(fn($r) => in_array($r['category'], $categories))->values()->all();
+        }
+
+        // ── 4. General cash book metrics ────────────────────────────────────
         $accounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
@@ -190,31 +262,28 @@ class ReceivablePayableReportController extends Controller
             ->get();
 
         $totalCashBalance = $accounts->sum(fn($a) => $a->current_balance);
-        $disposableAmount = $totalCashBalance - $totalOwnersPending;
+
+        $totalPayablesSum = collect($payables)->sum('net');
+        $totalReceivablesSum = collect($receivables)->sum('net');
+        $netPosition = $totalReceivablesSum - $totalPayablesSum;
 
         return [
-            // Owners
-            'ownerRows'           => $ownerRows,
-            'totalOwnersDue'      => $totalOwnersDue,
-            'totalOwnersPaid'     => $totalOwnersPaid,
-            'totalOwnersPending'  => $totalOwnersPending,
-            
-            // Parties
-            'partyRows'           => $partyRows,
-            'partyTotals'         => $partyTotals,
+            // Lists
+            'payables'            => $payables,
+            'receivables'         => $receivables,
 
-            // Overall
-            'totalIncome'         => $totalIncome,
-            'totalTenantIncome'   => $totalTenantIncome,
-            'totalPartyIncome'    => $totalPartyIncome,
+            // Overall totals
             'totalCashBalance'    => $totalCashBalance,
-            'disposableAmount'    => $disposableAmount,
+            'totalPayables'       => $totalPayablesSum,
+            'totalReceivables'    => $totalReceivablesSum,
+            'netPosition'         => $netPosition,
             'accounts'            => $accounts,
 
             // Filters
-            'search'              => $search,
             'dateFrom'            => $dateFrom,
             'dateTo'              => $dateTo,
+            'type'                => $type,
+            'categories'          => $categories,
             'generatedAt'         => now(),
         ];
     }
