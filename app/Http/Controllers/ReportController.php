@@ -587,6 +587,7 @@ class ReportController extends Controller
                        ->where('month', $month->format('Y-m-d'));
                 });
             })
+            ->select(['id', 'unit_number', 'landlord_id', 'status', 'is_self', 'default_maintenance_charge'])
             ->orderBy('unit_number')
             ->get();
 
@@ -653,13 +654,17 @@ class ReportController extends Controller
             // Services (Maintenance)
             $maintPayment = $unitPayments->where('type', 'maintenance')->first();
             if ($maintPayment) {
-                $serv_due = (float) $maintPayment->amount;
+                $serv_due  = (float) $maintPayment->amount;
                 $serv_paid = (float) $maintPayment->amount_paid;
             } elseif ($agreement && $agreement->maintenance_charge > 0) {
-                $serv_due = (float) $agreement->maintenance_charge;
+                $serv_due  = (float) $agreement->maintenance_charge;
+                $serv_paid = 0.0;
+            } elseif ($unit->is_self && $unit->default_maintenance_charge > 0) {
+                // Other-Owned unit: no agreement, fall back to unit's current maintenance charge
+                $serv_due  = (float) $unit->default_maintenance_charge;
                 $serv_paid = 0.0;
             } else {
-                $serv_due = 0.0;
+                $serv_due  = 0.0;
                 $serv_paid = 0.0;
             }
 
