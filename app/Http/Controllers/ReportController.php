@@ -561,7 +561,15 @@ class ReportController extends Controller
             ->when($unitId,     fn($q) => $q->where('id', $unitId))
             ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
             ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
-            ->when($ownerType === 'other',    fn($q) => $q->where('is_self', true))
+            ->when($ownerType === 'other',    fn($q) => $q->where('is_self', true)->whereHas('otherTenant'))
+            ->when(!$ownerType, function ($q) {
+                $q->where(function ($sq) {
+                    $sq->where('is_self', false)
+                      ->orWhere(function ($ssq) {
+                          $ssq->where('is_self', true)->whereHas('otherTenant');
+                      });
+                });
+            })
             ->when($tenantId, function ($q) use ($tenantId, $month) {
                 $q->where(function ($sq) use ($tenantId, $month) {
                     $sq->whereHas('agreements', function ($qa) use ($tenantId, $month) {
