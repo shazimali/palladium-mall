@@ -59,8 +59,9 @@
                         <th class="px-4 py-3">Start Date</th>
                         <th class="px-4 py-3">End Date</th>
                         <th class="px-4 py-3">Monthly Rent</th>
+                        <th class="px-4 py-3">Maint. Charges</th>
+                        <th class="px-4 py-3">Sec. Deposit</th>
                         <th class="px-4 py-3">Days Left</th>
-                        <th class="px-4 py-3">Status</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -79,7 +80,9 @@
                             </td>
                             <td class="px-4 py-3 text-xs">{{ $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft' }}</td>
                             <td class="px-4 py-3 text-xs">{{ $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft' }}</td>
-                            <td class="px-4 py-3 font-medium">{{ $agreement->monthly_rent ? 'Rs. ' . number_format($agreement->monthly_rent) : '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">{{ $agreement->monthly_rent ? 'Rs. ' . number_format($agreement->monthly_rent) : '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">{{ $agreement->maintenance_charge ? 'Rs. ' . number_format($agreement->maintenance_charge) : '—' }}</td>
+                            <td class="px-4 py-3 font-bold text-gray-900 dark:text-white">{{ $agreement->security_deposit ? 'Rs. ' . number_format($agreement->security_deposit) : '—' }}</td>
                             <td class="px-4 py-3">
                                 @if($agreement->isActive())
                                     @php $days = $agreement->daysRemaining(); @endphp
@@ -90,12 +93,6 @@
                                 @else
                                     <span class="text-xs text-gray-400">—</span>
                                 @endif
-                            </td>
-                            <td class="px-4 py-3">
-                                <span
-                                    class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $agreement->status_badge_class }}">
-                                    {{ ucfirst($agreement->status) }}
-                                </span>
                             </td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-end gap-2">
@@ -155,7 +152,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-12 text-center text-gray-400">
+                            <td colspan="10" class="px-4 py-12 text-center text-gray-400">
                                 <svg class="mx-auto mb-3 h-10 w-10 opacity-40" fill="none" stroke="currentColor"
                                     stroke-width="1.5" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -184,7 +181,7 @@
                 lengthMenu: [10, 20, 50, 100],
                 order: [[3, 'desc']],
                 columnDefs: [
-                    { orderable: false, targets: [0, 8] },
+                    { orderable: false, targets: [0, 9] },
                 ],
                 language: {
                     search: '',

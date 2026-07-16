@@ -369,8 +369,8 @@
                     <tr>
                         <th class="py-2 pr-4">Period</th>
                         <th class="py-2 pr-4">Rent/mo</th>
+                        <th class="py-2 pr-4">Maint/mo</th>
                         <th class="py-2 pr-4">Deposit</th>
-                        <th class="py-2">Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -381,17 +381,9 @@
                                 {{ $ag->start_date ? $ag->start_date->format('d M Y') : 'Draft' }} → {{ $ag->end_date ? $ag->end_date->format('d M Y') : 'Draft' }}
                             </a>
                         </td>
-                        <td class="py-2 pr-4">PKR {{ number_format($ag->monthly_rent) }}</td>
-                        <td class="py-2 pr-4">PKR {{ number_format($ag->security_deposit) }}</td>
-                        <td class="py-2">
-                            <span class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium
-                                {{ match($ag->status) {
-                                    'active' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                    'draft'  => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                    'expired','terminated' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400',
-                                    default  => 'bg-gray-100 text-gray-500',
-                                } }}">{{ ucfirst($ag->status) }}</span>
-                        </td>
+                        <td class="py-2 pr-4 font-bold text-gray-800 dark:text-gray-200">PKR {{ number_format($ag->monthly_rent) }}</td>
+                        <td class="py-2 pr-4 font-bold text-gray-800 dark:text-gray-200">{{ $ag->maintenance_charge ? 'PKR ' . number_format($ag->maintenance_charge) : '—' }}</td>
+                        <td class="py-2 pr-4 font-bold text-gray-800 dark:text-gray-200">PKR {{ number_format($ag->security_deposit) }}</td>
                     </tr>
                     @endforeach
                 </tbody>

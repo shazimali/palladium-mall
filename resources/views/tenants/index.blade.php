@@ -153,9 +153,20 @@
                                                             <span class="font-medium text-gray-800 dark:text-white/90 whitespace-nowrap">
                                                                 {{ $agreement->start_date->format('d M Y') }} - {{ $agreement->end_date->format('d M Y') }}
                                                             </span>
-                                                            <span class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-medium w-fit {{ $agreement->status_badge_class }}">
-                                                                {{ ucfirst($agreement->status) }}
-                                                            </span>
+                                                            <div class="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 flex flex-wrap gap-x-1.5 items-center">
+                                                                <span class="font-semibold text-gray-700 dark:text-gray-300">Rent:</span>
+                                                                <span>Rs. {{ number_format($agreement->monthly_rent) }}</span>
+                                                                @if($agreement->maintenance_charge)
+                                                                    <span class="text-gray-300 dark:text-gray-700">|</span>
+                                                                    <span class="font-semibold text-gray-700 dark:text-gray-300">Maint:</span>
+                                                                    <span>Rs. {{ number_format($agreement->maintenance_charge) }}</span>
+                                                                @endif
+                                                                @if($agreement->security_deposit)
+                                                                    <span class="text-gray-300 dark:text-gray-700">|</span>
+                                                                    <span class="font-semibold text-gray-700 dark:text-gray-300">Dep:</span>
+                                                                    <span>Rs. {{ number_format($agreement->security_deposit) }}</span>
+                                                                @endif
+                                                            </div>
                                                         </div>
                                                     @endif
                                                 @endforeach

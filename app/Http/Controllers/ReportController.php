@@ -12,6 +12,7 @@ use App\Models\Agreement;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -624,6 +625,27 @@ class ReportController extends Controller
             ->pluck('agreement_id')
             ->toArray();
 
+        $allocations = DB::table('receiving_voucher_payments')
+            ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
+            ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
+            ->whereNull('receiving_vouchers.deleted_at')
+            ->whereNull('payments.deleted_at')
+            ->whereBetween('receiving_vouchers.date', [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()])
+            ->when($paymentMethod, fn($q) => $q->where('receiving_vouchers.payment_method', $paymentMethod))
+            ->when($paymentAccountId, fn($q) => $q->where('receiving_vouchers.payment_account_id', $paymentAccountId))
+            ->select(
+                'payments.unit_id',
+                'payments.type',
+                'receiving_voucher_payments.amount_allocated',
+                'receiving_vouchers.payment_account_id',
+                'receiving_vouchers.payment_method',
+                'receiving_vouchers.voucher_no',
+                'receiving_vouchers.date as voucher_date'
+            )
+            ->get();
+
+        $unitAllocations = $allocations->groupBy('unit_id');
+
         $matrixEntries = collect();
 
         foreach ($units as $index => $unit) {
@@ -650,37 +672,29 @@ class ReportController extends Controller
             $rentPayment = $unitPayments->where('type', 'rent')->first();
             if ($rentPayment) {
                 $rent_due = (float) $rentPayment->amount;
-                $rent_paid = (float) $rentPayment->amount_paid;
             } elseif ($agreement) {
                 $rent_due = (float) $agreement->monthly_rent;
-                $rent_paid = 0.0;
             } else {
                 $rent_due = 0.0;
-                $rent_paid = 0.0;
             }
 
             // Services (Maintenance)
             $maintPayment = $unitPayments->where('type', 'maintenance')->first();
             if ($maintPayment) {
                 $serv_due  = (float) $maintPayment->amount;
-                $serv_paid = (float) $maintPayment->amount_paid;
             } elseif ($agreement && $agreement->maintenance_charge > 0) {
                 $serv_due  = (float) $agreement->maintenance_charge;
-                $serv_paid = 0.0;
             } elseif ($unit->is_self && $unit->default_maintenance_charge > 0) {
                 // Other-Owned unit: no agreement, fall back to unit's current maintenance charge
                 $serv_due  = (float) $unit->default_maintenance_charge;
-                $serv_paid = 0.0;
             } else {
                 $serv_due  = 0.0;
-                $serv_paid = 0.0;
             }
 
             // Security Deposit
             $secPayment = $unitPayments->where('type', 'security_deposit')->first();
             if ($secPayment) {
                 $sec_due = (float) $secPayment->amount;
-                $sec_paid = (float) $secPayment->amount_paid;
             } elseif ($agreement) {
                 $agreementStartMonth = $agreement->start_date ? $agreement->start_date->format('Y-m') : '';
                 $selectedMonthStr = $month->format('Y-m');
@@ -690,45 +704,66 @@ class ReportController extends Controller
                 } else {
                     $sec_due = 0.0;
                 }
-                $sec_paid = 0.0;
             } else {
                 $sec_due = 0.0;
-                $sec_paid = 0.0;
             }
 
             // Extra
             $extraPayments = $unitPayments->whereNotIn('type', ['rent', 'maintenance', 'security_deposit']);
             $extra_due = (float) $extraPayments->sum('amount');
-            $extra_paid = (float) $extraPayments->sum('amount_paid');
 
             // Previous unpaid balance
             $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
 
             $total_due = $serv_due + $extra_due + $sec_due + $rent_due;
-            $total_received = $serv_paid + $extra_paid + $sec_paid + $rent_paid;
-            $pending = max(0.0, $total_due - $total_received) + $prevUnpaid;
 
-            $accountsBreakdown = [];
-            foreach ($paymentAccounts as $account) {
-                $accountsBreakdown[$account->name] = (float) $unitPayments->where('payment_account_id', $account->id)->sum('amount_paid');
-            }
+            $unitAllocationsForUnit = $unitAllocations->get($unit->id) ?? collect();
 
-            $vouchers = [];
-            $dates = [];
-            foreach ($unitPayments as $p) {
-                if ($p->status === 'paid' || $p->amount_paid > 0) {
-                    if ($p->receivingVouchers->isNotEmpty()) {
-                        foreach ($p->receivingVouchers->pluck('voucher_no') as $vNo) {
-                            $vouchers[] = $vNo;
+            if ($unitAllocationsForUnit->isNotEmpty()) {
+                $rent_paid  = (float) $unitAllocationsForUnit->where('type', 'rent')->sum('amount_allocated');
+                $serv_paid  = (float) $unitAllocationsForUnit->where('type', 'maintenance')->sum('amount_allocated');
+                $sec_paid   = (float) $unitAllocationsForUnit->where('type', 'security_deposit')->sum('amount_allocated');
+                $extra_paid = (float) $unitAllocationsForUnit->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('amount_allocated');
+                $total_received = (float) $unitAllocationsForUnit->sum('amount_allocated');
+
+                $accountsBreakdown = [];
+                foreach ($paymentAccounts as $account) {
+                    $accountsBreakdown[$account->name] = (float) $unitAllocationsForUnit->where('payment_account_id', $account->id)->sum('amount_allocated');
+                }
+
+                $vouchers = $unitAllocationsForUnit->pluck('voucher_no')->unique()->filter()->toArray();
+                $dates = $unitAllocationsForUnit->map(fn($a) => $a->voucher_date ? \Carbon\Carbon::parse($a->voucher_date)->format('d/m') : null)->unique()->filter()->toArray();
+            } else {
+                $rent_paid = $rentPayment ? (float) $rentPayment->amount_paid : 0.0;
+                $serv_paid = $maintPayment ? (float) $maintPayment->amount_paid : 0.0;
+                $sec_paid = $secPayment ? (float) $secPayment->amount_paid : 0.0;
+                $extra_paid = (float) $extraPayments->sum('amount_paid');
+                $total_received = $serv_paid + $extra_paid + $sec_paid + $rent_paid;
+
+                $accountsBreakdown = [];
+                foreach ($paymentAccounts as $account) {
+                    $accountsBreakdown[$account->name] = (float) $unitPayments->where('payment_account_id', $account->id)->sum('amount_paid');
+                }
+
+                $vouchers = [];
+                $dates = [];
+                foreach ($unitPayments as $p) {
+                    if ($p->status === 'paid' || $p->amount_paid > 0) {
+                        if ($p->receivingVouchers->isNotEmpty()) {
+                            foreach ($p->receivingVouchers->pluck('voucher_no') as $vNo) {
+                                $vouchers[] = $vNo;
+                            }
+                        } else {
+                            $vouchers[] = $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT));
                         }
-                    } else {
-                        $vouchers[] = $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT));
-                    }
-                    if ($p->paid_at) {
-                        $dates[] = $p->paid_at->format('d/m');
+                        if ($p->paid_at) {
+                            $dates[] = $p->paid_at->format('d/m');
+                        }
                     }
                 }
             }
+
+            $pending = max(0.0, $total_due - $total_received) + $prevUnpaid;
 
             $datesString = !empty($dates) ? implode(', ', array_unique($dates)) : '';
             $vouchersString = !empty($vouchers) ? implode('/', array_unique($vouchers)) : '';
