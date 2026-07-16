@@ -7,7 +7,7 @@
         
         <form action="{{ route('receiving-vouchers.store') }}" method="POST"
             x-data="{
-                tenantId: '{{ old('tenant_id', '') }}',
+                unitId: '{{ old('unit_id', '') }}',
                 voucherAmount: '{{ old('amount', '') }}',
                 displayAmount: '',
                 pendingPayments: [],
@@ -17,19 +17,19 @@
                 open: false,
                 highlightedIndex: -1,
                 options: [
-                    @foreach($tenants as $tenant)
+                    @foreach($units as $unit)
                     {
-                        id: '{{ $tenant->id }}',
-                        unit: 'Flat/Shop: {{ addslashes($tenant->unit?->unit_number ?? '—') }}',
-                        tenant: '(Tenant: {{ addslashes($tenant->name) }})',
-                        text: 'Flat/Shop: {{ addslashes($tenant->unit?->unit_number ?? '—') }} (Tenant: {{ addslashes($tenant->name) }})',
-                        searchLabel: '{{ strtolower(($tenant->unit?->unit_number ?? "") . " " . $tenant->name) }}'
+                        id: '{{ $unit->id }}',
+                        unit: 'Flat/Shop: {{ addslashes($unit->unit_number) }}',
+                        tenant: '{{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
+                        text: 'Flat/Shop: {{ addslashes($unit->unit_number) }} {{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
+                        searchLabel: '{{ strtolower($unit->unit_number . " " . ($unit->tenant?->name ?? ($unit->otherTenant?->name ?? "vacant"))) }}'
                     },
                     @endforeach
                 ],
 
                 init() {
-                    this.$watch('tenantId', (val) => {
+                    this.$watch('unitId', (val) => {
                         if (val) this.fetchPendingPayments(val);
                         else {
                             this.pendingPayments = [];
@@ -37,8 +37,8 @@
                         }
                     });
 
-                    if (this.tenantId) {
-                        this.fetchPendingPayments(this.tenantId);
+                    if (this.unitId) {
+                        this.fetchPendingPayments(this.unitId);
                     }
 
                     if (this.voucherAmount) {
@@ -57,9 +57,9 @@
                     this.voucherAmount = clean ? parseFloat(clean) : '';
                 },
 
-                fetchPendingPayments(tenantId) {
+                fetchPendingPayments(unitId) {
                     this.loading = true;
-                    fetch(`/ajax/tenant-pending-payments?tenant_id=${tenantId}`)
+                    fetch(`/ajax/tenant-pending-payments?unit_id=${unitId}`)
                         .then(res => res.json())
                         .then(data => {
                             this.pendingPayments = data.payments;
@@ -79,22 +79,22 @@
                 },
 
                 get selectedUnit() {
-                    let selected = this.options.find(opt => opt.id == this.tenantId);
+                    let selected = this.options.find(opt => opt.id == this.unitId);
                     return selected ? selected.unit : '';
                 },
 
                 get selectedTenant() {
-                    let selected = this.options.find(opt => opt.id == this.tenantId);
+                    let selected = this.options.find(opt => opt.id == this.unitId);
                     return selected ? selected.tenant : '';
                 },
 
                 get selectedText() {
-                    let selected = this.options.find(opt => opt.id == this.tenantId);
+                    let selected = this.options.find(opt => opt.id == this.unitId);
                     return selected ? selected.text : 'Choose a Flat / Shop';
                 },
 
                 selectOption(opt) {
-                    this.tenantId = opt.id;
+                    this.unitId = opt.id;
                     this.open = false;
                     this.search = '';
                     this.highlightedIndex = -1;
@@ -114,7 +114,7 @@
                 },
 
                 clearSelection() {
-                    this.tenantId = '';
+                    this.unitId = '';
                     this.open = false;
                     this.search = '';
                     this.highlightedIndex = -1;
@@ -142,13 +142,13 @@
                         {{-- Trigger Button --}}
                         <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
                             class="w-full flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 text-left focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                            <template x-if="tenantId">
+                            <template x-if="unitId">
                                 <span class="flex items-center gap-1.5">
                                     <span x-text="selectedUnit" class="font-bold text-gray-900 dark:text-white"></span>
                                     <span x-text="selectedTenant" class="text-gray-500 dark:text-gray-400 font-normal"></span>
                                 </span>
                             </template>
-                            <template x-if="!tenantId">
+                            <template x-if="!unitId">
                                 <span class="text-gray-400 dark:text-gray-500">Choose a Flat / Shop</span>
                             </template>
                             <svg class="h-4 w-4 text-gray-500 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -157,13 +157,13 @@
                         </button>
 
                         {{-- Hidden Input for HTML5 native validation and submission --}}
-                        <input type="text" name="tenant_id" x-model="tenantId" required
+                        <input type="text" name="unit_id" x-model="unitId" required
                             class="absolute inset-0 -z-10 w-0 h-0 opacity-0 pointer-events-none"
                             @focus="open = true">
 
                         {{-- Dropdown Container --}}
                         <div x-show="open" x-transition x-cloak
-                            class="absolute left-0 right-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-950">
+                            class="absolute left-0 right-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-955">
                             
                             {{-- Search field --}}
                             <div class="p-2 border-b border-gray-100 dark:border-gray-800">
@@ -194,14 +194,14 @@
                                     <button type="button" @click="selectOption(opt)"
                                         @mouseenter="highlightedIndex = index"
                                         class="w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between"
-                                        :class="tenantId == opt.id ? 'bg-brand-500 text-white font-semibold' : (highlightedIndex === index ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5')">
+                                        :class="unitId == opt.id ? 'bg-brand-500 text-white font-semibold' : (highlightedIndex === index ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5')">
                                     <template x-if="true">
                                         <span class="flex items-center gap-1.5 flex-1 min-w-0">
                                             <span x-text="opt.unit" class="font-bold"></span>
                                             <span x-text="opt.tenant" class="font-normal opacity-75 truncate"></span>
                                         </span>
                                     </template>
-                                        <span x-show="tenantId == opt.id" class="text-[10px]">✔️</span>
+                                        <span x-show="unitId == opt.id" class="text-[10px]">✔️</span>
                                     </button>
                                 </template>
 
@@ -211,7 +211,7 @@
                             </div>
                         </div>
 
-                        @error('tenant_id')
+                        @error('unit_id')
                             <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
@@ -227,7 +227,7 @@
                 </div>
 
                 {{-- Form fields shown only when Flat is selected and NOT loading --}}
-                <div x-show="tenantId && !loading" x-transition x-cloak class="space-y-6">
+                <div x-show="unitId && !loading" x-transition x-cloak class="space-y-6">
                     
                     {{-- Hidden Category Input --}}
                     <input type="hidden" name="received_from_type" value="tenant">

@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\Owner;
 use App\Models\PaymentAccount;
 use App\Models\Payment;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -64,13 +65,13 @@ class ReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $tenants = Tenant::where('status', 'active')->orderBy('name')->get();
+        $units = Unit::with(['tenant', 'otherTenant'])->orderBy('unit_number')->get();
         $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
         return view('receiving_vouchers.create', [
             'title' => 'New Receiving Voucher',
-            'tenants' => $tenants,
+            'units' => $units,
             'owners' => $owners,
             'paymentAccounts' => $paymentAccounts,
         ]);
@@ -89,13 +90,16 @@ class ReceivingVoucherController extends Controller
             'date' => ['required', 'date'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'received_from_type' => ['required', 'string', 'in:tenant'],
-            'tenant_id' => ['required', 'exists:tenants,id'],
+            'unit_id' => ['required', 'exists:units,id'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
 
         $data = $request->validate($rules);
+
+        $unit = Unit::with('tenant')->findOrFail($data['unit_id']);
+        $data['tenant_id'] = $unit->tenant?->id;
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         $data['payment_method'] = $paymentAccount->type;
@@ -104,8 +108,8 @@ class ReceivingVoucherController extends Controller
         // Perform transaction
         DB::beginTransaction();
         try {
-            // Retrieve outstanding payments for this tenant ordered by month ASC
-            $payments = Payment::where('tenant_id', $data['tenant_id'])
+            // Retrieve outstanding payments for this unit ordered by month ASC
+            $payments = Payment::where('unit_id', $data['unit_id'])
                 ->whereIn('status', ['unpaid', 'partial'])
                 ->orderBy('month', 'asc')
                 ->lockForUpdate()
@@ -261,16 +265,19 @@ class ReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
         }
 
-        $tenants = Tenant::where('status', 'active')->orWhere('id', $receivingVoucher->tenant_id)->orderBy('name')->get();
+        $units = Unit::with(['tenant', 'otherTenant'])->orderBy('unit_number')->get();
         $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orWhere('id', $receivingVoucher->payment_account_id)->orderBy('name')->get();
+
+        $voucherUnitId = $receivingVoucher->payments->first()?->unit_id;
 
         return view('receiving_vouchers.edit', [
             'title' => 'Edit Receiving Voucher — ' . $receivingVoucher->voucher_no,
             'voucher' => $receivingVoucher,
-            'tenants' => $tenants,
+            'units' => $units,
             'owners' => $owners,
             'paymentAccounts' => $paymentAccounts,
+            'voucherUnitId' => $voucherUnitId,
         ]);
     }
 
@@ -287,13 +294,16 @@ class ReceivingVoucherController extends Controller
             'date' => ['required', 'date'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'received_from_type' => ['required', 'string', 'in:tenant'],
-            'tenant_id' => ['required', 'exists:tenants,id'],
+            'unit_id' => ['required', 'exists:units,id'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ];
 
         $data = $request->validate($rules);
+
+        $unit = Unit::with('tenant')->findOrFail($data['unit_id']);
+        $data['tenant_id'] = $unit->tenant?->id;
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         $data['payment_method'] = $paymentAccount->type;
@@ -327,7 +337,7 @@ class ReceivingVoucherController extends Controller
             }
 
             // 2. Fetch new outstanding balance
-            $payments = Payment::where('tenant_id', $data['tenant_id'])
+            $payments = Payment::where('unit_id', $data['unit_id'])
                 ->whereIn('status', ['unpaid', 'partial'])
                 ->orderBy('month', 'asc')
                 ->lockForUpdate()
@@ -391,14 +401,14 @@ class ReceivingVoucherController extends Controller
      */
     public function getTenantPendingPayments(Request $request): JsonResponse
     {
-        $tenantId = $request->query('tenant_id');
+        $unitId = $request->query('unit_id');
         $excludeVoucherId = $request->query('exclude_voucher_id');
-        if (!$tenantId) {
+        if (!$unitId) {
             return response()->json(['payments' => []]);
         }
 
         $payments = Payment::with(['unit', 'receivingVouchers'])
-            ->where('tenant_id', $tenantId)
+            ->where('unit_id', $unitId)
             ->where(function ($query) use ($excludeVoucherId) {
                 $query->whereIn('status', ['unpaid', 'partial']);
                 if ($excludeVoucherId) {
