@@ -28,7 +28,19 @@ class StorePaymentRequest extends FormRequest
 
     public function rules(): array
     {
-        $isSelf = $this->input('payment_mode') === 'self';
+        $isExtra = $this->input('payment_mode') === 'extra';
+        $isSelf  = $this->input('payment_mode') === 'self';
+
+        // Extra Payment mode — any unit, no tenant/agreement, no uniqueness check
+        if ($isExtra) {
+            return [
+                'unit_id'  => ['required', 'exists:units,id'],
+                'month'    => ['required', 'date'],
+                'amount'   => ['required', 'numeric', 'min:0'],
+                'due_date' => ['required', 'date'],
+                'notes'    => ['nullable', 'string', 'max:500'],
+            ];
+        }
 
         $uniqueRule = null;
         if (!$isSelf) {
@@ -49,7 +61,7 @@ class StorePaymentRequest extends FormRequest
                     ? Rule::unique('payments', 'agreement_id')->where('type', 'security_deposit')
                     : null
             ]),
-            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other,security_deposit'],
+            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other,security_deposit,extra_payment'],
             'month' => array_filter([
                 'required',
                 'date',

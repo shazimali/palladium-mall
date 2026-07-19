@@ -254,15 +254,42 @@ class PaymentController extends Controller
             ->orderBy('unit_number')
             ->get();
 
+        $allUnits = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
+
         return view('payments.create', [
             'title'     => 'Add Payment Record',
             'tenants'   => $tenants,
             'selfUnits' => $selfUnits,
+            'allUnits'  => $allUnits,
         ]);
     }
 
     public function store(StorePaymentRequest $request): RedirectResponse
     {
+        // ── Extra Payment (any unit, no tenant/agreement) ─────────────────
+        if ($request->input('payment_mode') === 'extra') {
+            $unit  = Unit::findOrFail($request->unit_id);
+            $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
+
+            Payment::create([
+                'tenant_id'       => null,
+                'other_tenant_id' => null,
+                'unit_id'         => $unit->id,
+                'agreement_id'    => null,
+                'type'            => 'extra_payment',
+                'month'           => $month,
+                'amount'          => $request->amount,
+                'amount_paid'     => 0,
+                'status'          => 'unpaid',
+                'due_date'        => $request->due_date,
+                'notes'           => $request->notes,
+            ]);
+
+            return redirect()
+                ->route('payments.index')
+                ->with('success', "Extra payment for unit {$unit->unit_number} created successfully.");
+        }
+
         // ── Self-unit maintenance payment (no tenant / agreement) ──────────
         if ($request->input('payment_mode') === 'self') {
             $request->validate([
@@ -377,7 +404,10 @@ class PaymentController extends Controller
         if (is_null($payment->tenant_id)) {
             $data['tenant_id'] = null;
             $data['agreement_id'] = null;
-            $data['type'] = 'maintenance';
+            // Preserve extra_payment type; only force maintenance for plain self-unit payments
+            if (!in_array($payment->type, ['extra_payment', 'fine', 'other'])) {
+                $data['type'] = 'maintenance';
+            }
         }
 
         $payment->update($data);

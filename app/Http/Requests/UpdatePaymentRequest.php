@@ -31,15 +31,17 @@ class UpdatePaymentRequest extends FormRequest
         $payment = $this->route('payment');
         $isSelf = is_null($payment->tenant_id);
 
+        $isExtra = $payment->type === 'extra_payment';
+
         $uniqueRule = null;
-        if (!$isSelf) {
+        if (!$isSelf && !$isExtra) {
             if (in_array($this->type, ['rent', 'maintenance', 'electricity', 'water', 'gas'])) {
                 $uniqueRule = Rule::unique('payments', 'month')
                     ->where('unit_id', $this->unit_id)
                     ->where('type', $this->type)
                     ->ignore($payment->id);
             }
-        } elseif ($isSelf) {
+        } elseif ($isSelf && !$isExtra) {
             $uniqueRule = Rule::unique('payments', 'month')
                 ->where('unit_id', $this->unit_id)
                 ->where('type', 'maintenance')
@@ -47,16 +49,16 @@ class UpdatePaymentRequest extends FormRequest
         }
 
         return [
-            'tenant_id'    => $isSelf ? ['nullable'] : ['required', 'exists:tenants,id'],
+            'tenant_id'    => ($isSelf || $isExtra) ? ['nullable'] : ['required', 'exists:tenants,id'],
             'unit_id'      => ['required', 'exists:units,id'],
             'agreement_id' => array_filter([
-                $isSelf ? 'nullable' : 'required',
+                ($isSelf || $isExtra) ? 'nullable' : 'required',
                 'exists:agreements,id',
-                (!$isSelf && $this->type === 'security_deposit')
+                (!$isSelf && !$isExtra && $this->type === 'security_deposit')
                     ? Rule::unique('payments', 'agreement_id')->where('type', 'security_deposit')->ignore($payment->id)
                     : null
             ]),
-            'type'         => $isSelf ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other,security_deposit'],
+            'type'         => ($isSelf || $isExtra) ? ['nullable'] : ['required', 'in:rent,maintenance,fine,other,security_deposit,extra_payment'],
             'month' => array_filter([
                 'required',
                 'date',

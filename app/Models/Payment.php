@@ -192,6 +192,7 @@ class Payment extends Model
             'water' => 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
             'gas' => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
             'other' => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+            'extra_payment'   => 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
             default => 'bg-gray-100 text-gray-600',
         };
     }
@@ -206,6 +207,7 @@ class Payment extends Model
             'electricity' => '⚡',
             'water' => '💧',
             'gas' => '🔥',
+            'extra_payment' => '💰',
             default => '💵',
         };
     }
@@ -220,8 +222,9 @@ class Payment extends Model
             'electricity' => 'Electricity',
             'water' => 'Water',
             'gas' => 'Gas',
-            'other' => 'Other',
-            default => ucfirst(str_replace('_', ' ', $this->type)),
+            'other'         => 'Other',
+            'extra_payment' => 'Extra Payment',
+            default         => ucfirst(str_replace('_', ' ', $this->type)),
         };
     }
 
