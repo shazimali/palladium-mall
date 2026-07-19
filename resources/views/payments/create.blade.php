@@ -9,17 +9,40 @@
                         selfAmount: '{{ old('amount', '') }}',
                         selfLandlordName: '',
                         selfUnits: {{ $selfUnits->map(fn($u) => [
-        'id' => $u->id,
-        'label' => $u->unit_number,
-        'charge' => $u->default_maintenance_charge ?? 0,
-        'landlord_name' => $u->landlord?->name ?? '—',
-    ])->values()->toJson() }},
+                            'id' => $u->id,
+                            'label' => $u->unit_number,
+                            'charge' => $u->default_maintenance_charge ?? 0,
+                            'landlord_name' => $u->landlord?->name ?? '—',
+                        ])->values()->toJson() }},
                         extraUnitId: '{{ old('unit_id', '') }}',
+                        extraAmount: '{{ old('amount', '') }}',
+                        extraUnits: {{ $allUnits->map(fn($u) => [
+                            'id' => $u->id,
+                            'label' => $u->unit_number,
+                            'landlord_id' => $u->landlord_id,
+                            'landlord_name' => $u->landlord?->name ?? null,
+                            'default_rent' => (float)($u->default_monthly_rent ?? 0),
+                        ])->values()->toJson() }},
+                        extraCbOpen: false,
+                        extraCbSearch: '',
+                        extraCbSelectedLabel: '',
+                        extraCbActiveIndex: 0,
+                        get filteredExtraUnits() {
+                            if (!this.extraCbSearch) return this.extraUnits;
+                            const q = this.extraCbSearch.toLowerCase();
+                            return this.extraUnits.filter(u => u.label.toLowerCase().includes(q));
+                        },
                         init() {
                             if (this.selfUnitId) {
                                 const u = this.selfUnits.find(x => x.id == this.selfUnitId);
                                 if (u) {
                                     this.selfLandlordName = u.landlord_name;
+                                }
+                            }
+                            if (this.extraUnitId) {
+                                const u = this.extraUnits.find(x => x.id == this.extraUnitId);
+                                if (u) {
+                                    this.extraCbSelectedLabel = u.label;
                                 }
                             }
                         },
@@ -32,6 +55,33 @@
                             } else {
                                 this.selfLandlordName = '';
                             }
+                        },
+                        pickExtraUnit(u) {
+                            if (!u) return;
+                            this.extraCbSelectedLabel = u.label;
+                            this.extraCbOpen = false;
+                            this.extraCbSearch = '';
+                            this.extraUnitId = u.id;
+                        },
+                        extraCbScrollIntoView() {
+                            const el = this.$refs.extraOptionsList?.querySelector(`[data-index='${this.extraCbActiveIndex}']`);
+                            if (el) el.scrollIntoView({ block: 'nearest' });
+                        },
+                        getExtraSplit() {
+                            const amt = parseFloat(this.extraAmount) || 0;
+                            const unit = this.extraUnits.find(x => x.id == this.extraUnitId);
+                            if (!unit || !unit.landlord_id || unit.default_rent <= 0) {
+                                return { has_split: false, landlord_share: 0, pm_mall_share: amt, landlord_name: '' };
+                            }
+                            const landlordShare = Math.min(amt, unit.default_rent);
+                            const pmMallShare = Math.max(0, amt - landlordShare);
+                            return {
+                                has_split: true,
+                                landlord_share: landlordShare,
+                                pm_mall_share: pmMallShare,
+                                landlord_name: unit.landlord_name,
+                                default_rent: unit.default_rent
+                            };
                         }
                     }">
 
@@ -311,24 +361,72 @@
                             Unit Selection
                         </h4>
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                            <div>
-                                <label for="extra_unit_id"
-                                    class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Select Flat/Shop <span class="text-red-500">*</span>
-                                </label>
-                                <select name="unit_id" id="extra_unit_id" x-model="extraUnitId"
-                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('unit_id') && old('payment_mode') === 'extra' ? 'border-red-400' : '' }}">
-                                    <option value="">Select flat/shop...</option>
-                                    @foreach($allUnits as $u)
-                                        <option value="{{ $u->id }}" {{ old('unit_id') == $u->id && old('payment_mode') === 'extra' ? 'selected' : '' }}>
-                                            {{ $u->unit_number }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @if($errors->has('unit_id') && old('payment_mode') === 'extra')
-                                    <p class="mt-1 text-xs text-red-500">{{ $errors->first('unit_id') }}</p>
-                                @endif
-                            </div>
+                                <input type="hidden" name="unit_id" :value="extraUnitId">
+
+                                <div class="relative"
+                                     @keydown.escape.stop="extraCbOpen = false; $refs.extraCbTrigger.focus()"
+                                     @keydown.arrow-down.prevent="if (!extraCbOpen) { extraCbOpen = true; extraCbActiveIndex = 0; } else if (filteredExtraUnits.length > 0) { extraCbActiveIndex = (extraCbActiveIndex + 1) % filteredExtraUnits.length; $nextTick(() => extraCbScrollIntoView()); }"
+                                     @keydown.arrow-up.prevent="if (extraCbOpen && filteredExtraUnits.length > 0) { extraCbActiveIndex = (extraCbActiveIndex - 1 + filteredExtraUnits.length) % filteredExtraUnits.length; $nextTick(() => extraCbScrollIntoView()); }"
+                                     @keydown.enter.prevent="if (extraCbOpen && filteredExtraUnits.length > 0) { pickExtraUnit(filteredExtraUnits[extraCbActiveIndex]); }">
+
+                                    {{-- Trigger --}}
+                                    <div x-ref="extraCbTrigger"
+                                         tabindex="0"
+                                         @click="extraCbOpen = !extraCbOpen; if(extraCbOpen) { $nextTick(() => $refs.extraCbSearch.focus()) }"
+                                         @click.outside="extraCbOpen = false"
+                                         @keydown.enter.prevent.stop="extraCbOpen = !extraCbOpen; if(extraCbOpen) { $nextTick(() => $refs.extraCbSearch.focus()) }"
+                                         @keydown.space.prevent.stop="extraCbOpen = !extraCbOpen; if(extraCbOpen) { $nextTick(() => $refs.extraCbSearch.focus()) }"
+                                         class="w-full cursor-pointer flex justify-between items-center rounded-lg border bg-white px-4 py-2.5 text-sm dark:bg-gray-900 {{ $errors->has('unit_id') && old('payment_mode') === 'extra' ? 'border-red-400' : 'border-gray-300 dark:border-gray-700' }}">
+                                        <span x-text="extraCbSelectedLabel || 'Select Flat/Shop…'"
+                                              :class="extraCbSelectedLabel ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-gray-600'"></span>
+                                        <svg class="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200"
+                                             :class="extraCbOpen ? 'rotate-180' : ''"
+                                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+
+                                    {{-- Dropdown --}}
+                                    <div x-show="extraCbOpen"
+                                         x-transition:enter="transition ease-out duration-100"
+                                         x-transition:enter-start="opacity-0 scale-95"
+                                         x-transition:enter-end="opacity-100 scale-100"
+                                         x-transition:leave="transition ease-in duration-75"
+                                         x-transition:leave-start="opacity-100 scale-100"
+                                         x-transition:leave-end="opacity-0 scale-95"
+                                         class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                                         style="display:none;">
+
+                                        <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                            <input x-ref="extraCbSearch"
+                                                   x-model="extraCbSearch"
+                                                   type="text"
+                                                   placeholder="Type to search flat/shop…"
+                                                   class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                        </div>
+
+                                        <ul class="max-h-60 overflow-y-auto mt-1" x-ref="extraOptionsList">
+                                            <template x-if="filteredExtraUnits.length === 0">
+                                                <li class="px-4 py-2 text-xs text-gray-400 dark:text-gray-500">No matching flats/shops found.</li>
+                                            </template>
+                                            <template x-for="(u, index) in filteredExtraUnits" :key="u.id">
+                                                <li @click="pickExtraUnit(u)"
+                                                    @mouseenter="extraCbActiveIndex = index"
+                                                    :data-index="index"
+                                                    :class="extraCbActiveIndex === index ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400' : 'text-gray-800 dark:text-white/90'"
+                                                    class="px-4 py-2 text-sm cursor-pointer flex items-center justify-between gap-3 transition-colors">
+                                                    <span x-text="u.label" class="font-medium"></span>
+                                                    <span x-text="u.landlord_name ? u.landlord_name : ''"
+                                                          class="text-xs text-gray-400 dark:text-gray-500 truncate"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+
+                                    @if($errors->has('unit_id') && old('payment_mode') === 'extra')
+                                        <p class="mt-1 text-xs text-red-500">{{ $errors->first('unit_id') }}</p>
+                                    @endif
+                                </div>
 
                             {{-- Type badge -- locked --}}
                             <div>
@@ -372,8 +470,8 @@
                                     class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Amount (Rs.) <span class="text-red-500">*</span>
                                 </label>
-                                <input type="number" id="extra_amount" name="amount" value="{{ old('amount') }}" min="0"
-                                    step="0.01" placeholder="e.g. 5000"
+                                <input type="number" id="extra_amount" name="amount" x-model="extraAmount" min="0"
+                                    step="0.01" placeholder="e.g. 25000"
                                     class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 {{ $errors->has('amount') && old('payment_mode') === 'extra' ? 'border-red-400' : '' }}">
                                 @if($errors->has('amount') && old('payment_mode') === 'extra')
                                     <p class="mt-1 text-xs text-red-500">{{ $errors->first('amount') }}</p>
@@ -409,6 +507,30 @@
                                 placeholder="e.g. Generator fee, Parking charge, Repair cost..."
                                 class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         </div>
+
+                        {{-- Dynamic Split Preview --}}
+                        <template x-if="getExtraSplit().has_split">
+                            <div class="mt-5 rounded-xl border border-brand-100 bg-brand-50/30 p-4 dark:border-brand-900/30 dark:bg-brand-950/10">
+                                <h5 class="mb-3 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                                    Payment Allocation Split (Automatic)
+                                </h5>
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div class="rounded-lg border border-gray-100 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                                        <div class="text-xs text-gray-400 dark:text-gray-500">Landlord Share (Rent Target)</div>
+                                        <div class="mt-1 text-lg font-bold text-gray-800 dark:text-white" x-text="'Rs. ' + getExtraSplit().landlord_share.toLocaleString()"></div>
+                                        <div class="mt-1 text-xs text-brand-500" x-text="'Receiver: ' + getExtraSplit().landlord_name"></div>
+                                    </div>
+                                    <div class="rounded-lg border border-gray-100 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                                        <div class="text-xs text-gray-400 dark:text-gray-500">PM Mall Share (Excess Surplus)</div>
+                                        <div class="mt-1 text-lg font-bold text-gray-800 dark:text-white" x-text="'Rs. ' + getExtraSplit().pm_mall_share.toLocaleString()"></div>
+                                        <div class="mt-1 text-xs text-gray-500">Receiver: PM Mall Management</div>
+                                    </div>
+                                </div>
+                                <div class="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                                    Calculated automatically based on the Unit's Rent Limit of <span class="font-semibold text-gray-700 dark:text-gray-300" x-text="'Rs. ' + getExtraSplit().default_rent.toLocaleString()"></span>.
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     <div class="mt-5 flex items-center gap-3">

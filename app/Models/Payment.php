@@ -42,6 +42,7 @@ class Payment extends Model
         'hash',
         'receipt_no',
         'whatsapp_number',
+        'landlord_id',
     ];
 
     protected $casts = [
@@ -59,6 +60,11 @@ class Payment extends Model
     // -----------------------------------------------------------------------
     // Relationships
     // -----------------------------------------------------------------------
+
+    public function landlord(): BelongsTo
+    {
+        return $this->belongsTo(Landlord::class)->withTrashed();
+    }
 
     public function tenant(): BelongsTo
     {

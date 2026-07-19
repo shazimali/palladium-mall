@@ -92,6 +92,8 @@ class CashBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -109,6 +111,8 @@ class CashBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'general_receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -133,6 +137,8 @@ class CashBookController extends Controller
                 'method' => $outflow->payment_method . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => (float)$outflow->amount,
                 'credit' => 0.0,
+                'model_type' => $isExpense ? 'expense' : 'payment_voucher',
+                'model_id' => $outflow->id,
             ]);
         }
 
@@ -248,6 +254,8 @@ class CashBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -265,6 +273,8 @@ class CashBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'general_receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -289,6 +299,8 @@ class CashBookController extends Controller
                 'method' => $outflow->payment_method . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => (float)$outflow->amount,
                 'credit' => 0.0,
+                'model_type' => $isExpense ? 'expense' : 'payment_voucher',
+                'model_id' => $outflow->id,
             ]);
         }
 
@@ -316,7 +328,6 @@ class CashBookController extends Controller
             ['key' => 'date',            'label' => 'Date',              'type' => 'date'],
             ['key' => 'voucher_no',      'label' => 'Voucher #',         'td_class' => 'mono'],
             ['key' => 'details',         'label' => 'Details / Reference'],
-            ['key' => 'method',          'label' => 'Method / Account',  'td_class' => 'mono'],
             ['key' => 'debit',           'label' => 'Debit (Outflow)',   'type' => 'debit',   'class' => 'text-right'],
             ['key' => 'credit',          'label' => 'Credit (Inflow)',   'type' => 'credit',  'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance',   'type' => 'balance', 'class' => 'text-right'],

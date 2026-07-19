@@ -72,6 +72,8 @@ class DayBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -89,6 +91,8 @@ class DayBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'general_receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -113,6 +117,8 @@ class DayBookController extends Controller
                 'method' => $outflow->payment_method . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => (float)$outflow->amount,
                 'credit' => 0.0,
+                'model_type' => $isExpense ? 'expense' : 'payment_voucher',
+                'model_id' => $outflow->id,
             ]);
         }
 
@@ -210,6 +216,8 @@ class DayBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -227,6 +235,8 @@ class DayBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float)$inflow->amount,
+                'model_type' => 'general_receiving_voucher',
+                'model_id' => $inflow->id,
             ]);
         }
 
@@ -251,6 +261,8 @@ class DayBookController extends Controller
                 'method' => $outflow->payment_method . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => (float)$outflow->amount,
                 'credit' => 0.0,
+                'model_type' => $isExpense ? 'expense' : 'payment_voucher',
+                'model_id' => $outflow->id,
             ]);
         }
 

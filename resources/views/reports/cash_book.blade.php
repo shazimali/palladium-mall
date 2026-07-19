@@ -123,7 +123,6 @@
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Voucher #</th>
                         <th class="px-4 py-3">Details / Reference</th>
-                        <th class="px-4 py-3">Method / Account</th>
                         <th class="px-4 py-3 text-right text-red-600 dark:text-red-400">Debit (Outflow)</th>
                         <th class="px-4 py-3 text-right text-green-600 dark:text-green-400">Credit (Inflow)</th>
                         <th class="px-4 py-3 text-right font-semibold">Running Balance</th>
@@ -136,13 +135,30 @@
                                 {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
                             </td>
                             <td class="px-4 py-3 text-xs font-mono font-semibold">
-                                {{ $entry['voucher_no'] }}
+                                @if(!empty($entry['model_type']) && !empty($entry['model_id']))
+                                    @if($entry['model_type'] === 'receiving_voucher')
+                                        <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @elseif($entry['model_type'] === 'general_receiving_voucher')
+                                        <a href="{{ route('general-receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @elseif($entry['model_type'] === 'payment_voucher')
+                                        <a href="{{ route('payment-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @elseif($entry['model_type'] === 'expense')
+                                        <a href="{{ route('expenses.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @endif
+                                @else
+                                    {{ $entry['voucher_no'] }}
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-xs font-medium">
                                 {!! $entry['details'] !!}
-                            </td>
-                            <td class="px-4 py-3 text-xs font-mono">
-                                {{ $entry['method'] }}
                             </td>
                             <td class="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">
                                 {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
@@ -156,7 +172,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
+                            <td colspan="6" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
                                 No ledger cash transactions logged for this period.
                             </td>
                         </tr>
@@ -165,7 +181,7 @@
                 @if($ledgerEntries->isNotEmpty())
                     <tfoot class="bg-gray-50 dark:bg-gray-800 font-bold">
                         <tr>
-                            <td colspan="4" class="px-4 py-3 text-gray-700 dark:text-gray-300 text-right">Totals:</td>
+                            <td colspan="3" class="px-4 py-3 text-gray-700 dark:text-gray-300 text-right">Totals:</td>
                             <td class="px-4 py-3 text-right text-red-600 dark:text-red-400">
                                 Rs. {{ number_format($totalOutflows, 2) }}
                             </td>

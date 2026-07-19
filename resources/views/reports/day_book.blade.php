@@ -135,9 +135,31 @@
                             <td class="px-4 py-3 text-xs font-mono">
                                 {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
                             </td>
-                            <td class="px-4 py-3 text-xs font-mono font-semibold">
-                                {{ $entry['voucher_no'] }}
-                            </td>
+                             <td class="px-4 py-3 text-xs font-mono font-semibold">
+                                 @if(!empty($entry['model_type']) && !empty($entry['model_id']))
+                                     @if($entry['model_type'] === 'receiving_voucher')
+                                         <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                             {{ $entry['voucher_no'] }}
+                                         </a>
+                                     @elseif($entry['model_type'] === 'general_receiving_voucher')
+                                         <a href="{{ route('general-receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                             {{ $entry['voucher_no'] }}
+                                         </a>
+                                     @elseif($entry['model_type'] === 'payment_voucher')
+                                         <a href="{{ route('payment-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                             {{ $entry['voucher_no'] }}
+                                         </a>
+                                     @elseif($entry['model_type'] === 'expense')
+                                         <a href="{{ route('expenses.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
+                                             {{ $entry['voucher_no'] }}
+                                         </a>
+                                     @else
+                                         {{ $entry['voucher_no'] }}
+                                     @endif
+                                 @else
+                                     {{ $entry['voucher_no'] }}
+                                 @endif
+                             </td>
                             <td class="px-4 py-3 text-xs font-medium">
                                 {!! $entry['details'] !!}
                             </td>

@@ -4,13 +4,33 @@ Structural and ownership fields managed directly in the Units module.
 ═══════════════════════════════════════════════════════════════ --}}
 
 <div x-data="{
-    total: {{ old('total_amount', $unit->currentOwnership?->total_amount ?? '') ?: 0 }},
-    received: {{ old('received_amount', $unit->currentOwnership?->received_amount ?? '') ?: 0 }},
+    totalRaw: '{{ old('total_amount', $unit->currentOwnership?->total_amount ?? '') }}',
+    receivedRaw: '{{ old('received_amount', $unit->currentOwnership?->received_amount ?? '') }}',
+    rentRaw: '{{ old('default_monthly_rent', $unit->default_monthly_rent ?? '') }}',
+    maintenanceRaw: '{{ old('default_maintenance_charge', $unit->default_maintenance_charge ?? '') }}',
     isSelf: {{ old('is_self', $unit->is_self ? 'true' : 'false') }},
+    formatNumber(val) {
+        if (val === undefined || val === null || val === '') return '';
+        const clean = val.toString().replace(/,/g, '');
+        if (isNaN(clean)) return '';
+        const parts = clean.split('.');
+        parts[0] = parseInt(parts[0], 10).toLocaleString('en-US');
+        return parts.join('.');
+    },
+    onInput(field, e) {
+        let value = e.target.value;
+        let clean = value.replace(/[^\d.]/g, '');
+        const parts = clean.split('.');
+        if (parts.length > 2) {
+            clean = parts[0] + '.' + parts.slice(1).join('');
+        }
+        this[field] = clean;
+        e.target.value = this.formatNumber(clean);
+    },
     get credit() {
-        const t = parseFloat(this.total) || 0;
-        const r = parseFloat(this.received) || 0;
-        return (t - r).toLocaleString('en-PK');
+        const t = parseFloat(this.totalRaw) || 0;
+        const r = parseFloat(this.receivedRaw) || 0;
+        return (t - r).toLocaleString('en-US');
     }
 }" class="space-y-6">
 
@@ -179,8 +199,10 @@ Structural and ownership fields managed directly in the Units module.
                 </label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Rs.</span>
-                    <input type="number" name="default_monthly_rent" step="0.01"
-                        value="{{ old('default_monthly_rent', $unit->default_monthly_rent) }}"
+                    <input type="hidden" name="default_monthly_rent" :value="rentRaw">
+                    <input type="text"
+                        :value="formatNumber(rentRaw)"
+                        @input="onInput('rentRaw', $event)"
                         placeholder="0.00"
                         class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                 </div>
@@ -196,8 +218,10 @@ Structural and ownership fields managed directly in the Units module.
                 </label>
                 <div class="relative">
                     <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">Rs.</span>
-                    <input type="number" name="default_maintenance_charge" step="0.01"
-                        value="{{ old('default_maintenance_charge', $unit->default_maintenance_charge) }}"
+                    <input type="hidden" name="default_maintenance_charge" :value="maintenanceRaw">
+                    <input type="text"
+                        :value="formatNumber(maintenanceRaw)"
+                        @input="onInput('maintenanceRaw', $event)"
                         placeholder="0.00"
                         class="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                 </div>
@@ -264,7 +288,10 @@ Structural and ownership fields managed directly in the Units module.
             {{-- Total Amount --}}
             <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Total Amount</label>
-                <input type="number" name="total_amount" step="0.01" x-model="total"
+                <input type="hidden" name="total_amount" :value="totalRaw">
+                <input type="text"
+                    :value="formatNumber(totalRaw)"
+                    @input="onInput('totalRaw', $event)"
                     placeholder="0.00"
                     class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                 @error('total_amount')
@@ -275,7 +302,10 @@ Structural and ownership fields managed directly in the Units module.
             {{-- Received Amount --}}
             <div>
                 <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Received Amount</label>
-                <input type="number" name="received_amount" step="0.01" x-model="received"
+                <input type="hidden" name="received_amount" :value="receivedRaw">
+                <input type="text"
+                    :value="formatNumber(receivedRaw)"
+                    @input="onInput('receivedRaw', $event)"
                     placeholder="0.00"
                     class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                 @error('received_amount')
