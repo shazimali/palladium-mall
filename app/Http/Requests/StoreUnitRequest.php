@@ -27,7 +27,7 @@ class StoreUnitRequest extends FormRequest
         return [
             'unit_number'             => ['required', 'string', 'max:20', Rule::unique('units', 'unit_number')],
             'floor_id'                => ['required', 'exists:floors,id'],
-            'block_id'                => ['required', 'exists:blocks,id'],
+            'block_id'                => ['nullable', 'exists:blocks,id'],
             'area_id'                 => ['nullable', 'exists:areas,id'],
             'landlord_id'             => ['nullable', 'exists:landlords,id'],
             'type'                    => ['required', 'in:flat,shop,office'],
