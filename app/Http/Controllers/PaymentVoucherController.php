@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\PaymentVoucher;
 use App\Models\Owner;
 use App\Models\PaymentAccount;
+use App\Models\Tenant;
+use App\Models\Payment;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -64,6 +67,7 @@ class PaymentVoucherController extends Controller
 
         $owners = Owner::orderBy('name')->get();
         $parties = \App\Models\Party::orderBy('name')->get();
+        $tenants = Tenant::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
@@ -76,6 +80,7 @@ class PaymentVoucherController extends Controller
             'title'           => 'New Payment Voucher',
             'owners'          => $owners,
             'parties'         => $parties,
+            'tenants'         => $tenants,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -92,7 +97,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:owner,other'],
+            'paid_to_type'       => ['required', 'string', 'in:owner,tenant,other'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -101,6 +106,9 @@ class PaymentVoucherController extends Controller
 
         if ($request->input('paid_to_type') === 'owner') {
             $rules['owner_id'] = ['required', 'exists:owners,id'];
+        } elseif ($request->input('paid_to_type') === 'tenant') {
+            $rules['tenant_id'] = ['required', 'exists:tenants,id'];
+            $rules['unit_id']   = ['required', 'exists:units,id'];
         } else {
             $rules['party_id'] = ['required', 'exists:parties,id'];
         }
@@ -112,7 +120,20 @@ class PaymentVoucherController extends Controller
         $data['user_id'] = auth()->id() ?? 1;
         $data['is_advance'] = $request->has('is_advance');
 
-        if ($request->input('paid_to_type') === 'other') {
+        if ($request->input('paid_to_type') === 'owner') {
+            $data['party_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
+            $data['other_name'] = null;
+        } elseif ($request->input('paid_to_type') === 'tenant') {
+            $data['owner_id'] = null;
+            $data['party_id'] = null;
+            $tenant = Tenant::findOrFail($data['tenant_id']);
+            $data['other_name'] = $tenant->name;
+        } else {
+            $data['owner_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
         }
@@ -125,6 +146,31 @@ class PaymentVoucherController extends Controller
                 return back()->withInput()->withErrors([
                     'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds '
                         . $owner->name . '\'s pending income balance of Rs. ' . number_format($pendingBalance, 2) . '.',
+                ]);
+            }
+        }
+
+        // ── Tenant security deposit limit guard ──────────────────────────────
+        if ($request->input('paid_to_type') === 'tenant' && isset($data['tenant_id']) && isset($data['unit_id'])) {
+            $tenant = Tenant::findOrFail($data['tenant_id']);
+            $unit = Unit::findOrFail($data['unit_id']);
+            
+            // Total collected security deposit for this tenant/unit
+            $totalCollected = (float) Payment::where('tenant_id', $tenant->id)
+                ->where('unit_id', $unit->id)
+                ->where('type', 'security_deposit')
+                ->sum('amount_paid');
+            
+            // Already refunded via vouchers
+            $totalRefunded = (float) PaymentVoucher::where('tenant_id', $tenant->id)
+                ->where('unit_id', $unit->id)
+                ->sum('amount');
+            
+            $pendingRefund = round($totalCollected - $totalRefunded, 2);
+            
+            if ((float) $data['amount'] > $pendingRefund + 0.01) {
+                return back()->withInput()->withErrors([
+                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds security deposit refund limit of Rs. ' . number_format($pendingRefund, 2) . ' for unit ' . $unit->unit_number . '.',
                 ]);
             }
         }
@@ -196,6 +242,7 @@ class PaymentVoucherController extends Controller
 
         $owners = Owner::orderBy('name')->get();
         $parties = \App\Models\Party::orderBy('name')->get();
+        $tenants = Tenant::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
@@ -209,6 +256,7 @@ class PaymentVoucherController extends Controller
             'voucher'         => $paymentVoucher,
             'owners'          => $owners,
             'parties'         => $parties,
+            'tenants'         => $tenants,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -225,7 +273,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:owner,other'],
+            'paid_to_type'       => ['required', 'string', 'in:owner,tenant,other'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -234,6 +282,9 @@ class PaymentVoucherController extends Controller
 
         if ($request->input('paid_to_type') === 'owner') {
             $rules['owner_id'] = ['required', 'exists:owners,id'];
+        } elseif ($request->input('paid_to_type') === 'tenant') {
+            $rules['tenant_id'] = ['required', 'exists:tenants,id'];
+            $rules['unit_id']   = ['required', 'exists:units,id'];
         } else {
             $rules['party_id'] = ['required', 'exists:parties,id'];
         }
@@ -246,9 +297,18 @@ class PaymentVoucherController extends Controller
 
         if ($request->input('paid_to_type') === 'owner') {
             $data['party_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
             $data['other_name'] = null;
+        } elseif ($request->input('paid_to_type') === 'tenant') {
+            $data['owner_id'] = null;
+            $data['party_id'] = null;
+            $tenant = Tenant::findOrFail($data['tenant_id']);
+            $data['other_name'] = $tenant->name;
         } else {
             $data['owner_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
         }
@@ -265,11 +325,87 @@ class PaymentVoucherController extends Controller
                 ]);
             }
         }
+
+        // ── Tenant security deposit limit guard ──────────────────────────────
+        if ($request->input('paid_to_type') === 'tenant' && isset($data['tenant_id']) && isset($data['unit_id'])) {
+            $tenant = Tenant::findOrFail($data['tenant_id']);
+            $unit = Unit::findOrFail($data['unit_id']);
+            
+            // Total collected security deposit for this tenant/unit
+            $totalCollected = (float) Payment::where('tenant_id', $tenant->id)
+                ->where('unit_id', $unit->id)
+                ->where('type', 'security_deposit')
+                ->sum('amount_paid');
+            
+            // Already refunded via vouchers (exclude this one for update)
+            $totalRefunded = (float) PaymentVoucher::where('tenant_id', $tenant->id)
+                ->where('unit_id', $unit->id)
+                ->where('id', '!=', $paymentVoucher->id)
+                ->sum('amount');
+            
+            $pendingRefund = round($totalCollected - $totalRefunded, 2);
+            
+            if ((float) $data['amount'] > $pendingRefund + 0.01) {
+                return back()->withInput()->withErrors([
+                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds security deposit refund limit of Rs. ' . number_format($pendingRefund, 2) . ' for unit ' . $unit->unit_number . '.',
+                ]);
+            }
+        }
         // ────────────────────────────────────────────────────────────────
 
         $paymentVoucher->update($data);
 
         return redirect()->route('payment-vouchers.index')
             ->with('success', 'Payment voucher updated successfully.');
+    }
+
+    public function getTenantSecurityDeposits(Request $request)
+    {
+        $tenantId = $request->query('tenant_id');
+        if (!$tenantId) {
+            return response()->json([]);
+        }
+
+        $tenant = Tenant::findOrFail($tenantId);
+
+        // Fetch all units that this tenant has paid security deposits for
+        $securityDepositPayments = Payment::where('tenant_id', $tenantId)
+            ->where('type', 'security_deposit')
+            ->selectRaw('unit_id, SUM(amount_paid) as total_collected')
+            ->groupBy('unit_id')
+            ->with('unit')
+            ->get();
+
+        $vouchersQuery = PaymentVoucher::where('tenant_id', $tenantId)
+            ->selectRaw('unit_id, SUM(amount) as total_refunded')
+            ->groupBy('unit_id');
+
+        // Exclude current voucher being edited if id is provided
+        if ($request->filled('voucher_id')) {
+            $vouchersQuery->where('id', '!=', $request->voucher_id);
+        }
+
+        $refunds = $vouchersQuery->get()->pluck('total_refunded', 'unit_id');
+
+        $data = [];
+        foreach ($securityDepositPayments as $sd) {
+            if (!$sd->unit) continue;
+            
+            $refunded = $refunds->get($sd->unit_id, 0);
+            $pending = max(0, $sd->total_collected - $refunded);
+            
+            $data[] = [
+                'unit_id' => $sd->unit_id,
+                'unit_number' => $sd->unit->unit_number,
+                'total_collected' => (float)$sd->total_collected,
+                'total_refunded' => (float)$refunded,
+                'pending_refund' => (float)$pending,
+            ];
+        }
+
+        return response()->json([
+            'tenant_name' => $tenant->name,
+            'security_deposits' => $data
+        ]);
     }
 }

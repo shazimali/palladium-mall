@@ -1,8 +1,13 @@
 @php
     if ($voucher->paid_to_type === 'owner') {
         $payeeName = $voucher->owner->name ?? 'Partner';
+        $payeeTypeLabel = 'Managing Owner / Partner';
+    } elseif ($voucher->paid_to_type === 'tenant') {
+        $payeeName = ($voucher->tenant ? $voucher->tenant->name : $voucher->other_name) . ($voucher->unit ? ' (Unit ' . $voucher->unit->unit_number . ')' : '');
+        $payeeTypeLabel = 'Tenant (Refund Security Deposit)';
     } else {
         $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
+        $payeeTypeLabel = 'Other Payee';
     }
 @endphp
 <!DOCTYPE html>
@@ -97,7 +102,7 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-4 print-border">
                 <div class="text-gray-450 font-medium">Paid To (Payee):</div>
                 <div class="md:col-span-2 font-bold text-gray-900 text-base">{{ $payeeName }} 
-                    <span class="text-xs font-semibold text-gray-450">({{ $voucher->paid_to_type === 'owner' ? 'Managing Owner / Partner' : 'Other Payee' }})</span>
+                    <span class="text-xs font-semibold text-gray-450">({{ $payeeTypeLabel }})</span>
                 </div>
             </div>
 

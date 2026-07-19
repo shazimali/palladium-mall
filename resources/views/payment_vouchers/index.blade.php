@@ -108,6 +108,7 @@
                     <select name="paid_to_type" class="{{ $filterInput }}">
                         <option value="">All Types</option>
                         <option value="owner" {{ request('paid_to_type') === 'owner' ? 'selected' : '' }}>Managing Owner</option>
+                        <option value="tenant" {{ request('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund)</option>
                         <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Other (Misc)</option>
                     </select>
                 </div>
@@ -168,17 +169,23 @@
                             <td class="px-4 py-3">
                                 {{ $voucher->date->format('d M Y') }}
                             </td>
-                            <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white">
+                             <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white">
                                 @if($voucher->paid_to_type === 'owner')
                                     👤 {{ $voucher->owner->name ?? 'Partner' }}
+                                @elseif($voucher->paid_to_type === 'tenant')
+                                    👤 {{ $voucher->tenant->name ?? $voucher->other_name }} @if($voucher->unit) <span class="text-xs font-normal text-gray-500">({{ $voucher->unit->unit_number }})</span> @endif
                                 @else
                                     👤 {{ $voucher->other_name }}
                                 @endif
                             </td>
                             <td class="px-4 py-3">
-                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold {{ $voucher->paid_to_type === 'owner' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' }}">
-                                    {{ $voucher->paid_to_type === 'owner' ? 'Partner' : 'Other' }}
-                                </span>
+                                @if($voucher->paid_to_type === 'owner')
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400">Partner</span>
+                                @elseif($voucher->paid_to_type === 'tenant')
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/20 dark:text-teal-400">Tenant (Refund)</span>
+                                @else
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">Other</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 font-bold text-red-600 dark:text-red-400 text-right">
                                 Rs. {{ number_format($voucher->amount, 2) }}

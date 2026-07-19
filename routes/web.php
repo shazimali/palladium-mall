@@ -246,6 +246,7 @@ Route::middleware('auth')->group(function () {
 
     // AJAX: owner pending balance (used in Payment Voucher form)
     Route::get('ajax/owner-pending-balance', [ReceivablePayableReportController::class, 'getOwnerBalance'])->name('ajax.owner-pending-balance');
+    Route::get('ajax/tenant-security-deposits', [App\Http\Controllers\PaymentVoucherController::class, 'getTenantSecurityDeposits'])->name('ajax.tenant-security-deposits');
 
     // Ledgers
     Route::middleware('permission:ledgers.view')->group(function () {

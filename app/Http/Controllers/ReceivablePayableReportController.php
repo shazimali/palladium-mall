@@ -96,11 +96,24 @@ class ReceivablePayableReportController extends Controller
                 return ($p->tenant_id ?? 0) . '_' . ($p->unit_id ?? 0);
             });
 
+            // Fetch all tenant security deposit refund vouchers
+            $refundVouchers = PaymentVoucher::whereNotNull('tenant_id')
+                ->whereNotNull('unit_id')
+                ->get()
+                ->groupBy(function ($v) {
+                    return $v->tenant_id . '_' . $v->unit_id;
+                });
+
             foreach ($groupedSecurity as $key => $group) {
                 $first = $group->first();
                 $totalCollected = (float) $group->sum('amount_paid');
+                
+                $refundedGroup = $refundVouchers->get(($first->tenant_id ?? 0) . '_' . ($first->unit_id ?? 0));
+                $totalRefunded = $refundedGroup ? (float) $refundedGroup->sum('amount') : 0.00;
 
-                if ($totalCollected > 0.01) {
+                $netPayable = round($totalCollected - $totalRefunded, 2);
+
+                if ($netPayable > 0.01 || $totalRefunded > 0.01) {
                     $tenantName = $first->otherTenant
                         ? $first->otherTenant->name
                         : ($first->tenant ? $first->tenant->name : 'Other Owned');
@@ -110,8 +123,8 @@ class ReceivablePayableReportController extends Controller
                         'name'     => $tenantName,
                         'unit'     => $unitNo,
                         'due'      => $totalCollected,
-                        'paid'     => 0.00,
-                        'net'      => $totalCollected,
+                        'paid'     => $totalRefunded,
+                        'net'      => $netPayable,
                     ];
                 }
             }

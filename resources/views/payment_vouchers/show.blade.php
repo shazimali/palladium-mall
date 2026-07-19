@@ -39,8 +39,13 @@
             @php
                 if ($voucher->paid_to_type === 'owner') {
                     $payeeName = $voucher->owner->name ?? 'Partner';
+                    $payeeType = 'Managing Owner / Partner';
+                } elseif ($voucher->paid_to_type === 'tenant') {
+                    $payeeName = ($voucher->tenant ? $voucher->tenant->name : $voucher->other_name) . ($voucher->unit ? ' (Unit ' . $voucher->unit->unit_number . ')' : '');
+                    $payeeType = 'Tenant (Refund Security Deposit)';
                 } else {
                     $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
+                    $payeeType = 'Other (Miscellaneous)';
                 }
             @endphp
             
@@ -48,7 +53,7 @@
                 ['Voucher Number',      $voucher->voucher_no],
                 ['Voucher Date',        $voucher->date->format('d M Y')],
                 ['Paid To (Payee)',     $payeeName],
-                ['Payee Type',          $voucher->paid_to_type === 'owner' ? 'Managing Owner / Partner' : 'Other (Miscellaneous)'],
+                ['Payee Type',          $payeeType],
                 ['Voucher Amount',      'Rs. ' . number_format($voucher->amount, 2)],
                 ['Advance Payout?',     $voucher->is_advance ? 'Yes (Advance)' : 'No (Standard Payout)'],
                 ['Payment Account',     $voucher->paymentAccount ? $voucher->paymentAccount->name : '—'],

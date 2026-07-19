@@ -20,6 +20,10 @@
                     originalAmount: '{{ $voucher->amount }}',
                     ownerPendingBalance: null,
                     ownerName: '',
+                    selectedTenantId: '{{ old('tenant_id', $voucher->tenant_id) }}',
+                    tenantDeposits: [],
+                    selectedUnitId: '{{ old('unit_id', $voucher->unit_id) }}',
+                    selectedUnitDeposit: null,
                     fetchOwnerBalance(ownerId) {
                         if (!ownerId) { this.ownerPendingBalance = null; this.ownerName = ''; return; }
                         fetch('{{ route('ajax.owner-pending-balance') }}?owner_id=' + ownerId)
@@ -39,6 +43,27 @@
                         }
                         return balance;
                     },
+                    fetchTenantDeposits(tenantId) {
+                        this.selectedTenantId = tenantId;
+                        this.tenantDeposits = [];
+                        this.selectedUnitDeposit = null;
+                        if (!tenantId) return;
+                        fetch('{{ route('ajax.tenant-security-deposits') }}?tenant_id=' + tenantId + '&voucher_id={{ $voucher->id }}')
+                            .then(r => r.json())
+                            .then(d => { 
+                                this.tenantDeposits = d.security_deposits || []; 
+                                if (this.selectedUnitId) {
+                                    this.selectedUnitDeposit = this.tenantDeposits.find(x => x.unit_id == this.selectedUnitId) || null;
+                                }
+                            });
+                    },
+                    selectUnit(unitId) {
+                        this.selectedUnitId = unitId;
+                        this.selectedUnitDeposit = this.tenantDeposits.find(x => x.unit_id == unitId) || null;
+                        if (this.selectedUnitDeposit) {
+                            this.formatAmount(String(this.selectedUnitDeposit.pending_refund));
+                        }
+                    },
                     formatAmount(val) {
                         let clean = val.replace(/[^\d.]/g, '');
                         let parts = clean.split('.');
@@ -52,6 +77,9 @@
                     init() {
                         if (this.amount) {
                             this.formatAmount(String(this.amount));
+                        }
+                        if (this.selectedTenantId) {
+                            this.fetchTenantDeposits(this.selectedTenantId);
                         }
                     }
                 }"
@@ -76,6 +104,7 @@
                         <label class="{{ $label }}">Paid To Type <span class="text-red-500">*</span></label>
                         <select name="paid_to_type" x-model="paidToType" class="{{ $input }} {{ $errors->has('paid_to_type') ? 'border-red-400' : '' }}" required>
                             <option value="owner" {{ old('paid_to_type', $voucher->paid_to_type) === 'owner' ? 'selected' : '' }}>Managing Owner (Partner)</option>
+                            <option value="tenant" {{ old('paid_to_type', $voucher->paid_to_type) === 'tenant' ? 'selected' : '' }}>Tenant (Refund Security Deposit)</option>
                             <option value="other" {{ old('paid_to_type', $voucher->paid_to_type) === 'other' ? 'selected' : '' }}>Other (Miscellaneous)</option>
                         </select>
                         @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
@@ -112,6 +141,134 @@
                             </div>
                         </template>
                     </div>
+
+                    {{-- Tenant Selection --}}
+                    <div x-show="paidToType === 'tenant'" x-transition x-cloak
+                         x-data="{
+                            open: false,
+                            search: '',
+                            selectedId: '{{ old('tenant_id', $voucher->tenant_id) }}',
+                            selectedLabel: '{{ old('tenant_name', $voucher->tenant?->name) }}',
+                            highlightedIndex: -1,
+                            tenants: [
+                                @foreach($tenants as $tenant)
+                                    { id: {{ $tenant->id }}, name: '{{ addslashes($tenant->name) }}', phone: '{{ addslashes($tenant->phone ?? '—') }}' },
+                                @endforeach
+                            ],
+                            get filteredTenants() {
+                                if (!this.search) return this.tenants;
+                                let q = this.search.toLowerCase();
+                                return this.tenants.filter(t => t.name.toLowerCase().includes(q) || t.phone.toLowerCase().includes(q));
+                            },
+                            selectTenant(t) {
+                                this.selectedId = t.id;
+                                this.selectedLabel = t.name;
+                                this.open = false;
+                                this.search = '';
+                                this.highlightedIndex = -1;
+                                fetchTenantDeposits(t.id);
+                            },
+                            moveHighlight(direction) {
+                                let list = this.filteredTenants;
+                                if (list.length === 0) return;
+                                this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                            },
+                            selectHighlighted() {
+                                let list = this.filteredTenants;
+                                if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                                    this.selectTenant(list[this.highlightedIndex]);
+                                }
+                            }
+                         }">
+                        <label class="{{ $label }}">Select Tenant <span class="text-red-500">*</span></label>
+                        <input type="hidden" name="tenant_id" :value="selectedId" :required="paidToType === 'tenant'">
+                        <input type="hidden" name="tenant_name" :value="selectedLabel">
+
+                        <div class="relative">
+                            <div tabindex="0"
+                                 @click="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
+                                 @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
+                                 @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
+                                 @click.outside="open = false"
+                                 class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('tenant_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
+                                <span x-text="selectedLabel || 'Select Tenant'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
+                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+
+                            <div x-show="open"
+                                 class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
+                                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                    <input x-ref="tenantSearchInput"
+                                           x-model="search"
+                                           @keydown.arrow-down.prevent="moveHighlight(1)"
+                                           @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                           @keydown.enter.prevent="selectHighlighted()"
+                                           @keydown.escape.prevent="open = false; highlightedIndex = -1"
+                                           type="text"
+                                           placeholder="Type to search tenant..."
+                                           class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                </div>
+                                <ul class="max-h-60 overflow-y-auto mt-1">
+                                    <template x-if="filteredTenants.length === 0">
+                                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching tenants found.</li>
+                                    </template>
+                                    <template x-for="(t, index) in filteredTenants" :key="t.id">
+                                        <li @click="selectTenant(t)"
+                                            @mouseenter="highlightedIndex = index"
+                                            :class="{
+                                                'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                            }"
+                                            class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
+                                            <span x-text="t.name" class="font-medium"></span>
+                                            <span x-text="t.phone" class="text-[10px] text-gray-400"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                        @error('tenant_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Tenant Unit Selection --}}
+                    <div x-show="paidToType === 'tenant' && tenantDeposits.length > 0" x-transition x-cloak>
+                        <label class="{{ $label }}">Select Flat/Shop (Security Deposit Refund) <span class="text-red-500">*</span></label>
+                        <select name="unit_id" class="{{ $input }} {{ $errors->has('unit_id') ? 'border-red-400' : '' }}" :required="paidToType === 'tenant'"
+                                @change="selectUnit($event.target.value)">
+                            <option value="">Select Flat/Shop</option>
+                            <template x-for="d in tenantDeposits" :key="d.unit_id">
+                                <option :value="d.unit_id" :selected="d.unit_id == selectedUnitId" x-text="d.unit_number + ' (Pending: Rs. ' + Number(d.pending_refund).toLocaleString(undefined, {minimumFractionDigits: 2}) + ')'"></option>
+                            </template>
+                        </select>
+                        @error('unit_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+
+                        {{-- Deposit balance box --}}
+                        <template x-if="selectedUnitDeposit !== null">
+                            <div class="mt-2 rounded-lg border border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-900/10 p-2.5 text-xs font-semibold flex flex-col gap-1">
+                                <div class="flex justify-between items-center text-teal-700 dark:text-teal-400">
+                                    <span>Total Deposit Paid by Tenant:</span>
+                                    <span class="font-bold text-sm text-teal-800 dark:text-teal-300" x-text="'Rs. ' + Number(selectedUnitDeposit.total_collected).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
+                                </div>
+                                <div class="flex justify-between items-center text-gray-500 dark:text-gray-400">
+                                    <span>Previously Refunded:</span>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300" x-text="'Rs. ' + Number(selectedUnitDeposit.total_refunded).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
+                                </div>
+                                <div class="flex justify-between items-center text-brand-600 dark:text-brand-400 pt-1 border-t border-teal-100 dark:border-teal-900/30">
+                                    <span>Maximum Refund Allowed:</span>
+                                    <span class="font-bold text-sm text-brand-700 dark:text-brand-300" x-text="'Rs. ' + Number(selectedUnitDeposit.pending_refund).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    {{-- Warning if no deposit records found --}}
+                    <div x-show="paidToType === 'tenant' && tenantDeposits.length === 0 && selectedTenantId" x-cloak
+                         class="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10 p-4 text-xs text-amber-700 dark:text-amber-400 sm:col-span-2">
+                        No active security deposit records found for this tenant. They must have a paid security deposit payment record first.
+                    </div>
+
 
                     {{-- Other Payee Name (Searchable Party Head Dropdown) --}}
                     <div x-show="paidToType === 'other'" x-transition x-cloak
