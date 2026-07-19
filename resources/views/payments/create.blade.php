@@ -501,67 +501,30 @@
                 disableMobile: true,
             });
 
-            // ── Tenant auto-fill ─────────────────────────────────────────────
-            const tenantSelect = document.getElementById('tenant_id');
+            // ── Type change → re-fill amount from selected unit's agreement data ──
             const typeSelect = document.getElementById('type');
-
-            if (tenantSelect) {
-                tenantSelect.addEventListener('change', function () {
-                    const tenantId = this.value;
-                    if (!tenantId) {
-                        document.getElementById('unit_display').textContent = 'Auto-filled when tenant is selected';
-                        document.getElementById('landlord_display').textContent = 'Auto-filled when tenant is selected';
-                        document.getElementById('unit_id').value = '';
-                        document.getElementById('agreement_id').value = '';
-                        document.getElementById('amount').value = '';
-                        return;
-                    }
-
-                    fetch(`/ajax/agreement-by-tenant?tenant_id=${tenantId}`)
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.agreement) {
-                                document.getElementById('unit_display').textContent = data.agreement.unit_number;
-                                document.getElementById('landlord_display').textContent = data.agreement.landlord_name;
-                                document.getElementById('unit_id').value = data.agreement.unit_id;
-                                document.getElementById('agreement_id').value = data.agreement.id;
-                                fillAmount(data.agreement);
-                            } else {
-                                document.getElementById('unit_display').textContent = 'No active agreement found';
-                                document.getElementById('landlord_display').textContent = 'No active agreement found';
-                                document.getElementById('unit_id').value = '';
-                                document.getElementById('agreement_id').value = '';
-                            }
-                        });
-                });
-            }
-
             if (typeSelect) {
                 typeSelect.addEventListener('change', function () {
-                    const tenantId = document.getElementById('tenant_id')?.value;
-                    if (!tenantId) return;
+                    const unitSelect = document.getElementById('unit_select');
+                    if (!unitSelect || !unitSelect.value) return;
 
-                    fetch(`/ajax/agreement-by-tenant?tenant_id=${tenantId}`)
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.agreement) fillAmount(data.agreement);
-                        });
+                    const alpineEl = unitSelect.closest('[x-data]');
+                    if (!alpineEl) return;
+                    const alpine = Alpine.$data(alpineEl);
+                    if (!alpine || !alpine.units) return;
+
+                    const unit = alpine.units.find(u => u.id == unitSelect.value);
+                    if (!unit) return;
+
+                    const amountEl = document.getElementById('amount');
+                    if (!amountEl) return;
+
+                    const t = this.value;
+                    if (t === 'rent')                  amountEl.value = unit.monthly_rent;
+                    else if (t === 'maintenance')       amountEl.value = unit.maintenance_charge;
+                    else if (t === 'security_deposit')  amountEl.value = unit.security_deposit;
+                    else                                amountEl.value = '';
                 });
-            }
-
-            function fillAmount(agreement) {
-                const type = document.getElementById('type').value;
-                const amountInput = document.getElementById('amount');
-
-                if (type === 'rent') {
-                    amountInput.value = agreement.monthly_rent;
-                } else if (type === 'maintenance') {
-                    amountInput.value = agreement.maintenance_charge;
-                } else if (type === 'security_deposit') {
-                    amountInput.value = agreement.security_deposit;
-                } else {
-                    amountInput.value = '';
-                }
             }
         });
     </script>

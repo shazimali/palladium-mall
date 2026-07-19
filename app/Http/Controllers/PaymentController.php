@@ -244,9 +244,11 @@ class PaymentController extends Controller
 
     public function create(Request $request): View
     {
-        $tenants = Tenant::where('status', 'active')
-            ->whereDoesntHave('unit', fn($q) => $q->where('is_self', true))
-            ->orderBy('name')
+        // Units that have an active tenant (for the "Tenant Payment" flow — unit-first)
+        $tenantUnits = Unit::where('is_self', false)
+            ->whereHas('agreements', fn($q) => $q->where('status', 'active'))
+            ->with(['landlord', 'agreements' => fn($q) => $q->where('status', 'active')->with('tenant')])
+            ->orderBy('unit_number')
             ->get();
 
         $selfUnits = Unit::where('is_self', true)
@@ -256,11 +258,18 @@ class PaymentController extends Controller
 
         $allUnits = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
 
+        // Keep tenants list for backward compatibility (used for old agreement-by-tenant AJAX)
+        $tenants = Tenant::where('status', 'active')
+            ->whereDoesntHave('unit', fn($q) => $q->where('is_self', true))
+            ->orderBy('name')
+            ->get();
+
         return view('payments.create', [
-            'title'     => 'Add Payment Record',
-            'tenants'   => $tenants,
-            'selfUnits' => $selfUnits,
-            'allUnits'  => $allUnits,
+            'title'       => 'Add Payment Record',
+            'tenants'     => $tenants,
+            'tenantUnits' => $tenantUnits,
+            'selfUnits'   => $selfUnits,
+            'allUnits'    => $allUnits,
         ]);
     }
 
@@ -755,6 +764,40 @@ class PaymentController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // Bulk Delete
+    // -----------------------------------------------------------------------
+
+    public function bulkDelete(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'month' => ['required', 'date'],
+            'types' => ['required', 'array', 'min:1'],
+            'types.*' => ['in:rent,maintenance,security_deposit,fine,electricity,water,gas,other,extra_payment'],
+        ]);
+
+        $parsed     = Carbon::parse($request->month);
+        $monthStart = $parsed->copy()->startOfMonth()->toDateString(); // e.g. 2026-07-01
+        $monthEnd   = $parsed->copy()->endOfMonth()->toDateString();   // e.g. 2026-07-31
+        $types      = $request->types;
+
+        $deletedCount = DB::transaction(function () use ($monthStart, $monthEnd, $types) {
+            $query = Payment::whereBetween('month', [$monthStart, $monthEnd])
+                ->where('status', 'unpaid')
+                ->whereIn('type', $types);
+
+            $count = $query->count();
+            $query->delete();
+            return $count;
+        });
+
+        $monthLabel = $parsed->format('F Y');
+
+        return redirect()
+            ->route('payments.index')
+            ->with('success', "{$deletedCount} unpaid payment record(s) deleted successfully for {$monthLabel}.");
+    }
+
+    // -----------------------------------------------------------------------
     // AJAX — get agreement for selected tenant
     // -----------------------------------------------------------------------
 
@@ -773,6 +816,33 @@ class PaymentController extends Controller
         return response()->json([
             'agreement' => [
                 'id'                 => $agreement->id,
+                'monthly_rent'       => $agreement->monthly_rent,
+                'maintenance_charge' => $agreement->maintenance_charge ?? 0,
+                'security_deposit'   => $agreement->security_deposit ?? 0,
+                'unit_id'            => $agreement->unit_id,
+                'unit_number'        => $agreement->unit?->unit_number ?? '—',
+                'landlord_name'      => $agreement->unit?->landlord?->name ?? '—',
+            ],
+        ]);
+    }
+
+    public function getAgreementByUnit(Request $request): JsonResponse
+    {
+        $agreement = Agreement::with(['unit.landlord', 'tenant'])
+            ->where('unit_id', $request->unit_id)
+            ->where('status', 'active')
+            ->latest('updated_at')
+            ->first();
+
+        if (!$agreement) {
+            return response()->json(['agreement' => null]);
+        }
+
+        return response()->json([
+            'agreement' => [
+                'id'                 => $agreement->id,
+                'tenant_id'          => $agreement->tenant_id,
+                'tenant_name'        => $agreement->tenant?->name ?? '—',
                 'monthly_rent'       => $agreement->monthly_rent,
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
                 'security_deposit'   => $agreement->security_deposit ?? 0,

@@ -1,142 +1,183 @@
-{{-- ── Tenant & Agreement ──────────────────────────────────────────── --}}
+{{-- ── Unit / Flat-Shop Selection (First) ─────────────────────────── --}}
 <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02]">
     <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-        Tenant & Agreement
+        Flat / Shop &amp; Tenant
     </h4>
 
-    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+    @php
+        $tenantUnitsJson = ($tenantUnits ?? collect())->map(fn($u) => [
+            'id'           => $u->id,
+            'unit_number'  => $u->unit_number,
+            'tenant_id'    => $u->agreements->first()?->tenant_id,
+            'tenant_name'  => $u->agreements->first()?->tenant?->name ?? '—',
+            'landlord_name'=> $u->landlord?->name ?? '—',
+            'monthly_rent'       => $u->agreements->first()?->monthly_rent ?? 0,
+            'maintenance_charge' => $u->agreements->first()?->maintenance_charge ?? 0,
+            'security_deposit'   => $u->agreements->first()?->security_deposit ?? 0,
+            'agreement_id'       => $u->agreements->first()?->id,
+        ])->values()->toJson();
+    @endphp
 
-        {{-- Tenant --}}
-        @php
-            $tenantsJson = $tenants->map(fn($t) => [
-                'id' => $t->id,
-                'name' => $t->name,
-            ])->values()->toJson();
-        @endphp
-        <div>
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Tenant <span class="text-red-500">*</span>
-            </label>
-            <div x-data="{
-                open: false,
-                search: '',
-                selectedId: '{{ old('tenant_id', $payment->tenant_id ?? '') }}',
-                selectedLabel: '',
-                tenants: {{ $tenantsJson }},
-                activeIndex: 0,
-                init() {
-                    let match = this.tenants.find(t => t.id == this.selectedId);
-                    if (match) {
-                        this.selectedLabel = match.name;
-                    }
-                    this.$watch('search', () => {
-                        this.activeIndex = 0;
-                    });
-                },
-                get filteredTenants() {
-                    if (!this.search) return this.tenants;
-                    let q = this.search.toLowerCase();
-                    return this.tenants.filter(t => t.name.toLowerCase().includes(q));
-                },
-                selectTenant(t) {
-                    if (!t) return;
-                    this.selectedId = t.id;
-                    this.selectedLabel = t.name;
-                    this.open = false;
-                    this.search = '';
-                    this.$nextTick(() => {
-                        let el = document.getElementById('tenant_id');
-                        el.dispatchEvent(new Event('change', { bubbles: true }));
-                    });
-                },
-                scrollIntoView() {
-                    let activeEl = this.$refs.optionsList.querySelector(`[data-index='${this.activeIndex}']`);
-                    if (activeEl) {
-                        activeEl.scrollIntoView({ block: 'nearest' });
+    <div class="grid grid-cols-1 gap-5 sm:grid-cols-3"
+         x-data="{
+            units: {{ $tenantUnitsJson }},
+            selectedUnitId: '{{ old('unit_id', isset($payment) ? $payment->unit_id : '') }}',
+            tenantName: '',
+            tenantId: '{{ old('tenant_id', isset($payment) ? $payment->tenant_id : '') }}',
+            landlordName: '',
+            agreementId: '{{ old('agreement_id', isset($payment) ? $payment->agreement_id : '') }}',
+            // Combobox state
+            cbOpen: false,
+            cbSearch: '',
+            cbSelectedLabel: '',
+            cbActiveIndex: 0,
+            get filteredUnits() {
+                if (!this.cbSearch) return this.units;
+                const q = this.cbSearch.toLowerCase();
+                return this.units.filter(u => u.unit_number.toLowerCase().includes(q));
+            },
+            init() {
+                if (this.selectedUnitId) {
+                    const u = this.units.find(x => x.id == this.selectedUnitId);
+                    if (u) {
+                        this.cbSelectedLabel = u.unit_number;
+                        this.tenantName      = u.tenant_name;
+                        this.tenantId        = u.tenant_id;
+                        this.landlordName    = u.landlord_name;
+                        this.agreementId     = u.agreement_id;
                     }
                 }
-            }" class="relative"
-               @keydown.escape.stop="open = false; $refs.triggerBtn.focus()"
-               @keydown.arrow-down.prevent="if (!open) { open = true; activeIndex = 0; } else if (filteredTenants.length > 0) { activeIndex = (activeIndex + 1) % filteredTenants.length; $nextTick(() => scrollIntoView()); }"
-               @keydown.arrow-up.prevent="if (open && filteredTenants.length > 0) { activeIndex = (activeIndex - 1 + filteredTenants.length) % filteredTenants.length; $nextTick(() => scrollIntoView()); }"
-               @keydown.enter.prevent="if (open && filteredTenants.length > 0) { selectTenant(filteredTenants[activeIndex]); }">
-                <!-- Hidden Input for Form Submission -->
-                <input type="hidden" id="tenant_id" name="tenant_id" :value="selectedId">
- 
-                <!-- Trigger Button -->
-                <div x-ref="triggerBtn"
-                     tabindex="0"
-                     @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                     @click.outside="open = false"
-                     @keydown.enter.prevent.stop="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                     @keydown.space.prevent.stop="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                     class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('tenant_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
-                    <span x-text="selectedLabel || 'Select tenant'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
-                    <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </div>
- 
-                <!-- Dropdown Menu -->
-                <div x-show="open"
-                     x-transition:enter="transition ease-out duration-100"
-                     x-transition:enter-start="opacity-0 transform scale-95"
-                     x-transition:enter-end="opacity-100 transform scale-100"
-                     x-transition:leave="transition ease-in duration-75"
-                     x-transition:leave-start="opacity-100 transform scale-100"
-                     x-transition:leave-end="opacity-0 transform scale-95"
-                     class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
-                     style="display: none;">
-                    
-                    <!-- Search Input -->
-                    <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
-                        <input x-ref="searchInput"
-                               x-model="search"
-                               type="text"
-                               placeholder="Type to search tenant name..."
-                               class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                    </div>
- 
-                    <!-- Options List -->
-                    <ul class="max-h-60 overflow-y-auto mt-1" x-ref="optionsList">
-                        <template x-if="filteredTenants.length === 0">
-                            <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching tenants found.</li>
-                        </template>
-                        <template x-for="(t, index) in filteredTenants" :key="t.id">
-                            <li @click="selectTenant(t)"
-                                @mouseenter="activeIndex = index"
-                                :data-index="index"
-                                :class="activeIndex === index ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-900 dark:text-brand-400' : 'text-gray-800 dark:text-white/90'"
-                                class="px-4 py-2 text-sm cursor-pointer flex justify-between items-center transition-colors">
-                                <span x-text="t.name"></span>
-                            </li>
-                        </template>
-                    </ul>
-                </div>
+                @if(isset($payment) && $payment->unit)
+                    this.tenantName   = '{{ $payment->tenant?->name ?? '—' }}';
+                    this.landlordName = '{{ $payment->unit->landlord?->name ?? '—' }}';
+                @endif
+            },
+            pickUnit(u) {
+                if (!u) return;
+                this.cbSelectedLabel = u.unit_number;
+                this.cbOpen = false;
+                this.cbSearch = '';
+                this.selectUnit(u.id);
+            },
+            cbScrollIntoView() {
+                const el = this.$refs.optionsList?.querySelector(`[data-index='${this.cbActiveIndex}']`);
+                if (el) el.scrollIntoView({ block: 'nearest' });
+            },
+            selectUnit(id) {
+                this.selectedUnitId = id;
+                const u = this.units.find(x => x.id == id);
+                if (u) {
+                    this.tenantName   = u.tenant_name;
+                    this.tenantId     = u.tenant_id;
+                    this.landlordName = u.landlord_name;
+                    this.agreementId  = u.agreement_id;
+                    const typeEl   = document.getElementById('type');
+                    const amountEl = document.getElementById('amount');
+                    if (typeEl && amountEl) {
+                        const t = typeEl.value;
+                        if (t === 'rent')                 amountEl.value = u.monthly_rent;
+                        else if (t === 'maintenance')      amountEl.value = u.maintenance_charge;
+                        else if (t === 'security_deposit') amountEl.value = u.security_deposit;
+                        else                               amountEl.value = '';
+                    }
+                } else {
+                    this.tenantName = this.tenantId = this.landlordName = this.agreementId = '';
+                }
+            }
+         }">
+
+        {{-- Hidden inputs --}}
+        <input type="hidden" id="unit_id"      name="unit_id"      :value="selectedUnitId">
+        <input type="hidden" id="tenant_id"    name="tenant_id"    :value="tenantId">
+        <input type="hidden" id="agreement_id" name="agreement_id" :value="agreementId">
+
+        {{-- Flat/Shop Searchable Combobox --}}
+        <div class="relative"
+             @keydown.escape.stop="cbOpen = false; $refs.cbTrigger.focus()"
+             @keydown.arrow-down.prevent="if (!cbOpen) { cbOpen = true; cbActiveIndex = 0; } else if (filteredUnits.length > 0) { cbActiveIndex = (cbActiveIndex + 1) % filteredUnits.length; $nextTick(() => cbScrollIntoView()); }"
+             @keydown.arrow-up.prevent="if (cbOpen && filteredUnits.length > 0) { cbActiveIndex = (cbActiveIndex - 1 + filteredUnits.length) % filteredUnits.length; $nextTick(() => cbScrollIntoView()); }"
+             @keydown.enter.prevent="if (cbOpen && filteredUnits.length > 0) { pickUnit(filteredUnits[cbActiveIndex]); }">
+
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Select Flat / Shop <span class="text-red-500">*</span>
+            </label>
+
+            {{-- Trigger --}}
+            <div x-ref="cbTrigger"
+                 tabindex="0"
+                 @click="cbOpen = !cbOpen; if(cbOpen) { $nextTick(() => $refs.cbSearch.focus()) }"
+                 @click.outside="cbOpen = false"
+                 @keydown.enter.prevent.stop="cbOpen = !cbOpen; if(cbOpen) { $nextTick(() => $refs.cbSearch.focus()) }"
+                 @keydown.space.prevent.stop="cbOpen = !cbOpen; if(cbOpen) { $nextTick(() => $refs.cbSearch.focus()) }"
+                 class="w-full cursor-pointer flex justify-between items-center rounded-lg border bg-white px-4 py-2.5 text-sm dark:bg-gray-900 {{ $errors->has('unit_id') ? 'border-red-400' : 'border-gray-300 dark:border-gray-700' }}">
+                <span x-text="cbSelectedLabel || 'Select Flat/Shop…'"
+                      :class="cbSelectedLabel ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-gray-600'"></span>
+                <svg class="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200"
+                     :class="cbOpen ? 'rotate-180' : ''"
+                     fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
             </div>
-            @error('tenant_id')
+
+            {{-- Dropdown --}}
+            <div x-show="cbOpen"
+                 x-transition:enter="transition ease-out duration-100"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-75"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                 style="display:none;">
+
+                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                    <input x-ref="cbSearch"
+                           x-model="cbSearch"
+                           type="text"
+                           placeholder="Type to search flat/shop…"
+                           class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                </div>
+
+                <ul class="max-h-60 overflow-y-auto mt-1" x-ref="optionsList">
+                    <template x-if="filteredUnits.length === 0">
+                        <li class="px-4 py-2 text-xs text-gray-400 dark:text-gray-500">No matching flats/shops found.</li>
+                    </template>
+                    <template x-for="(u, index) in filteredUnits" :key="u.id">
+                        <li @click="pickUnit(u)"
+                            @mouseenter="cbActiveIndex = index"
+                            :data-index="index"
+                            :class="cbActiveIndex === index ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400' : 'text-gray-800 dark:text-white/90'"
+                            class="px-4 py-2 text-sm cursor-pointer flex items-center justify-between gap-3 transition-colors">
+                            <span x-text="u.unit_number" class="font-medium"></span>
+                            <span x-text="u.tenant_name !== '—' ? u.tenant_name : ''"
+                                  class="text-xs text-gray-400 dark:text-gray-500 truncate"></span>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+
+            @error('unit_id')
                 <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
             @enderror
         </div>
 
-        {{-- Unit (auto-filled) --}}
+        {{-- Tenant (auto-filled) --}}
         <div>
-            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Flat/Shop</label>
-            <div id="unit_display"
-                class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                {{ isset($payment) ? $payment->unit->unit_number : 'Auto-filled when tenant is selected' }}
+            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Tenant</label>
+            <div class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800">
+                <span x-text="tenantName || 'Auto-filled when flat/shop is selected'"
+                      :class="tenantName ? 'text-gray-800 dark:text-white/90 font-medium' : 'text-gray-400 dark:text-gray-500'">
+                </span>
             </div>
-            <input type="hidden" id="unit_id" name="unit_id" value="{{ old('unit_id', $payment->unit_id ?? '') }}">
-            <input type="hidden" id="agreement_id" name="agreement_id"
-                value="{{ old('agreement_id', $payment->agreement_id ?? '') }}">
         </div>
 
         {{-- Landlord (auto-filled) --}}
         <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Landlord</label>
-            <div id="landlord_display"
-                class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                {{ isset($payment) && $payment->unit?->landlord ? $payment->unit->landlord->name : 'Auto-filled when tenant is selected' }}
+            <div class="w-full rounded-lg border border-gray-200 bg-gray-100 px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800">
+                <span x-text="landlordName || 'Auto-filled when flat/shop is selected'"
+                      :class="landlordName ? 'text-gray-800 dark:text-white/90 font-medium' : 'text-gray-400 dark:text-gray-500'">
+                </span>
             </div>
         </div>
 
@@ -186,7 +227,7 @@
             @enderror
         </div>
 
-        {{-- Add after Monthly Rent field --}}
+        {{-- Others --}}
         <div>
             <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Others

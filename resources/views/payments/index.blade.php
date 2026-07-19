@@ -176,6 +176,15 @@
                                 </svg>
                                 Bulk Edit
                             </button>
+
+                            <button type="button" x-data @click="$dispatch('open-bulk-delete')"
+                                class="inline-flex items-center gap-2 rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Bulk Delete
+                            </button>
                         @endif
 
                         <a href="{{ route('payments.history') }}"
@@ -447,6 +456,106 @@
                             <button type="submit"
                                 class="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors">
                                 Update Payments
+                            </button>
+                            <button type="button" @click="show = false"
+                                class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        @endif
+
+        {{-- ── Bulk Delete Modal ──────────────────────────────────────────── --}}
+        @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
+            <div x-data="{
+                    show: false,
+                    init() {
+                        window.addEventListener('open-bulk-delete', () => { this.show = true; });
+                    }
+                 }"
+                 x-show="show" x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
+                     @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
+
+                    {{-- Header --}}
+                    <div class="mb-5 flex items-start gap-3">
+                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/40">
+                            <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-semibold text-gray-800 dark:text-white">Bulk Delete Payments</h3>
+                            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Select the month and payment type(s) to permanently delete all matching records.</p>
+                        </div>
+                    </div>
+
+                    <form id="bulk-delete-form" action="{{ route('payments.bulk-delete') }}" method="POST">
+                        @csrf
+                        @method('DELETE')
+
+                        <div class="space-y-4">
+
+                            {{-- Month --}}
+                            <div>
+                                <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Billing Month <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="bulk_delete_month" name="month"
+                                       placeholder="Select month" autocomplete="off"
+                                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                            </div>
+
+                            {{-- Payment Types --}}
+                            <div>
+                                <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Payment Type(s) <span class="text-red-500">*</span>
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    @foreach([
+                                        'rent'             => 'Rent',
+                                        'maintenance'      => 'Maintenance',
+                                        'security_deposit' => 'Security Deposit',
+                                        'fine'             => 'Fine',
+                                        'electricity'      => 'Electricity',
+                                        'water'            => 'Water',
+                                        'gas'              => 'Gas',
+                                        'other'            => 'Other',
+                                        'extra_payment'    => 'Extra Payment',
+                                    ] as $val => $label)
+                                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                            <input type="checkbox" name="types[]" value="{{ $val }}"
+                                                   class="bulk-delete-type-cb rounded border-gray-300 text-red-500 focus:ring-red-500">
+                                            {{ $label }}
+                                        </label>
+                                    @endforeach
+                                </div>
+                                <p class="mt-1.5 text-xs text-gray-400 dark:text-gray-500">Select one or more types to delete.</p>
+                            </div>
+
+                            {{-- Warning Banner --}}
+                            <div class="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+                                <svg class="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                <p class="text-xs text-amber-700 dark:text-amber-300">
+                                    <strong>Note:</strong> Only <strong>Unpaid</strong> payments will be deleted. Partial and fully paid records are <strong>protected</strong> and will not be affected.
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-5 flex items-center gap-3">
+                            <button type="button" id="bulk-delete-confirm-btn"
+                                onclick="confirmBulkDelete()"
+                                class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Delete Payments
                             </button>
                             <button type="button" @click="show = false"
                                 class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
@@ -752,6 +861,70 @@
                     disableMobile: true,
                     static: true,
                 });
+
+                // Bulk Delete month picker
+                flatpickr('#bulk_delete_month', {
+                    dateFormat: 'Y-m-01',
+                    altInput: true,
+                    altFormat: 'F Y',
+                    allowInput: false,
+                    disableMobile: true,
+                    plugins: [
+                        new monthSelectPlugin({
+                            shorthand: false,
+                            dateFormat: 'Y-m-01',
+                            altFormat: 'F Y',
+                            theme: 'light',
+                        })
+                    ],
+                });
             });
+
+            // ── Bulk Delete SweetAlert Confirmation ──────────────────────────
+            function confirmBulkDelete() {
+                const monthInput = document.getElementById('bulk_delete_month');
+                const checkedTypes = document.querySelectorAll('.bulk-delete-type-cb:checked');
+
+                if (!monthInput || !monthInput.value) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Month Required',
+                        text: 'Please select a billing month before deleting.',
+                        confirmButtonColor: '#ef4444',
+                    });
+                    return;
+                }
+
+                if (checkedTypes.length === 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Type Required',
+                        text: 'Please select at least one payment type to delete.',
+                        confirmButtonColor: '#ef4444',
+                    });
+                    return;
+                }
+
+                // Get a readable month label from the altInput
+                const altInput = monthInput.nextElementSibling;
+                const monthLabel = (altInput && altInput.classList.contains('flatpickr-input')) ? altInput.value : monthInput.value;
+                const typeLabels = Array.from(checkedTypes).map(cb => cb.closest('label').textContent.trim()).join(', ');
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Delete Unpaid Payments?',
+                    html: `This will permanently delete all <strong>unpaid</strong> payments for <strong>${monthLabel}</strong> of type: <strong>${typeLabels}</strong>.<br><br>Partial and paid records will <strong>not</strong> be affected. This action cannot be undone.`,
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc2626',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Yes, Delete Unpaid',
+                    cancelButtonText: 'Cancel',
+                    reverseButtons: true,
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('bulk-delete-form').submit();
+                    }
+                });
+            }
         </script>
     @endpush

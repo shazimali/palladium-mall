@@ -177,9 +177,18 @@ Route::middleware('auth')->group(function () {
         Route::post(  'ajax/landlord-units/{unit}/transfer',         [AjaxUnitController::class, 'transfer'])  ->name('ajax.landlord-units.transfer');
     });
 
+    Route::middleware('permission:payments.bulk-generate')->group(function () {
+        Route::post('payments/bulk-generate', [PaymentController::class, 'bulkGenerate'])
+            ->name('payments.bulk-generate');
+        Route::post('payments/bulk-edit', [PaymentController::class, 'bulkEdit'])
+            ->name('payments.bulk-edit');
+        Route::delete('payments/bulk-delete', [PaymentController::class, 'bulkDelete'])
+            ->name('payments.bulk-delete');
+    });
+
     Route::middleware('permission:payments.view')->group(function () {
         Route::get('payments/history', [PaymentController::class, 'history'])->name('payments.history');
-        Route::resource('payments', PaymentController::class);
+        Route::resource('payments', PaymentController::class)->whereNumber('payment');
     });
 
     Route::middleware('permission:payments.record')->group(function () {
@@ -187,13 +196,6 @@ Route::middleware('auth')->group(function () {
             ->name('payments.record');
         Route::patch('payments/{payment}/toggle-status', [PaymentController::class, 'toggleStatus'])
             ->name('payments.toggle-status');
-    });
-
-    Route::middleware('permission:payments.bulk-generate')->group(function () {
-        Route::post('payments/bulk-generate', [PaymentController::class, 'bulkGenerate'])
-            ->name('payments.bulk-generate');
-        Route::post('payments/bulk-edit', [PaymentController::class, 'bulkEdit'])
-            ->name('payments.bulk-edit');
     });
 
     Route::middleware('permission:payments.print')->group(function () {
@@ -211,6 +213,8 @@ Route::middleware('auth')->group(function () {
     // AJAX
     Route::get('ajax/agreement-by-tenant', [PaymentController::class, 'getAgreementByTenant'])
         ->name('ajax.agreement-by-tenant');
+    Route::get('ajax/agreement-by-unit', [PaymentController::class, 'getAgreementByUnit'])
+        ->name('ajax.agreement-by-unit');
     Route::get('ajax/tenant-pending-payments', [ReceivingVoucherController::class, 'getTenantPendingPayments'])
         ->name('ajax.tenant-pending-payments');
 
