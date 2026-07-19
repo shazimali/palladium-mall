@@ -226,7 +226,17 @@
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
                                 <td class="px-4 py-3 font-mono font-semibold text-gray-800 dark:text-white/90">
-                                    {{ $entry['ref'] }}
+                                    @if($entry['type'] === 'Receipt (General)')
+                                        <a href="{{ route('general-receiving-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline">
+                                            {{ $entry['ref'] }}
+                                        </a>
+                                    @elseif($entry['type'] === 'Payment' || $entry['type'] === 'Payment (Advance)')
+                                        <a href="{{ route('payment-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline">
+                                            {{ $entry['ref'] }}
+                                        </a>
+                                    @else
+                                        {{ $entry['ref'] }}
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3 text-xs">
                                     <span class="inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold 

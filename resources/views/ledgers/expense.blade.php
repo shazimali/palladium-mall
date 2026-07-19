@@ -109,7 +109,13 @@
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
                                 <td class="px-5 py-3.5 text-xs font-mono font-semibold">
-                                    {{ $entry['voucher_no'] }}
+                                    @if(!empty($entry['id']))
+                                        <a href="{{ route('expenses.show', $entry['id']) }}" class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @else
+                                        {{ $entry['voucher_no'] }}
+                                    @endif
                                 </td>
                                 <td class="px-5 py-3.5 text-xs">
                                     {{ $entry['notes'] }}

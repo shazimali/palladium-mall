@@ -31,37 +31,52 @@
         </div>
 
         {{-- Overall Summary Widgets --}}
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
-            <!-- System Cash Card -->
-
-            <!-- Total Receivables Card -->
-            <div
-                class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] {{ $type === 'receivables' ? 'ring-2 ring-brand-500/20 bg-brand-50/10' : '' }}">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Receivables</span>
-                <h4 class="mt-1.5 text-lg font-bold text-green-600 dark:text-green-400">
-                    Rs. {{ number_format($totalReceivables, 2) }}
-                </h4>
-            </div>
-            <!-- Total Payables Card -->
-            <div
-                class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] {{ $type === 'payables' ? 'ring-2 ring-brand-500/20 bg-brand-50/10' : '' }}">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Received</span>
-                <h4 class="mt-1.5 text-lg font-bold text-red-500 dark:text-red-400">
-                    Rs. {{ number_format($totalPayables, 2) }}
-                </h4>
-            </div>
-
-            
-
-            <!-- Net Financial Position Card -->
-            <div
-                class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Balance</span>
-                <h4
-                    class="mt-1.5 text-lg font-bold {{ $totalReceivables - $totalPayables >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400' }}">
-                    Rs. {{ number_format($totalReceivables - $totalPayables, 2) }}
-                </h4>
-            </div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            @if($type === 'receivables')
+                <!-- Total Receivables Card -->
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] ring-2 ring-brand-500/20 bg-brand-50/10">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Receivables</span>
+                    <h4 class="mt-1.5 text-lg font-bold text-green-600 dark:text-green-400">
+                        Rs. {{ number_format($totalReceivablesDue, 2) }}
+                    </h4>
+                </div>
+                <!-- Total Received Card -->
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Received</span>
+                    <h4 class="mt-1.5 text-lg font-bold text-brand-600 dark:text-brand-400">
+                        Rs. {{ number_format($totalReceivablesPaid, 2) }}
+                    </h4>
+                </div>
+                <!-- Receivables Balance Card -->
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Balance</span>
+                    <h4 class="mt-1.5 text-lg font-bold text-green-600 dark:text-green-400">
+                        Rs. {{ number_format($totalReceivablesNet, 2) }}
+                    </h4>
+                </div>
+            @else
+                <!-- Total Payables Card -->
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] ring-2 ring-brand-500/20 bg-brand-50/10">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Payables</span>
+                    <h4 class="mt-1.5 text-lg font-bold text-red-500 dark:text-red-400">
+                        Rs. {{ number_format($totalPayablesDue, 2) }}
+                    </h4>
+                </div>
+                <!-- Total Paid Card -->
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Paid</span>
+                    <h4 class="mt-1.5 text-lg font-bold text-brand-600 dark:text-brand-400">
+                        Rs. {{ number_format($totalPayablesPaid, 2) }}
+                    </h4>
+                </div>
+                <!-- Payables Balance Card -->
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Balance</span>
+                    <h4 class="mt-1.5 text-lg font-bold text-red-500 dark:text-red-400">
+                        Rs. {{ number_format($totalPayablesNet, 2) }}
+                    </h4>
+                </div>
+            @endif
         </div>
 
         {{-- Filters & Options — all inline --}}

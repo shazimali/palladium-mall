@@ -292,9 +292,15 @@ class ReceivablePayableReportController extends Controller
 
         $totalCashBalance = $accounts->sum(fn($a) => $a->current_balance);
 
-        $totalPayablesSum = collect($payables)->sum('net');
-        $totalReceivablesSum = collect($receivables)->sum('net');
-        $netPosition = $totalReceivablesSum - $totalPayablesSum;
+        $totalPayablesDue = collect($payables)->sum('due');
+        $totalPayablesPaid = collect($payables)->sum('paid');
+        $totalPayablesNet = collect($payables)->sum('net');
+
+        $totalReceivablesDue = collect($receivables)->sum('due');
+        $totalReceivablesPaid = collect($receivables)->sum('paid');
+        $totalReceivablesNet = collect($receivables)->sum('net');
+
+        $netPosition = $totalReceivablesNet - $totalPayablesNet;
 
         return [
             // Lists
@@ -303,9 +309,19 @@ class ReceivablePayableReportController extends Controller
 
             // Overall totals
             'totalCashBalance' => $totalCashBalance,
-            'totalPayables' => $totalPayablesSum,
-            'totalReceivables' => $totalReceivablesSum,
+            'totalPayables' => $totalPayablesNet,
+            'totalReceivables' => $totalReceivablesNet,
             'netPosition' => $netPosition,
+
+            // Separate detailed sums
+            'totalPayablesDue' => $totalPayablesDue,
+            'totalPayablesPaid' => $totalPayablesPaid,
+            'totalPayablesNet' => $totalPayablesNet,
+
+            'totalReceivablesDue' => $totalReceivablesDue,
+            'totalReceivablesPaid' => $totalReceivablesPaid,
+            'totalReceivablesNet' => $totalReceivablesNet,
+
             'accounts' => $accounts,
 
             // Filters

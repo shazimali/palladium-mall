@@ -119,7 +119,19 @@
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
                                 <td class="px-5 py-3.5 text-xs font-mono font-semibold">
-                                    {{ $entry['voucher_no'] }}
+                                    @if(!empty($entry['type']) && !empty($entry['id']))
+                                        @if($entry['type'] === 'payment_voucher')
+                                            <a href="{{ route('payment-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline">
+                                                {{ $entry['voucher_no'] }}
+                                            </a>
+                                        @elseif($entry['type'] === 'receiving_voucher')
+                                            <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline">
+                                                {{ $entry['voucher_no'] }}
+                                            </a>
+                                        @endif
+                                    @else
+                                        {{ $entry['voucher_no'] }}
+                                    @endif
                                 </td>
                                 <td class="px-5 py-3.5 text-xs">
                                     {{ $entry['account'] }}

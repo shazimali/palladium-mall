@@ -131,7 +131,17 @@
                         @endphp
                         <tr>
                             <td class="p-4 whitespace-nowrap">{{ \Carbon\Carbon::parse($t['date'])->format('M d, Y') }}</td>
-                            <td class="p-4 whitespace-nowrap">{{ $t['description'] }}</td>
+                            <td class="p-4 whitespace-nowrap">
+                                @if(!empty($t['model']) && $t['model'] instanceof \App\Models\ReceivingVoucher)
+                                    Payment Received: 
+                                    <a href="{{ route('receiving-vouchers.show', $t['model']->id) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                        {{ $t['model']->voucher_no }}
+                                    </a>
+                                    {{ $t['model']->notes ? ' - ' . $t['model']->notes : '' }}
+                                @else
+                                    {{ $t['description'] }}
+                                @endif
+                            </td>
                             <td class="p-4 whitespace-nowrap text-right text-amber-600">
                                 {{ $t['debit'] > 0 ? 'Rs. ' . number_format($t['debit']) : '-' }}
                             </td>

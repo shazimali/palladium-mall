@@ -50,30 +50,45 @@
     {{-- Summary Widgets Cards --}}
     <table class="summary-table">
         <tr>
-            <td class="summary-td" style="width: 25%;">
-                <div class="summary-card" style="border-left: 3px solid #1D3461;">
-                    <div class="label">Cash Balance</div>
-                    <div class="value">Rs. {{ number_format($totalCashBalance, 2) }}</div>
-                </div>
-            </td>
-            <td class="summary-td" style="width: 25%;">
-                <div class="summary-card" style="border-left: 3px solid #EF4444;">
-                    <div class="label">Total Payables</div>
-                    <div class="value" style="color: #EF4444;">Rs. {{ number_format($totalPayables, 2) }}</div>
-                </div>
-            </td>
-            <td class="summary-td" style="width: 25%;">
-                <div class="summary-card" style="border-left: 3px solid #10B981;">
-                    <div class="label">Total Receivables</div>
-                    <div class="value" style="color: #10B981;">Rs. {{ number_format($totalReceivables, 2) }}</div>
-                </div>
-            </td>
-            <td class="summary-td" style="width: 25%;">
-                <div class="summary-card" style="border-left: 3px solid {{ $netPosition >= 0 ? '#10B981' : '#EF4444' }};">
-                    <div class="label">Net Position</div>
-                    <div class="value" style="color: {{ $netPosition >= 0 ? '#10B981' : '#EF4444' }};">Rs. {{ number_format($netPosition, 2) }}</div>
-                </div>
-            </td>
+            @if($type === 'receivables')
+                <td class="summary-td" style="width: 33.33%;">
+                    <div class="summary-card" style="border-left: 3px solid #10B981;">
+                        <div class="label">Total Receivables</div>
+                        <div class="value" style="color: #10B981;">Rs. {{ number_format($totalReceivablesDue, 2) }}</div>
+                    </div>
+                </td>
+                <td class="summary-td" style="width: 33.33%;">
+                    <div class="summary-card" style="border-left: 3px solid #0EA5E9;">
+                        <div class="label">Total Received</div>
+                        <div class="value" style="color: #0EA5E9;">Rs. {{ number_format($totalReceivablesPaid, 2) }}</div>
+                    </div>
+                </td>
+                <td class="summary-td" style="width: 33.33%;">
+                    <div class="summary-card" style="border-left: 3px solid #10B981;">
+                        <div class="label">Balance</div>
+                        <div class="value" style="color: #10B981;">Rs. {{ number_format($totalReceivablesNet, 2) }}</div>
+                    </div>
+                </td>
+            @else
+                <td class="summary-td" style="width: 33.33%;">
+                    <div class="summary-card" style="border-left: 3px solid #EF4444;">
+                        <div class="label">Total Payables</div>
+                        <div class="value" style="color: #EF4444;">Rs. {{ number_format($totalPayablesDue, 2) }}</div>
+                    </div>
+                </td>
+                <td class="summary-td" style="width: 33.33%;">
+                    <div class="summary-card" style="border-left: 3px solid #0EA5E9;">
+                        <div class="label">Total Paid</div>
+                        <div class="value" style="color: #0EA5E9;">Rs. {{ number_format($totalPayablesPaid, 2) }}</div>
+                    </div>
+                </td>
+                <td class="summary-td" style="width: 33.33%;">
+                    <div class="summary-card" style="border-left: 3px solid #EF4444;">
+                        <div class="label">Balance</div>
+                        <div class="value" style="color: #EF4444;">Rs. {{ number_format($totalPayablesNet, 2) }}</div>
+                    </div>
+                </td>
+            @endif
         </tr>
     </table>
 

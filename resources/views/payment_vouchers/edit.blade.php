@@ -10,6 +10,7 @@
 
         <x-common.component-card :title="'Edit Payment Voucher: ' . $voucher->voucher_no" desc="Modify payout details. Restricted to Super Administrators only.">
             <form action="{{ route('payment-vouchers.update', $voucher) }}" method="POST" class="space-y-6" 
+                @submit.prevent="handleSubmit($event)"
                 x-data="{ 
                     paidToType: '{{ old('paid_to_type', $voucher->paid_to_type) }}',
                     selectedBalance: null,
@@ -24,6 +25,63 @@
                     tenantDeposits: [],
                     selectedUnitId: '{{ old('unit_id', $voucher->unit_id) }}',
                     selectedUnitDeposit: null,
+                    handleSubmit(event) {
+                        if (this.selectedBalance !== null && this.selectedBalance !== '' && this.amount !== '') {
+                            let amt = parseFloat(this.amount);
+                            let bal = this.adjustedBalance;
+                            if (amt > bal) {
+                                Swal.fire({
+                                    title: 'Insufficient Balance',
+                                    text: 'The selected Payment Account does not have sufficient balance. Available balance: Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    customClass: {
+                                        confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+                                    },
+                                    buttonsStyling: false
+                                });
+                                return;
+                            }
+                        }
+
+                        if (this.paidToType === 'owner' && this.ownerPendingBalance !== null && this.amount !== '') {
+                            let amt = parseFloat(this.amount);
+                            let bal = parseFloat(this.ownerPendingBalance);
+                            if (amt > bal) {
+                                Swal.fire({
+                                    title: 'Limit Exceeded',
+                                    text: 'Payment amount exceeds ' + this.ownerName + '\'s available income balance of Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    customClass: {
+                                        confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+                                    },
+                                    buttonsStyling: false
+                                });
+                                return;
+                            }
+                        }
+
+                        if (this.paidToType === 'tenant' && this.selectedUnitDeposit !== null && this.amount !== '') {
+                            let amt = parseFloat(this.amount);
+                            let bal = parseFloat(this.selectedUnitDeposit.pending_refund);
+                            if (amt > bal) {
+                                Swal.fire({
+                                    title: 'Limit Exceeded',
+                                    text: 'Payment amount exceeds security deposit refund limit of Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    customClass: {
+                                        confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+                                    },
+                                    buttonsStyling: false
+                                });
+                                return;
+                            }
+                        }
+
+                        event.target.submit();
+                    },
                     fetchOwnerBalance(ownerId) {
                         if (!ownerId) { this.ownerPendingBalance = null; this.ownerName = ''; return; }
                         fetch('{{ route('ajax.owner-pending-balance') }}?owner_id=' + ownerId)
@@ -82,14 +140,7 @@
                             this.fetchTenantDeposits(this.selectedTenantId);
                         }
                     }
-                }"
-                @submit="
-                    if (adjustedBalance !== null && parseFloat(amount) > adjustedBalance) {
-                        if (!confirm('This account (' + selectedAccountName + ') has insufficient funds. \n\nAvailable balance (adjusted): Rs. ' + adjustedBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\nPayment amount: Rs. ' + Number(amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '\n\nThe account balance will become negative. Do you want to proceed?')) {
-                            $event.preventDefault();
-                        }
-                    }
-                ">
+                }">
                 @csrf
                 @method('PUT')
 
@@ -431,6 +482,7 @@
                                 <span :class="adjustedBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" class="font-bold text-sm" x-text="'Rs. ' + adjustedBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
                             </div>
                         </template>
+
                     </div>
 
                     {{-- Reference/Cheque Number --}}

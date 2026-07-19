@@ -421,6 +421,8 @@ class LedgerController extends Controller
                 'notes' => $payout->notes ?? 'Owner Payout',
                 'debit' => (float)$payout->amount,
                 'credit' => 0.00,
+                'type' => 'payment_voucher',
+                'id' => $payout->id,
             ]);
         }
 
@@ -440,6 +442,8 @@ class LedgerController extends Controller
                 'notes' => $deposit->notes ?? 'Capital Deposit',
                 'debit' => 0.00,
                 'credit' => (float)$deposit->amount,
+                'type' => 'receiving_voucher',
+                'id' => $deposit->id,
             ]);
         }
 
@@ -475,21 +479,28 @@ class LedgerController extends Controller
         $entries = collect();
 
         // 1. Calculate prior inflows and outflows to compute carried forward opening balance
-        $priorInflowRVs = (float) ReceivingVoucher::where('payment_account_id', $accountId)
-            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
-            ->sum('amount');
+        $priorInflowRVs = 0.00;
+        $priorInflowGRVs = 0.00;
+        $priorOutflowPVs = 0.00;
+        $priorOutflowExpenses = 0.00;
 
-        $priorInflowGRVs = (float) \App\Models\GeneralReceivingVoucher::where('payment_account_id', $accountId)
-            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
-            ->sum('amount');
+        if ($dateFrom) {
+            $priorInflowRVs = (float) ReceivingVoucher::where('payment_account_id', $accountId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
 
-        $priorOutflowPVs = (float) PaymentVoucher::where('payment_account_id', $accountId)
-            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
-            ->sum('amount');
+            $priorInflowGRVs = (float) \App\Models\GeneralReceivingVoucher::where('payment_account_id', $accountId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
 
-        $priorOutflowExpenses = (float) Expense::where('payment_account_id', $accountId)
-            ->when($dateFrom, fn($q) => $q->where('date', '<', $dateFrom))
-            ->sum('amount');
+            $priorOutflowPVs = (float) PaymentVoucher::where('payment_account_id', $accountId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
+
+            $priorOutflowExpenses = (float) Expense::where('payment_account_id', $accountId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
+        }
 
         $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs - $priorOutflowPVs - $priorOutflowExpenses;
 
@@ -518,6 +529,8 @@ class LedgerController extends Controller
                 'description' => $receipt->notes ?? 'Received Payment',
                 'debit' => (float)$receipt->amount, // Cash/Bank debit is inflow
                 'credit' => 0.00,
+                'model_type' => 'receiving_voucher',
+                'model_id' => $receipt->id,
             ]);
         }
 
@@ -540,6 +553,8 @@ class LedgerController extends Controller
                 'description' => $desc,
                 'debit' => (float)$receipt->amount,
                 'credit' => 0.00,
+                'model_type' => 'general_receiving_voucher',
+                'model_id' => $receipt->id,
             ]);
         }
 
@@ -557,6 +572,8 @@ class LedgerController extends Controller
                 'description' => $payout->notes ?? 'Owner Payout / Advance',
                 'debit' => 0.00,
                 'credit' => (float)$payout->amount,
+                'model_type' => 'payment_voucher',
+                'model_id' => $payout->id,
             ]);
         }
 
@@ -574,6 +591,8 @@ class LedgerController extends Controller
                 'description' => ($expense->expenseHead->name ?? 'Expense') . ' - ' . ($expense->notes ?? ''),
                 'debit' => 0.00,
                 'credit' => (float)$expense->amount,
+                'model_type' => 'expense',
+                'model_id' => $expense->id,
             ]);
         }
 
@@ -627,6 +646,7 @@ class LedgerController extends Controller
             'payment_account' => $e->paymentAccount->name ?? '—',
             'reference' => $e->reference ?? '—',
             'amount' => (float)$e->amount,
+            'id' => $e->id,
         ]);
 
         $totalAmount = $entries->sum('amount');
