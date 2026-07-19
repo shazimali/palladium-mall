@@ -105,7 +105,6 @@
                     @foreach([
                         'Tenant Security Deposit' => 'Security Deposits',
                         'Party Payable'           => 'Party Payables',
-                        'Landlord Payable'        => 'Landlord Payables',
                     ] as $value => $label)
                         <label class="inline-flex items-center gap-1.5 cursor-pointer">
                             <input type="checkbox" name="categories[]" value="{{ $value }}"

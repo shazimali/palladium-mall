@@ -118,9 +118,6 @@ Route::middleware('auth')->group(function () {
         // Landlord Ledgers
         Route::get('landlord-ledgers', [LandlordLedgerController::class, 'index'])->name('landlord_ledgers.index');
         Route::get('landlord-ledgers/{landlord}', [LandlordLedgerController::class, 'show'])->name('landlord_ledgers.show');
-        
-        // Landlord Payables
-        Route::resource('landlord-payables', LandlordPayableController::class)->except(['show', 'create', 'edit']);
     });
 
     Route::middleware('permission:parties.view')->group(function () {

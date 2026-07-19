@@ -260,27 +260,7 @@ class ReceivablePayableReportController extends Controller
                 }
             }
         } else {
-            // Payables side (LandlordPayable installments building owes)
-            $landlordPayablesQuery = LandlordPayable::query()
-                ->with(['landlord', 'unit'])
-                ->when($dateFrom, fn($q) => $q->where('due_date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('due_date', '<=', $dateTo));
-
-            $landlordPayables = $landlordPayablesQuery->get();
-
-            foreach ($landlordPayables as $lp) {
-                $netPayable = round($lp->amount - $lp->amount_paid, 2);
-                if ($netPayable > 0.01) {
-                    $payables[] = [
-                        'category' => 'Landlord Payable',
-                        'name'     => $lp->landlord->name,
-                        'unit'     => $lp->unit ? $lp->unit->unit_number : '',
-                        'due'      => (float) $lp->amount,
-                        'paid'     => (float) $lp->amount_paid,
-                        'net'      => $netPayable,
-                    ];
-                }
-            }
+            // Payables side (LandlordPayable installments building owes) - Removed
         }
 
         // Apply category filter checkboxes if set
