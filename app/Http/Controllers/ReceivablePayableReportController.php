@@ -279,6 +279,7 @@ class ReceivablePayableReportController extends Controller
                         'category' => 'Landlord Credit',
                         'name' => $landlord->name,
                         'unit' => '',
+                        'details' => 'Landlord Opening Credit',
                         'due' => $openingBalance,
                         'paid' => $totalReceived,
                         'net' => $netReceivable,
@@ -288,7 +289,50 @@ class ReceivablePayableReportController extends Controller
                 }
             }
         } else {
-            // Payables side (LandlordPayable installments building owes) - Removed
+            // Payables side: Landlord Payables (fetched strictly from Extra Payments)
+            $extraPaymentsQuery = Payment::query()
+                ->where('type', 'extra_payment')
+                ->where('landlord_id', '!=', null)
+                ->with(['landlord', 'unit', 'tenant', 'otherTenant']);
+
+            if ($dateFrom) {
+                $extraPaymentsQuery->where('due_date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $extraPaymentsQuery->where('due_date', '<=', $dateTo);
+            }
+
+            $extraPaymentsList = $extraPaymentsQuery->get();
+
+            foreach ($extraPaymentsList as $ep) {
+                if (!empty($categories) && !in_array('Landlord Payable', $categories)) {
+                    continue;
+                }
+
+                $name = $ep->landlord
+                    ? $ep->landlord->name
+                    : ($ep->otherTenant
+                        ? $ep->otherTenant->name
+                        : ($ep->tenant ? $ep->tenant->name : 'N/A'));
+                $unitNo = $ep->unit ? $ep->unit->unit_number : '';
+                $totalDue = (float) $ep->amount;
+                $totalPaid = (float) $ep->amount_paid;
+                $netPayable = round($totalDue - $totalPaid, 2);
+
+                if ($netPayable > 0.01 || $totalPaid > 0.01) {
+                    $payables[] = [
+                        'category' => 'Landlord Payable',
+                        'name' => $name,
+                        'unit' => $unitNo,
+                        'details' => 'Extra Payment' . ($ep->notes ? ' - ' . $ep->notes : ''),
+                        'due' => $totalDue,
+                        'paid' => $totalPaid,
+                        'net' => max(0.00, $netPayable),
+                        'is_self' => (bool) ($ep->unit ? $ep->unit->is_self : false),
+                        'is_other_receivable' => false,
+                    ];
+                }
+            }
         }
 
         // Apply category filter checkboxes if set
