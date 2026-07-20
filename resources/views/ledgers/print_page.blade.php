@@ -78,6 +78,16 @@
             @endforeach
         </div>
     @endif
+    @if(!empty($summaryCards))
+        <div class="summary-grid">
+            @foreach($summaryCards as $card)
+                <div class="summary-card {{ $card['color'] ?? 's-neutral' }}">
+                    <div class="s-label">{{ $card['label'] }}</div>
+                    <div class="s-value">{{ $card['value'] }}</div>
+                </div>
+            @endforeach
+        </div>
+    @endif
 
 
     <table>

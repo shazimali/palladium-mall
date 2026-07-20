@@ -235,6 +235,53 @@
                 @endforeach
             </tbody>
         </table>
+    {{-- Landlord Statement Summary & Table --}}
+    @elseif($type === 'landlord')
+        <table class="summary-table">
+            <tr>
+                <td class="summary-td">
+                    <div class="summary-card" style="border-left: 3px solid #3B82F6;">
+                        <div class="label">Total Unit Value Owed</div>
+                        <div class="value">Rs. {{ number_format($summary['total_debit'], 2) }}</div>
+                    </div>
+                </td>
+                <td class="summary-td">
+                    <div class="summary-card" style="border-left: 3px solid #10B981;">
+                        <div class="label">Total Payments Received</div>
+                        <div class="value" style="color: #10B981;">Rs. {{ number_format($summary['total_credit'], 2) }}</div>
+                    </div>
+                </td>
+                <td class="summary-td">
+                    <div class="summary-card" style="border-left: 3px solid #EF4444;">
+                        <div class="label">Outstanding Balance</div>
+                        <div class="value" style="color: #EF4444;">Rs. {{ number_format($summary['net_balance'], 2) }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Date</th>
+                    <th style="width: 45%;">Description</th>
+                    <th style="width: 15%;" class="text-right">Debit (Payable)</th>
+                    <th style="width: 15%;" class="text-right">Credit (Paid)</th>
+                    <th style="width: 10%;" class="text-right">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($entries as $entry)
+                    <tr>
+                        <td class="font-mono">{{ $entry['date']->format('d M Y') }}</td>
+                        <td>{{ $entry['description'] }}</td>
+                        <td class="text-right text-red">{{ $entry['debit'] > 0 ? number_format($entry['debit'], 2) : '—' }}</td>
+                        <td class="text-right text-green">{{ $entry['credit'] > 0 ? number_format($entry['credit'], 2) : '—' }}</td>
+                        <td class="text-right font-mono" style="font-weight: bold;">{{ number_format($entry['running_balance'], 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
     @endif
 
     <div class="footer">

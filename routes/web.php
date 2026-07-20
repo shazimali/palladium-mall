@@ -119,6 +119,9 @@ Route::middleware('auth')->group(function () {
         
         // Landlord Ledgers
         Route::get('landlord-ledgers', [LandlordLedgerController::class, 'index'])->name('landlord_ledgers.index');
+        Route::get('landlord-ledgers/excel', [LandlordLedgerController::class, 'exportExcel'])->name('landlord_ledgers.excel');
+        Route::get('landlord-ledgers/pdf', [LandlordLedgerController::class, 'exportPdf'])->name('landlord_ledgers.pdf');
+        Route::get('landlord-ledgers/print', [LandlordLedgerController::class, 'print'])->name('landlord_ledgers.print');
         Route::get('landlord-ledgers/{landlord}', [LandlordLedgerController::class, 'show'])->name('landlord_ledgers.show');
     });
 
