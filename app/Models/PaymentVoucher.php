@@ -20,6 +20,7 @@ class PaymentVoucher extends Model
         'owner_id',
         'party_id',
         'tenant_id',
+        'landlord_id',
         'unit_id',
         'other_name',
         'is_advance',
@@ -65,6 +66,11 @@ class PaymentVoucher extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class)->withTrashed();
+    }
+
+    public function landlord(): BelongsTo
+    {
+        return $this->belongsTo(Landlord::class)->withTrashed();
     }
 
     public function unit(): BelongsTo

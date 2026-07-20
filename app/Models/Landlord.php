@@ -63,10 +63,36 @@ class Landlord extends Model
     }
 
     /**
+     * Payouts / refunds paid to this landlord via Payment Vouchers.
+     */
+    public function payouts(): HasMany
+    {
+        return $this->hasMany(PaymentVoucher::class)->where('paid_to_type', 'landlord')->orderBy('date', 'desc');
+    }
+
+    /**
      * Get the remaining opening balance (Opening Balance - Payables).
      */
     public function getRemainingOpeningBalanceAttribute(): float
     {
         return (float) ($this->ownerships->sum('credit_amount') - $this->payables->sum('amount'));
+    }
+
+    /**
+     * Calculate current outstanding balance of the landlord.
+     * Outstanding Balance = Total Value Owed - Vouchers Paid - Tenant Extra Payments Paid + Mall Payouts to Landlord.
+     */
+    public function currentBalance(): float
+    {
+        $opening = (float) $this->ownerships->sum('credit_amount');
+        $vouchersPaid = (float) ReceivingVoucher::where('received_from_type', 'owner')
+            ->where('owner_id', $this->id)
+            ->sum('amount');
+        $extraPaid = (float) Payment::where('landlord_id', $this->id)
+            ->where('type', 'extra_payment')
+            ->sum('amount_paid');
+        $payouts = (float) $this->payouts()->sum('amount');
+
+        return $opening - $vouchersPaid - $extraPaid + $payouts;
     }
 }

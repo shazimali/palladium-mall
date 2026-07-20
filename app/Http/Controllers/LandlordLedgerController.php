@@ -135,22 +135,40 @@ class LandlordLedgerController extends Controller
 
         $ledgerData = $this->getLandlordLedgerData($landlordId, $dateFrom, $dateTo);
 
-        return view('ledgers.print', [
+        $summaryCards = [
+            ['label' => 'Total Unit Value Owed',    'value' => 'Rs. ' . number_format($ledgerData['openingBalance'], 2), 'color' => 's-blue'],
+            ['label' => 'Total Payments Received', 'value' => 'Rs. ' . number_format($ledgerData['totalPaid'], 2),      'color' => 's-green'],
+            ['label' => 'Outstanding Balance',     'value' => 'Rs. ' . number_format($ledgerData['pendingBalance'], 2),  'color' => $ledgerData['pendingBalance'] > 0 ? 's-orange' : 's-neutral'],
+        ];
+
+        $columns = [
+            ['key' => 'date_str',        'label' => 'Date'],
+            ['key' => 'description',     'label' => 'Description'],
+            ['key' => 'voucher_no',      'label' => 'Voucher / Ref #', 'td_class' => 'mono'],
+            ['key' => 'debit',           'label' => 'Debit (Payable)', 'type' => 'debit',   'class' => 'text-right'],
+            ['key' => 'credit',          'label' => 'Credit (Paid)',   'type' => 'credit',  'class' => 'text-right'],
+            ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
+        ];
+
+        $rows = $ledgerData['entries']->map(function($e) {
+            $e['date_str'] = $e['date']->format('d M Y');
+            return $e;
+        })->toArray();
+
+        return view('ledgers.print_page', [
             'type'         => 'landlord',
-            'entries'      => $ledgerData['entries'],
-            'summary'      => $ledgerData['summary'],
-            'dateFrom'     => $dateFrom,
-            'dateTo'       => $dateTo,
             'pageTitle'    => 'Landlord Ledger — ' . $ledgerData['landlord']->name,
+            'filterChips'  => [
+                ['label' => 'Date From', 'value' => $dateFrom ?? 'All Time'],
+                ['label' => 'Date To', 'value' => $dateTo ?? 'All Time'],
+            ],
             'metaItems'    => [
                 ['label' => 'Landlord Name', 'value' => $ledgerData['landlord']->name],
                 ['label' => 'Phone', 'value' => $ledgerData['landlord']->phone ?? '—'],
             ],
-            'infoCards'    => [
-                ['label' => 'Total Unit Value Owed', 'value' => 'Rs. ' . number_format($ledgerData['openingBalance'], 2)],
-                ['label' => 'Total Payments Received', 'value' => 'Rs. ' . number_format($ledgerData['totalPaid'], 2)],
-                ['label' => 'Outstanding Balance', 'value' => 'Rs. ' . number_format($ledgerData['pendingBalance'], 2)],
-            ]
+            'summaryCards' => $summaryCards,
+            'columns'      => $columns,
+            'rows'         => $rows,
         ]);
     }
 
@@ -167,6 +185,7 @@ class LandlordLedgerController extends Controller
 
         // 2. Prior payments (all-time ReceivingVouchers prior to dateFrom + all-time paid extra_payments prior to dateFrom)
         $priorPaid = 0.00;
+        $priorCharged = 0.00;
         if ($dateFrom) {
             $priorPaid += (float) ReceivingVoucher::where('received_from_type', 'owner')
                 ->where('owner_id', $landlordId)
@@ -181,9 +200,14 @@ class LandlordLedgerController extends Controller
                       ->orWhere('paid_at', '<', $dateFrom);
                 })
                 ->sum('amount_paid');
+
+            $priorCharged += (float) \App\Models\PaymentVoucher::where('paid_to_type', 'landlord')
+                ->where('landlord_id', $landlordId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
         }
 
-        $carriedForwardBalance = $openingBalance - $priorPaid;
+        $carriedForwardBalance = $openingBalance + $priorCharged - $priorPaid;
 
         // Prepend opening balance carried forward row
         $entries->push([
@@ -247,19 +271,41 @@ class LandlordLedgerController extends Controller
             ]);
         }
 
+        // 5. Current period payouts (payment vouchers paid to landlord)
+        $payouts = \App\Models\PaymentVoucher::where('paid_to_type', 'landlord')
+            ->where('landlord_id', $landlordId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->orderBy('date', 'asc')
+            ->get();
+
+        foreach ($payouts as $pv) {
+            $entries->push([
+                'date' => $pv->date,
+                'voucher_no' => $pv->voucher_no,
+                'type' => 'Payout',
+                'description' => 'Payout: ' . $pv->voucher_no . ($pv->notes ? ' - ' . $pv->notes : ''),
+                'debit' => (float)$pv->amount,
+                'credit' => 0.00,
+                'is_opening' => false,
+                'model' => $pv,
+            ]);
+        }
+
         // Sort all entries chronologically, keeping opening balance row first
         $entries = $entries->sortBy(function ($e) {
             return ($e['is_opening'] ?? false) ? '0000-00-00' : $e['date']->format('Y-m-d');
         })->values();
 
-        // 5. Calculate running balance
+        // 6. Calculate running balance
         $runningBalance = $carriedForwardBalance;
         $totalDebit = 0.00;
         $totalCredit = 0.00;
 
         $entries = $entries->map(function ($entry) use (&$runningBalance, &$totalDebit, &$totalCredit) {
             if (empty($entry['is_opening'])) {
-                $runningBalance -= $entry['credit'];
+                $runningBalance += $entry['debit'] - $entry['credit'];
+                $totalDebit += $entry['debit'];
                 $totalCredit += $entry['credit'];
             }
             $entry['running_balance'] = $runningBalance;
@@ -277,16 +323,23 @@ class LandlordLedgerController extends Controller
 
         $allTimePaid += $allTimeExtraPaid;
 
+        $allTimePayouts = (float) \App\Models\PaymentVoucher::where('paid_to_type', 'landlord')
+            ->where('landlord_id', $landlordId)
+            ->sum('amount');
+
+        $pendingBalance = $openingBalance - $allTimePaid + $allTimePayouts;
+
         return [
             'landlord'       => $landlord,
             'entries'        => $entries,
             'openingBalance' => $openingBalance,
             'totalPaid'      => $allTimePaid,
-            'pendingBalance' => $openingBalance - $allTimePaid,
+            'pendingBalance' => $pendingBalance,
             'summary'        => [
-                'total_debit'  => $openingBalance,
+                'opening_balance' => $openingBalance,
+                'total_debit'  => $openingBalance + $totalDebit,
                 'total_credit' => $totalCredit,
-                'net_balance'  => $openingBalance - $allTimePaid,
+                'net_balance'  => $pendingBalance,
             ]
         ];
     }

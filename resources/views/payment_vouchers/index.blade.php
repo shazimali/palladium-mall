@@ -174,6 +174,8 @@
                                     👤 {{ $voucher->owner->name ?? 'Partner' }}
                                 @elseif($voucher->paid_to_type === 'tenant')
                                     👤 {{ $voucher->tenant->name ?? $voucher->other_name }} @if($voucher->unit) <span class="text-xs font-normal text-gray-500">({{ $voucher->unit->unit_number }})</span> @endif
+                                @elseif($voucher->paid_to_type === 'landlord')
+                                    👤 {{ $voucher->landlord->name ?? $voucher->other_name }}
                                 @else
                                     👤 {{ $voucher->other_name }}
                                 @endif
@@ -183,6 +185,8 @@
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400">Partner</span>
                                 @elseif($voucher->paid_to_type === 'tenant')
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/20 dark:text-teal-400">Tenant (Refund)</span>
+                                @elseif($voucher->paid_to_type === 'landlord')
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400">Landlord (Payout)</span>
                                 @else
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">Other</span>
                                 @endif

@@ -242,7 +242,7 @@
                 <td class="summary-td">
                     <div class="summary-card" style="border-left: 3px solid #3B82F6;">
                         <div class="label">Total Unit Value Owed</div>
-                        <div class="value">Rs. {{ number_format($summary['total_debit'], 2) }}</div>
+                        <div class="value">Rs. {{ number_format($summary['opening_balance'], 2) }}</div>
                     </div>
                 </td>
                 <td class="summary-td">

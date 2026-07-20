@@ -8,6 +8,7 @@ use App\Models\PaymentAccount;
 use App\Models\Tenant;
 use App\Models\Payment;
 use App\Models\Unit;
+use App\Models\Landlord;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -23,7 +24,7 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = PaymentVoucher::with(['owner', 'party', 'paymentAccount', 'user'])
+        $query = PaymentVoucher::with(['owner', 'party', 'tenant', 'landlord', 'paymentAccount', 'user'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
                 $q->where('voucher_no', 'like', "%{$term}%")
@@ -67,6 +68,7 @@ class PaymentVoucherController extends Controller
 
         $parties = \App\Models\Party::orderBy('name')->get();
         $tenants = Tenant::with('unit')->orderBy('name')->get();
+        $landlords = Landlord::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
@@ -80,6 +82,7 @@ class PaymentVoucherController extends Controller
             'title'           => 'New Payment Voucher',
             'parties'         => $parties,
             'tenants'         => $tenants,
+            'landlords'       => $landlords,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -96,7 +99,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:tenant,other'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -106,11 +109,31 @@ class PaymentVoucherController extends Controller
         if ($request->input('paid_to_type') === 'tenant') {
             $rules['tenant_id'] = ['required', 'exists:tenants,id'];
             $rules['unit_id']   = ['required', 'exists:units,id'];
+        } elseif ($request->input('paid_to_type') === 'landlord') {
+            $rules['landlord_id'] = ['required', 'exists:landlords,id'];
         } else {
             $rules['party_id'] = ['required', 'exists:parties,id'];
         }
 
         $data = $request->validate($rules);
+
+        // ── Landlord negative balance guard ───────────────────────────────────
+        if ($request->input('paid_to_type') === 'landlord') {
+            $landlord = Landlord::findOrFail($data['landlord_id']);
+            $availableBalance = -$landlord->currentBalance();
+
+            if ($availableBalance <= 0) {
+                return back()->withInput()->withErrors([
+                    'landlord_id' => 'This landlord does not have any negative balance (available to pay: Rs. 0.00).',
+                ]);
+            }
+
+            if ((float) $data['amount'] > $availableBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds the available negative balance (Rs. ' . number_format($availableBalance, 2) . ').',
+                ]);
+            }
+        }
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         
@@ -129,12 +152,21 @@ class PaymentVoucherController extends Controller
         if ($request->input('paid_to_type') === 'tenant') {
             $data['owner_id'] = null;
             $data['party_id'] = null;
+            $data['landlord_id'] = null;
             $tenant = Tenant::findOrFail($data['tenant_id']);
             $data['other_name'] = $tenant->name;
+        } elseif ($request->input('paid_to_type') === 'landlord') {
+            $data['owner_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
+            $data['party_id'] = null;
+            $landlord = Landlord::findOrFail($data['landlord_id']);
+            $data['other_name'] = $landlord->name;
         } else {
             $data['owner_id'] = null;
             $data['tenant_id'] = null;
             $data['unit_id'] = null;
+            $data['landlord_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
         }
@@ -180,7 +212,7 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $paymentVoucher->load(['owner', 'party', 'paymentAccount', 'user']);
+        $paymentVoucher->load(['owner', 'party', 'tenant', 'landlord', 'paymentAccount', 'user']);
 
         return view('payment_vouchers.show', [
             'title'   => 'Voucher details — ' . $paymentVoucher->voucher_no,
@@ -197,7 +229,7 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $paymentVoucher->load(['owner', 'party', 'paymentAccount', 'user']);
+        $paymentVoucher->load(['owner', 'party', 'tenant', 'landlord', 'paymentAccount', 'user']);
 
         return view('payment_vouchers.print', [
             'title'   => 'Print Voucher — ' . $paymentVoucher->voucher_no,
@@ -231,6 +263,7 @@ class PaymentVoucherController extends Controller
 
         $parties = \App\Models\Party::orderBy('name')->get();
         $tenants = Tenant::with('unit')->orderBy('name')->get();
+        $landlords = Landlord::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
@@ -245,6 +278,7 @@ class PaymentVoucherController extends Controller
             'voucher'         => $paymentVoucher,
             'parties'         => $parties,
             'tenants'         => $tenants,
+            'landlords'       => $landlords,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -261,7 +295,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:tenant,other'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -271,11 +305,36 @@ class PaymentVoucherController extends Controller
         if ($request->input('paid_to_type') === 'tenant') {
             $rules['tenant_id'] = ['required', 'exists:tenants,id'];
             $rules['unit_id']   = ['required', 'exists:units,id'];
+        } elseif ($request->input('paid_to_type') === 'landlord') {
+            $rules['landlord_id'] = ['required', 'exists:landlords,id'];
         } else {
             $rules['party_id'] = ['required', 'exists:parties,id'];
         }
 
         $data = $request->validate($rules);
+
+        // ── Landlord negative balance guard ───────────────────────────────────
+        if ($request->input('paid_to_type') === 'landlord') {
+            $landlord = Landlord::findOrFail($data['landlord_id']);
+            $availableBalance = -$landlord->currentBalance();
+
+            // If updating the same landlord, add back the old amount of this voucher to the available balance
+            if ($paymentVoucher->landlord_id == $landlord->id) {
+                $availableBalance += (float) $paymentVoucher->amount;
+            }
+
+            if ($availableBalance <= 0) {
+                return back()->withInput()->withErrors([
+                    'landlord_id' => 'This landlord does not have any negative balance (available to pay: Rs. 0.00).',
+                ]);
+            }
+
+            if ((float) $data['amount'] > $availableBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds the available negative balance (Rs. ' . number_format($availableBalance, 2) . ').',
+                ]);
+            }
+        }
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         
@@ -299,12 +358,21 @@ class PaymentVoucherController extends Controller
         if ($request->input('paid_to_type') === 'tenant') {
             $data['owner_id'] = null;
             $data['party_id'] = null;
+            $data['landlord_id'] = null;
             $tenant = Tenant::findOrFail($data['tenant_id']);
             $data['other_name'] = $tenant->name;
+        } elseif ($request->input('paid_to_type') === 'landlord') {
+            $data['owner_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
+            $data['party_id'] = null;
+            $landlord = Landlord::findOrFail($data['landlord_id']);
+            $data['other_name'] = $landlord->name;
         } else {
             $data['owner_id'] = null;
             $data['tenant_id'] = null;
             $data['unit_id'] = null;
+            $data['landlord_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
         }
@@ -389,6 +457,26 @@ class PaymentVoucherController extends Controller
         return response()->json([
             'tenant_name' => $tenant->name,
             'security_deposits' => $data
+        ]);
+    }
+
+    public function getLandlordBalance(Request $request)
+    {
+        $landlordId = $request->query('landlord_id');
+        if (!$landlordId) {
+            return response()->json([
+                'current_balance' => 0.00,
+                'payable_amount' => 0.00
+            ]);
+        }
+
+        $landlord = Landlord::findOrFail($landlordId);
+        $currentBalance = (float) $landlord->currentBalance();
+
+        return response()->json([
+            'landlord_name' => $landlord->name,
+            'current_balance' => $currentBalance,
+            'payable_amount' => $currentBalance < 0 ? abs($currentBalance) : 0.00
         ]);
     }
 }

@@ -21,6 +21,8 @@
                     tenantDeposits: [],
                     selectedUnitId: '{{ old('unit_id') }}',
                     selectedUnitDeposit: null,
+                    selectedLandlordId: '{{ old('landlord_id') }}',
+                    landlordBalanceInfo: null,
                     handleSubmit(event) {
                         if (this.selectedBalance !== null && this.selectedBalance !== '' && this.amount !== '') {
                             let amt = parseFloat(this.amount);
@@ -58,6 +60,24 @@
                             }
                         }
 
+                        if (this.paidToType === 'landlord' && this.landlordBalanceInfo !== null && this.amount !== '') {
+                            let amt = parseFloat(this.amount);
+                            let bal = parseFloat(this.landlordBalanceInfo.payable_amount);
+                            if (amt > bal) {
+                                Swal.fire({
+                                    title: 'Limit Exceeded',
+                                    text: 'Payment amount exceeds the landlord\'s available negative balance of Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    customClass: {
+                                        confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+                                    },
+                                    buttonsStyling: false
+                                });
+                                return;
+                            }
+                        }
+
                         event.target.submit();
                     },
                     fetchTenantDeposits(tenantId) {
@@ -69,6 +89,19 @@
                             .then(r => r.json())
                             .then(d => { 
                                 this.tenantDeposits = d.security_deposits || []; 
+                            });
+                    },
+                    fetchLandlordBalance(landlordId) {
+                        this.selectedLandlordId = landlordId;
+                        this.landlordBalanceInfo = null;
+                        if (!landlordId) return;
+                        fetch('{{ route('ajax.landlord-pending-balance') }}?landlord_id=' + landlordId)
+                            .then(r => r.json())
+                            .then(d => {
+                                this.landlordBalanceInfo = d;
+                                if (d.payable_amount > 0) {
+                                    this.formatAmount(String(d.payable_amount));
+                                }
                             });
                     },
                     selectUnit(unitId) {
@@ -92,6 +125,9 @@
                         if (this.amount) {
                             this.formatAmount(String(this.amount));
                         }
+                        if (this.selectedLandlordId) {
+                            this.fetchLandlordBalance(this.selectedLandlordId);
+                        }
                     }
                 }">
                 @csrf
@@ -107,6 +143,7 @@
                         <label class="{{ $label }}">Paid To Type <span class="text-red-500">*</span></label>
                         <select name="paid_to_type" x-model="paidToType" class="{{ $input }} {{ $errors->has('paid_to_type') ? 'border-red-400' : '' }}" required>
                             <option value="tenant" {{ old('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund Security Deposit)</option>
+                            <option value="landlord" {{ old('paid_to_type') === 'landlord' ? 'selected' : '' }}>Landlord (Pay Negative Balance)</option>
                             <option value="other" {{ old('paid_to_type') === 'other' ? 'selected' : '' }}>Other (Miscellaneous)</option>
                         </select>
                         @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
@@ -239,6 +276,110 @@
                         No active security deposit records found for this tenant. They must have a paid security deposit payment record first.
                     </div>
 
+
+                    {{-- Landlord Selection --}}
+                    <div x-show="paidToType === 'landlord'" x-transition x-cloak
+                         x-data="{
+                            open: false,
+                            search: '',
+                            selectedId: '{{ old('landlord_id') }}',
+                            selectedLabel: '{{ old('landlord_name') }}',
+                            highlightedIndex: -1,
+                            landlords: [
+                                @foreach($landlords as $landlord)
+                                    { id: {{ $landlord->id }}, name: '{{ addslashes($landlord->name) }}', phone: '{{ addslashes($landlord->phone ?? '—') }}' },
+                                @endforeach
+                            ],
+                            get filteredLandlords() {
+                                if (!this.search) return this.landlords;
+                                let q = this.search.toLowerCase();
+                                return this.landlords.filter(l => l.name.toLowerCase().includes(q) || l.phone.toLowerCase().includes(q));
+                            },
+                            selectLandlord(l) {
+                                this.selectedId = l.id;
+                                this.selectedLabel = l.name;
+                                this.open = false;
+                                this.search = '';
+                                this.highlightedIndex = -1;
+                                fetchLandlordBalance(l.id);
+                            },
+                            moveHighlight(direction) {
+                                let list = this.filteredLandlords;
+                                if (list.length === 0) return;
+                                this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                            },
+                            selectHighlighted() {
+                                let list = this.filteredLandlords;
+                                if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                                    this.selectLandlord(list[this.highlightedIndex]);
+                                }
+                            }
+                         }">
+                        <label class="{{ $label }}">Select Landlord <span class="text-red-500">*</span></label>
+                        <input type="hidden" name="landlord_id" :value="selectedId" :required="paidToType === 'landlord'">
+                        <input type="hidden" name="landlord_name" :value="selectedLabel">
+
+                        <div class="relative">
+                            <div tabindex="0"
+                                 @click="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
+                                 @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
+                                 @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
+                                 @click.outside="open = false"
+                                 class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('landlord_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
+                                <span x-text="selectedLabel || 'Select Landlord'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
+                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+
+                            <div x-show="open"
+                                 class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
+                                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                    <input x-ref="landlordSearchInput"
+                                           x-model="search"
+                                           @keydown.arrow-down.prevent="moveHighlight(1)"
+                                           @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                           @keydown.enter.prevent="selectHighlighted()"
+                                           @keydown.escape.prevent="open = false; highlightedIndex = -1"
+                                           type="text"
+                                           placeholder="Type to search landlord..."
+                                           class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                </div>
+                                <ul class="max-h-60 overflow-y-auto mt-1">
+                                    <template x-if="filteredLandlords.length === 0">
+                                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching landlords found.</li>
+                                    </template>
+                                    <template x-for="(l, index) in filteredLandlords" :key="l.id">
+                                        <li @click="selectLandlord(l)"
+                                            @mouseenter="highlightedIndex = index"
+                                            :class="{
+                                                'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                            }"
+                                            class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
+                                            <span x-text="l.name" class="font-medium"></span>
+                                            <span x-text="l.phone" class="text-[10px] text-gray-400"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                        @error('landlord_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+
+                        {{-- Landlord Balance Information --}}
+                        <template x-if="landlordBalanceInfo !== null">
+                            <div class="mt-2 rounded-lg border border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-900/10 p-2.5 text-xs font-semibold flex flex-col gap-1">
+                                <div class="flex justify-between items-center text-teal-700 dark:text-teal-400">
+                                    <span>Net Ledger Balance:</span>
+                                    <span class="font-bold text-sm text-teal-800 dark:text-teal-300" x-text="'Rs. ' + Number(landlordBalanceInfo.current_balance).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
+                                </div>
+                                <div class="flex justify-between items-center text-brand-600 dark:text-brand-400 pt-1 border-t border-teal-100 dark:border-teal-900/30">
+                                    <span>Payable Amount (Mall owes Landlord):</span>
+                                    <span class="font-bold text-sm text-brand-700 dark:text-brand-300" x-text="'Rs. ' + Number(landlordBalanceInfo.payable_amount).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
 
                     {{-- Other Payee Name (Searchable Party Head Dropdown) --}}
                     <div x-show="paidToType === 'other'" x-transition x-cloak

@@ -43,6 +43,9 @@
                 } elseif ($voucher->paid_to_type === 'tenant') {
                     $payeeName = ($voucher->tenant ? $voucher->tenant->name : $voucher->other_name) . ($voucher->unit ? ' (Unit ' . $voucher->unit->unit_number . ')' : '');
                     $payeeType = 'Tenant (Refund Security Deposit)';
+                } elseif ($voucher->paid_to_type === 'landlord') {
+                    $payeeName = $voucher->landlord ? $voucher->landlord->name : $voucher->other_name;
+                    $payeeType = 'Landlord (Payout)';
                 } else {
                     $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
                     $payeeType = 'Other (Miscellaneous)';
