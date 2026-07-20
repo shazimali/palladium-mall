@@ -64,7 +64,7 @@ class CashBookController extends Controller
             ->get();
 
         // Fetch Outflows (Payment Vouchers) filtered by cash
-        $paymentVouchers = PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
+        $paymentVouchers = PaymentVoucher::with(['paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
@@ -72,8 +72,16 @@ class CashBookController extends Controller
             })
             ->get();
 
+        // Fetch Outflows (Withdrawals) filtered by cash
+        $withdrawals = \App\Models\Withdrawal::with(['owner', 'paymentAccount', 'user'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->whereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -226,7 +234,7 @@ class CashBookController extends Controller
             ->get();
 
         // Fetch Outflows (Payment Vouchers) filtered by cash
-        $paymentVouchers = PaymentVoucher::with(['owner', 'paymentAccount', 'user'])
+        $paymentVouchers = PaymentVoucher::with(['paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
@@ -234,8 +242,16 @@ class CashBookController extends Controller
             })
             ->get();
 
+        // Fetch Outflows (Withdrawals) filtered by cash
+        $withdrawals = \App\Models\Withdrawal::with(['owner', 'paymentAccount', 'user'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where(function ($q) {
+                $q->whereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -280,11 +296,17 @@ class CashBookController extends Controller
 
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof Expense;
-            $details = $isExpense
-                ? '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense')
-                : ($outflow->is_advance
-                    ? '⚠️ Advance Payout to: ' . ($outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A'))
-                    : '📤 Payout to: ' . ($outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A')));
+            $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
+            
+            if ($isExpense) {
+                $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
+            } elseif ($isWithdrawal) {
+                $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+            } else {
+                $details = $outflow->is_advance
+                    ? '⚠️ Advance Payout to: ' . ($outflow->other_name ?? 'N/A')
+                    : '📤 Payout to: ' . ($outflow->other_name ?? 'N/A');
+            }
 
             if ($outflow->notes) {
                 $details .= ' • ' . $outflow->notes;
@@ -296,10 +318,10 @@ class CashBookController extends Controller
                 'voucher_no' => $outflow->voucher_no,
                 'type' => 'Outflow',
                 'details' => $details,
-                'method' => $outflow->payment_method . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
+                'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => (float)$outflow->amount,
                 'credit' => 0.0,
-                'model_type' => $isExpense ? 'expense' : 'payment_voucher',
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
                 'model_id' => $outflow->id,
             ]);
         }

@@ -12,13 +12,11 @@
             <form action="{{ route('payment-vouchers.store') }}" method="POST" class="space-y-6"
                 @submit.prevent="handleSubmit($event)"
                 x-data="{ 
-                    paidToType: '{{ old('paid_to_type', 'owner') }}',
+                    paidToType: '{{ old('paid_to_type', 'tenant') }}',
                     selectedBalance: null,
                     selectedAccountName: '',
                     amount: '{{ old('amount') }}',
                     displayAmount: '',
-                    ownerPendingBalance: null,
-                    ownerName: '',
                     selectedTenantId: '{{ old('tenant_id') }}',
                     tenantDeposits: [],
                     selectedUnitId: '{{ old('unit_id') }}',
@@ -31,24 +29,6 @@
                                 Swal.fire({
                                     title: 'Insufficient Balance',
                                     text: 'The selected Payment Account does not have sufficient balance. Current balance: Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                                    icon: 'error',
-                                    confirmButtonText: 'OK',
-                                    customClass: {
-                                        confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-                                    },
-                                    buttonsStyling: false
-                                });
-                                return;
-                            }
-                        }
-
-                        if (this.paidToType === 'owner' && this.ownerPendingBalance !== null && this.amount !== '') {
-                            let amt = parseFloat(this.amount);
-                            let bal = parseFloat(this.ownerPendingBalance);
-                            if (amt > bal) {
-                                Swal.fire({
-                                    title: 'Limit Exceeded',
-                                    text: 'Payment amount exceeds ' + this.ownerName + '\'s available income balance of Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.',
                                     icon: 'error',
                                     confirmButtonText: 'OK',
                                     customClass: {
@@ -79,12 +59,6 @@
                         }
 
                         event.target.submit();
-                    },
-                    fetchOwnerBalance(ownerId) {
-                        if (!ownerId) { this.ownerPendingBalance = null; this.ownerName = ''; return; }
-                        fetch('{{ route('ajax.owner-pending-balance') }}?owner_id=' + ownerId)
-                            .then(r => r.json())
-                            .then(d => { this.ownerPendingBalance = d.pending_balance; this.ownerName = d.owner_name; });
                     },
                     fetchTenantDeposits(tenantId) {
                         this.selectedTenantId = tenantId;
@@ -132,42 +106,10 @@
                     <div>
                         <label class="{{ $label }}">Paid To Type <span class="text-red-500">*</span></label>
                         <select name="paid_to_type" x-model="paidToType" class="{{ $input }} {{ $errors->has('paid_to_type') ? 'border-red-400' : '' }}" required>
-                            <option value="owner" {{ old('paid_to_type', 'owner') === 'owner' ? 'selected' : '' }}>Managing Owner (Partner)</option>
                             <option value="tenant" {{ old('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund Security Deposit)</option>
                             <option value="other" {{ old('paid_to_type') === 'other' ? 'selected' : '' }}>Other (Miscellaneous)</option>
                         </select>
                         @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Owner Selection --}}
-                    <div x-show="paidToType === 'owner'" x-transition>
-                        <label class="{{ $label }}">Managing Owner / Partner <span class="text-red-500">*</span></label>
-                        <select name="owner_id" class="{{ $input }} {{ $errors->has('owner_id') ? 'border-red-400' : '' }}" :required="paidToType === 'owner'"
-                            @change="fetchOwnerBalance($event.target.value)">
-                            <option value="">Select Owner</option>
-                            @foreach($owners as $owner)
-                                <option value="{{ $owner->id }}" {{ old('owner_id') == $owner->id ? 'selected' : '' }}>
-                                    {{ $owner->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('owner_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-
-                        {{-- Pending Balance Info Box --}}
-                        <template x-if="ownerPendingBalance !== null">
-                            <div class="mt-2 rounded-lg border p-2.5 text-xs font-semibold flex justify-between items-center"
-                                 :class="ownerPendingBalance > 0
-                                     ? 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-900/10'
-                                     : 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/10'">
-                                <span :class="ownerPendingBalance > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-green-700 dark:text-green-400'">
-                                    Pending Balance Owed to Owner:
-                                </span>
-                                <span class="font-bold text-sm"
-                                      :class="ownerPendingBalance > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-green-600 dark:text-green-400'"
-                                      x-text="'Rs. ' + Number(ownerPendingBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})">
-                                </span>
-                            </div>
-                        </template>
                     </div>
 
                     {{-- Tenant Selection --}}
@@ -180,17 +122,17 @@
                             highlightedIndex: -1,
                             tenants: [
                                 @foreach($tenants as $tenant)
-                                    { id: {{ $tenant->id }}, name: '{{ addslashes($tenant->name) }}', phone: '{{ addslashes($tenant->phone ?? '—') }}' },
+                                    { id: {{ $tenant->id }}, name: '{{ addslashes($tenant->name) }}', phone: '{{ addslashes($tenant->phone ?? '—') }}', unit_number: '{{ $tenant->unit ? addslashes($tenant->unit->unit_number) : '—' }}' },
                                 @endforeach
                             ],
                             get filteredTenants() {
                                 if (!this.search) return this.tenants;
                                 let q = this.search.toLowerCase();
-                                return this.tenants.filter(t => t.name.toLowerCase().includes(q) || t.phone.toLowerCase().includes(q));
+                                return this.tenants.filter(t => t.name.toLowerCase().includes(q) || t.phone.toLowerCase().includes(q) || t.unit_number.toLowerCase().includes(q));
                             },
                             selectTenant(t) {
                                 this.selectedId = t.id;
-                                this.selectedLabel = t.name;
+                                this.selectedLabel = t.name + (t.unit_number && t.unit_number !== '—' ? ' (' + t.unit_number + ')' : '');
                                 this.open = false;
                                 this.search = '';
                                 this.highlightedIndex = -1;
@@ -250,7 +192,7 @@
                                                 'text-gray-800 dark:text-gray-200': highlightedIndex !== index
                                             }"
                                             class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
-                                            <span x-text="t.name" class="font-medium"></span>
+                                            <span x-text="t.name + (t.unit_number && t.unit_number !== '—' ? ' (' + t.unit_number + ')' : '')" class="font-medium"></span>
                                             <span x-text="t.phone" class="text-[10px] text-gray-400"></span>
                                         </li>
                                     </template>

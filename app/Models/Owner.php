@@ -48,21 +48,40 @@ class Owner extends Model
     }
 
     /**
-     * Total amount already paid out to this owner via Payment Vouchers.
+     * Total profit share DUE to this owner (all time).
+     * = Net Mall Profit (Tenant RVs + General RVs - Expenses) * partnership %
+     */
+    public function totalProfitShare(): float
+    {
+        $tenantIncome = (float) ReceivingVoucher::where('received_from_type', 'tenant')->sum('amount');
+        $partyIncome  = (float) GeneralReceivingVoucher::sum('amount');
+        $totalIncome  = $tenantIncome + $partyIncome;
+
+        $totalExpenses = (float) Expense::sum('amount');
+        $netProfit     = max(0.00, $totalIncome - $totalExpenses);
+
+        return round($netProfit * ((float) $this->partnership_percentage / 100), 2);
+    }
+
+    public function withdrawals(): HasMany
+    {
+        return $this->hasMany(Withdrawal::class);
+    }
+
+    /**
+     * Total amount already withdrawn by this owner via Withdrawal vouchers.
      */
     public function totalPaid(): float
     {
-        return (float) PaymentVoucher::where('paid_to_type', 'owner')
-            ->where('owner_id', $this->id)
-            ->sum('amount');
+        return (float) $this->withdrawals()->sum('amount');
     }
 
     /**
      * Remaining pending balance owed to this owner.
-     * = totalIncomeDue − totalPaid
+     * = totalProfitShare − totalPaid
      */
     public function pendingBalance(): float
     {
-        return max(0.00, round($this->totalIncomeDue() - $this->totalPaid(), 2));
+        return max(0.00, round($this->totalProfitShare() - $this->totalPaid(), 2));
     }
 }

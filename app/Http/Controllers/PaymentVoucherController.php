@@ -65,20 +65,19 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $owners = Owner::orderBy('name')->get();
         $parties = \App\Models\Party::orderBy('name')->get();
-        $tenants = Tenant::orderBy('name')->get();
+        $tenants = Tenant::with('unit')->orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
             ->withSum('paymentVouchers', 'amount')
             ->withSum('expenses', 'amount')
+            ->withSum('withdrawals', 'amount')
             ->orderBy('name')
             ->get();
 
         return view('payment_vouchers.create', [
             'title'           => 'New Payment Voucher',
-            'owners'          => $owners,
             'parties'         => $parties,
             'tenants'         => $tenants,
             'paymentAccounts' => $paymentAccounts,
@@ -97,16 +96,14 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:owner,tenant,other'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
             'is_advance'         => ['nullable', 'boolean'],
         ];
 
-        if ($request->input('paid_to_type') === 'owner') {
-            $rules['owner_id'] = ['required', 'exists:owners,id'];
-        } elseif ($request->input('paid_to_type') === 'tenant') {
+        if ($request->input('paid_to_type') === 'tenant') {
             $rules['tenant_id'] = ['required', 'exists:tenants,id'];
             $rules['unit_id']   = ['required', 'exists:units,id'];
         } else {
@@ -129,12 +126,7 @@ class PaymentVoucherController extends Controller
         $data['user_id'] = auth()->id() ?? 1;
         $data['is_advance'] = $request->has('is_advance');
 
-        if ($request->input('paid_to_type') === 'owner') {
-            $data['party_id'] = null;
-            $data['tenant_id'] = null;
-            $data['unit_id'] = null;
-            $data['other_name'] = null;
-        } elseif ($request->input('paid_to_type') === 'tenant') {
+        if ($request->input('paid_to_type') === 'tenant') {
             $data['owner_id'] = null;
             $data['party_id'] = null;
             $tenant = Tenant::findOrFail($data['tenant_id']);
@@ -145,18 +137,6 @@ class PaymentVoucherController extends Controller
             $data['unit_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
-        }
-
-        // ── Owner balance guard ───────────────────────────────────────────────
-        if ($request->input('paid_to_type') === 'owner' && isset($data['owner_id'])) {
-            $owner          = Owner::findOrFail($data['owner_id']);
-            $pendingBalance = $owner->pendingBalance();
-            if ((float) $data['amount'] > $pendingBalance + 0.01) {
-                return back()->withInput()->withErrors([
-                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds '
-                        . $owner->name . '\'s pending income balance of Rs. ' . number_format($pendingBalance, 2) . '.',
-                ]);
-            }
         }
 
         // ── Tenant security deposit limit guard ──────────────────────────────
@@ -249,21 +229,20 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
         }
 
-        $owners = Owner::orderBy('name')->get();
         $parties = \App\Models\Party::orderBy('name')->get();
-        $tenants = Tenant::orderBy('name')->get();
+        $tenants = Tenant::with('unit')->orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
             ->withSum('paymentVouchers', 'amount')
             ->withSum('expenses', 'amount')
+            ->withSum('withdrawals', 'amount')
             ->orderBy('name')
             ->get();
 
         return view('payment_vouchers.edit', [
             'title'           => 'Edit Payment Voucher — ' . $paymentVoucher->voucher_no,
             'voucher'         => $paymentVoucher,
-            'owners'          => $owners,
             'parties'         => $parties,
             'tenants'         => $tenants,
             'paymentAccounts' => $paymentAccounts,
@@ -282,16 +261,14 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:owner,tenant,other'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
             'is_advance'         => ['nullable', 'boolean'],
         ];
 
-        if ($request->input('paid_to_type') === 'owner') {
-            $rules['owner_id'] = ['required', 'exists:owners,id'];
-        } elseif ($request->input('paid_to_type') === 'tenant') {
+        if ($request->input('paid_to_type') === 'tenant') {
             $rules['tenant_id'] = ['required', 'exists:tenants,id'];
             $rules['unit_id']   = ['required', 'exists:units,id'];
         } else {
@@ -319,12 +296,7 @@ class PaymentVoucherController extends Controller
         $data['payment_method'] = $paymentAccount->type;
         $data['is_advance'] = $request->has('is_advance');
 
-        if ($request->input('paid_to_type') === 'owner') {
-            $data['party_id'] = null;
-            $data['tenant_id'] = null;
-            $data['unit_id'] = null;
-            $data['other_name'] = null;
-        } elseif ($request->input('paid_to_type') === 'tenant') {
+        if ($request->input('paid_to_type') === 'tenant') {
             $data['owner_id'] = null;
             $data['party_id'] = null;
             $tenant = Tenant::findOrFail($data['tenant_id']);
@@ -335,19 +307,6 @@ class PaymentVoucherController extends Controller
             $data['unit_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
-        }
-
-        // ── Owner balance guard (exclude current voucher amount from paid total) ──
-        if ($request->input('paid_to_type') === 'owner' && isset($data['owner_id'])) {
-            $owner            = \App\Models\Owner::findOrFail($data['owner_id']);
-            $currentVoucherAmount = (float) $paymentVoucher->amount;
-            $pendingBalance   = round($owner->pendingBalance() + $currentVoucherAmount, 2); // add back current to re-evaluate
-            if ((float) $data['amount'] > $pendingBalance + 0.01) {
-                return back()->withInput()->withErrors([
-                    'amount' => 'Payment amount (Rs. ' . number_format($data['amount'], 2) . ') exceeds '
-                        . $owner->name . '\'s available income balance of Rs. ' . number_format($pendingBalance, 2) . '.'
-                ]);
-            }
         }
 
         // ── Tenant security deposit limit guard ──────────────────────────────

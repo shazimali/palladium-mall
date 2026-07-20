@@ -22,6 +22,8 @@ use App\Http\Controllers\ReceivingVoucherController;
 use App\Http\Controllers\PaymentVoucherController;
 use App\Http\Controllers\ProfitLossController;
 use App\Http\Controllers\ReceivablePayableReportController;
+use App\Http\Controllers\OwnerDuesController;
+use App\Http\Controllers\WithdrawalController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -220,7 +222,9 @@ Route::middleware('auth')->group(function () {
 
     // Owners
     Route::middleware('permission:owners.view')->group(function () {
+        Route::get('owners/dues', [OwnerDuesController::class, 'index'])->name('owners.dues');
         Route::resource('owners', OwnerController::class);
+        Route::resource('withdrawals', WithdrawalController::class);
     });
 
     // Receiving Vouchers

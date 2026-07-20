@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\ReceivingVoucher;
 use App\Models\PaymentVoucher;
 use App\Models\Expense;
+use App\Models\Withdrawal;
 use Carbon\Carbon;
 use Barryvdh\Dompdf\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
@@ -406,8 +407,8 @@ class LedgerController extends Controller
         $owner = Owner::findOrFail($ownerId);
         $entries = collect();
 
-        // 1. Outflows: PaymentVouchers as DEBITS
-        $payouts = PaymentVoucher::where('owner_id', $ownerId)
+        // 1. Outflows: Withdrawals as DEBITS
+        $payouts = Withdrawal::where('owner_id', $ownerId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->get();
@@ -418,10 +419,10 @@ class LedgerController extends Controller
                 'voucher_no' => $payout->voucher_no,
                 'account' => $payout->paymentAccount->name ?? '—',
                 'reference' => $payout->reference ?? '—',
-                'notes' => $payout->notes ?? 'Owner Payout',
+                'notes' => $payout->notes ?? 'Owner Withdrawal',
                 'debit' => (float)$payout->amount,
                 'credit' => 0.00,
-                'type' => 'payment_voucher',
+                'type' => 'withdrawal',
                 'id' => $payout->id,
             ]);
         }
@@ -483,6 +484,7 @@ class LedgerController extends Controller
         $priorInflowGRVs = 0.00;
         $priorOutflowPVs = 0.00;
         $priorOutflowExpenses = 0.00;
+        $priorOutflowWithdrawals = 0.00;
 
         if ($dateFrom) {
             $priorInflowRVs = (float) ReceivingVoucher::where('payment_account_id', $accountId)
@@ -500,9 +502,13 @@ class LedgerController extends Controller
             $priorOutflowExpenses = (float) Expense::where('payment_account_id', $accountId)
                 ->where('date', '<', $dateFrom)
                 ->sum('amount');
+
+            $priorOutflowWithdrawals = (float) Withdrawal::where('payment_account_id', $accountId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
         }
 
-        $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs - $priorOutflowPVs - $priorOutflowExpenses;
+        $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs - $priorOutflowPVs - $priorOutflowExpenses - $priorOutflowWithdrawals;
 
         // Prepend carried forward opening balance row
         $entries->push([
@@ -593,6 +599,25 @@ class LedgerController extends Controller
                 'credit' => (float)$expense->amount,
                 'model_type' => 'expense',
                 'model_id' => $expense->id,
+            ]);
+        }
+
+        // 5. Debits (Outflows) in the selected period: Withdrawals
+        $withdrawals = Withdrawal::where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($withdrawals as $withdrawal) {
+            $entries->push([
+                'date' => $withdrawal->date,
+                'voucher_no' => $withdrawal->voucher_no,
+                'type' => 'Withdrawal',
+                'description' => 'Owner Withdrawal: ' . ($withdrawal->owner->name ?? 'Partner') . ($withdrawal->notes ? ' - ' . $withdrawal->notes : ''),
+                'debit' => 0.00,
+                'credit' => (float)$withdrawal->amount,
+                'model_type' => 'withdrawal',
+                'model_id' => $withdrawal->id,
             ]);
         }
 

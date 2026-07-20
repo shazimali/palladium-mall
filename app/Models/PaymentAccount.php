@@ -57,6 +57,11 @@ class PaymentAccount extends Model
         return $this->hasMany(Expense::class);
     }
 
+    public function withdrawals(): HasMany
+    {
+        return $this->hasMany(Withdrawal::class);
+    }
+
     /**
      * Get the computed current balance of the payment account.
      */
@@ -80,6 +85,10 @@ class PaymentAccount extends Model
             ? (float) $this->attributes['expenses_sum_amount']
             : ($this->relationLoaded('expenses') ? (float) $this->expenses->sum('amount') : (float) $this->expenses()->sum('amount'));
 
-        return $opening + $inflowRVs + $inflowGRVs - $outflowPVs - $outflowExpenses;
+        $outflowWithdrawals = array_key_exists('withdrawals_sum_amount', $this->attributes)
+            ? (float) $this->attributes['withdrawals_sum_amount']
+            : ($this->relationLoaded('withdrawals') ? (float) $this->withdrawals->sum('amount') : (float) $this->withdrawals()->sum('amount'));
+
+        return $opening + $inflowRVs + $inflowGRVs - $outflowPVs - $outflowExpenses - $outflowWithdrawals;
     }
 }
