@@ -23,7 +23,12 @@
             @php
                 $recipientName = '';
                 if ($voucher->received_from_type === 'tenant') {
-                    $recipientName = $voucher->tenant->name ?? 'N/A';
+                    if ($voucher->tenant) {
+                        $recipientName = $voucher->tenant->name;
+                    } else {
+                        $firstPayment = $voucher->payments->first();
+                        $recipientName = ($firstPayment && $firstPayment->otherTenant) ? $firstPayment->otherTenant->name : 'N/A';
+                    }
                 } elseif ($voucher->received_from_type === 'owner') {
                     $recipientName = $voucher->owner->name ?? 'N/A';
                 } else {

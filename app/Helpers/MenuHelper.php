@@ -122,10 +122,7 @@ class MenuHelper
             $mainItems[] = [
                 'icon' => 'user-profile',
                 'name' => 'Landlords',
-                'subItems' => [
-                    ['name' => 'Registry', 'path' => '/landlords'],
-                    ['name' => 'Landlord Ledger', 'path' => '/landlord-ledgers'],
-                ],
+                'path' => '/landlords',
             ];
         }
 
@@ -212,6 +209,7 @@ class MenuHelper
         if (auth()->check() && $user->can('ledgers.view')) {
             $ledgerSubItems[] = ['name' => 'Tenant Ledger', 'path' => '/ledgers/tenant'];
             $ledgerSubItems[] = ['name' => 'Owner Ledger', 'path' => '/ledgers/owner'];
+            $ledgerSubItems[] = ['name' => 'Landlord Ledger', 'path' => '/landlord-ledgers'];
             $ledgerSubItems[] = ['name' => 'Account Ledger', 'path' => '/ledgers/payment-account'];
             $ledgerSubItems[] = ['name' => 'Expense Ledger', 'path' => '/ledgers/expense'];
             $ledgerSubItems[] = ['name' => 'Party Ledger', 'path' => '/ledgers/party'];

@@ -90,7 +90,12 @@
             @php
                 $fromName = '';
                 if ($voucher->received_from_type === 'tenant') {
-                    $fromName = $voucher->tenant->name ?? 'N/A';
+                    if ($voucher->tenant) {
+                        $fromName = $voucher->tenant->name;
+                    } else {
+                        $firstPayment = $voucher->payments->first();
+                        $fromName = ($firstPayment && $firstPayment->otherTenant) ? $firstPayment->otherTenant->name : 'N/A';
+                    }
                 } elseif ($voucher->received_from_type === 'owner') {
                     $fromName = $voucher->owner->name ?? 'N/A';
                 } else {

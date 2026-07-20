@@ -58,10 +58,10 @@
         <!-- Filters & Search -->
         <div
             class="my-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <form action="{{ route('receiving-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            <form x-ref="filterForm" action="{{ route('receiving-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
 
                 <!-- Search Input -->
-                <div class="relative col-span-1 sm:col-span-2 lg:col-span-3">
+                <div class="relative col-span-1 lg:col-span-2">
                     <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2">
                         <svg class="fill-gray-500 dark:fill-gray-400" width="18" height="18" viewBox="0 0 20 20" fill="none">
                             <path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
@@ -71,17 +71,172 @@
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
-                <!-- Account Filter -->
-                <div>
-                    <select name="payment_account_id" onchange="this.form.submit()"
-                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                        <option value="">All Accounts</option>
-                        @foreach($paymentAccounts as $account)
-                            <option value="{{ $account->id }}" {{ request('payment_account_id') == $account->id ? 'selected' : '' }}>
-                                {{ $account->name }}
-                            </option>
+                <!-- Flat/Shop Filter (Searchable Dropdown) -->
+                <div x-data="{
+                    open: false,
+                    search: '',
+                    selectedId: '{{ request('unit_id') }}',
+                    selectedLabel: '{{ request('unit_id') ? ($units->firstWhere('id', request('unit_id'))?->unit_number ?? 'All Flats/Shops') : 'All Flats/Shops' }}',
+                    highlightedIndex: -1,
+                    units: [
+                        { id: '', label: 'All Flats/Shops' },
+                        @foreach($units as $unit)
+                            { id: '{{ $unit->id }}', label: '{{ addslashes($unit->unit_number) }}' },
                         @endforeach
-                    </select>
+                    ],
+                    get filteredUnits() {
+                        if (!this.search) return this.units;
+                        let q = this.search.toLowerCase();
+                        return this.units.filter(u => u.label.toLowerCase().includes(q));
+                    },
+                    selectUnit(u) {
+                        this.selectedId = u.id;
+                        this.selectedLabel = u.label;
+                        this.open = false;
+                        this.search = '';
+                        this.highlightedIndex = -1;
+                        this.$nextTick(() => {
+                            $refs.filterForm.submit();
+                        });
+                    },
+                    moveHighlight(direction) {
+                        let list = this.filteredUnits;
+                        if (list.length === 0) return;
+                        this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                    },
+                    selectHighlighted() {
+                        let list = this.filteredUnits;
+                        if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                            this.selectUnit(list[this.highlightedIndex]);
+                        }
+                    }
+                }" class="relative" @click.outside="open = false; highlightedIndex = -1">
+                    <input type="hidden" name="unit_id" :value="selectedId">
+                    <div tabindex="0"
+                         @click="open = !open; if(open) { $nextTick(() => $refs.unitSearchInput.focus()) }"
+                         @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.unitSearchInput.focus()) }"
+                         @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.unitSearchInput.focus()) }"
+                         class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center border-gray-300 dark:border-gray-700 h-10">
+                        <span x-text="selectedLabel" class="truncate"></span>
+                        <svg class="h-4 w-4 text-gray-500 transition-transform duration-200 flex-shrink-0" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+
+                    <div x-show="open" x-cloak
+                         class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
+                        <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                            <input x-ref="unitSearchInput"
+                                   x-model="search"
+                                   @keydown.arrow-down.prevent="moveHighlight(1)"
+                                   @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                   @keydown.enter.prevent="selectHighlighted()"
+                                   @keydown.escape.prevent="open = false; highlightedIndex = -1"
+                                   type="text"
+                                   placeholder="Search flat/shop..."
+                                   class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        </div>
+                        <ul class="max-h-60 overflow-y-auto mt-1">
+                            <template x-if="filteredUnits.length === 0">
+                                <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matches found.</li>
+                            </template>
+                            <template x-for="(u, index) in filteredUnits" :key="u.id">
+                                <li @click="selectUnit(u)"
+                                    @mouseenter="highlightedIndex = index"
+                                    :class="{
+                                        'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                        'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                    }"
+                                    class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
+                                    <span x-text="u.label" class="font-medium"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Account Filter (Searchable Dropdown) -->
+                <div x-data="{
+                    open: false,
+                    search: '',
+                    selectedId: '{{ request('payment_account_id') }}',
+                    selectedLabel: '{{ request('payment_account_id') ? ($paymentAccounts.firstWhere('id', request('payment_account_id'))?->name ?? 'All Accounts') : 'All Accounts' }}',
+                    highlightedIndex: -1,
+                    accounts: [
+                        { id: '', label: 'All Accounts' },
+                        @foreach($paymentAccounts as $account)
+                            { id: '{{ $account->id }}', label: '{{ addslashes($account->name) }}' },
+                        @endforeach
+                    ],
+                    get filteredAccounts() {
+                        if (!this.search) return this.accounts;
+                        let q = this.search.toLowerCase();
+                        return this.accounts.filter(a => a.label.toLowerCase().includes(q));
+                    },
+                    selectAccount(a) {
+                        this.selectedId = a.id;
+                        this.selectedLabel = a.label;
+                        this.open = false;
+                        this.search = '';
+                        this.highlightedIndex = -1;
+                        this.$nextTick(() => {
+                            $refs.filterForm.submit();
+                        });
+                    },
+                    moveHighlight(direction) {
+                        let list = this.filteredAccounts;
+                        if (list.length === 0) return;
+                        this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                    },
+                    selectHighlighted() {
+                        let list = this.filteredAccounts;
+                        if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                            this.selectAccount(list[this.highlightedIndex]);
+                        }
+                    }
+                }" class="relative" @click.outside="open = false; highlightedIndex = -1">
+                    <input type="hidden" name="payment_account_id" :value="selectedId">
+                    <div tabindex="0"
+                         @click="open = !open; if(open) { $nextTick(() => $refs.accountSearchInput.focus()) }"
+                         @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.accountSearchInput.focus()) }"
+                         @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.accountSearchInput.focus()) }"
+                         class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center border-gray-300 dark:border-gray-700 h-10">
+                        <span x-text="selectedLabel" class="truncate"></span>
+                        <svg class="h-4 w-4 text-gray-500 transition-transform duration-200 flex-shrink-0" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+
+                    <div x-show="open" x-cloak
+                         class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
+                        <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                            <input x-ref="accountSearchInput"
+                                   x-model="search"
+                                   @keydown.arrow-down.prevent="moveHighlight(1)"
+                                   @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                   @keydown.enter.prevent="selectHighlighted()"
+                                   @keydown.escape.prevent="open = false; highlightedIndex = -1"
+                                   type="text"
+                                   placeholder="Search account..."
+                                   class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        </div>
+                        <ul class="max-h-60 overflow-y-auto mt-1">
+                            <template x-if="filteredAccounts.length === 0">
+                                <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matches found.</li>
+                            </template>
+                            <template x-for="(a, index) in filteredAccounts" :key="a.id">
+                                <li @click="selectAccount(a)"
+                                    @mouseenter="highlightedIndex = index"
+                                    :class="{
+                                        'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                        'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                    }"
+                                    class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
+                                    <span x-text="a.label" class="font-medium"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
                 </div>
 
                 <!-- Date Picker Fields -->
@@ -121,9 +276,23 @@
                             <td class="px-4 py-3 text-xs">{{ $voucher->date->format('d M Y') }}</td>
                             <td class="px-4 py-3 text-xs font-semibold text-gray-700 dark:text-gray-300">
                                 @if($voucher->received_from_type === 'tenant')
-                                    <div>{{ $voucher->tenant->unit->unit_number ?? '—' }}</div>
-                                    @if($voucher->tenant)
-                                        <div class="text-[11px] text-gray-400 mt-0.5 font-normal">{{ $voucher->tenant->name }}</div>
+                                    @php
+                                        $unitNumber = '—';
+                                        $tenantName = '';
+                                        if ($voucher->tenant) {
+                                            $unitNumber = $voucher->tenant->unit->unit_number ?? '—';
+                                            $tenantName = $voucher->tenant->name;
+                                        } else {
+                                            $firstPayment = $voucher->payments->first();
+                                            if ($firstPayment) {
+                                                $unitNumber = $firstPayment->unit->unit_number ?? '—';
+                                                $tenantName = $firstPayment->otherTenant->name ?? '—';
+                                            }
+                                        }
+                                    @endphp
+                                    <div>{{ $unitNumber }}</div>
+                                    @if($tenantName)
+                                        <div class="text-[11px] text-gray-400 mt-0.5 font-normal">{{ $tenantName }}</div>
                                     @endif
                                 @elseif($voucher->received_from_type === 'owner')
                                     <div>—</div>

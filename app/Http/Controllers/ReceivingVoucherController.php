@@ -26,7 +26,7 @@ class ReceivingVoucherController extends Controller
         }
 
         $vouchers = ReceivingVoucher::query()
-            ->with(['tenant.unit', 'owner', 'paymentAccount', 'user'])
+            ->with(['tenant.unit', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
                 $q->where('voucher_no', 'like', "%{$term}%")
@@ -40,6 +40,11 @@ class ReceivingVoucherController extends Controller
             })
             ->when($request->received_from_type, fn($q) => $q->where('received_from_type', $request->received_from_type))
             ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
+            ->when($request->unit_id, function ($q) use ($request) {
+                $q->whereHas('payments', function ($qp) use ($request) {
+                    $qp->where('unit_id', $request->unit_id);
+                });
+            })
             ->when($request->date_from, fn($q) => $q->where('date', '>=', $request->date_from))
             ->when($request->date_to, fn($q) => $q->where('date', '<=', $request->date_to))
             ->latest('date')
@@ -48,11 +53,13 @@ class ReceivingVoucherController extends Controller
             ->withQueryString();
 
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
+        $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
 
         return view('receiving_vouchers.index', [
             'title' => 'Receiving Vouchers',
             'vouchers' => $vouchers,
             'paymentAccounts' => $paymentAccounts,
+            'units' => $units,
         ]);
     }
 
@@ -181,7 +188,7 @@ class ReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $receivingVoucher->load(['tenant', 'owner', 'paymentAccount', 'user', 'payments.unit']);
+        $receivingVoucher->load(['tenant', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant']);
 
         return view('receiving_vouchers.show', [
             'title' => 'Voucher details — ' . $receivingVoucher->voucher_no,
@@ -198,7 +205,7 @@ class ReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $receivingVoucher->load(['tenant', 'owner', 'paymentAccount', 'user', 'payments.unit']);
+        $receivingVoucher->load(['tenant', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant']);
 
         return view('receiving_vouchers.print', [
             'title' => 'Print Voucher — ' . $receivingVoucher->voucher_no,
