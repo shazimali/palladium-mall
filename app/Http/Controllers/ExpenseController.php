@@ -108,6 +108,16 @@ class ExpenseController extends Controller
             'receipt'            => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], // Max 5MB
         ]);
 
+        if (!empty($data['payment_account_id'])) {
+            $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
+            $currentBalance = $paymentAccount->current_balance;
+            if ((float) $data['amount'] > $currentBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'payment_account_id' => 'The selected Payment Account (' . $paymentAccount->name . ') does not have sufficient balance. Current balance: Rs. ' . number_format($currentBalance, 2) . '.',
+                ]);
+            }
+        }
+
         if ($request->hasFile('receipt')) {
             $data['receipt'] = $request->file('receipt')->store('expenses/receipts', 'public');
         }
@@ -173,6 +183,22 @@ class ExpenseController extends Controller
             'notes'              => ['nullable', 'string', 'max:1000'],
             'receipt'            => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'], // Max 5MB
         ]);
+
+        if (!empty($data['payment_account_id'])) {
+            $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
+            $currentBalance = $paymentAccount->current_balance;
+
+            // If updating the same account, add back the old expense amount to get actual available balance
+            if ($expense->payment_account_id == $paymentAccount->id) {
+                $currentBalance += (float) $expense->amount;
+            }
+
+            if ((float) $data['amount'] > $currentBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'payment_account_id' => 'The selected Payment Account (' . $paymentAccount->name . ') does not have sufficient balance. Available balance: Rs. ' . number_format($currentBalance, 2) . '.',
+                ]);
+            }
+        }
 
         if ($request->hasFile('receipt')) {
             if ($expense->receipt) {

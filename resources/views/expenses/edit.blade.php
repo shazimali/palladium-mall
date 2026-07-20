@@ -10,9 +10,14 @@
 
         <x-common.component-card title="Edit Recorded Expense" desc="Modify details of the logged expense transaction">
             <form action="{{ route('expenses.update', $expense) }}" method="POST" enctype="multipart/form-data" class="space-y-6"
+                @submit.prevent="handleSubmit($event)"
                 x-data="{
                     amount: '{{ old('amount', $expense->amount) }}',
                     displayAmount: '',
+                    selectedBalance: null,
+                    selectedAccountName: '',
+                    originalAccountId: '{{ $expense->payment_account_id }}',
+                    originalAmount: {{ (float)$expense->amount }},
                     formatAmount(val) {
                         let clean = val.replace(/[^\d.]/g, '');
                         let parts = clean.split('.');
@@ -27,6 +32,35 @@
                         if (this.amount) {
                             this.formatAmount(String(this.amount));
                         }
+                    },
+                    get adjustedBalance() {
+                        if (this.selectedBalance === null || this.selectedBalance === '') return null;
+                        let bal = parseFloat(this.selectedBalance);
+                        let selectEl = document.querySelector('select[name=payment_account_id]');
+                        if (selectEl && selectEl.value == this.originalAccountId) {
+                            bal += this.originalAmount;
+                        }
+                        return bal;
+                    },
+                    handleSubmit(event) {
+                        if (this.adjustedBalance !== null && this.amount !== '') {
+                            let amt = parseFloat(this.amount);
+                            let bal = this.adjustedBalance;
+                            if (amt > bal) {
+                                Swal.fire({
+                                    title: 'Insufficient Balance',
+                                    text: 'The selected Payment Account does not have sufficient balance. Available balance: Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                                    icon: 'error',
+                                    confirmButtonText: 'OK',
+                                    customClass: {
+                                        confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
+                                    },
+                                    buttonsStyling: false
+                                });
+                                return;
+                            }
+                        }
+                        event.target.submit();
                     }
                 }">
                 @csrf
@@ -91,16 +125,37 @@
 
                     {{-- Payment Account --}}
                     <div>
-                        <label class="{{ $label }}">Paid From (Payment Account)</label>
-                        <select name="payment_account_id" class="{{ $input }} {{ $errors->has('payment_account_id') ? 'border-red-400' : '' }}">
-                            <option value="">Select Account (Optional)</option>
+                        <label class="{{ $label }}">Paid From (Payment Account) <span class="text-red-500">*</span></label>
+                        <select name="payment_account_id" class="{{ $input }} {{ $errors->has('payment_account_id') ? 'border-red-400' : '' }}" required
+                            x-init="
+                                $nextTick(() => {
+                                    let opt = $el.selectedOptions[0];
+                                    if (opt) {
+                                        selectedBalance = opt.getAttribute('data-balance');
+                                        selectedAccountName = opt.getAttribute('data-name');
+                                    }
+                                })
+                            "
+                            @change="
+                                let opt = $event.target.selectedOptions[0];
+                                selectedBalance = opt.getAttribute('data-balance');
+                                selectedAccountName = opt.getAttribute('data-name');
+                            ">
+                            <option value="" data-balance="" data-name="">Select Account</option>
                             @foreach($paymentAccounts as $account)
-                                <option value="{{ $account->id }}" {{ old('payment_account_id', $expense->payment_account_id) == $account->id ? 'selected' : '' }}>
-                                    {{ $account->name }} ({{ $account->bank_name ?? 'No Bank' }})
+                                <option value="{{ $account->id }}" data-balance="{{ $account->current_balance }}" data-name="{{ $account->name }}" {{ old('payment_account_id', $expense->payment_account_id) == $account->id ? 'selected' : '' }}>
+                                    {{ $account->name }} ({{ $account->bank_name ?? 'Cash' }}) — Current Balance: Rs. {{ number_format($account->current_balance, 2) }}
                                 </option>
                             @endforeach
                         </select>
                         @error('payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+
+                        <template x-if="adjustedBalance !== null">
+                            <div class="mt-2 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/30 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700/60 flex justify-between items-center">
+                                <span>Available Balance:</span>
+                                <span :class="parseFloat(adjustedBalance) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'" class="font-bold text-sm" x-text="'Rs. ' + Number(adjustedBalance).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Reference/Voucher Number --}}
