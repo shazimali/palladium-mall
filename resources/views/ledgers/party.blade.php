@@ -280,6 +280,26 @@
                             </tr>
                         @endforelse
                     </tbody>
+                    @if(count($ledgerEntries) > 0)
+                        @php
+                            $sumDebit = $ledgerEntries->sum('debit');
+                            $sumCredit = $ledgerEntries->sum('credit');
+                        @endphp
+                        <tfoot class="bg-gray-100/80 dark:bg-gray-800/80 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-bold">
+                            <tr>
+                                <td colspan="4" class="px-4 py-4 text-xs uppercase tracking-wider font-extrabold text-gray-700 dark:text-gray-300">
+                                    Total Summary
+                                </td>
+                                <td class="px-4 py-4 text-right font-mono font-extrabold text-sm text-gray-900 dark:text-white">
+                                    Rs. {{ number_format($sumDebit, 0) }}
+                                </td>
+                                <td class="px-4 py-4 text-right font-mono font-extrabold text-sm text-gray-900 dark:text-white">
+                                    Rs. {{ number_format($sumCredit, 0) }}
+                                </td>
+                                <td class="no-print"></td>
+                            </tr>
+                        </tfoot>
+                    @endif
                 </table>
             </div>
         @else

@@ -109,6 +109,8 @@
                         <option value="">All Types</option>
                         <option value="owner" {{ request('paid_to_type') === 'owner' ? 'selected' : '' }}>Managing Owner</option>
                         <option value="tenant" {{ request('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund)</option>
+                        <option value="landlord" {{ request('paid_to_type') === 'landlord' ? 'selected' : '' }}>Landlord (Payout)</option>
+                        <option value="account" {{ request('paid_to_type') === 'account' ? 'selected' : '' }}>Payment Account (Transfer)</option>
                         <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
                     </select>
                 </div>
@@ -176,6 +178,8 @@
                                     👤 {{ $voucher->tenant->name ?? $voucher->other_name }} @if($voucher->unit) <span class="text-xs font-normal text-gray-500">({{ $voucher->unit->unit_number }})</span> @endif
                                 @elseif($voucher->paid_to_type === 'landlord')
                                     👤 {{ $voucher->landlord->name ?? $voucher->other_name }}
+                                @elseif($voucher->paid_to_type === 'account')
+                                    🏦 {{ $voucher->toPaymentAccount->name ?? $voucher->other_name }}
                                 @else
                                     👤 {{ $voucher->other_name }}
                                 @endif
@@ -187,6 +191,8 @@
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/20 dark:text-teal-400">Tenant (Refund)</span>
                                 @elseif($voucher->paid_to_type === 'landlord')
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400">Landlord (Payout)</span>
+                                @elseif($voucher->paid_to_type === 'account')
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400">Account Transfer</span>
                                 @else
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">Party</span>
                                 @endif

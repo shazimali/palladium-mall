@@ -76,6 +76,7 @@ class ReceivablePayableReportController extends Controller
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
         $type = $request->query('type', 'receivables'); // 'receivables' or 'payables'
+        $receivableScope = $request->query('receivable_scope', 'pm_mall'); // 'pm_mall' or 'other'
         $categories = $request->query('categories', []); // selected category checkboxes
 
         $payables = [];
@@ -125,6 +126,7 @@ class ReceivablePayableReportController extends Controller
                         'due' => $totalCollected,
                         'paid' => $totalRefunded,
                         'net' => $netPayable,
+                        'is_self' => (bool) ($first->unit ? $first->unit->is_self : false),
                     ];
                 }
             }
@@ -153,6 +155,7 @@ class ReceivablePayableReportController extends Controller
                         ? $first->otherTenant->name
                         : ($first->tenant ? $first->tenant->name : 'Other Owned');
                     $unitNo = $first->unit ? $first->unit->unit_number : '';
+                    $isSelf = (bool) ($first->unit ? $first->unit->is_self : false);
 
                     $category = match ($chargeType) {
                         'rent' => 'Tenant Rent',
@@ -167,6 +170,9 @@ class ReceivablePayableReportController extends Controller
                         continue;
                     }
 
+                    $hasOtherTenant = (bool) ($first->other_tenant_id || ($first->unit && $first->unit->otherTenant));
+                    $isOtherReceivable = $isSelf && !$hasOtherTenant;
+
                     $receivables[] = [
                         'category' => $category,
                         'name' => $tenantName,
@@ -174,6 +180,9 @@ class ReceivablePayableReportController extends Controller
                         'due' => $totalDue,
                         'paid' => $totalPaid,
                         'net' => $netReceivable,
+                        'is_self' => $isSelf,
+                        'has_other_tenant' => $hasOtherTenant,
+                        'is_other_receivable' => $isOtherReceivable,
                     ];
                 }
             }
@@ -224,6 +233,8 @@ class ReceivablePayableReportController extends Controller
                         'due' => $totalReceived + $totalPayableDue,
                         'paid' => $totalPaid,
                         'net' => $netPayable,
+                        'is_self' => false,
+                        'is_other_receivable' => false,
                     ];
                 }
             } else {
@@ -239,6 +250,8 @@ class ReceivablePayableReportController extends Controller
                         'due' => $totalReceivableDue + $totalPaid,
                         'paid' => $totalReceived + $totalPayableDue,
                         'net' => $netReceivable,
+                        'is_self' => false,
+                        'is_other_receivable' => false,
                     ];
                 }
             }
@@ -269,6 +282,8 @@ class ReceivablePayableReportController extends Controller
                         'due' => $openingBalance,
                         'paid' => $totalReceived,
                         'net' => $netReceivable,
+                        'is_self' => false,
+                        'is_other_receivable' => false,
                     ];
                 }
             }
@@ -280,6 +295,24 @@ class ReceivablePayableReportController extends Controller
         if (!empty($categories)) {
             $payables = collect($payables)->filter(fn($p) => in_array($p['category'], $categories))->values()->all();
             $receivables = collect($receivables)->filter(fn($r) => in_array($r['category'], $categories))->values()->all();
+        }
+
+        // Separate receivables into PM Mall managed vs Other (Not managed by PM Mall without attached other tenant)
+        $allReceivablesColl = collect($receivables);
+        $pmMallReceivablesList = $allReceivablesColl->where('is_other_receivable', false)->values();
+        $otherReceivablesList = $allReceivablesColl->where('is_other_receivable', true)->values();
+
+        $pmMallReceivablesNet = $pmMallReceivablesList->sum('net');
+        $otherReceivablesNet = $otherReceivablesList->sum('net');
+
+        if ($type === 'receivables') {
+            if ($receivableScope === 'other') {
+                $activeReceivables = $otherReceivablesList->all();
+            } else {
+                $activeReceivables = $pmMallReceivablesList->all();
+            }
+        } else {
+            $activeReceivables = $receivables;
         }
 
         // ── 4. General cash book metrics ────────────────────────────────────
@@ -296,22 +329,27 @@ class ReceivablePayableReportController extends Controller
         $totalPayablesPaid = collect($payables)->sum('paid');
         $totalPayablesNet = collect($payables)->sum('net');
 
-        $totalReceivablesDue = collect($receivables)->sum('due');
-        $totalReceivablesPaid = collect($receivables)->sum('paid');
-        $totalReceivablesNet = collect($receivables)->sum('net');
+        $totalReceivablesDue = collect($activeReceivables)->sum('due');
+        $totalReceivablesPaid = collect($activeReceivables)->sum('paid');
+        $totalReceivablesNet = collect($activeReceivables)->sum('net');
 
         $netPosition = $totalReceivablesNet - $totalPayablesNet;
 
         return [
             // Lists
             'payables' => $payables,
-            'receivables' => $receivables,
+            'receivables' => $activeReceivables,
+            'allReceivables' => $receivables,
 
             // Overall totals
             'totalCashBalance' => $totalCashBalance,
             'totalPayables' => $totalPayablesNet,
             'totalReceivables' => $totalReceivablesNet,
             'netPosition' => $netPosition,
+
+            // PM Mall vs Other stats
+            'pmMallReceivablesNet' => $pmMallReceivablesNet,
+            'otherReceivablesNet' => $otherReceivablesNet,
 
             // Separate detailed sums
             'totalPayablesDue' => $totalPayablesDue,
@@ -328,6 +366,7 @@ class ReceivablePayableReportController extends Controller
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'type' => $type,
+            'receivableScope' => $receivableScope,
             'categories' => $categories,
             'generatedAt' => now(),
         ];

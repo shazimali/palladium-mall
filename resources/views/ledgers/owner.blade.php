@@ -166,6 +166,29 @@
                             </tr>
                         @endforelse
                     </tbody>
+                    @if(count($ledgerData['entries']) > 0)
+                        @php
+                            $sumDebit = $ledgerData['entries']->sum('debit');
+                            $sumCredit = $ledgerData['entries']->sum('credit');
+                            $finalBalance = $ledgerData['entries']->last()['running_balance'] ?? 0;
+                        @endphp
+                        <tfoot class="bg-gray-100/80 dark:bg-gray-800/80 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-bold">
+                            <tr>
+                                <td colspan="5" class="px-5 py-4 text-xs uppercase tracking-wider font-extrabold text-gray-700 dark:text-gray-300">
+                                    Total Summary
+                                </td>
+                                <td class="px-5 py-4 text-right text-rose-600 font-mono font-bold text-sm">
+                                    Rs. {{ number_format($sumDebit, 2) }}
+                                </td>
+                                <td class="px-5 py-4 text-right text-emerald-600 font-mono font-bold text-sm">
+                                    Rs. {{ number_format($sumCredit, 2) }}
+                                </td>
+                                <td class="px-5 py-4 text-right font-mono font-extrabold text-sm text-gray-900 dark:text-white">
+                                    Rs. {{ number_format($finalBalance, 2) }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    @endif
                 </table>
             </div>
         @else

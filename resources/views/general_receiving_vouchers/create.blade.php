@@ -17,6 +17,7 @@
     <x-common.component-card title="Create General Receiving Voucher" desc="Record a cash or bank receipt from a registered party head">
         <form action="{{ route('general-receiving-vouchers.store') }}" method="POST"
             x-data="{
+                receivedFromType: '{{ old('received_from_type', 'party') }}',
                 amount: '{{ old('amount') }}',
                 displayAmount: '',
                 formatAmount(val) {
@@ -45,8 +46,19 @@
 
                     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
                         
-                        {{-- Searchable Party Dropdown using Alpine.js --}}
-                        <div class="sm:col-span-2 md:col-span-3" 
+                        {{-- Received From Type --}}
+                        <div class="sm:col-span-2 md:col-span-3">
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Received From Type <span class="text-red-500">*</span>
+                            </label>
+                            <select name="received_from_type" x-model="receivedFromType" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" required>
+                                <option value="party" {{ old('received_from_type', 'party') === 'party' ? 'selected' : '' }}>Party / Vendor Head</option>
+                                <option value="account" {{ old('received_from_type') === 'account' ? 'selected' : '' }}>Payment Account (Inter-Account Transfer In)</option>
+                            </select>
+                        </div>
+
+                        {{-- Searchable Party Dropdown using Alpine.js (when receivedFromType === 'party') --}}
+                        <div class="sm:col-span-2 md:col-span-3" x-show="receivedFromType === 'party'" x-transition x-cloak
                              x-data="{
                                 open: false,
                                 search: '',
@@ -148,6 +160,22 @@
                                     </ul>
                                 </div>
                             </div>
+                        </div>
+
+                        {{-- Source Payment Account (when receivedFromType === 'account') --}}
+                        <div class="sm:col-span-2 md:col-span-3" x-show="receivedFromType === 'account'" x-transition x-cloak>
+                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Source Payment Account (Transfer From) <span class="text-red-500">*</span>
+                            </label>
+                            <select name="from_payment_account_id" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" :required="receivedFromType === 'account'">
+                                <option value="">Select Source Account...</option>
+                                @foreach($paymentAccounts as $account)
+                                    <option value="{{ $account->id }}" {{ old('from_payment_account_id') == $account->id ? 'selected' : '' }}>
+                                        {{ $account->name }} (Balance: Rs. {{ number_format($account->current_balance, 2) }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('from_payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                         </div>
 
                         {{-- Date --}}

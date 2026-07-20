@@ -88,9 +88,19 @@
         <!-- Receipt Particulars -->
         <div class="space-y-6 mb-8 text-sm">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-4 print-border">
-                <div class="text-gray-450 font-medium">Received From Party:</div>
+                <div class="text-gray-450 font-medium">
+                    @if($voucher->received_from_type === 'account')
+                        Received From Account:
+                    @else
+                        Received From Party:
+                    @endif
+                </div>
                 <div class="md:col-span-2 font-bold text-gray-900 text-base">
-                    {{ $voucher->party ? $voucher->party->name : 'N/A' }} 
+                    @if($voucher->received_from_type === 'account')
+                        {{ $voucher->fromPaymentAccount ? $voucher->fromPaymentAccount->name : 'Payment Account' }}
+                    @else
+                        {{ $voucher->party ? $voucher->party->name : 'N/A' }}
+                    @endif
                 </div>
             </div>
 

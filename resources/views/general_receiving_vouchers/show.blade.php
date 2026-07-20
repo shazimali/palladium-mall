@@ -29,13 +29,23 @@
             </a>
         </div>
 
+        @php
+            if ($voucher->received_from_type === 'account') {
+                $receivedFrom = $voucher->fromPaymentAccount ? $voucher->fromPaymentAccount->name : 'Payment Account';
+                $receivedFromLabel = 'Received From Account';
+            } else {
+                $receivedFrom = $voucher->party ? $voucher->party->name : 'N/A';
+                $receivedFromLabel = 'Received From Party';
+            }
+        @endphp
+
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
             @foreach([
                 ['Voucher Number',      $voucher->voucher_no],
                 ['Voucher Date',        $voucher->date->format('d M Y')],
-                ['Received From Party', $voucher->party ? $voucher->party->name : 'N/A'],
+                [$receivedFromLabel,    $receivedFrom],
                 ['Voucher Amount',      'Rs. ' . number_format($voucher->amount, 0)],
-                ['Payment Account',     $voucher->paymentAccount ? $voucher->paymentAccount->name : '—'],
+                ['Received In Account', $voucher->paymentAccount ? $voucher->paymentAccount->name : '—'],
                 ['Payment Method',      $voucher->payment_method ? ucfirst(str_replace('_',' ',$voucher->payment_method)) : '—'],
                 ['Reference / Cheque',  $voucher->reference ?? '—'],
                 ['Recorded By',         $voucher->user->name ?? '—'],

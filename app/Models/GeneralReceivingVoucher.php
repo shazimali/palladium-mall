@@ -16,9 +16,11 @@ class GeneralReceivingVoucher extends Model
         'voucher_no',
         'date',
         'amount',
+        'received_from_type',
         'party_id',
         'payment_method',
         'payment_account_id',
+        'from_payment_account_id',
         'reference',
         'notes',
         'user_id',
@@ -53,6 +55,11 @@ class GeneralReceivingVoucher extends Model
     public function paymentAccount(): BelongsTo
     {
         return $this->belongsTo(PaymentAccount::class);
+    }
+
+    public function fromPaymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(PaymentAccount::class, 'from_payment_account_id');
     }
 
     public function user(): BelongsTo

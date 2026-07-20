@@ -223,12 +223,14 @@ class LandlordLedgerController extends Controller
         // 3. Current period payments (owner receiving vouchers)
         $payments = ReceivingVoucher::where('received_from_type', 'owner')
             ->where('owner_id', $landlordId)
+            ->with(['payments.unit', 'tenant.unit'])
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->orderBy('date', 'asc')
             ->get();
 
         foreach ($payments as $v) {
+            $unitNo = $v->payments->first()?->unit?->unit_number ?? $v->tenant?->unit?->unit_number;
             $entries->push([
                 'date' => $v->date,
                 'voucher_no' => $v->voucher_no,
@@ -238,6 +240,7 @@ class LandlordLedgerController extends Controller
                 'credit' => (float)$v->amount,
                 'is_opening' => false,
                 'model' => $v,
+                'unit_number' => $unitNo,
             ]);
         }
 
@@ -258,7 +261,8 @@ class LandlordLedgerController extends Controller
 
         foreach ($extraPayments as $ep) {
             $v = $ep->receivingVouchers->first();
-            $desc = 'Extra Payment Paid (Unit ' . ($ep->unit?->unit_number ?? '—') . '): ' . $ep->notes;
+            $unitNo = $ep->unit?->unit_number;
+            $desc = 'Extra Payment Paid' . ($unitNo ? ' (Unit ' . $unitNo . ')' : '') . ': ' . $ep->notes;
             $entries->push([
                 'date' => $ep->paid_at ? Carbon::parse($ep->paid_at) : $ep->month,
                 'voucher_no' => $v?->voucher_no ?? $ep->receipt_no ?? '—',
@@ -268,12 +272,14 @@ class LandlordLedgerController extends Controller
                 'credit' => (float)$ep->amount_paid,
                 'is_opening' => false,
                 'model' => $v,
+                'unit_number' => $unitNo,
             ]);
         }
 
         // 5. Current period payouts (payment vouchers paid to landlord)
         $payouts = \App\Models\PaymentVoucher::where('paid_to_type', 'landlord')
             ->where('landlord_id', $landlordId)
+            ->with('unit')
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->orderBy('date', 'asc')
@@ -289,6 +295,7 @@ class LandlordLedgerController extends Controller
                 'credit' => 0.00,
                 'is_opening' => false,
                 'model' => $pv,
+                'unit_number' => $pv->unit?->unit_number,
             ]);
         }
 

@@ -11,6 +11,7 @@
         <x-common.component-card :title="'Edit General Receiving Voucher: ' . $voucher->voucher_no" desc="Modify details of this general receipt voucher. Restricted to Super Administrators only.">
             <form action="{{ route('general-receiving-vouchers.update', $voucher) }}" method="POST" class="space-y-6"
                 x-data="{
+                    receivedFromType: '{{ old('received_from_type', $voucher->received_from_type ?? 'party') }}',
                     amount: '{{ old('amount', $voucher->amount) }}',
                     displayAmount: '',
                     formatAmount(val) {
@@ -38,8 +39,18 @@
                 @endphp
 
                 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    {{-- Received From Type --}}
+                    <div class="sm:col-span-2">
+                        <label class="{{ $label }}">Received From Type <span class="text-red-500">*</span></label>
+                        <select name="received_from_type" x-model="receivedFromType" class="{{ $input }}" required>
+                            <option value="party" {{ old('received_from_type', $voucher->received_from_type ?? 'party') === 'party' ? 'selected' : '' }}>Party / Vendor Head</option>
+                            <option value="account" {{ old('received_from_type', $voucher->received_from_type) === 'account' ? 'selected' : '' }}>Payment Account (Inter-Account Transfer In)</option>
+                        </select>
+                    </div>
+
                     {{-- Party Dropdown (Searchable via Alpine) --}}
-                    <div x-data="{
+                    <div x-show="receivedFromType === 'party'" x-transition x-cloak
+                         x-data="{
                             open: false,
                             search: '',
                             selectedId: '{{ old('party_id', $voucher->party_id) }}',
@@ -138,6 +149,20 @@
                             </div>
                         </div>
                         @error('party_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Source Payment Account (when receivedFromType === 'account') --}}
+                    <div x-show="receivedFromType === 'account'" x-transition x-cloak>
+                        <label class="{{ $label }}">Source Payment Account (Transfer From) <span class="text-red-500">*</span></label>
+                        <select name="from_payment_account_id" class="{{ $input }} {{ $errors->has('from_payment_account_id') ? 'border-red-400' : '' }}" :required="receivedFromType === 'account'">
+                            <option value="">Select Source Account...</option>
+                            @foreach($paymentAccounts as $account)
+                                <option value="{{ $account->id }}" {{ old('from_payment_account_id', $voucher->from_payment_account_id) == $account->id ? 'selected' : '' }}>
+                                    {{ $account->name }} (Balance: Rs. {{ number_format($account->current_balance, 2) }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('from_payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 
                     {{-- Date --}}

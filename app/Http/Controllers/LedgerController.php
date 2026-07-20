@@ -327,6 +327,7 @@ class LedgerController extends Controller
             ->get();
 
         foreach ($payments as $payment) {
+            $unitNo = $payment->unit->unit_number ?? $unit->unit_number;
             // Debit Entry: Bill Generated (Only for non-security deposit bills)
             if ($payment->type !== 'security_deposit') {
                 $entries->push([
@@ -337,6 +338,7 @@ class LedgerController extends Controller
                     'credit' => 0.00,
                     'type' => 'bill',
                     'id' => $payment->id,
+                    'unit_number' => $unitNo,
                 ]);
             }
 
@@ -351,6 +353,7 @@ class LedgerController extends Controller
                     'credit' => (float)$voucher->pivot->amount_allocated,
                     'type' => 'voucher',
                     'id' => $voucher->id,
+                    'unit_number' => $unitNo,
                 ]);
             }
 
@@ -366,6 +369,7 @@ class LedgerController extends Controller
                     'credit' => $unvoucheredPaid,
                     'type' => 'legacy_payment',
                     'id' => $payment->id,
+                    'unit_number' => $unitNo,
                 ]);
             }
         }
@@ -378,7 +382,7 @@ class LedgerController extends Controller
                     $q->orWhere('tenant_id', $unit->tenant_id);
                 }
             })
-            ->with('paymentAccount')
+            ->with(['paymentAccount', 'unit'])
             ->get();
 
         foreach ($payoutVouchers as $pv) {
@@ -390,6 +394,7 @@ class LedgerController extends Controller
                 'credit' => 0.00,
                 'type' => 'voucher_payout',
                 'id' => $pv->id,
+                'unit_number' => $pv->unit->unit_number ?? $unit->unit_number,
             ]);
         }
 
@@ -546,7 +551,9 @@ class LedgerController extends Controller
         // 1. Calculate prior inflows and outflows to compute carried forward opening balance
         $priorInflowRVs = 0.00;
         $priorInflowGRVs = 0.00;
+        $priorInflowPVTransfers = 0.00;
         $priorOutflowPVs = 0.00;
+        $priorOutflowGRVTransfers = 0.00;
         $priorOutflowExpenses = 0.00;
         $priorOutflowWithdrawals = 0.00;
 
@@ -563,6 +570,14 @@ class LedgerController extends Controller
                 ->where('date', '<', $dateFrom)
                 ->sum('amount');
 
+            $priorInflowPVTransfers = (float) PaymentVoucher::where('to_payment_account_id', $accountId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
+
+            $priorOutflowGRVTransfers = (float) \App\Models\GeneralReceivingVoucher::where('from_payment_account_id', $accountId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
+
             $priorOutflowExpenses = (float) Expense::where('payment_account_id', $accountId)
                 ->where('date', '<', $dateFrom)
                 ->sum('amount');
@@ -572,7 +587,7 @@ class LedgerController extends Controller
                 ->sum('amount');
         }
 
-        $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs - $priorOutflowPVs - $priorOutflowExpenses - $priorOutflowWithdrawals;
+        $carriedForwardBalance = (float) $account->opening_balance + $priorInflowRVs + $priorInflowGRVs + $priorInflowPVTransfers - $priorOutflowPVs - $priorOutflowGRVTransfers - $priorOutflowExpenses - $priorOutflowWithdrawals;
 
         // Prepend carried forward opening balance row
         $entries->push([
@@ -587,11 +602,13 @@ class LedgerController extends Controller
 
         // 2. Credits (Inflows) in the selected period: ReceivingVouchers
         $receipts = ReceivingVoucher::where('payment_account_id', $accountId)
+            ->with(['payments.unit', 'tenant.unit'])
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->get();
 
         foreach ($receipts as $receipt) {
+            $unitNo = $receipt->payments->first()?->unit?->unit_number ?? $receipt->tenant?->unit?->unit_number;
             $entries->push([
                 'date' => $receipt->date,
                 'voucher_no' => $receipt->voucher_no,
@@ -601,49 +618,119 @@ class LedgerController extends Controller
                 'credit' => 0.00,
                 'model_type' => 'receiving_voucher',
                 'model_id' => $receipt->id,
+                'unit_number' => $unitNo,
             ]);
         }
 
         // 2b. General Credits (Inflows) in the selected period: GeneralReceivingVouchers
-        $generalReceipts = \App\Models\GeneralReceivingVoucher::with('party')
+        $generalReceipts = \App\Models\GeneralReceivingVoucher::with(['party', 'fromPaymentAccount'])
             ->where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->get();
 
         foreach ($generalReceipts as $receipt) {
-            $desc = 'Party: ' . ($receipt->party ? $receipt->party->name : 'N/A');
+            if ($receipt->received_from_type === 'account') {
+                $typeLabel = 'Transfer In';
+                $desc = 'Transfer In from ' . ($receipt->fromPaymentAccount->name ?? 'Account');
+            } else {
+                $typeLabel = 'Receipt (General)';
+                $desc = 'Party: ' . ($receipt->party ? $receipt->party->name : 'N/A');
+            }
             if ($receipt->notes) {
                 $desc .= ' • ' . $receipt->notes;
             }
             $entries->push([
                 'date' => $receipt->date,
                 'voucher_no' => $receipt->voucher_no,
-                'type' => 'Receipt (General)',
+                'type' => $typeLabel,
                 'description' => $desc,
                 'debit' => (float)$receipt->amount,
                 'credit' => 0.00,
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $receipt->id,
+                'unit_number' => null,
+            ]);
+        }
+
+        // 2c. Account Transfers (Inflows) in the selected period: PaymentVouchers to this account
+        $transfersIn = PaymentVoucher::where('to_payment_account_id', $accountId)
+            ->with('paymentAccount')
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($transfersIn as $transfer) {
+            $desc = 'Transfer In from ' . ($transfer->paymentAccount->name ?? 'Account');
+            if ($transfer->notes) {
+                $desc .= ' • ' . $transfer->notes;
+            }
+            $entries->push([
+                'date' => $transfer->date,
+                'voucher_no' => $transfer->voucher_no,
+                'type' => 'Transfer In',
+                'description' => $desc,
+                'debit' => (float)$transfer->amount,
+                'credit' => 0.00,
+                'model_type' => 'payment_voucher',
+                'model_id' => $transfer->id,
+                'unit_number' => null,
             ]);
         }
 
         // 3. Debits (Outflows) in the selected period: PaymentVouchers
         $payouts = PaymentVoucher::where('payment_account_id', $accountId)
+            ->with(['unit', 'toPaymentAccount', 'tenant', 'landlord', 'party'])
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->get();
 
         foreach ($payouts as $payout) {
+            if ($payout->paid_to_type === 'account') {
+                $typeLabel = 'Transfer Out';
+                $desc = 'Transfer Out to ' . ($payout->toPaymentAccount->name ?? 'Account');
+            } else {
+                $typeLabel = 'Payout';
+                $desc = $payout->notes ?? 'Payment Voucher (' . ucfirst($payout->paid_to_type) . ')';
+            }
+            if ($payout->notes && $payout->paid_to_type === 'account') {
+                $desc .= ' • ' . $payout->notes;
+            }
             $entries->push([
                 'date' => $payout->date,
                 'voucher_no' => $payout->voucher_no,
-                'type' => 'Payout',
-                'description' => $payout->notes ?? 'Owner Payout / Advance',
+                'type' => $typeLabel,
+                'description' => $desc,
                 'debit' => 0.00,
                 'credit' => (float)$payout->amount,
                 'model_type' => 'payment_voucher',
                 'model_id' => $payout->id,
+                'unit_number' => $payout->unit?->unit_number,
+            ]);
+        }
+
+        // 3b. Debits (Outflows) in the selected period: GeneralReceivingVoucher Transfers from this account
+        $grvTransfersOut = \App\Models\GeneralReceivingVoucher::where('from_payment_account_id', $accountId)
+            ->with('paymentAccount')
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($grvTransfersOut as $transfer) {
+            $desc = 'Transfer Out to ' . ($transfer->paymentAccount->name ?? 'Account');
+            if ($transfer->notes) {
+                $desc .= ' • ' . $transfer->notes;
+            }
+            $entries->push([
+                'date' => $transfer->date,
+                'voucher_no' => $transfer->voucher_no,
+                'type' => 'Transfer Out',
+                'description' => $desc,
+                'debit' => 0.00,
+                'credit' => (float)$transfer->amount,
+                'model_type' => 'general_receiving_voucher',
+                'model_id' => $transfer->id,
+                'unit_number' => null,
             ]);
         }
 
@@ -663,6 +750,7 @@ class LedgerController extends Controller
                 'credit' => (float)$expense->amount,
                 'model_type' => 'expense',
                 'model_id' => $expense->id,
+                'unit_number' => null,
             ]);
         }
 

@@ -24,7 +24,7 @@ class PaymentVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = PaymentVoucher::with(['owner', 'party', 'tenant', 'landlord', 'paymentAccount', 'user'])
+        $query = PaymentVoucher::with(['owner', 'party', 'tenant', 'landlord', 'paymentAccount', 'toPaymentAccount', 'user'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
                 $q->where('voucher_no', 'like', "%{$term}%")
@@ -79,7 +79,7 @@ class PaymentVoucherController extends Controller
             ->get();
 
         return view('payment_vouchers.create', [
-            'title'           => 'New Payment Voucher',
+            'title'           => 'Create Payment Voucher',
             'parties'         => $parties,
             'tenants'         => $tenants,
             'landlords'       => $landlords,
@@ -99,7 +99,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord,account'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -111,6 +111,8 @@ class PaymentVoucherController extends Controller
             $rules['unit_id']   = ['required', 'exists:units,id'];
         } elseif ($request->input('paid_to_type') === 'landlord') {
             $rules['landlord_id'] = ['required', 'exists:landlords,id'];
+        } elseif ($request->input('paid_to_type') === 'account') {
+            $rules['to_payment_account_id'] = ['required', 'exists:payment_accounts,id', 'different:payment_account_id'];
         } else {
             $rules['party_id'] = ['required', 'exists:parties,id'];
         }
@@ -153,6 +155,7 @@ class PaymentVoucherController extends Controller
             $data['owner_id'] = null;
             $data['party_id'] = null;
             $data['landlord_id'] = null;
+            $data['to_payment_account_id'] = null;
             $tenant = Tenant::findOrFail($data['tenant_id']);
             $data['other_name'] = $tenant->name;
         } elseif ($request->input('paid_to_type') === 'landlord') {
@@ -160,13 +163,23 @@ class PaymentVoucherController extends Controller
             $data['tenant_id'] = null;
             $data['unit_id'] = null;
             $data['party_id'] = null;
+            $data['to_payment_account_id'] = null;
             $landlord = Landlord::findOrFail($data['landlord_id']);
             $data['other_name'] = $landlord->name;
+        } elseif ($request->input('paid_to_type') === 'account') {
+            $data['owner_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
+            $data['party_id'] = null;
+            $data['landlord_id'] = null;
+            $toAccount = PaymentAccount::findOrFail($data['to_payment_account_id']);
+            $data['other_name'] = $toAccount->name;
         } else {
             $data['owner_id'] = null;
             $data['tenant_id'] = null;
             $data['unit_id'] = null;
             $data['landlord_id'] = null;
+            $data['to_payment_account_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
         }
@@ -295,7 +308,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord,account'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -307,6 +320,8 @@ class PaymentVoucherController extends Controller
             $rules['unit_id']   = ['required', 'exists:units,id'];
         } elseif ($request->input('paid_to_type') === 'landlord') {
             $rules['landlord_id'] = ['required', 'exists:landlords,id'];
+        } elseif ($request->input('paid_to_type') === 'account') {
+            $rules['to_payment_account_id'] = ['required', 'exists:payment_accounts,id', 'different:payment_account_id'];
         } else {
             $rules['party_id'] = ['required', 'exists:parties,id'];
         }
@@ -359,6 +374,7 @@ class PaymentVoucherController extends Controller
             $data['owner_id'] = null;
             $data['party_id'] = null;
             $data['landlord_id'] = null;
+            $data['to_payment_account_id'] = null;
             $tenant = Tenant::findOrFail($data['tenant_id']);
             $data['other_name'] = $tenant->name;
         } elseif ($request->input('paid_to_type') === 'landlord') {
@@ -366,13 +382,23 @@ class PaymentVoucherController extends Controller
             $data['tenant_id'] = null;
             $data['unit_id'] = null;
             $data['party_id'] = null;
+            $data['to_payment_account_id'] = null;
             $landlord = Landlord::findOrFail($data['landlord_id']);
             $data['other_name'] = $landlord->name;
+        } elseif ($request->input('paid_to_type') === 'account') {
+            $data['owner_id'] = null;
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
+            $data['party_id'] = null;
+            $data['landlord_id'] = null;
+            $toAccount = PaymentAccount::findOrFail($data['to_payment_account_id']);
+            $data['other_name'] = $toAccount->name;
         } else {
             $data['owner_id'] = null;
             $data['tenant_id'] = null;
             $data['unit_id'] = null;
             $data['landlord_id'] = null;
+            $data['to_payment_account_id'] = null;
             $party = \App\Models\Party::findOrFail($data['party_id']);
             $data['other_name'] = $party->name;
         }

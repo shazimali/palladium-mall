@@ -26,6 +26,7 @@ class PaymentVoucher extends Model
         'is_advance',
         'payment_method',
         'payment_account_id',
+        'to_payment_account_id',
         'reference',
         'notes',
         'user_id',
@@ -81,6 +82,11 @@ class PaymentVoucher extends Model
     public function paymentAccount(): BelongsTo
     {
         return $this->belongsTo(PaymentAccount::class);
+    }
+
+    public function toPaymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(PaymentAccount::class, 'to_payment_account_id');
     }
 
     public function user(): BelongsTo

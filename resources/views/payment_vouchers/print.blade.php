@@ -8,6 +8,9 @@
     } elseif ($voucher->paid_to_type === 'landlord') {
         $payeeName = $voucher->landlord ? $voucher->landlord->name : $voucher->other_name;
         $payeeTypeLabel = 'Landlord (Payout)';
+    } elseif ($voucher->paid_to_type === 'account') {
+        $payeeName = $voucher->toPaymentAccount ? $voucher->toPaymentAccount->name : $voucher->other_name;
+        $payeeTypeLabel = 'Payment Account (Inter-Account Transfer)';
     } else {
         $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
         $payeeTypeLabel = 'Party (Suppliers/Contractors)';

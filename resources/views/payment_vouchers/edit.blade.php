@@ -168,8 +168,23 @@
                             <option value="tenant" {{ old('paid_to_type', $voucher->paid_to_type) === 'tenant' ? 'selected' : '' }}>Tenant (Refund Security Deposit)</option>
                             <option value="landlord" {{ old('paid_to_type', $voucher->paid_to_type) === 'landlord' ? 'selected' : '' }}>Landlord (Pay Negative Balance)</option>
                             <option value="other" {{ old('paid_to_type', $voucher->paid_to_type) === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
+                            <option value="account" {{ old('paid_to_type', $voucher->paid_to_type) === 'account' ? 'selected' : '' }}>Payment Account (Inter-Account Transfer)</option>
                         </select>
                         @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Destination Payment Account Selection (when paidToType === 'account') --}}
+                    <div x-show="paidToType === 'account'" x-transition x-cloak>
+                        <label class="{{ $label }}">Destination Account (Transfer To) <span class="text-red-500">*</span></label>
+                        <select name="to_payment_account_id" class="{{ $input }} {{ $errors->has('to_payment_account_id') ? 'border-red-400' : '' }}" :required="paidToType === 'account'">
+                            <option value="">Select Destination Account...</option>
+                            @foreach($paymentAccounts as $account)
+                                <option value="{{ $account->id }}" {{ old('to_payment_account_id', $voucher->to_payment_account_id) == $account->id ? 'selected' : '' }}>
+                                    {{ $account->name }} (Balance: Rs. {{ number_format($account->current_balance, 2) }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('to_payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
 
                     {{-- Tenant Selection --}}

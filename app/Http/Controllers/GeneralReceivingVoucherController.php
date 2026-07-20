@@ -20,7 +20,7 @@ class GeneralReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $query = GeneralReceivingVoucher::with(['party', 'paymentAccount', 'user'])
+        $query = GeneralReceivingVoucher::with(['party', 'paymentAccount', 'fromPaymentAccount', 'user'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
                 $q->where('voucher_no', 'like', "%{$term}%")
@@ -82,13 +82,35 @@ class GeneralReceivingVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:1'],
-            'party_id'           => ['required', 'exists:parties,id'],
+            'received_from_type' => ['required', 'string', 'in:party,account'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
         ];
 
+        if ($request->input('received_from_type') === 'account') {
+            $rules['from_payment_account_id'] = ['required', 'exists:payment_accounts,id', 'different:payment_account_id'];
+        } else {
+            $rules['party_id'] = ['required', 'exists:parties,id'];
+        }
+
         $data = $request->validate($rules);
+
+        // ── Balance Guard for Source Account ──────────────────────────────
+        if ($request->input('received_from_type') === 'account') {
+            $sourceAccount = PaymentAccount::findOrFail($data['from_payment_account_id']);
+            $currentBalance = $sourceAccount->current_balance;
+
+            if ((float) $data['amount'] > $currentBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'from_payment_account_id' => 'The selected Source Account (' . $sourceAccount->name . ') does not have sufficient balance to transfer. Current balance: Rs. ' . number_format($currentBalance, 2) . '.',
+                ]);
+            }
+
+            $data['party_id'] = null;
+        } else {
+            $data['from_payment_account_id'] = null;
+        }
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         $data['payment_method'] = $paymentAccount->type;
@@ -112,7 +134,7 @@ class GeneralReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $generalReceivingVoucher->load(['party', 'paymentAccount', 'user']);
+        $generalReceivingVoucher->load(['party', 'paymentAccount', 'fromPaymentAccount', 'user']);
 
         return view('general_receiving_vouchers.show', [
             'title'   => 'General Voucher Details — ' . $generalReceivingVoucher->voucher_no,
@@ -129,7 +151,7 @@ class GeneralReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $generalReceivingVoucher->load(['party', 'paymentAccount', 'user']);
+        $generalReceivingVoucher->load(['party', 'paymentAccount', 'fromPaymentAccount', 'user']);
 
         return view('general_receiving_vouchers.print', [
             'title'   => 'Print General Voucher — ' . $generalReceivingVoucher->voucher_no,
@@ -184,13 +206,38 @@ class GeneralReceivingVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:1'],
-            'party_id'           => ['required', 'exists:parties,id'],
+            'received_from_type' => ['required', 'string', 'in:party,account'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
         ];
 
+        if ($request->input('received_from_type') === 'account') {
+            $rules['from_payment_account_id'] = ['required', 'exists:payment_accounts,id', 'different:payment_account_id'];
+        } else {
+            $rules['party_id'] = ['required', 'exists:parties,id'];
+        }
+
         $data = $request->validate($rules);
+
+        // ── Balance Guard for Source Account ──────────────────────────────
+        if ($request->input('received_from_type') === 'account') {
+            $sourceAccount = PaymentAccount::findOrFail($data['from_payment_account_id']);
+            $currentBalance = $sourceAccount->current_balance;
+            if ($generalReceivingVoucher->from_payment_account_id == $sourceAccount->id) {
+                $currentBalance += (float) $generalReceivingVoucher->amount;
+            }
+
+            if ((float) $data['amount'] > $currentBalance + 0.01) {
+                return back()->withInput()->withErrors([
+                    'from_payment_account_id' => 'The selected Source Account (' . $sourceAccount->name . ') does not have sufficient balance to transfer. Available balance: Rs. ' . number_format($currentBalance, 2) . '.',
+                ]);
+            }
+
+            $data['party_id'] = null;
+        } else {
+            $data['from_payment_account_id'] = null;
+        }
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         $data['payment_method'] = $paymentAccount->type;

@@ -129,7 +129,11 @@
                                 {{ $voucher->date->format('d M Y') }}
                             </td>
                             <td class="px-4 py-3 font-semibold">
-                                {{ $voucher->party ? $voucher->party->name : 'N/A' }}
+                                @if($voucher->received_from_type === 'account')
+                                    <span class="text-blue-600 dark:text-blue-400">🏦 Transfer from {{ $voucher->fromPaymentAccount->name ?? 'Account' }}</span>
+                                @else
+                                    👤 {{ $voucher->party ? $voucher->party->name : 'N/A' }}
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-xs">
                                 {{ $voucher->paymentAccount ? $voucher->paymentAccount->name : 'N/A' }}

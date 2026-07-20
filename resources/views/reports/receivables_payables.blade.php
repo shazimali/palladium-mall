@@ -6,7 +6,7 @@
     <form action="{{ route('reports.receivables-payables') }}" method="GET" id="report-filter-form" class="space-y-6">
 
         {{-- Segmented Tab Switcher --}}
-        <div class="flex justify-center">
+        <div class="flex flex-col items-center gap-3">
             <div
                 class="inline-flex rounded-xl p-1.5 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-sm">
                 <label class="cursor-pointer">
@@ -28,6 +28,29 @@
                     </span>
                 </label>
             </div>
+
+            {{-- Secondary Sub-Tabs for Receivables (PM Mall vs Other Receivables) --}}
+            @if($type === 'receivables')
+                <input type="hidden" name="receivable_scope" id="receivable_scope_input" value="{{ $receivableScope }}">
+                <div class="inline-flex rounded-xl p-1 bg-gray-200/80 dark:bg-gray-800 border border-gray-300/60 dark:border-gray-700/60 shadow-inner">
+                    <button type="button"
+                        onclick="document.getElementById('receivable_scope_input').value='pm_mall'; document.getElementById('report-filter-form').submit();"
+                        class="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer {{ $receivableScope === 'pm_mall' ? 'bg-white dark:bg-gray-900 text-brand-600 dark:text-brand-400 shadow-sm ring-1 ring-brand-500/20' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
+                        <span>🏢 PM Mall Receivables</span>
+                        <span class="rounded-full px-2 py-0.5 text-[10px] font-extrabold font-mono {{ $receivableScope === 'pm_mall' ? 'bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300' : 'bg-gray-300/60 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }}">
+                            Rs. {{ number_format($pmMallReceivablesNet, 0) }}
+                        </span>
+                    </button>
+                    <button type="button"
+                        onclick="document.getElementById('receivable_scope_input').value='other'; document.getElementById('report-filter-form').submit();"
+                        class="inline-flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer {{ $receivableScope === 'other' ? 'bg-white dark:bg-gray-900 text-amber-600 dark:text-amber-400 shadow-sm ring-1 ring-amber-500/20' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900' }}">
+                        <span>🏘️ Other Receivables (Not Managed by PM Mall)</span>
+                        <span class="rounded-full px-2 py-0.5 text-[10px] font-extrabold font-mono {{ $receivableScope === 'other' ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300' : 'bg-gray-300/60 dark:bg-gray-700 text-gray-700 dark:text-gray-300' }}">
+                            Rs. {{ number_format($otherReceivablesNet, 0) }}
+                        </span>
+                    </button>
+                </div>
+            @endif
         </div>
 
         {{-- Overall Summary Widgets --}}
@@ -169,8 +192,12 @@
             {{-- Receivables Table --}}
             <div>
                 <div class="mb-4 pb-2">
-                    <h3 class="text-sm font-bold text-gray-850 dark:text-white/90">Due Receivables Summary</h3>
-                    <p class="text-xs text-gray-400 mt-0.5"></p>
+                    <h3 class="text-sm font-bold text-gray-850 dark:text-white/90">
+                        {{ $receivableScope === 'other' ? 'Other Receivables Summary (Not Managed by PM Mall)' : 'PM Mall Managed Receivables Summary' }}
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-0.5">
+                        {{ $receivableScope === 'other' ? 'Breakdown of outstanding dues for self-owned / external units not managed by PM Mall.' : 'Breakdown of outstanding dues for units and accounts managed by PM Mall.' }}
+                    </p>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -215,7 +242,8 @@
                         <tfoot
                             class="border-t-2 border-gray-150 bg-gray-50/20 font-bold dark:border-gray-800 dark:bg-gray-900/10">
                             <tr>
-                                <td class="px-4 py-3.5 text-gray-900 dark:text-white" colspan="2">Total Building Receivables
+                                <td class="px-4 py-3.5 text-gray-900 dark:text-white" colspan="2">
+                                    {{ $receivableScope === 'other' ? 'Total Other Receivables (Not Managed by PM Mall)' : 'Total PM Mall Receivables' }}
                                 </td>
                                 <td class="px-4 py-3.5 text-right font-mono">Rs.
                                     {{ number_format(collect($receivables)->sum('due'), 2) }}</td>
