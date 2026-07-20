@@ -187,7 +187,7 @@
 {{-- ── Payment Details ─────────────────────────────────────────────── --}}
 <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02]">
     <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-        Payment Details
+        Billing Details
     </h4>
 
     <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">

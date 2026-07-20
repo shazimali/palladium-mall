@@ -30,12 +30,12 @@
         <button type="button" onclick="setOwnerFilter('other')"
             class="owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all {{ $activeOwner === 'other' ? 'bg-brand-500 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}"
             data-owner="other">
-            <span>🏠</span> Other-Owned Payments
+            <span>🏠</span> Other-Owned Billings
         </button>
         <button type="button" onclick="setOwnerFilter('pm_mall')"
             class="owner-type-btn inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all {{ $activeOwner === 'pm_mall' ? 'bg-brand-500 text-white shadow-sm' : 'border border-gray-200 bg-white text-gray-600 hover:border-brand-400 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300' }}"
             data-owner="pm_mall">
-            <span>🏢</span> PM Mall Payments
+            <span>🏢</span> PM Mall Billings
         </button>
 
         {{-- Summary cards --}}
@@ -134,7 +134,7 @@
                 default => 'All Billings',
             };
         @endphp
-        <x-common.component-card :title="$cardTitle" desc="Track rent, maintenance and fine payments">
+        <x-common.component-card :title="$cardTitle" desc="Track rent, maintenance and fine billings">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex flex-wrap gap-2 items-center">
                     <span
@@ -206,7 +206,7 @@
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                             </svg>
-                            Add Payment
+                            Add Billing
                         </a>
                     @endif
                 </div>
@@ -236,7 +236,7 @@
                     <div class="relative">
                         <select name="unit_id" onchange="fetchResults()"
                             class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                            <option value="">All Units</option>
+                            <option value="">All Flat/Shops</option>
                             @foreach($units as $unit)
                                 <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
                                     {{ $unit->unit_number }}
@@ -294,200 +294,142 @@
 
 
         {{-- Bulk Generate Modal --}}
-        <div x-data="{
-                                                                                            show: false,
-                                                                                            init() {
-                                                                                                window.addEventListener('open-bulk-generate', () => { this.show = true; });
-                                                                                            }
-                                                                                        }" x-show="show" x-cloak
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
-                @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
-                <h3 class="mb-1 text-base font-semibold text-gray-800 dark:text-white">Bulk Generate Payments</h3>
-                <p class="mb-4 text-sm text-gray-500">Creates payment records for all active tenants with active agreements.
-                </p>
-                <form action="{{ route('payments.bulk-generate') }}" method="POST">
-                    @csrf
-                    <div class="space-y-4">
+        @if(auth()->user()->hasPermission('payments.create') || auth()->user()->isSuperAdmin())
+            <div x-data="{ open: false }" x-show="open" @open-bulk-generate.window="open = true"
+                @keydown.escape.window="open = false" x-cloak class="fixed inset-0 z-50 overflow-y-auto"
+                aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                    <div x-show="open" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+                        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                        class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 transition-opacity" @click="open = false">
+                    </div>
 
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Billing Month <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="bulk_month" name="month" placeholder="Select month" autocomplete="off"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                        </div>
+                    <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
 
-                        <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Due Date <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="bulk_due_date" name="due_date" placeholder="Select due date"
-                                autocomplete="off"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                        </div>
+                    <div x-show="open" x-transition:enter="ease-out duration-300"
+                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave="ease-in duration-200"
+                        x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        class="inline-block transform overflow-hidden rounded-2xl bg-white p-6 text-left align-bottom shadow-xl transition-all dark:bg-gray-900 sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
 
-                        <div>
-                            <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Generate For <span class="text-red-500">*</span>
-                            </label>
-                            <div class="flex flex-col gap-3">
-                                <div class="flex items-center gap-4">
-                                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" name="types[]" value="rent" checked
-                                            class="rounded border-gray-300 text-brand-500 focus:ring-brand-500">
-                                        Rent
+                        <h3 class="mb-1 text-base font-semibold text-gray-800 dark:text-white">Bulk Generate Billings</h3>
+                        <p class="mb-4 text-sm text-gray-500">Creates billing records for all active tenants with active agreements.</p>
+
+                        <form action="{{ route('payments.bulk-generate') }}" method="POST">
+                            @csrf
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        For Month <span class="text-red-500">*</span>
                                     </label>
-                                    <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                        <input type="checkbox" name="types[]" value="maintenance"
-                                            class="rounded border-gray-300 text-brand-500 focus:ring-brand-500">
-                                        Maintenance
-                                    </label>
+                                    <input type="text" id="bulk_month" name="month"
+                                        value="{{ old('month', now()->format('Y-m-01')) }}" placeholder="Select month"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                        required>
                                 </div>
 
-                                {{-- External owner units note --}}
-                                <div
-                                    class="rounded-lg border border-blue-200 bg-blue-50/50 px-3.5 py-2.5 dark:border-blue-900/40 dark:bg-blue-950/10">
-                                    <p class="text-xs text-blue-700 dark:text-blue-300">
-                                        <strong>Note:</strong> Other-owned units with active maintenance charges are
-                                        automatically included when generating <strong>Maintenance</strong> payments.
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Due Date <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" id="bulk_due_date" name="due_date"
+                                        value="{{ old('due_date', now()->addDays(10)->format('Y-m-d')) }}"
+                                        placeholder="Select due date"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                        required>
+                                </div>
+
+                                {{-- Options: Which payments to generate --}}
+                                <div class="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50">
+                                    <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Generate Options</p>
+                                    <label class="flex items-center gap-2.5 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                        <input type="checkbox" name="generate_rent" value="1" checked
+                                            class="rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900">
+                                        Rent Billings
+                                    </label>
+                                    <label class="flex items-center gap-2.5 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                                        <input type="checkbox" name="generate_maintenance" value="1" checked
+                                            class="rounded border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900">
+                                        Maintenance Billings
+                                    </label>
+                                    <p class="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                        * Fine charges (if applicable per agreement) will be
+                                        automatically included when generating <strong>Maintenance</strong> billings.
                                     </p>
                                 </div>
                             </div>
-                        </div>
 
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button type="button" @click="open = false"
+                                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5">
+                                    Cancel
+                                </button>
+                                <button type="submit"
+                                    class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">
+                                    Generate Billings
+                                </button>
+                            </div>
+                        </form>
                     </div>
-
-                    <div class="mt-5 flex items-center gap-3">
-                        <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
-                            Generate Now
-                        </button>
-                        <button type="button" @click="show = false"
-                            class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        {{-- Bulk Edit Modal ── --}}
-        @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
-            <div x-data="{
-                                                                                                                                                                        show: false,
-                                                                                                                                                                        init() {
-                                                                                                                                                                            window.addEventListener('open-bulk-edit', () => { this.show = true; });
-                                                                                                                                                                        }
-                                                                                                                                                                    }"
-                x-show="show" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-900"
-                    @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
-                    <h3 class="mb-1 text-base font-semibold text-gray-800 dark:text-white">Bulk Edit Payments</h3>
-                    <p class="mb-4 text-sm text-gray-500">Correct the Month/Year or Due Date of bulk payments in one batch.</p>
-                    <form action="{{ route('payments.bulk-edit') }}" method="POST"
-                        onsubmit="return confirm('Are you sure you want to bulk edit matching unpaid payments?')">
-                        @csrf
-                        <div class="space-y-4">
-
-                            {{-- Section: Source filter criteria --}}
-                            <div class="border-b border-gray-250 pb-4 dark:border-gray-800">
-                                <span class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">1.
-                                    Target Wrong Month/Type</span>
-
-                                <div class="mt-3">
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Incorrect Generated Month <span class="text-red-500">*</span>
-                                    </label>
-                                    <input type="text" id="bulk_edit_source_month" name="source_month"
-                                        placeholder="Select month to fix" autocomplete="off" required
-                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                </div>
-
-                                <div class="mt-3">
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Payment Type <span class="text-red-500">*</span>
-                                    </label>
-                                    <select name="type" required
-                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white/90">
-                                        <option value="all">Both (Rent & Maintenance)</option>
-                                        <option value="rent">Rent Only</option>
-                                        <option value="maintenance">Maintenance Only</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            {{-- Section: Target new values --}}
-                            <div>
-                                <span
-                                    class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">2.
-                                    Change To Correct Values</span>
-
-                                <div class="mt-3">
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        New Month/Year (Optional)
-                                    </label>
-                                    <input type="text" id="bulk_edit_target_month" name="target_month"
-                                        placeholder="Leave empty if unchanged" autocomplete="off"
-                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                </div>
-
-                                <div class="mt-3">
-                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        New Due Date (Optional)
-                                    </label>
-                                    <input type="text" id="bulk_edit_target_due_date" name="target_due_date"
-                                        placeholder="Leave empty if unchanged" autocomplete="off"
-                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                </div>
-                            </div>
-
-                            <div
-                                class="rounded-lg border border-amber-200 bg-amber-50/50 px-3.5 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/10">
-                                <p class="text-xs text-amber-700 dark:text-amber-300">
-                                    <strong>Note:</strong> This bulk update will only affect matching payments with
-                                    <strong>Unpaid</strong> status to preserve accounting records.
-                                </p>
-                            </div>
-
-                        </div>
-
-                        <div class="mt-5 flex items-center gap-3">
-                            <button type="submit"
-                                class="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-amber-700 transition-colors">
-                                Update Payments
-                            </button>
-                            <button type="button" @click="show = false"
-                                class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-colors">
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
                 </div>
             </div>
         @endif
 
-        {{-- ── Bulk Delete Modal ──────────────────────────────────────────── --}}
+        {{-- Bulk Edit Modal --}}
         @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
-            <div x-data="{
-                    show: false,
-                    init() {
-                        window.addEventListener('open-bulk-delete', () => { this.show = true; });
-                    }
-                 }"
-                 x-show="show" x-cloak
-                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900"
-                     @click.outside="if (document.body.contains($event.target) && !$event.target.closest('.flatpickr-calendar')) show = false">
+            <div x-data="{ open: false }" x-show="open" @open-bulk-edit.window="open = true"
+                @keydown.escape.window="open = false" x-cloak class="fixed inset-0 z-50 overflow-y-auto"
+                aria-labelledby="modal-title" role="dialog" aria-modal="true">
+                <div class="flex min-h-screen items-end justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                    <div x-show="open" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+                        x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+                        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                        class="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/80 transition-opacity" @click="open = false">
+                    </div>
 
-                    {{-- Header --}}
-                    <div class="mb-5 flex items-start gap-3">
-                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-950/40">
-                            <svg class="h-5 w-5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </div>
-                        <div>
+                    <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+
+                    <div x-show="open" x-transition:enter="ease-out duration-300"
+                        x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave="ease-in duration-200"
+                        x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                        x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                        class="inline-block transform overflow-hidden rounded-2xl bg-white p-6 text-left align-bottom shadow-xl transition-all dark:bg-gray-900 sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+
+                        <h3 class="mb-1 text-base font-semibold text-gray-800 dark:text-white">Bulk Edit Billings</h3>
+                        <p class="mb-4 text-sm text-gray-500">Correct the Month/Year or Due Date of bulk billings in one batch.</p>
+
+                        <form action="{{ route('payments.bulk-edit') }}" method="POST"
+                            onsubmit="return confirm('Are you sure you want to bulk edit matching unpaid billings?')">
+                            @csrf
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Find Billings Currently Set To Month <span class="text-red-500">*</span>
+                                    </label>
+                                    <input type="text" id="bulk_edit_current_month" name="current_month"
+                                        value="{{ old('current_month', now()->format('Y-m-01')) }}" placeholder="Select month"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                        required>
+                                </div>
+
+                                <div>
+                                    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Billing Type <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="type"
+                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90"
+                                        required>
+                                        <option value="all">All Types (Rent, Maintenance, Extra, etc.)</option>
+                                        <option value="rent">Rent Only</option>
+                                        <option value="maintenance">Maintenance Only</option>
+                                        <option value="extra_payment">Extra Billings Only</option>
+                                    </select>
+                                </div>
                             <h3 class="text-base font-semibold text-gray-800 dark:text-white">Bulk Delete Payments</h3>
                             <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Select the month and payment type(s) to permanently delete all matching records.</p>
                         </div>
@@ -899,7 +841,7 @@
                     Swal.fire({
                         icon: 'warning',
                         title: 'Type Required',
-                        text: 'Please select at least one payment type to delete.',
+                        text: 'Please select at least one billing type to delete.',
                         confirmButtonColor: '#ef4444',
                     });
                     return;
@@ -912,8 +854,8 @@
 
                 Swal.fire({
                     icon: 'warning',
-                    title: 'Delete Unpaid Payments?',
-                    html: `This will permanently delete all <strong>unpaid</strong> payments for <strong>${monthLabel}</strong> of type: <strong>${typeLabels}</strong>.<br><br>Partial and paid records will <strong>not</strong> be affected. This action cannot be undone.`,
+                    title: 'Delete Unpaid Billings?',
+                    html: `This will permanently delete all <strong>unpaid</strong> billings for <strong>${monthLabel}</strong> of type: <strong>${typeLabels}</strong>.<br><br>Partial and paid records will <strong>not</strong> be affected. This action cannot be undone.`,
                     showCancelButton: true,
                     confirmButtonColor: '#dc2626',
                     cancelButtonColor: '#6b7280',

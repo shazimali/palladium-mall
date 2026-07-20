@@ -3,10 +3,10 @@
 @section('content')
     @php
         $isSelf = is_null($payment->tenant_id);
-        $pageTitle = $isSelf ? 'Edit Other-Owned Flat/Shop Payment' : 'Edit Tenant Payment';
+        $pageTitle = $isSelf ? 'Edit Other-Owned Flat/Shop Billing' : 'Edit Tenant Billing';
         $descText = $isSelf 
-            ? 'Update maintenance payment details for an other-owned flat/shop' 
-            : 'Update payment record details linked to a tenant\'s agreement';
+            ? 'Update maintenance billing details for an other-owned flat/shop' 
+            : 'Update billing record details linked to a tenant\'s agreement';
     @endphp
 
     <x-common.page-breadcrumb pageTitle="{{ $pageTitle }}" />
@@ -42,7 +42,7 @@
                 }
             }
         }">
-            <x-common.component-card title="Other-Owned Flat/Shop — Maintenance Payment" desc="{{ $descText }}">
+            <x-common.component-card title="Other-Owned Flat/Shop — Maintenance Billing" desc="{{ $descText }}">
                 <form action="{{ route('payments.update', $payment) }}" method="POST">
                     @csrf
                     @method('PUT')
@@ -107,10 +107,10 @@
                         </div>
                     </div>
 
-                    {{-- Payment Details --}}
+                    {{-- Billing Details --}}
                     <div class="mt-5 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
                         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                            Maintenance Payment Details
+                            Maintenance Billing Details
                         </h4>
 
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -199,8 +199,8 @@
             </x-common.component-card>
         </div>
     @else
-        {{-- ── TENANT PAYMENT EDIT FORM ─────────────────────────────────── --}}
-        <x-common.component-card title="Tenant Payment" desc="{{ $descText }}">
+        {{-- ── TENANT BILLING EDIT FORM ─────────────────────────────────── --}}
+        <x-common.component-card title="Tenant Billing" desc="{{ $descText }}">
             <form action="{{ route('payments.update', $payment) }}" method="POST">
                 @csrf
                 @method('PUT')

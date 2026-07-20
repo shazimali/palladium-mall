@@ -3,7 +3,7 @@
 @section('containerClass', 'max-w-none w-full')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Billing & Payment History" />
+    <x-common.page-breadcrumb pageTitle="Billing History" />
 
     @if(session('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"

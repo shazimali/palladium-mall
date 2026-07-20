@@ -48,7 +48,7 @@
                 <th class="px-4 py-3">Flat/Shop Number</th>
                 <th class="px-4 py-3">Tenant</th>
                 <th class="px-4 py-3">Month</th>
-                <th class="px-4 py-3">Payments Details</th>
+                <th class="px-4 py-3">Billing Details</th>
                 <th class="px-4 py-3">Total Amount</th>
                 <th class="px-4 py-3">Total Paid</th>
                 <th class="px-4 py-3">Consolidated Status</th>

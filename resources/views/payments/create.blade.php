@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Add Payment Record" />
+    <x-common.page-breadcrumb pageTitle="Add Billing Record" />
 
     <div x-data="{
                         mode: '{{ old('payment_mode', 'tenant') }}',
@@ -93,52 +93,47 @@
             <div
                 class="inline-flex rounded-xl border border-gray-200 bg-gray-100 p-1 dark:border-gray-700 dark:bg-gray-800">
 
-                {{-- Tenant Payment --}}
+                {{-- Tenant Billing --}}
                 <button type="button" @click="mode = 'tenant'" :class="mode === 'tenant'
                                         ? 'bg-white text-gray-800 shadow-sm dark:bg-gray-900 dark:text-white'
                                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
                     class="relative inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none">
-                    <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    Tenant Payment
+                    Tenant Billing
                 </button>
 
-                {{-- External Owner --}}
+                {{-- Maintenance-Only (Other-Owned) --}}
                 <button type="button" @click="mode = 'self'" :class="mode === 'self'
                                         ? 'bg-white text-gray-800 shadow-sm dark:bg-gray-900 dark:text-white'
                                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
                     class="relative inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none">
-                    <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
-                    Other-Owned Flat/Shop
+                    Maintenance (Other-Owned)
                 </button>
 
-                {{-- Extra Payment --}}
+                {{-- Extra Billing --}}
                 <button type="button" @click="mode = 'extra'" :class="mode === 'extra'
                                         ? 'bg-white text-gray-800 shadow-sm dark:bg-gray-900 dark:text-white'
                                         : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
                     class="relative inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none">
-                    <svg class="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
-                    Extra Payment
+                    Extra Billing
                 </button>
-
             </div>
         </div>
 
-        {{-- ── TENANT PAYMENT FORM ─────────────────────────────────────── --}}
+        {{-- ── TENANT BILLING FORM ─────────────────────────────────────── --}}
         <div x-show="mode === 'tenant'" x-cloak>
-            <x-common.component-card title="Tenant Payment"
-                desc="Create a rent or maintenance payment linked to a tenant's agreement">
+            <x-common.component-card title="Tenant Billing"
+                desc="Create a rent or maintenance billing linked to a tenant's agreement">
                 <form action="{{ route('payments.store') }}" method="POST">
                     @csrf
                     <input type="hidden" name="payment_mode" value="tenant">
@@ -243,7 +238,7 @@
                     <div
                         class="mt-5 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
                         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                            Maintenance Payment Details
+                            Maintenance Billing Details
                         </h4>
 
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -323,7 +318,7 @@
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
-                            Create Maintenance Payment
+                            Create Maintenance Billing
                         </button>
                         <a href="{{ route('payments.index') }}"
                             class="inline-flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
@@ -334,9 +329,9 @@
             </x-common.component-card>
         </div>
 
-        {{-- ── EXTRA PAYMENT FORM ─────────────────────────────────────────── --}}
+        {{-- ── EXTRA BILLING FORM ─────────────────────────────────────────── --}}
         <div x-show="mode === 'extra'" x-cloak>
-            <x-common.component-card title="Extra Payment"
+            <x-common.component-card title="Extra Billing"
                 desc="Collect any ad-hoc charge against any unit. No tenant or agreement required. Appears in the EXTRA column of the Monthly Matrix report.">
                 <form action="{{ route('payments.store') }}" method="POST">
                     @csrf
@@ -352,8 +347,8 @@
                                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <p class="text-sm text-teal-700 dark:text-teal-300">
-                            Extra payments are free-form charges. Select any unit, enter the amount, and optionally add a
-                            note to identify the charge. Multiple extra payments can be recorded for the same unit and
+                            Extra billings are free-form charges. Select any unit, enter the amount, and optionally add a
+                            note to identify the charge. Multiple extra billings can be recorded for the same unit and
                             month.
                         </p>
                     </div>
@@ -438,17 +433,17 @@
                                 <div
                                     class="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-medium text-teal-700 dark:border-teal-800/40 dark:bg-teal-900/20 dark:text-teal-300">
                                     <span>💰</span>
-                                    Extra Payment
+                                    Extra Billing
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Payment Details --}}
+                    {{-- Billing Details --}}
                     <div
                         class="mt-5 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
                         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                            Payment Details
+                            Billing Details
                         </h4>
                         <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
 
@@ -515,7 +510,7 @@
                         <template x-if="getExtraSplit().has_split">
                             <div class="mt-5 rounded-xl border border-brand-100 bg-brand-50/30 p-4 dark:border-brand-900/30 dark:bg-brand-950/10">
                                 <h5 class="mb-3 text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                                    Payment Allocation Split (Automatic)
+                                    Billing Allocation Split (Automatic)
                                 </h5>
                                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     <div class="rounded-lg border border-gray-100 bg-white p-3 shadow-xs dark:border-gray-800 dark:bg-gray-900">
@@ -542,7 +537,7 @@
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
-                            Save Extra Payment
+                            Save Extra Billing
                         </button>
                         <a href="{{ route('payments.index') }}"
                             class="inline-flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">

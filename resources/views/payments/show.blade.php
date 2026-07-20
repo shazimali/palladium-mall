@@ -7,7 +7,7 @@
                 ?: ($payment->unit?->landlord?->name ?: 'Other-Owned Unit'));
     @endphp
 
-    <x-common.page-breadcrumb pageTitle="Payment — {{ $recipientName }}" />
+    <x-common.page-breadcrumb pageTitle="Billing — {{ $recipientName }}" />
 
     @if(session('success'))
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
@@ -67,7 +67,7 @@
             @if(auth()->user()->hasPermission('payments.edit') || auth()->user()->isSuperAdmin())
                 <a href="{{ route('payments.edit', $payment) }}"
                     class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
-                    Edit Payment
+                    Edit Billing
                 </a>
             @endif
             <a href="{{ route('payments.print', $payment) }}" target="_blank"
@@ -108,7 +108,7 @@
 
             <a href="{{ route('payments.index') }}"
                 class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
-                Back to Payments
+                Back to Billings
             </a>
         </div>
     </x-common.component-card>
