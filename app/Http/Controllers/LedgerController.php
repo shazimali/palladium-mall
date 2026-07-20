@@ -320,13 +320,29 @@ class LedgerController extends Controller
         $unit = Unit::with(['tenant', 'otherTenant'])->findOrFail($unitId);
         $entries = collect();
 
-        // 1. Fetch Payments (Bills) as DEBITS
+        // 1. Fetch all payments and their receiving vouchers (no date filter in SQL)
         $payments = Payment::where('unit_id', $unitId)
             ->with(['receivingVouchers', 'paymentAccount'])
-            ->when($dateFrom, fn($q) => $q->where('month', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->where('month', '<=', $dateTo))
             ->orderBy('month', 'asc')
             ->get();
+
+        // 2. Fetch all Payment Vouchers (Refunds/Payouts) for this unit
+        $refunds = \App\Models\PaymentVoucher::where('unit_id', $unitId)
+            ->where('paid_to_type', 'tenant')
+            ->with('paymentAccount')
+            ->get();
+
+        foreach ($refunds as $refund) {
+            $entries->push([
+                'date' => $refund->date,
+                'description' => 'Security Deposit Refund (' . ($refund->paymentAccount->name ?? 'Voucher') . ')',
+                'reference' => $refund->voucher_no,
+                'debit' => (float)$refund->amount,
+                'credit' => 0.00,
+                'type' => 'refund',
+                'id' => $refund->id,
+            ]);
+        }
 
         foreach ($payments as $payment) {
             // Debit Entry: Bill Generated
@@ -342,9 +358,6 @@ class LedgerController extends Controller
 
             // Credit Entries: Allocated Payments via Receiving Vouchers
             foreach ($payment->receivingVouchers as $voucher) {
-                if ($dateFrom && $voucher->date->lt(Carbon::parse($dateFrom))) continue;
-                if ($dateTo && $voucher->date->gt(Carbon::parse($dateTo))) continue;
-
                 $entries->push([
                     'date' => $voucher->date,
                     'description' => 'Payment received via ' . ($voucher->paymentAccount->name ?? 'Voucher'),
@@ -373,31 +386,74 @@ class LedgerController extends Controller
         }
 
         // Sort all entries chronologically
-        $entries = $entries->sortBy(function ($e) {
-            $datePart = $e['date']->format('Y-m-d');
+        $allEntries = $entries->sortBy(function ($e) {
+            $datePart = $e['date'] instanceof \Carbon\Carbon ? $e['date']->format('Y-m-d') : \Carbon\Carbon::parse($e['date'])->format('Y-m-d');
             $typePart = $e['type'] === 'bill' ? '0' : '1';
             return $datePart . '-' . $typePart;
         })->values();
 
-        $runningBalance = 0.00;
+        // 2. Separate into prior and current period entries
+        $priorDebit = 0.00;
+        $priorCredit = 0.00;
+        $filteredEntries = collect();
+
+        foreach ($allEntries as $e) {
+            $eDate = $e['date'] instanceof \Carbon\Carbon ? $e['date'] : \Carbon\Carbon::parse($e['date']);
+            
+            // If before dateFrom, accumulate into opening balance
+            if ($dateFrom && $eDate->lt(\Carbon\Carbon::parse($dateFrom))) {
+                $priorDebit += $e['debit'];
+                $priorCredit += $e['credit'];
+            } else {
+                // If after dateTo, exclude from visible list but keep for overall aggregates
+                if ($dateTo && $eDate->gt(\Carbon\Carbon::parse($dateTo))) {
+                    continue;
+                }
+                $filteredEntries->push($e);
+            }
+        }
+
+        $openingBalance = $priorDebit - $priorCredit;
+
+        // Prepend opening balance carried forward row if dateFrom is set
+        if ($dateFrom) {
+            $filteredEntries->prepend([
+                'date' => \Carbon\Carbon::parse($dateFrom)->subDay(),
+                'description' => 'Opening Balance (Carried Forward)',
+                'reference' => '—',
+                'debit' => $openingBalance >= 0 ? $openingBalance : 0.00,
+                'credit' => $openingBalance < 0 ? abs($openingBalance) : 0.00,
+                'type' => 'opening',
+                'id' => null,
+            ]);
+        }
+
+        // Calculate running balance and period totals
+        $runningBalance = $openingBalance;
         $totalInvoiced = 0.00;
         $totalPaid = 0.00;
 
-        $entries = $entries->map(function ($entry) use (&$runningBalance, &$totalInvoiced, &$totalPaid) {
-            $totalInvoiced += $entry['debit'];
-            $totalPaid += $entry['credit'];
-            $runningBalance += ($entry['debit'] - $entry['credit']);
+        $finalEntries = $filteredEntries->map(function ($entry) use (&$runningBalance, &$totalInvoiced, &$totalPaid) {
+            if ($entry['type'] !== 'opening') {
+                $totalInvoiced += $entry['debit'];
+                $totalPaid += $entry['credit'];
+                $runningBalance += ($entry['debit'] - $entry['credit']);
+            }
             $entry['running_balance'] = $runningBalance;
             return $entry;
         });
 
+        // Compute overall all-time statistics for summary cards
+        $allTimeInvoiced = $allEntries->sum('debit');
+        $allTimePaid = $allEntries->sum('credit');
+
         return [
             'unit' => $unit,
-            'entries' => $entries,
+            'entries' => $finalEntries,
             'summary' => [
-                'total_invoiced' => $totalInvoiced,
-                'total_paid' => $totalPaid,
-                'balance_due' => max(0.00, $totalInvoiced - $totalPaid),
+                'total_invoiced' => $allTimeInvoiced,
+                'total_paid' => $allTimePaid,
+                'balance_due' => max(0.00, $allTimeInvoiced - $allTimePaid),
             ]
         ];
     }
