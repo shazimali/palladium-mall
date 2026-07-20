@@ -257,6 +257,49 @@
         @enderror
     </div>
 
+    {{-- Monthly Rent --}}
+    <div x-data="{
+        rentRaw: '{{ old('monthly_rent', isset($otherTenant) ? ($otherTenant->monthly_rent > 0 ? (int)$otherTenant->monthly_rent : '') : '') }}',
+        formatNumber(val) {
+            if (val === undefined || val === null || val === '') return '';
+            const clean = val.toString().replace(/,/g, '');
+            if (isNaN(clean) || clean === '') return '';
+            const parts = clean.split('.');
+            parts[0] = parseInt(parts[0], 10).toLocaleString('en-US');
+            return parts.join('.');
+        },
+        onInput(e) {
+            let clean = e.target.value.replace(/[^\d.]/g, '');
+            const parts = clean.split('.');
+            if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
+            this.rentRaw = clean;
+            e.target.value = this.formatNumber(clean);
+        },
+        init() {
+            if (this.rentRaw) {
+                this.$nextTick(() => {
+                    const el = this.$refs.rentDisplay;
+                    if (el) el.value = this.formatNumber(this.rentRaw);
+                });
+            }
+        }
+    }">
+        <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Monthly Rent (Rs.) <span class="text-xs text-gray-400">(Landlord's Share)</span>
+        </label>
+        {{-- Hidden raw value submitted to backend --}}
+        <input type="hidden" name="monthly_rent" :value="rentRaw">
+        {{-- Visible formatted display input --}}
+        <input type="text" x-ref="rentDisplay"
+            @input="onInput($event)"
+            placeholder="e.g. 10,000"
+            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('monthly_rent') border-red-400 @enderror" />
+        <p class="mt-1 text-xs text-gray-400">When an extra payment is created for the attached unit, this amount will be the landlord's share.</p>
+        @error('monthly_rent')
+            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
+        @enderror
+    </div>
+
     {{-- Photo Upload --}}
     <div>
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">

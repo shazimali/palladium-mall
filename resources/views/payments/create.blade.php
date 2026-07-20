@@ -17,11 +17,14 @@
                         extraUnitId: '{{ old('unit_id', '') }}',
                         extraAmount: '{{ old('amount', '') }}',
                         extraUnits: {{ $allUnits->map(fn($u) => [
-                            'id' => $u->id,
-                            'label' => $u->unit_number,
-                            'landlord_id' => $u->landlord_id,
-                            'landlord_name' => $u->landlord?->name ?? null,
-                            'default_rent' => (float)($u->default_monthly_rent ?? 0),
+                            'id'           => $u->id,
+                            'label'        => $u->unit_number,
+                            'landlord_id'  => $u->landlord_id,
+                            'landlord_name'=> $u->landlord?->name ?? null,
+                            // Use Other Tenant monthly_rent if attached, else unit default_monthly_rent
+                            'default_rent' => ($u->otherTenant && (float)$u->otherTenant->monthly_rent > 0)
+                                                ? (float) $u->otherTenant->monthly_rent
+                                                : (float) ($u->default_monthly_rent ?? 0),
                         ])->values()->toJson() }},
                         extraCbOpen: false,
                         extraCbSearch: '',

@@ -109,7 +109,7 @@
                         <option value="">All Types</option>
                         <option value="owner" {{ request('paid_to_type') === 'owner' ? 'selected' : '' }}>Managing Owner</option>
                         <option value="tenant" {{ request('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund)</option>
-                        <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Other (Misc)</option>
+                        <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
                     </select>
                 </div>
 
@@ -188,7 +188,7 @@
                                 @elseif($voucher->paid_to_type === 'landlord')
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-orange-50 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400">Landlord (Payout)</span>
                                 @else
-                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">Other</span>
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">Party</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 font-bold text-red-600 dark:text-red-400 text-right">

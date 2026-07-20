@@ -144,7 +144,7 @@
                         <select name="paid_to_type" x-model="paidToType" class="{{ $input }} {{ $errors->has('paid_to_type') ? 'border-red-400' : '' }}" required>
                             <option value="tenant" {{ old('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund Security Deposit)</option>
                             <option value="landlord" {{ old('paid_to_type') === 'landlord' ? 'selected' : '' }}>Landlord (Pay Negative Balance)</option>
-                            <option value="other" {{ old('paid_to_type') === 'other' ? 'selected' : '' }}>Other (Miscellaneous)</option>
+                            <option value="other" {{ old('paid_to_type') === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
                         </select>
                         @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>

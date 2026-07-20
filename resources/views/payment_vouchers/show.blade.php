@@ -48,7 +48,7 @@
                     $payeeType = 'Landlord (Payout)';
                 } else {
                     $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
-                    $payeeType = 'Other (Miscellaneous)';
+                    $payeeType = 'Party (Suppliers/Contractors)';
                 }
             @endphp
             

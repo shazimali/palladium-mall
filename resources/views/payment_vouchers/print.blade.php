@@ -10,7 +10,7 @@
         $payeeTypeLabel = 'Landlord (Payout)';
     } else {
         $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
-        $payeeTypeLabel = 'Other Payee';
+        $payeeTypeLabel = 'Party (Suppliers/Contractors)';
     }
 @endphp
 <!DOCTYPE html>

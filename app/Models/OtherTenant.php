@@ -23,12 +23,14 @@ class OtherTenant extends Model
         'address',
         'status',
         'maintenance_charge',
+        'monthly_rent',
         'unit_id',
         'photo',
     ];
 
     protected $casts = [
         'maintenance_charge' => 'decimal:2',
+        'monthly_rent'       => 'decimal:2',
     ];
 
     public function getPhotoUrlAttribute(): ?string

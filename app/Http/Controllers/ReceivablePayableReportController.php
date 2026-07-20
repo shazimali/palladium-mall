@@ -107,7 +107,7 @@ class ReceivablePayableReportController extends Controller
             foreach ($groupedSecurity as $key => $group) {
                 $first = $group->first();
                 $totalCollected = (float) $group->sum('amount_paid');
-                
+
                 $refundedGroup = $refundVouchers->get(($first->tenant_id ?? 0) . '_' . ($first->unit_id ?? 0));
                 $totalRefunded = $refundedGroup ? (float) $refundedGroup->sum('amount') : 0.00;
 
@@ -120,11 +120,11 @@ class ReceivablePayableReportController extends Controller
                     $unitNo = $first->unit ? $first->unit->unit_number : '';
                     $payables[] = [
                         'category' => 'Tenant Security Deposit',
-                        'name'     => $tenantName,
-                        'unit'     => $unitNo,
-                        'due'      => $totalCollected,
-                        'paid'     => $totalRefunded,
-                        'net'      => $netPayable,
+                        'name' => $tenantName,
+                        'unit' => $unitNo,
+                        'due' => $totalCollected,
+                        'paid' => $totalRefunded,
+                        'net' => $netPayable,
                     ];
                 }
             }
@@ -155,11 +155,11 @@ class ReceivablePayableReportController extends Controller
                     $unitNo = $first->unit ? $first->unit->unit_number : '';
 
                     $category = match ($chargeType) {
-                        'rent'        => 'Tenant Rent',
+                        'rent' => 'Tenant Rent',
                         'maintenance' => 'Tenant Maintenance',
-                        'fine'        => 'Tenant Fine',
-                        'utility'     => 'Tenant Utilities',
-                        default       => 'Tenant Other',
+                        'fine' => 'Tenant Fine',
+                        'utility' => 'Tenant Utilities',
+                        default => 'Tenant Other',
                     };
 
                     // Apply category filter — skip if categories selected but this category not in list
@@ -169,11 +169,11 @@ class ReceivablePayableReportController extends Controller
 
                     $receivables[] = [
                         'category' => $category,
-                        'name'     => $tenantName,
-                        'unit'     => $unitNo,
-                        'due'      => $totalDue,
-                        'paid'     => $totalPaid,
-                        'net'      => $netReceivable,
+                        'name' => $tenantName,
+                        'unit' => $unitNo,
+                        'due' => $totalDue,
+                        'paid' => $totalPaid,
+                        'net' => $netReceivable,
                     ];
                 }
             }
@@ -219,11 +219,11 @@ class ReceivablePayableReportController extends Controller
                 if ($netPayable > 0.01) {
                     $payables[] = [
                         'category' => 'Party Payable',
-                        'name'     => $party->name,
-                        'unit'     => '',
-                        'due'      => $totalReceived + $totalPayableDue,
-                        'paid'     => $totalPaid,
-                        'net'      => $netPayable,
+                        'name' => $party->name,
+                        'unit' => '',
+                        'due' => $totalReceived + $totalPayableDue,
+                        'paid' => $totalPaid,
+                        'net' => $netPayable,
                     ];
                 }
             } else {
@@ -234,11 +234,11 @@ class ReceivablePayableReportController extends Controller
                 if ($netReceivable > 0.01) {
                     $receivables[] = [
                         'category' => 'Party Receivable',
-                        'name'     => $party->name,
-                        'unit'     => '',
-                        'due'      => $totalReceivableDue + $totalPaid,
-                        'paid'     => $totalReceived + $totalPayableDue,
-                        'net'      => $netReceivable,
+                        'name' => $party->name,
+                        'unit' => '',
+                        'due' => $totalReceivableDue + $totalPaid,
+                        'paid' => $totalReceived + $totalPayableDue,
+                        'net' => $netReceivable,
                     ];
                 }
             }
@@ -264,11 +264,11 @@ class ReceivablePayableReportController extends Controller
                 if ($netReceivable > 0.01) {
                     $receivables[] = [
                         'category' => 'Landlord Credit',
-                        'name'     => $landlord->name,
-                        'unit'     => '',
-                        'due'      => $openingBalance,
-                        'paid'     => $totalReceived,
-                        'net'      => $netReceivable,
+                        'name' => $landlord->name,
+                        'unit' => '',
+                        'due' => $openingBalance,
+                        'paid' => $totalReceived,
+                        'net' => $netReceivable,
                     ];
                 }
             }

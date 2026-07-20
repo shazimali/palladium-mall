@@ -256,7 +256,7 @@ class PaymentController extends Controller
             ->orderBy('unit_number')
             ->get();
 
-        $allUnits = Unit::with('landlord')->orderBy('unit_number')->get();
+        $allUnits = Unit::with(['landlord', 'otherTenant'])->orderBy('unit_number')->get();
 
         // Keep tenants list for backward compatibility (used for old agreement-by-tenant AJAX)
         $tenants = Tenant::where('status', 'active')
@@ -277,19 +277,50 @@ class PaymentController extends Controller
     {
         // ── Extra Payment (any unit, no tenant/agreement) ─────────────────
         if ($request->input('payment_mode') === 'extra') {
-            $unit  = Unit::findOrFail($request->unit_id);
+            $unit  = Unit::with(['otherTenant', 'landlord'])->findOrFail($request->unit_id);
             $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
             $totalAmount = (float) $request->amount;
-            $defaultRent = (float) $unit->default_monthly_rent;
 
-            if ($unit->landlord_id && $defaultRent > 0) {
-                $landlordShare = min($totalAmount, $defaultRent);
-                $pmMallShare   = max(0.00, $totalAmount - $defaultRent);
+            // Step 1: Determine the landlord rent share amount
+            // If the unit has an Other Tenant with a monthly_rent set, use that.
+            // Otherwise fall back to the unit's own default_monthly_rent.
+            $otherTenant  = $unit->otherTenant;
+            $otherRent    = $otherTenant ? (float) $otherTenant->monthly_rent : 0.00;
+
+            if ($otherRent > 0) {
+                $landlordRent = $otherRent;
+                $landlordId   = $unit->landlord_id;
+            } else {
+                $landlordRent = (float) $unit->default_monthly_rent;
+                $landlordId   = $unit->landlord_id;
+            }
+
+            // Step 2: Duplicate landlord-share guard (per unit per month)
+            if ($landlordId && $landlordRent > 0) {
+                $existingLandlordShare = Payment::where('unit_id', $unit->id)
+                    ->where('type', 'extra_payment')
+                    ->where('month', $month)
+                    ->whereNotNull('landlord_id')
+                    ->exists();
+
+                if ($existingLandlordShare) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->withErrors([
+                            'month' => 'A landlord share extra payment already exists for unit ' . $unit->unit_number . ' in the selected month. Only PM Mall portion extra payments can be added additionally.'
+                        ]);
+                }
+            }
+
+            // Step 3: Create payment(s) with correct split
+            if ($landlordId && $landlordRent > 0) {
+                $landlordShare = min($totalAmount, $landlordRent);
+                $pmMallShare   = max(0.00, $totalAmount - $landlordRent);
 
                 // 1. Create Landlord Share Payment
                 Payment::create([
                     'tenant_id'       => null,
-                    'other_tenant_id' => null,
+                    'other_tenant_id' => $otherTenant?->id,
                     'unit_id'         => $unit->id,
                     'agreement_id'    => null,
                     'type'            => 'extra_payment',
@@ -298,7 +329,7 @@ class PaymentController extends Controller
                     'amount_paid'     => 0,
                     'status'          => 'unpaid',
                     'due_date'        => $request->due_date,
-                    'landlord_id'     => $unit->landlord_id,
+                    'landlord_id'     => $landlordId,
                     'notes'           => '[Landlord Share] ' . $request->notes,
                 ]);
 
@@ -306,7 +337,7 @@ class PaymentController extends Controller
                 if ($pmMallShare > 0) {
                     Payment::create([
                         'tenant_id'       => null,
-                        'other_tenant_id' => null,
+                        'other_tenant_id' => $otherTenant?->id,
                         'unit_id'         => $unit->id,
                         'agreement_id'    => null,
                         'type'            => 'extra_payment',
@@ -320,12 +351,15 @@ class PaymentController extends Controller
                     ]);
                 }
 
-                $msg = "Extra payment for unit {$unit->unit_number} split and created successfully (" . number_format($landlordShare) . " Landlord Share" . ($pmMallShare > 0 ? ", " . number_format($pmMallShare) . " PM Mall Share" : "") . ").";
+                $msg = "Extra payment for unit {$unit->unit_number} split and created successfully ("
+                    . number_format($landlordShare) . " Landlord Share"
+                    . ($pmMallShare > 0 ? ", " . number_format($pmMallShare) . " PM Mall Share" : "")
+                    . ").";
             } else {
-                // Create a single standard extra payment (unsplit)
+                // No split — single PM Mall payment (no landlord linked)
                 Payment::create([
                     'tenant_id'       => null,
-                    'other_tenant_id' => null,
+                    'other_tenant_id' => $otherTenant?->id,
                     'unit_id'         => $unit->id,
                     'agreement_id'    => null,
                     'type'            => 'extra_payment',
@@ -345,6 +379,7 @@ class PaymentController extends Controller
                 ->route('payments.index')
                 ->with('success', $msg);
         }
+
 
         // ── Self-unit maintenance payment (no tenant / agreement) ──────────
         if ($request->input('payment_mode') === 'self') {

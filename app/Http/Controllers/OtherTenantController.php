@@ -156,6 +156,7 @@ class OtherTenantController extends Controller
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'monthly_rent'       => ['nullable', 'numeric', 'min:0'],
             'attached_at'        => ['nullable', 'date'],
             'photo'              => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'unit_id'            => [
@@ -233,6 +234,7 @@ class OtherTenantController extends Controller
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
+            'monthly_rent'       => ['nullable', 'numeric', 'min:0'],
             'attached_at'        => ['nullable', 'date'],
             'photo'              => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'delete_photo'       => ['nullable', 'boolean'],
