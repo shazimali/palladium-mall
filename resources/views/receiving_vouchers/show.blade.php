@@ -6,7 +6,7 @@
     <x-common.component-card title="Receiving Voucher Details" desc="Voucher Reference #{{ $voucher->voucher_no }}">
         
         <div class="mb-6 flex justify-end gap-3 no-print">
-            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('receiving-vouchers.edit'))
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('receiving_vouchers.edit') || auth()->user()->hasPermission('receiving-vouchers.edit'))
                 <a href="{{ route('receiving-vouchers.edit', $voucher) }}"
                     class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors shadow-sm">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

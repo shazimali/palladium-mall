@@ -320,30 +320,32 @@ class LedgerController extends Controller
         $unit = Unit::with(['tenant', 'otherTenant'])->findOrFail($unitId);
         $entries = collect();
 
-        // 1. Fetch all payments and their receiving vouchers (no date filter in SQL)
+        // 1. Fetch all payments and their receiving vouchers
         $payments = Payment::where('unit_id', $unitId)
             ->with(['receivingVouchers', 'paymentAccount'])
             ->orderBy('month', 'asc')
             ->get();
 
-
         foreach ($payments as $payment) {
-            // Debit Entry: Bill Generated
-            $entries->push([
-                'date' => $payment->month,
-                'description' => ucfirst(str_replace('_', ' ', $payment->type)) . ' Billing - ' . $payment->month->format('M Y'),
-                'reference' => 'Bill #' . $payment->id,
-                'debit' => (float)$payment->amount,
-                'credit' => 0.00,
-                'type' => 'bill',
-                'id' => $payment->id,
-            ]);
+            // Debit Entry: Bill Generated (Only for non-security deposit bills)
+            if ($payment->type !== 'security_deposit') {
+                $entries->push([
+                    'date' => $payment->month,
+                    'description' => ucfirst(str_replace('_', ' ', $payment->type)) . ' Billing - ' . $payment->month->format('M Y'),
+                    'reference' => 'Bill #' . $payment->id,
+                    'debit' => (float)$payment->amount,
+                    'credit' => 0.00,
+                    'type' => 'bill',
+                    'id' => $payment->id,
+                ]);
+            }
 
-            // Credit Entries: Allocated Payments via Receiving Vouchers
+            // Credit Entries: Allocated Payments via Receiving Vouchers (Includes security deposit inflows)
             foreach ($payment->receivingVouchers as $voucher) {
+                $typeLabel = ucfirst(str_replace('_', ' ', $payment->type));
                 $entries->push([
                     'date' => $voucher->date,
-                    'description' => 'Payment received via ' . ($voucher->paymentAccount->name ?? 'Voucher'),
+                    'description' => 'Payment received (' . $typeLabel . ') via ' . ($voucher->paymentAccount->name ?? 'Voucher'),
                     'reference' => $voucher->voucher_no,
                     'debit' => 0.00,
                     'credit' => (float)$voucher->pivot->amount_allocated,
@@ -366,6 +368,29 @@ class LedgerController extends Controller
                     'id' => $payment->id,
                 ]);
             }
+        }
+
+        // 1b. Fetch Payment Vouchers (paid payables / payouts / refunds to tenant - Outflow)
+        $payoutVouchers = PaymentVoucher::where('paid_to_type', 'tenant')
+            ->where(function($q) use ($unitId, $unit) {
+                $q->where('unit_id', $unitId);
+                if ($unit->tenant_id) {
+                    $q->orWhere('tenant_id', $unit->tenant_id);
+                }
+            })
+            ->with('paymentAccount')
+            ->get();
+
+        foreach ($payoutVouchers as $pv) {
+            $entries->push([
+                'date' => $pv->date,
+                'description' => 'Refund / Payment Outflow via ' . ($pv->paymentAccount->name ?? 'Payment Voucher') . ($pv->notes ? ' - ' . $pv->notes : ''),
+                'reference' => $pv->voucher_no,
+                'debit' => (float)$pv->amount,
+                'credit' => 0.00,
+                'type' => 'voucher_payout',
+                'id' => $pv->id,
+            ]);
         }
 
         // Sort all entries chronologically

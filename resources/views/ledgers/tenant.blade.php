@@ -248,8 +248,16 @@
                                     <div class="font-medium">{{ $entry['description'] }}</div>
                                 </td>
                                 <td class="px-5 py-3.5 text-xs">
-                                    @if($entry['type'] === 'voucher' && $entry['id'])
-                                        <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline font-mono">
+                                    @if($entry['type'] === 'voucher' && !empty($entry['id']))
+                                        <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                            {{ $entry['reference'] }}
+                                        </a>
+                                    @elseif($entry['type'] === 'bill' && !empty($entry['id']))
+                                        <a href="{{ route('payments.show', $entry['id']) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                            {{ $entry['reference'] }}
+                                        </a>
+                                    @elseif($entry['type'] === 'voucher_payout' && !empty($entry['id']))
+                                        <a href="{{ route('payment-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline font-mono font-semibold">
                                             {{ $entry['reference'] }}
                                         </a>
                                     @else

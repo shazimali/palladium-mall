@@ -246,10 +246,18 @@
                                     <div class="font-medium">{{ $entry['description'] }}</div>
                                 </td>
                                 <td class="px-5 py-3.5 text-xs">
-                                    @if(!empty($entry['model']) && $entry['model'] instanceof \App\Models\ReceivingVoucher)
-                                        <a href="{{ route('receiving-vouchers.show', $entry['model']->id) }}" class="text-brand-500 hover:underline font-mono">
-                                            {{ $entry['voucher_no'] }}
-                                        </a>
+                                    @if(!empty($entry['model']))
+                                        @if($entry['model'] instanceof \App\Models\ReceivingVoucher)
+                                            <a href="{{ route('receiving-vouchers.show', $entry['model']->id) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                                {{ $entry['voucher_no'] }}
+                                            </a>
+                                        @elseif($entry['model'] instanceof \App\Models\PaymentVoucher)
+                                            <a href="{{ route('payment-vouchers.show', $entry['model']->id) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                                {{ $entry['voucher_no'] }}
+                                            </a>
+                                        @else
+                                            <span class="font-mono text-gray-400 dark:text-gray-500">{{ $entry['voucher_no'] ?? '—' }}</span>
+                                        @endif
                                     @else
                                         <span class="font-mono text-gray-400 dark:text-gray-500">{{ $entry['voucher_no'] ?? '—' }}</span>
                                     @endif

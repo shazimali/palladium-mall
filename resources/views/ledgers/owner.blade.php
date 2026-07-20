@@ -121,13 +121,19 @@
                                 <td class="px-5 py-3.5 text-xs font-mono font-semibold">
                                     @if(!empty($entry['type']) && !empty($entry['id']))
                                         @if($entry['type'] === 'payment_voucher')
-                                            <a href="{{ route('payment-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline">
+                                            <a href="{{ route('payment-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline font-semibold">
                                                 {{ $entry['voucher_no'] }}
                                             </a>
                                         @elseif($entry['type'] === 'receiving_voucher')
-                                            <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline">
+                                            <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline font-semibold">
                                                 {{ $entry['voucher_no'] }}
                                             </a>
+                                        @elseif($entry['type'] === 'withdrawal')
+                                            <a href="{{ route('withdrawals.show', $entry['id']) }}" class="text-brand-500 hover:underline font-semibold">
+                                                {{ $entry['voucher_no'] }}
+                                            </a>
+                                        @else
+                                            {{ $entry['voucher_no'] }}
                                         @endif
                                     @else
                                         {{ $entry['voucher_no'] }}

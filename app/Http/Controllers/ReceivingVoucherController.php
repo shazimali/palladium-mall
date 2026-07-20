@@ -268,8 +268,8 @@ class ReceivingVoucherController extends Controller
      */
     public function edit(ReceivingVoucher $receivingVoucher): View
     {
-        if (!auth()->user()->isSuperAdmin()) {
-            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('receiving_vouchers.edit')) {
+            abort(403, 'Unauthorized action. You do not have permission to edit vouchers.');
         }
 
         $units = Unit::with(['tenant', 'otherTenant'])->orderBy('unit_number')->get();
@@ -293,8 +293,8 @@ class ReceivingVoucherController extends Controller
      */
     public function update(Request $request, ReceivingVoucher $receivingVoucher): RedirectResponse
     {
-        if (!auth()->user()->isSuperAdmin()) {
-            abort(403, 'Unauthorized action. Only Super Admin can edit vouchers.');
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('receiving_vouchers.edit')) {
+            abort(403, 'Unauthorized action. You do not have permission to edit vouchers.');
         }
 
         $rules = [
