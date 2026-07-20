@@ -46,17 +46,22 @@
             return this.openSubmenus[key] || false;
         },
         isActive(path) {
-            const current = window.location.pathname;
-            // Exclude sub-paths that represent distinct top-level sidebar items
-            if (path === '/tenants' && current.startsWith('/tenants/pending-documents')) {
-                return false;
+            const currentPath = window.location.pathname;
+            const currentFull = window.location.pathname + window.location.search;
+            if (path.includes('?')) {
+                return currentFull === path || currentFull.startsWith(path);
             }
-            // /reports is a top-level item — only exact match; all /reports/* are their own items
-            if (path === '/reports' && current.startsWith('/reports/')) {
+            if (path === '/reports') {
+                if (currentPath.startsWith('/reports/') || window.location.search.includes('report_type=')) {
+                    return false;
+                }
+            }
+            // Exclude sub-paths that represent distinct top-level sidebar items
+            if (path === '/tenants' && currentPath.startsWith('/tenants/pending-documents')) {
                 return false;
             }
             // Active if exact match OR current path starts with path + '/'
-            return current === path || current.startsWith(path + '/');
+            return currentPath === path || currentPath.startsWith(path + '/');
         }
     }" :class="{
         'w-[290px]': $store.sidebar.isExpanded || $store.sidebar.isMobileOpen || $store.sidebar.isHovered,
