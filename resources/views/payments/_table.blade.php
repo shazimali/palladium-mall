@@ -84,8 +84,7 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors {{ request('search') ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02] border-l-2 border-l-amber-500/70' : '' }}">
                     <td class="px-4 py-3 text-gray-400 align-middle">{{ $payments->firstItem() + $rowIndex - 1 }}</td>
                     <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90 align-middle">
-                        <span
-                            class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-sm font-bold text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                        <span class="unit-badge-lg">
                             {!! $highlight($firstPayment->unit->unit_number) !!}
                         </span>
                     </td>

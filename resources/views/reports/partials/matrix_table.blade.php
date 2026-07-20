@@ -41,8 +41,8 @@
                 @endphp
                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors {{ $isVacant ? 'bg-gray-50/50 dark:bg-gray-900/10 text-gray-400 dark:text-gray-500 italic' : '' }}">
                     <td class="px-2 py-1.5 text-center font-medium">{{ $entry['sr'] }}</td>
-                    <td class="px-2 py-1.5 font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                        <span class="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5">
+                    <td class="px-2 py-1.5 whitespace-nowrap">
+                        <span class="inline-flex items-center rounded-md border border-brand-200 bg-brand-50 px-2 py-0.5 text-sm font-extrabold text-brand-800 dark:border-brand-800/60 dark:bg-brand-950/40 dark:text-brand-300">
                             {{ $entry['flat_no'] }}
                         </span>
                     </td>

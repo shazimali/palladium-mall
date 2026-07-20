@@ -186,8 +186,8 @@
                     @forelse($units as $index => $unit)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                     <td class="px-4 py-3 text-gray-400">{{ $units->firstItem() + $index }}</td>
-                                    <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">
-                                        {{ $unit->unit_number }}
+                                    <td class="px-4 py-3">
+                                        <span class="unit-badge-lg">{{ $unit->unit_number }}</span>
                                     </td>
                                     <td class="px-4 py-3">{{ $unit->floor->name ?? '—' }}</td>
                                     <td class="px-4 py-3">{{ $unit->block->name ?? '—' }}</td>

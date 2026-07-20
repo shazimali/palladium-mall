@@ -109,7 +109,7 @@
                         ] as [$label, $value, $url])
                             <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.02]">
                                 <p class="text-xs text-gray-400 dark:text-gray-500">{{ $label }}</p>
-                                <p class="mt-0.5 text-sm font-medium text-gray-800 dark:text-white/90">{{ $value }}</p>
+                                <p class="mt-0.5 {{ $label === 'Unit Number' ? 'unit-badge-lg' : 'text-sm font-medium text-gray-800 dark:text-white/90' }}">{{ $value }}</p>
                             </div>
                         @endforeach
                     </div>

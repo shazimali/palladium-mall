@@ -139,7 +139,7 @@
                                     <td class="px-4 py-3 text-gray-400">{{ $tenants->firstItem() + $index }}</td>
                                     <td class="px-4 py-3">
                                         @if($tenant->unit)
-                                        <span class="font-bold text-gray-900 dark:text-white text-sm">
+                                        <span class="unit-badge-lg">
                                             {{ $tenant->unit->unit_number }}
                                         </span>
                                         @else

@@ -883,3 +883,11 @@ pre[class*='language-'] {
     margin-right: -60px !important;
   }
 }
+
+/* Flat / Shop Number Badge & Typography Utilities */
+.unit-badge-lg {
+  @apply inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1 text-base font-extrabold text-brand-700 shadow-xs dark:border-brand-800/60 dark:bg-brand-950/40 dark:text-brand-300;
+}
+.unit-number-title {
+  @apply text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight;
+}

@@ -290,9 +290,9 @@
                                             }
                                         }
                                     @endphp
-                                    <div>{{ $unitNumber }}</div>
+                                    <div class="unit-badge-lg">{{ $unitNumber }}</div>
                                     @if($tenantName)
-                                        <div class="text-[11px] text-gray-400 mt-0.5 font-normal">{{ $tenantName }}</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-normal">{{ $tenantName }}</div>
                                     @endif
                                 @elseif($voucher->received_from_type === 'owner')
                                     <div>—</div>

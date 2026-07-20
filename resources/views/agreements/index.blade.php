@@ -73,8 +73,7 @@
                                 {{ $agreement->tenant->name }}
                             </td>
                             <td class="px-4 py-3">
-                                <span
-                                    class="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                                <span class="unit-badge-lg">
                                     {{ $agreement->unit->unit_number }}
                                 </span>
                             </td>
