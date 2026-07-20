@@ -326,23 +326,6 @@ class LedgerController extends Controller
             ->orderBy('month', 'asc')
             ->get();
 
-        // 2. Fetch all Payment Vouchers (Refunds/Payouts) for this unit
-        $refunds = \App\Models\PaymentVoucher::where('unit_id', $unitId)
-            ->where('paid_to_type', 'tenant')
-            ->with('paymentAccount')
-            ->get();
-
-        foreach ($refunds as $refund) {
-            $entries->push([
-                'date' => $refund->date,
-                'description' => 'Security Deposit Refund (' . ($refund->paymentAccount->name ?? 'Voucher') . ')',
-                'reference' => $refund->voucher_no,
-                'debit' => (float)$refund->amount,
-                'credit' => 0.00,
-                'type' => 'refund',
-                'id' => $refund->id,
-            ]);
-        }
 
         foreach ($payments as $payment) {
             // Debit Entry: Bill Generated
