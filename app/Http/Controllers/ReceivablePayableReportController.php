@@ -272,6 +272,13 @@ class ReceivablePayableReportController extends Controller
                     $rvQuery->where('date', '<=', $dateTo);
                 $totalReceived = (float) $rvQuery->sum('amount');
 
+                $grvQuery = GeneralReceivingVoucher::where('landlord_id', $landlord->id);
+                if ($dateFrom)
+                    $grvQuery->where('date', '>=', $dateFrom);
+                if ($dateTo)
+                    $grvQuery->where('date', '<=', $dateTo);
+                $totalReceived += (float) $grvQuery->sum('amount');
+
                 $netReceivable = round($openingBalance - $totalReceived, 2);
 
                 if ($netReceivable > 0.01) {

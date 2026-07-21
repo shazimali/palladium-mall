@@ -261,6 +261,10 @@
                                             <a href="{{ route('receiving-vouchers.show', $entry['model']->id) }}" class="text-brand-500 hover:underline font-mono font-semibold">
                                                 {{ $entry['voucher_no'] }}
                                             </a>
+                                        @elseif($entry['model'] instanceof \App\Models\GeneralReceivingVoucher)
+                                            <a href="{{ route('general-receiving-vouchers.show', $entry['model']->id) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                                {{ $entry['voucher_no'] }}
+                                            </a>
                                         @elseif($entry['model'] instanceof \App\Models\PaymentVoucher)
                                             <a href="{{ route('payment-vouchers.show', $entry['model']->id) }}" class="text-brand-500 hover:underline font-mono font-semibold">
                                                 {{ $entry['voucher_no'] }}

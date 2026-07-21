@@ -115,6 +115,14 @@ class PartyLedgerController extends Controller
                 $createdAt = $item['created_at'] instanceof Carbon ? $item['created_at'] : Carbon::parse($item['created_at']);
                 return $date->format('Y-m-d') . '_' . $createdAt->format('Y-m-d H:i:s');
             })->values();
+
+            // Calculate running balance per row
+            $runningBalance = 0.0;
+            $ledgerEntries = $ledgerEntries->map(function ($entry) use (&$runningBalance) {
+                $runningBalance += $entry['debit'] - $entry['credit'];
+                $entry['balance'] = $runningBalance;
+                return $entry;
+            });
         }
 
         return view('ledgers.party', [
@@ -237,6 +245,14 @@ class PartyLedgerController extends Controller
             $createdAt = $item['created_at'] instanceof Carbon ? $item['created_at'] : Carbon::parse($item['created_at']);
             return $date->format('Y-m-d') . '_' . $createdAt->format('Y-m-d H:i:s');
         })->values();
+
+        // Calculate running balance per row
+        $runningBalance = 0.0;
+        $ledgerEntries = $ledgerEntries->map(function ($entry) use (&$runningBalance) {
+            $runningBalance += $entry['debit'] - $entry['credit'];
+            $entry['balance'] = $runningBalance;
+            return $entry;
+        });
 
         return view('ledgers.party_print', [
             'selectedParty' => $selectedParty,

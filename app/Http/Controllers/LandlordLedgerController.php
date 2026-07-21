@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Landlord;
 use App\Models\ReceivingVoucher;
+use App\Models\GeneralReceivingVoucher;
 use App\Exports\LandlordLedgerExport;
 use Barryvdh\Dompdf\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
@@ -143,6 +144,7 @@ class LandlordLedgerController extends Controller
 
         $columns = [
             ['key' => 'date_str',        'label' => 'Date'],
+            ['key' => 'unit_number',     'label' => 'Flat/Shop'],
             ['key' => 'description',     'label' => 'Description'],
             ['key' => 'voucher_no',      'label' => 'Voucher / Ref #', 'td_class' => 'mono'],
             ['key' => 'debit',           'label' => 'Debit (Payable)', 'type' => 'debit',   'class' => 'text-right'],
@@ -177,18 +179,29 @@ class LandlordLedgerController extends Controller
      */
     private function getLandlordLedgerData($landlordId, $dateFrom, $dateTo): array
     {
-        $landlord = Landlord::with(['ownerships'])->findOrFail($landlordId);
+        $landlord = Landlord::with(['ownerships.unit'])->findOrFail($landlordId);
         $entries = collect();
 
         // 1. Calculate opening unit value debt (credit_amount sum on ownership records)
         $openingBalance = (float) $landlord->ownerships->sum('credit_amount');
 
-        // 2. Prior payments (all-time ReceivingVouchers prior to dateFrom + all-time paid extra_payments prior to dateFrom)
+        // Landlord's owned units summary string (e.g. "101, 102")
+        $landlordUnitsStr = $landlord->ownerships
+            ->map(fn($o) => $o->unit?->unit_number)
+            ->filter()
+            ->unique()
+            ->implode(', ');
+
+        // 2. Prior payments (all-time ReceivingVouchers + GeneralReceivingVouchers prior to dateFrom + all-time paid extra_payments prior to dateFrom)
         $priorPaid = 0.00;
         $priorCharged = 0.00;
         if ($dateFrom) {
             $priorPaid += (float) ReceivingVoucher::where('received_from_type', 'owner')
                 ->where('owner_id', $landlordId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
+
+            $priorPaid += (float) GeneralReceivingVoucher::where('landlord_id', $landlordId)
                 ->where('date', '<', $dateFrom)
                 ->sum('amount');
 
@@ -218,6 +231,7 @@ class LandlordLedgerController extends Controller
             'debit' => $carriedForwardBalance,
             'credit' => 0.00,
             'is_opening' => true,
+            'unit_number' => $landlordUnitsStr ?: '—',
         ]);
 
         // 3. Current period payments (owner receiving vouchers)
@@ -230,7 +244,7 @@ class LandlordLedgerController extends Controller
             ->get();
 
         foreach ($payments as $v) {
-            $unitNo = $v->payments->first()?->unit?->unit_number ?? $v->tenant?->unit?->unit_number;
+            $unitNo = $v->payments->first()?->unit?->unit_number ?? $v->tenant?->unit?->unit_number ?? $landlordUnitsStr;
             $entries->push([
                 'date' => $v->date,
                 'voucher_no' => $v->voucher_no,
@@ -240,7 +254,28 @@ class LandlordLedgerController extends Controller
                 'credit' => (float)$v->amount,
                 'is_opening' => false,
                 'model' => $v,
-                'unit_number' => $unitNo,
+                'unit_number' => $unitNo ?: '—',
+            ]);
+        }
+
+        // 3b. Current period General Receiving Vouchers
+        $grvPayments = GeneralReceivingVoucher::where('landlord_id', $landlordId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->orderBy('date', 'asc')
+            ->get();
+
+        foreach ($grvPayments as $grv) {
+            $entries->push([
+                'date' => $grv->date,
+                'voucher_no' => $grv->voucher_no,
+                'type' => 'General Receipt',
+                'description' => 'General Receipt: ' . $grv->voucher_no . ($grv->notes ? ' - ' . $grv->notes : ''),
+                'debit' => 0.00,
+                'credit' => (float)$grv->amount,
+                'is_opening' => false,
+                'model' => $grv,
+                'unit_number' => $landlordUnitsStr ?: '—',
             ]);
         }
 
@@ -261,7 +296,7 @@ class LandlordLedgerController extends Controller
 
         foreach ($extraPayments as $ep) {
             $v = $ep->receivingVouchers->first();
-            $unitNo = $ep->unit?->unit_number;
+            $unitNo = $ep->unit?->unit_number ?? $landlordUnitsStr;
             $desc = 'Extra Payment Paid' . ($unitNo ? ' (Unit ' . $unitNo . ')' : '') . ': ' . $ep->notes;
             $entries->push([
                 'date' => $ep->paid_at ? Carbon::parse($ep->paid_at) : $ep->month,
@@ -272,7 +307,7 @@ class LandlordLedgerController extends Controller
                 'credit' => (float)$ep->amount_paid,
                 'is_opening' => false,
                 'model' => $v,
-                'unit_number' => $unitNo,
+                'unit_number' => $unitNo ?: '—',
             ]);
         }
 
@@ -286,6 +321,7 @@ class LandlordLedgerController extends Controller
             ->get();
 
         foreach ($payouts as $pv) {
+            $unitNo = $pv->unit?->unit_number ?? $landlordUnitsStr;
             $entries->push([
                 'date' => $pv->date,
                 'voucher_no' => $pv->voucher_no,
@@ -295,7 +331,7 @@ class LandlordLedgerController extends Controller
                 'credit' => 0.00,
                 'is_opening' => false,
                 'model' => $pv,
-                'unit_number' => $pv->unit?->unit_number,
+                'unit_number' => $unitNo ?: '—',
             ]);
         }
 
@@ -324,11 +360,14 @@ class LandlordLedgerController extends Controller
             ->where('owner_id', $landlordId)
             ->sum('amount');
 
+        $allTimeGrvPaid = (float) GeneralReceivingVoucher::where('landlord_id', $landlordId)
+            ->sum('amount');
+
         $allTimeExtraPaid = (float) \App\Models\Payment::where('landlord_id', $landlordId)
             ->where('type', 'extra_payment')
             ->sum('amount_paid');
 
-        $allTimePaid += $allTimeExtraPaid;
+        $allTimePaid += $allTimeExtraPaid + $allTimeGrvPaid;
 
         $allTimePayouts = (float) \App\Models\PaymentVoucher::where('paid_to_type', 'landlord')
             ->where('landlord_id', $landlordId)

@@ -91,6 +91,8 @@
                 <div class="text-gray-450 font-medium">
                     @if($voucher->received_from_type === 'account')
                         Received From Account:
+                    @elseif($voucher->received_from_type === 'landlord')
+                        Received From Landlord:
                     @else
                         Received From Party:
                     @endif
@@ -98,6 +100,8 @@
                 <div class="md:col-span-2 font-bold text-gray-900 text-base">
                     @if($voucher->received_from_type === 'account')
                         {{ $voucher->fromPaymentAccount ? $voucher->fromPaymentAccount->name : 'Payment Account' }}
+                    @elseif($voucher->received_from_type === 'landlord')
+                        {{ $voucher->landlord ? $voucher->landlord->name : 'N/A' }}
                     @else
                         {{ $voucher->party ? $voucher->party->name : 'N/A' }}
                     @endif

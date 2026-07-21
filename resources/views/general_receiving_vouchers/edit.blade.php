@@ -14,6 +14,8 @@
                     receivedFromType: '{{ old('received_from_type', $voucher->received_from_type ?? 'party') }}',
                     amount: '{{ old('amount', $voucher->amount) }}',
                     displayAmount: '',
+                    landlordReceivables: null,
+                    landlordLoading: false,
                     formatAmount(val) {
                         let clean = val.replace(/[^\d.]/g, '');
                         let parts = clean.split('.');
@@ -24,12 +26,31 @@
                         this.displayAmount = parts.join('.');
                         this.amount = clean;
                     },
+                    fmt(n) {
+                        return 'Rs. ' + Number(n).toLocaleString('en-PK', { maximumFractionDigits: 0 });
+                    },
+                    async fetchLandlordReceivables(landlordId) {
+                        if (!landlordId) { this.landlordReceivables = null; return; }
+                        this.landlordLoading = true;
+                        this.landlordReceivables = null;
+                        try {
+                            const res = await fetch(`{{ route('ajax.landlord-receivables') }}?landlord_id=${landlordId}`);
+                            this.landlordReceivables = await res.json();
+                        } catch(e) {
+                            this.landlordReceivables = null;
+                        }
+                        this.landlordLoading = false;
+                    },
                     init() {
                         if (this.amount) {
                             this.formatAmount(String(this.amount));
                         }
+                        @if(old('received_from_type', $voucher->received_from_type) === 'landlord')
+                            this.fetchLandlordReceivables('{{ old('landlord_id', $voucher->landlord_id) }}');
+                        @endif
                     }
-                }">
+                }"
+                @landlord-selected.window="fetchLandlordReceivables($event.detail.id)">
                 @csrf
                 @method('PUT')
 
@@ -44,6 +65,7 @@
                         <label class="{{ $label }}">Received From Type <span class="text-red-500">*</span></label>
                         <select name="received_from_type" x-model="receivedFromType" class="{{ $input }}" required>
                             <option value="party" {{ old('received_from_type', $voucher->received_from_type ?? 'party') === 'party' ? 'selected' : '' }}>Party / Vendor Head</option>
+                            <option value="landlord" {{ old('received_from_type', $voucher->received_from_type) === 'landlord' ? 'selected' : '' }}>Landlord / Property Owner</option>
                             <option value="account" {{ old('received_from_type', $voucher->received_from_type) === 'account' ? 'selected' : '' }}>Payment Account (Inter-Account Transfer In)</option>
                         </select>
                     </div>
@@ -149,6 +171,177 @@
                             </div>
                         </div>
                         @error('party_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Searchable Landlord Dropdown (when receivedFromType === 'landlord') --}}
+                    <div class="sm:col-span-2" x-show="receivedFromType === 'landlord'" x-transition x-cloak
+                         x-data="{
+                            open: false,
+                            search: '',
+                            selectedId: '{{ old('landlord_id', $voucher->landlord_id) }}',
+                            selectedLabel: '{{ old('landlord_name', $voucher->landlord?->name) }}',
+                            highlightedIndex: -1,
+                            landlords: [
+                                @foreach($landlords as $landlord)
+                                    { id: {{ $landlord->id }}, name: '{{ addslashes($landlord->name) }}', phone: '{{ addslashes($landlord->phone ?? '—') }}' },
+                                @endforeach
+                            ],
+                            get filteredLandlords() {
+                                if (!this.search) return this.landlords;
+                                let q = this.search.toLowerCase();
+                                return this.landlords.filter(l => l.name.toLowerCase().includes(q) || l.phone.toLowerCase().includes(q));
+                            },
+                            selectLandlord(l) {
+                                this.selectedId = l.id;
+                                this.selectedLabel = l.name;
+                                this.open = false;
+                                this.search = '';
+                                this.highlightedIndex = -1;
+                                $dispatch('landlord-selected', { id: l.id });
+                            },
+                            moveHighlight(direction) {
+                                let list = this.filteredLandlords;
+                                if (list.length === 0) return;
+                                this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                            },
+                            selectHighlighted() {
+                                let list = this.filteredLandlords;
+                                if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                                    this.selectLandlord(list[this.highlightedIndex]);
+                                }
+                            }
+                         }">
+                        <label class="{{ $label }}">Landlord <span class="text-red-500">*</span></label>
+                        <input type="hidden" name="landlord_id" :value="selectedId">
+
+                        <div class="relative">
+                            <div tabindex="0"
+                                 @click="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInputEdit.focus()) }"
+                                 @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInputEdit.focus()) }"
+                                 @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInputEdit.focus()) }"
+                                 @click.outside="open = false"
+                                 class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700">
+                                <span x-text="selectedLabel || 'Select Landlord'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
+                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+
+                            <div x-show="open"
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="opacity-0 transform scale-95"
+                                 x-transition:enter-end="opacity-100 transform scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="opacity-100 transform scale-100"
+                                 x-transition:leave-end="opacity-0 transform scale-95"
+                                 class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                                 style="display: none;">
+                                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                    <input x-ref="landlordSearchInputEdit"
+                                           x-model="search"
+                                           @keydown.arrow-down.prevent="moveHighlight(1)"
+                                           @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                           @keydown.enter.prevent="selectHighlighted()"
+                                           @keydown.escape.prevent="open = false; highlightedIndex = -1"
+                                           type="text"
+                                           placeholder="Type to search landlord..."
+                                           class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                </div>
+                                <ul class="max-h-60 overflow-y-auto mt-1">
+                                    <template x-if="filteredLandlords.length === 0">
+                                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching landlords found.</li>
+                                    </template>
+                                    <template x-for="(l, index) in filteredLandlords" :key="l.id">
+                                        <li @click="selectLandlord(l)"
+                                            @mouseenter="highlightedIndex = index"
+                                            :class="{
+                                                'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                            }"
+                                            class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
+                                            <span x-text="l.name" class="font-medium"></span>
+                                            <span x-text="l.phone" class="text-[10px] text-gray-400"></span>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                        @error('landlord_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Landlord Pending Receivables Panel --}}
+                    <div class="sm:col-span-2" x-show="receivedFromType === 'landlord'" x-cloak>
+                        <div x-show="landlordLoading" class="flex items-center gap-2 py-3 text-sm text-gray-500 dark:text-gray-400">
+                            <svg class="h-4 w-4 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                            Loading receivables...
+                        </div>
+
+                        <div x-show="!landlordLoading && !landlordReceivables"
+                             class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-4 px-5 text-xs text-gray-400 dark:text-gray-600 text-center">
+                            Select a landlord above to view their pending receivables.
+                        </div>
+
+                        <div x-show="!landlordLoading && landlordReceivables" x-transition>
+                            <div class="rounded-xl border border-amber-200 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-950/10 p-4">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h5 class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                                        <span>⚠️</span> Pending Receivables
+                                    </h5>
+                                    <a x-bind:href="landlordReceivables ? `{{ url('landlord-ledgers') }}?landlord_id=${landlordReceivables.landlord_id ?? ''}` : '#'"
+                                       class="text-[10px] text-brand-500 hover:underline" target="_blank">View Ledger →</a>
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-3 mb-4">
+                                    <div class="rounded-lg bg-white dark:bg-gray-900 p-3 text-center shadow-theme-xs">
+                                        <p class="text-[10px] uppercase font-bold text-gray-400">Total Owed</p>
+                                        <p class="mt-0.5 text-sm font-bold font-mono text-gray-800 dark:text-white" x-text="landlordReceivables ? fmt(landlordReceivables.total_owed) : ''"></p>
+                                    </div>
+                                    <div class="rounded-lg bg-white dark:bg-gray-900 p-3 text-center shadow-theme-xs">
+                                        <p class="text-[10px] uppercase font-bold text-gray-400">Total Received</p>
+                                        <p class="mt-0.5 text-sm font-bold font-mono text-green-600" x-text="landlordReceivables ? fmt(landlordReceivables.total_received) : ''"></p>
+                                    </div>
+                                    <div class="rounded-lg bg-white dark:bg-gray-900 p-3 text-center shadow-theme-xs">
+                                        <p class="text-[10px] uppercase font-bold text-gray-400">Pending Balance</p>
+                                        <p class="mt-0.5 text-sm font-bold font-mono"
+                                           :class="landlordReceivables && landlordReceivables.pending_balance > 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'"
+                                           x-text="landlordReceivables ? fmt(landlordReceivables.pending_balance) : ''"></p>
+                                    </div>
+                                </div>
+
+                                <template x-if="landlordReceivables && landlordReceivables.units && landlordReceivables.units.length > 0">
+                                    <div>
+                                        <p class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-2">Unit-wise Breakdown</p>
+                                        <div class="overflow-hidden rounded-lg border border-amber-200 dark:border-amber-800/30">
+                                            <table class="w-full text-xs">
+                                                <thead class="bg-amber-100/60 dark:bg-amber-900/20 text-gray-600 dark:text-gray-400">
+                                                    <tr>
+                                                        <th class="px-3 py-2 text-left font-semibold">Unit</th>
+                                                        <th class="px-3 py-2 text-right font-semibold">Total Value</th>
+                                                        <th class="px-3 py-2 text-right font-semibold">Received</th>
+                                                        <th class="px-3 py-2 text-right font-semibold">Remaining</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-amber-100 dark:divide-amber-800/20 bg-white dark:bg-gray-900">
+                                                    <template x-for="unit in landlordReceivables.units" :key="unit.unit_number">
+                                                        <tr>
+                                                            <td class="px-3 py-2 font-medium text-gray-800 dark:text-white/90" x-text="unit.unit_number"></td>
+                                                            <td class="px-3 py-2 text-right font-mono text-gray-600 dark:text-gray-400" x-text="fmt(unit.total_amount)"></td>
+                                                            <td class="px-3 py-2 text-right font-mono text-green-600" x-text="fmt(unit.received_amount)"></td>
+                                                            <td class="px-3 py-2 text-right font-mono font-bold"
+                                                                :class="unit.credit_amount > 0 ? 'text-red-500' : 'text-gray-400'"
+                                                                x-text="fmt(unit.credit_amount)"></td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
                     </div>
 
                     {{-- Source Payment Account (when receivedFromType === 'account') --}}

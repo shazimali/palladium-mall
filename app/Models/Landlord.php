@@ -79,8 +79,16 @@ class Landlord extends Model
     }
 
     /**
+     * General receiving vouchers received from this landlord.
+     */
+    public function generalReceivingVouchers(): HasMany
+    {
+        return $this->hasMany(GeneralReceivingVoucher::class)->orderBy('date', 'desc');
+    }
+
+    /**
      * Calculate current outstanding balance of the landlord.
-     * Outstanding Balance = Total Value Owed - Vouchers Paid - Tenant Extra Payments Paid + Mall Payouts to Landlord.
+     * Outstanding Balance = Total Value Owed - Vouchers Paid - GRV Paid - Tenant Extra Payments Paid + Mall Payouts to Landlord.
      */
     public function currentBalance(): float
     {
@@ -88,11 +96,12 @@ class Landlord extends Model
         $vouchersPaid = (float) ReceivingVoucher::where('received_from_type', 'owner')
             ->where('owner_id', $this->id)
             ->sum('amount');
+        $grvPaid = (float) $this->generalReceivingVouchers()->sum('amount');
         $extraPaid = (float) Payment::where('landlord_id', $this->id)
             ->where('type', 'extra_payment')
             ->sum('amount_paid');
         $payouts = (float) $this->payouts()->sum('amount');
 
-        return $opening - $vouchersPaid - $extraPaid + $payouts;
+        return $opening - $vouchersPaid - $grvPaid - $extraPaid + $payouts;
     }
 }

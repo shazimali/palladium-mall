@@ -33,6 +33,9 @@
             if ($voucher->received_from_type === 'account') {
                 $receivedFrom = $voucher->fromPaymentAccount ? $voucher->fromPaymentAccount->name : 'Payment Account';
                 $receivedFromLabel = 'Received From Account';
+            } elseif ($voucher->received_from_type === 'landlord') {
+                $receivedFrom = $voucher->landlord ? $voucher->landlord->name : 'N/A';
+                $receivedFromLabel = 'Received From Landlord';
             } else {
                 $receivedFrom = $voucher->party ? $voucher->party->name : 'N/A';
                 $receivedFromLabel = 'Received From Party';

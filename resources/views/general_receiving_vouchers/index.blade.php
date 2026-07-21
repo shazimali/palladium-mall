@@ -32,7 +32,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'party_id', 'payment_account_id', 'start_date', 'end_date']))
+                @if(request()->anyFilled(['search', 'party_id', 'landlord_id', 'payment_account_id', 'start_date', 'end_date']))
                     <a href="{{ route('general-receiving-vouchers.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
                         Clear
@@ -53,7 +53,7 @@
         <!-- Filters & Search -->
         <div
             class="my-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <form action="{{ route('general-receiving-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+            <form action="{{ route('general-receiving-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
 
                 <!-- Search Input -->
                 <div class="relative col-span-1 lg:col-span-2">
@@ -62,7 +62,7 @@
                             <path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
                         </svg>
                     </span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search voucher #, ref..."
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search voucher #, landlord, party..."
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
@@ -74,6 +74,19 @@
                         @foreach($parties as $party)
                             <option value="{{ $party->id }}" {{ request('party_id') == $party->id ? 'selected' : '' }}>
                                 {{ $party->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Landlord Filter -->
+                <div>
+                    <select name="landlord_id" onchange="this.form.submit()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">All Landlords</option>
+                        @foreach($landlords as $landlord)
+                            <option value="{{ $landlord->id }}" {{ request('landlord_id') == $landlord->id ? 'selected' : '' }}>
+                                {{ $landlord->name }}
                             </option>
                         @endforeach
                     </select>
@@ -112,7 +125,7 @@
                     <tr>
                         <th class="px-4 py-3">Voucher #</th>
                         <th class="px-4 py-3">Date</th>
-                        <th class="px-4 py-3">Party Head</th>
+                        <th class="px-4 py-3">Received From</th>
                         <th class="px-4 py-3">Payment Account</th>
                         <th class="px-4 py-3">Reference</th>
                         <th class="px-4 py-3 text-right">Amount</th>
@@ -131,6 +144,8 @@
                             <td class="px-4 py-3 font-semibold">
                                 @if($voucher->received_from_type === 'account')
                                     <span class="text-blue-600 dark:text-blue-400">🏦 Transfer from {{ $voucher->fromPaymentAccount->name ?? 'Account' }}</span>
+                                @elseif($voucher->received_from_type === 'landlord' || $voucher->landlord_id)
+                                    <span class="text-amber-600 dark:text-amber-400">🏠 Landlord: {{ $voucher->landlord ? $voucher->landlord->name : 'N/A' }}</span>
                                 @else
                                     👤 {{ $voucher->party ? $voucher->party->name : 'N/A' }}
                                 @endif

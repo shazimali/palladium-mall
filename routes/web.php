@@ -259,6 +259,7 @@ Route::middleware('auth')->group(function () {
     Route::get('ajax/owner-pending-balance', [ReceivablePayableReportController::class, 'getOwnerBalance'])->name('ajax.owner-pending-balance');
     Route::get('ajax/tenant-security-deposits', [App\Http\Controllers\PaymentVoucherController::class, 'getTenantSecurityDeposits'])->name('ajax.tenant-security-deposits');
     Route::get('ajax/landlord-pending-balance', [App\Http\Controllers\PaymentVoucherController::class, 'getLandlordBalance'])->name('ajax.landlord-pending-balance');
+    Route::get('ajax/landlord-receivables', [App\Http\Controllers\GeneralReceivingVoucherController::class, 'getLandlordReceivables'])->name('ajax.landlord-receivables');
 
     // Ledgers
     Route::middleware('permission:ledgers.view')->group(function () {

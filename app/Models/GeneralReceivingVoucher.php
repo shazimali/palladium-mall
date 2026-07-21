@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Traits\LogsActivity;
+use App\Models\Landlord;
 
 class GeneralReceivingVoucher extends Model
 {
@@ -18,6 +19,7 @@ class GeneralReceivingVoucher extends Model
         'amount',
         'received_from_type',
         'party_id',
+        'landlord_id',
         'payment_method',
         'payment_account_id',
         'from_payment_account_id',
@@ -50,6 +52,11 @@ class GeneralReceivingVoucher extends Model
     public function party(): BelongsTo
     {
         return $this->belongsTo(Party::class)->withTrashed();
+    }
+
+    public function landlord(): BelongsTo
+    {
+        return $this->belongsTo(Landlord::class)->withTrashed();
     }
 
     public function paymentAccount(): BelongsTo
