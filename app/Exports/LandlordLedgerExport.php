@@ -31,7 +31,9 @@ class LandlordLedgerExport implements
     {
         return $this->entries->map(fn($e) => [
             'Date' => $e['date'] ? (\Carbon\Carbon::parse($e['date'])->format('d M Y')) : '—',
+            'Flat/Shop' => !empty($e['unit_number']) ? $e['unit_number'] : '—',
             'Description' => $e['description'] ?? '—',
+            'Voucher / Ref #' => $e['voucher_no'] ?? '—',
             'Debit (Payable Rs.)' => $e['debit'] > 0 ? number_format($e['debit'], 2) : '—',
             'Credit (Paid Rs.)' => $e['credit'] > 0 ? number_format($e['credit'], 2) : '—',
             'Running Balance (Rs.)' => number_format($e['running_balance'], 2)
@@ -42,7 +44,9 @@ class LandlordLedgerExport implements
     {
         return [
             'Date',
+            'Flat/Shop',
             'Description',
+            'Voucher / Ref #',
             'Debit (Payable Rs.)',
             'Credit (Paid Rs.)',
             'Running Balance (Rs.)'
@@ -53,10 +57,12 @@ class LandlordLedgerExport implements
     {
         return [
             'A' => 16,
-            'B' => 45,
-            'C' => 20,
+            'B' => 18,
+            'C' => 45,
             'D' => 20,
-            'E' => 22,
+            'E' => 20,
+            'F' => 20,
+            'G' => 22,
         ];
     }
 
