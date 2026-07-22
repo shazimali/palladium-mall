@@ -1,16 +1,16 @@
 @extends('layouts.app')
- 
+
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Edit Payment Account" />
- 
+    <x-common.page-breadcrumb pageTitle="Edit Cash & Bank Account" />
+
     <div class="mx-auto max-w-3xl">
-        <x-common.component-card title="Edit Payment Account" desc="Update details for {{ $paymentAccount->name }}">
+        <x-common.component-card title="Edit Cash & Bank Account" desc="Update details for {{ $paymentAccount->name }}">
             <form action="{{ route('payment-accounts.update', $paymentAccount) }}" method="POST">
                 @csrf
                 @method('PUT')
- 
+
                 @include('payment_accounts._form')
- 
+
                 {{-- Form Actions --}}
                 <div class="mt-6 flex items-center justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
                     <a href="{{ route('payment-accounts.index') }}"

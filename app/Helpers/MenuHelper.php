@@ -191,7 +191,7 @@ class MenuHelper
         if (auth()->check() && $user->can('payment_accounts.view')) {
             $mainItems[] = [
                 'icon' => 'task',
-                'name' => 'Payment Accounts',
+                'name' => 'Cash & Bank Accounts',
                 'path' => '/payment-accounts',
             ];
         }

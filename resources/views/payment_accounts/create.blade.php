@@ -1,15 +1,15 @@
 @extends('layouts.app')
- 
+
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Add New Payment Account" />
- 
+    <x-common.page-breadcrumb pageTitle="Add Cash & Bank Account" />
+
     <div class="mx-auto max-w-3xl">
-        <x-common.component-card title="Payment Account Details" desc="Provide information to register a new collection account">
+        <x-common.component-card title="" desc="">
             <form action="{{ route('payment-accounts.store') }}" method="POST">
                 @csrf
- 
+
                 @include('payment_accounts._form')
- 
+
                 {{-- Form Actions --}}
                 <div class="mt-6 flex items-center justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
                     <a href="{{ route('payment-accounts.index') }}"

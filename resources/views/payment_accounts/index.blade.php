@@ -1,7 +1,7 @@
 @extends('layouts.app')
  
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Payment Accounts" />
+    <x-common.page-breadcrumb pageTitle="Cash & Bank Accounts" />
  
     {{-- Flash Messages --}}
     @if(session('success'))
@@ -16,7 +16,7 @@
         </div>
     @endif
  
-    <x-common.component-card title="All Payment Accounts" desc="Manage cash points, banks, and mobile wallets used for collections">
+    <x-common.component-card title="" desc="">
  
         {{-- Top bar --}}
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
