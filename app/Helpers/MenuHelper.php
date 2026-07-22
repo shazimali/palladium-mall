@@ -173,7 +173,7 @@ class MenuHelper
                 $voucherSubItems[] = ['name' => 'General Receiving Vouchers', 'path' => '/general-receiving-vouchers'];
             }
             if ($user->can('payment_vouchers.view')) {
-                $voucherSubItems[] = ['name' => 'Payment Vouchers', 'path' => '/payment-vouchers'];
+                $voucherSubItems[] = ['name' => 'Paid Vouchers', 'path' => '/payment-vouchers'];
             }
             if ($user->can('expenses.view')) {
                 $voucherSubItems[] = ['name' => 'Expense Vouchers', 'path' => '/expense-vouchers'];

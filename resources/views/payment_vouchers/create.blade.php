@@ -3,12 +3,12 @@
 @section('content')
     <div class="mx-auto max-w-3xl px-4 py-6">
         <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-            <a href="{{ route('payment-vouchers.index') }}" class="hover:text-brand-500">Payment Vouchers</a>
+            <a href="{{ route('payment-vouchers.index') }}" class="hover:text-brand-500">Paid Vouchers</a>
             <span>/</span>
-            <span class="text-gray-800 dark:text-white/90">New Payment Voucher</span>
+            <span class="text-gray-800 dark:text-white/90">New Paid Voucher</span>
         </div>
 
-        <x-common.component-card title="Record Payment Voucher" desc="Record a payout from mall accounts to a managing owner/partner, a tenant (security deposit refund), or a miscellaneous recipient">
+        <x-common.component-card title="" desc="">
             <form action="{{ route('payment-vouchers.store') }}" method="POST" class="space-y-6"
                 @submit.prevent="handleSubmit($event)"
                 x-data="{ 

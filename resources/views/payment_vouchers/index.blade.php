@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Payment Vouchers" />
+    <x-common.page-breadcrumb pageTitle="Paid Vouchers" />
 
     {{-- Flash Messages --}}
     @if(session('success'))
@@ -51,7 +51,7 @@
         </div>
     </div>
 
-    <x-common.component-card title="Payment Vouchers List" desc="Manage cash/bank outflows paid out to partners, owners, or other miscellaneous payees">
+    <x-common.component-card title="" desc="">
 
         {{-- Top bar --}}
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -62,7 +62,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'paid_to_type', 'is_advance', 'payment_method', 'start_date', 'end_date']))
+                @if(request()->anyFilled(['search', 'paid_to_type', 'payment_account_id', 'is_advance', 'payment_method', 'start_date', 'end_date']))
                     <a href="{{ route('payment-vouchers.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
                         Clear Filters
@@ -74,7 +74,7 @@
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        Create Payment Voucher
+                        Create Paid Voucher
                     </a>
                 @endif
             </div>
@@ -82,14 +82,14 @@
 
         <!-- Filters & Search Form -->
         <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <form action="{{ route('payment-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-6 items-end">
+            <form action="{{ route('payment-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-7 items-end">
                 @php
                     $filterInput = 'dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
                     $filterLabel = 'mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400';
                 @endphp
 
                 <!-- Search Input -->
-                <div class="sm:col-span-2 relative">
+                <div class="sm:col-span-2 lg:col-span-2 relative">
                     <label class="{{ $filterLabel }}">Search Voucher / Details</label>
                     <div class="relative">
                         <span class="absolute -translate-y-1/2 pointer-events-none left-3.5 top-1/2">
@@ -115,13 +115,16 @@
                     </select>
                 </div>
 
-                <!-- Is Advance -->
+                <!-- Payment Account Filter -->
                 <div>
-                    <label class="{{ $filterLabel }}">Advance Status</label>
-                    <select name="is_advance" class="{{ $filterInput }}">
-                        <option value="">All</option>
-                        <option value="1" {{ request('is_advance') === '1' ? 'selected' : '' }}>Advance Only</option>
-                        <option value="0" {{ request('is_advance') === '0' ? 'selected' : '' }}>Standard Only</option>
+                    <label class="{{ $filterLabel }}">Payment Account</label>
+                    <select name="payment_account_id" class="{{ $filterInput }}">
+                        <option value="">All Accounts</option>
+                        @foreach($paymentAccounts as $account)
+                            <option value="{{ $account->id }}" {{ request('payment_account_id') == $account->id ? 'selected' : '' }}>
+                                {{ $account->name }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -138,8 +141,8 @@
                 </div>
 
                 <!-- Filter Action Button -->
-                <div class="sm:col-span-1 md:col-span-6 flex justify-end">
-                    <button type="submit" class="w-full sm:w-auto px-6 flex justify-center items-center h-10 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-200 transition-colors">
+                <div>
+                    <button type="submit" class="w-full sm:w-auto px-6 flex justify-center items-center h-10 rounded-lg bg-brand-500 hover:bg-brand-600  text-sm font-semibold text-white dark:text-white transition-colors">
                         Apply Filters
                     </button>
                 </div>

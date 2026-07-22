@@ -41,8 +41,8 @@ class Owner extends Model
     public function totalIncomeDue(): float
     {
         $tenantIncome = (float) ReceivingVoucher::where('received_from_type', 'tenant')->sum('amount');
-        $partyIncome  = (float) GeneralReceivingVoucher::sum('amount');
-        $totalIncome  = $tenantIncome + $partyIncome;
+        $partyIncome = (float) GeneralReceivingVoucher::sum('amount');
+        $totalIncome = $tenantIncome + $partyIncome;
 
         return round($totalIncome * ((float) $this->partnership_percentage / 100), 2);
     }
@@ -54,11 +54,11 @@ class Owner extends Model
     public function totalProfitShare(): float
     {
         $tenantIncome = (float) ReceivingVoucher::where('received_from_type', 'tenant')->sum('amount');
-        $partyIncome  = (float) GeneralReceivingVoucher::sum('amount');
-        $totalIncome  = $tenantIncome + $partyIncome;
+        $partyIncome = (float) GeneralReceivingVoucher::sum('amount');
+        $totalIncome = $tenantIncome + $partyIncome;
 
         $totalExpenses = (float) Expense::sum('amount');
-        $netProfit     = max(0.00, $totalIncome - $totalExpenses);
+        $netProfit = max(0.00, $totalIncome - $totalExpenses);
 
         return round($netProfit * ((float) $this->partnership_percentage / 100), 2);
     }
