@@ -115,10 +115,17 @@ class ReceivingVoucherController extends Controller
         // Perform transaction
         DB::beginTransaction();
         try {
-            // Retrieve outstanding payments for this unit ordered by month ASC
-            $payments = Payment::where('unit_id', $data['unit_id'])
-                ->whereIn('status', ['unpaid', 'partial'])
-                ->orderBy('month', 'asc')
+            $selectedPaymentIds = array_filter((array) $request->input('payment_ids', []));
+
+            // Retrieve outstanding payments for this unit (filtered by selected payment_ids if provided)
+            $paymentsQuery = Payment::where('unit_id', $data['unit_id'])
+                ->whereIn('status', ['unpaid', 'partial']);
+
+            if (!empty($selectedPaymentIds)) {
+                $paymentsQuery->whereIn('id', $selectedPaymentIds);
+            }
+
+            $payments = $paymentsQuery->orderBy('month', 'asc')
                 ->lockForUpdate()
                 ->get();
 
@@ -343,10 +350,17 @@ class ReceivingVoucherController extends Controller
                 $receivingVoucher->payments()->detach();
             }
 
-            // 2. Fetch new outstanding balance
-            $payments = Payment::where('unit_id', $data['unit_id'])
-                ->whereIn('status', ['unpaid', 'partial'])
-                ->orderBy('month', 'asc')
+            // 2. Fetch new outstanding balance (filtered by selected payment_ids if provided)
+            $selectedPaymentIds = array_filter((array) $request->input('payment_ids', []));
+
+            $paymentsQuery = Payment::where('unit_id', $data['unit_id'])
+                ->whereIn('status', ['unpaid', 'partial']);
+
+            if (!empty($selectedPaymentIds)) {
+                $paymentsQuery->whereIn('id', $selectedPaymentIds);
+            }
+
+            $payments = $paymentsQuery->orderBy('month', 'asc')
                 ->lockForUpdate()
                 ->get();
 

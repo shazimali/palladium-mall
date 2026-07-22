@@ -342,21 +342,6 @@ class LedgerController extends Controller
                 ]);
             }
 
-            // Credit Entries: Allocated Payments via Receiving Vouchers (Includes security deposit inflows)
-            foreach ($payment->receivingVouchers as $voucher) {
-                $typeLabel = ucfirst(str_replace('_', ' ', $payment->type));
-                $entries->push([
-                    'date' => $voucher->date,
-                    'description' => 'Payment received (' . $typeLabel . ') via ' . ($voucher->paymentAccount->name ?? 'Voucher'),
-                    'reference' => $voucher->voucher_no,
-                    'debit' => 0.00,
-                    'credit' => (float)$voucher->pivot->amount_allocated,
-                    'type' => 'voucher',
-                    'id' => $voucher->id,
-                    'unit_number' => $unitNo,
-                ]);
-            }
-
             // Legacy/Direct payments check
             $voucheredPaid = $payment->receivingVouchers->sum(fn($v) => $v->pivot->amount_allocated);
             $unvoucheredPaid = (float)$payment->amount_paid - (float)$voucheredPaid;
@@ -372,6 +357,38 @@ class LedgerController extends Controller
                     'unit_number' => $unitNo,
                 ]);
             }
+        }
+
+        // 1b. Credit Entries: Receiving Vouchers (Exactly ONE row per voucher receipt)
+        $receivingVouchers = ReceivingVoucher::query()
+            ->where(function ($q) use ($unitId, $unit) {
+                $q->whereHas('payments', fn($qp) => $qp->where('unit_id', $unitId));
+                if ($unit->tenant_id) {
+                    $q->orWhere('tenant_id', $unit->tenant_id);
+                }
+            })
+            ->with(['paymentAccount', 'payments.unit'])
+            ->get()
+            ->unique('id');
+
+        foreach ($receivingVouchers as $voucher) {
+            $unitNo = $unit->unit_number;
+            $allocatedForUnit = $voucher->payments->where('unit_id', $unitId)->sum(fn($p) => (float)$p->pivot->amount_allocated);
+            $creditAmount = $allocatedForUnit > 0 ? $allocatedForUnit : (float)$voucher->amount;
+
+            $typesPaid = $voucher->payments->where('unit_id', $unitId)->map(fn($p) => ucfirst(str_replace('_', ' ', $p->type)))->unique()->implode(', ');
+            $desc = 'Payment received' . ($typesPaid ? ' (' . $typesPaid . ')' : '') . ' via ' . ($voucher->paymentAccount->name ?? 'Voucher');
+
+            $entries->push([
+                'date' => $voucher->date,
+                'description' => $desc,
+                'reference' => $voucher->voucher_no,
+                'debit' => 0.00,
+                'credit' => $creditAmount,
+                'type' => 'voucher',
+                'id' => $voucher->id,
+                'unit_number' => $unitNo,
+            ]);
         }
 
         // 1b. Fetch Payment Vouchers (paid payables / payouts / refunds to tenant - Outflow)

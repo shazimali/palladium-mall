@@ -11,6 +11,7 @@
                 voucherAmount: '{{ old('amount', '') }}',
                 displayAmount: '',
                 pendingPayments: [],
+                selectedPaymentIds: [],
                 totalBalance: 0,
                 loading: false,
                 search: '',
@@ -33,6 +34,7 @@
                         if (val) this.fetchPendingPayments(val);
                         else {
                             this.pendingPayments = [];
+                            this.selectedPaymentIds = [];
                             this.totalBalance = 0;
                         }
                     });
@@ -63,6 +65,7 @@
                         .then(res => res.json())
                         .then(data => {
                             this.pendingPayments = data.payments;
+                            this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
                             this.totalBalance = this.pendingPayments.reduce((sum, p) => sum + p.balance, 0);
                             this.loading = false;
                         })
@@ -70,6 +73,27 @@
                             console.error(err);
                             this.loading = false;
                         });
+                },
+
+                get selectedPaymentsTotal() {
+                    return this.pendingPayments
+                        .filter(p => this.selectedPaymentIds.includes(String(p.id)))
+                        .reduce((sum, p) => sum + p.balance, 0);
+                },
+
+                toggleAllPayments(event) {
+                    if (event.target.checked) {
+                        this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
+                    } else {
+                        this.selectedPaymentIds = [];
+                    }
+                },
+
+                useSelectedTotal() {
+                    let total = this.selectedPaymentsTotal;
+                    if (total > 0) {
+                        this.formatAmount(String(total));
+                    }
                 },
 
                 get filteredOptions() {
@@ -310,6 +334,69 @@
                                 @error('amount')
                                     <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                                 @enderror
+                            </div>
+
+                            {{-- Payment Selection Checkboxes (Positioned directly after Voucher Amount field) --}}
+                            <div class="col-span-full rounded-xl border border-brand-200 bg-brand-50/20 p-4 dark:border-brand-900/40 dark:bg-brand-950/10 shadow-2xs"
+                                x-show="pendingPayments.length > 0">
+                                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-brand-100 dark:border-brand-900/30">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold uppercase tracking-wider text-brand-900 dark:text-brand-300 flex items-center gap-1.5">
+                                            <span>☑️</span> Select Payment(s) To Receive Amount Against:
+                                        </span>
+                                        <span class="rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300 px-2 py-0.5 text-[10px] font-extrabold font-mono"
+                                            x-text="selectedPaymentIds.length + ' / ' + pendingPayments.length + ' Selected'"></span>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-xs">
+                                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-gray-700 dark:text-gray-300 font-semibold select-none">
+                                            <input type="checkbox"
+                                                :checked="selectedPaymentIds.length === pendingPayments.length && pendingPayments.length > 0"
+                                                @change="toggleAllPayments($event)"
+                                                class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
+                                            <span>Select All</span>
+                                        </label>
+                                        <template x-if="selectedPaymentIds.length > 0 && selectedPaymentsTotal > 0">
+                                            <button type="button" @click="useSelectedTotal()" class="text-brand-600 hover:text-brand-700 dark:text-brand-400 font-bold underline cursor-pointer">
+                                                Set Amount to Selected (Rs. <span x-text="Math.round(selectedPaymentsTotal).toLocaleString()"></span>)
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                {{-- Individual Payment Checkboxes --}}
+                                <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                    <template x-for="p in pendingPayments" :key="p.id">
+                                        <label class="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer select-none"
+                                            :class="selectedPaymentIds.includes(String(p.id)) 
+                                                ? 'border-brand-400 bg-white dark:bg-gray-850 dark:border-brand-600 ring-1 ring-brand-500/20 shadow-xs' 
+                                                : 'border-gray-200 bg-white/60 dark:border-gray-800/80 dark:bg-gray-900/40 opacity-70 hover:opacity-100'">
+                                            <div class="flex items-center gap-3">
+                                                <input type="checkbox" name="payment_ids[]" :value="p.id" x-model="selectedPaymentIds"
+                                                    class="h-4.5 w-4.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                                                <div>
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="font-bold text-xs text-gray-900 dark:text-white font-mono" x-text="p.month"></span>
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+                                                            :class="p.type.toLowerCase().includes('rent') 
+                                                                ? 'bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60' 
+                                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'"
+                                                            x-text="p.type"></span>
+                                                    </div>
+                                                    <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                                                        Bill Amount: <span class="font-semibold text-gray-800 dark:text-gray-200">Rs. <span x-text="Math.round(p.amount_due).toLocaleString()"></span></span>
+                                                        <template x-if="p.amount_paid > 0">
+                                                            <span class="ml-1 text-gray-400">(Paid: Rs. <span x-text="Math.round(p.amount_paid).toLocaleString()"></span>)</span>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-right shrink-0">
+                                                <span class="text-xs font-extrabold text-brand-600 dark:text-brand-400 font-mono" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></span>
+                                                <div class="text-[10px] text-gray-400 uppercase font-semibold">Pending Balance</div>
+                                            </div>
+                                        </label>
+                                    </template>
+                                </div>
                             </div>
 
                             {{-- Date --}}
