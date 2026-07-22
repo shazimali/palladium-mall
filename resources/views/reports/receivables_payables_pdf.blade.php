@@ -51,40 +51,16 @@
     <table class="summary-table">
         <tr>
             @if($type === 'receivables')
-                <td class="summary-td" style="width: 33.33%;">
+                <td class="summary-td" style="width: 100%;">
                     <div class="summary-card" style="border-left: 3px solid #10B981;">
-                        <div class="label">Total Receivables</div>
-                        <div class="value" style="color: #10B981;">Rs. {{ number_format($totalReceivablesDue, 2) }}</div>
-                    </div>
-                </td>
-                <td class="summary-td" style="width: 33.33%;">
-                    <div class="summary-card" style="border-left: 3px solid #0EA5E9;">
-                        <div class="label">Total Received</div>
-                        <div class="value" style="color: #0EA5E9;">Rs. {{ number_format($totalReceivablesPaid, 2) }}</div>
-                    </div>
-                </td>
-                <td class="summary-td" style="width: 33.33%;">
-                    <div class="summary-card" style="border-left: 3px solid #10B981;">
-                        <div class="label">Balance</div>
+                        <div class="label">Total Amount Needed to Receive</div>
                         <div class="value" style="color: #10B981;">Rs. {{ number_format($totalReceivablesNet, 2) }}</div>
                     </div>
                 </td>
             @else
-                <td class="summary-td" style="width: 33.33%;">
+                <td class="summary-td" style="width: 100%;">
                     <div class="summary-card" style="border-left: 3px solid #EF4444;">
-                        <div class="label">Total Payables</div>
-                        <div class="value" style="color: #EF4444;">Rs. {{ number_format($totalPayablesDue, 2) }}</div>
-                    </div>
-                </td>
-                <td class="summary-td" style="width: 33.33%;">
-                    <div class="summary-card" style="border-left: 3px solid #0EA5E9;">
-                        <div class="label">Total Paid</div>
-                        <div class="value" style="color: #0EA5E9;">Rs. {{ number_format($totalPayablesPaid, 2) }}</div>
-                    </div>
-                </td>
-                <td class="summary-td" style="width: 33.33%;">
-                    <div class="summary-card" style="border-left: 3px solid #EF4444;">
-                        <div class="label">Balance</div>
+                        <div class="label">Total Amount Needed to Pay</div>
                         <div class="value" style="color: #EF4444;">Rs. {{ number_format($totalPayablesNet, 2) }}</div>
                     </div>
                 </td>
@@ -99,36 +75,28 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="width: 30%;">Entity Name</th>
-                    <th style="width: 20%;">Category</th>
-                    <th style="width: 20%;">Details</th>
-                    <th style="width: 10%;" class="text-right">Owed/Held</th>
-                    <th style="width: 10%;" class="text-right">Paid/Settled</th>
-                    <th style="width: 10%;" class="text-right">Net Payable</th>
+                    <th style="width: 50%;">Entity Name</th>
+                    <th style="width: 30%;">Flat / Shop</th>
+                    <th style="width: 20%;" class="text-right">Amount</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($payables as $row)
                     <tr>
                         <td style="font-weight: bold;">{{ $row['name'] }}</td>
-                        <td>{{ $row['category'] }}</td>
-                        <td style="color: #64748B;">{{ $row['details'] }}</td>
-                        <td class="text-right">Rs. {{ number_format($row['due'], 2) }}</td>
-                        <td class="text-right text-red">Rs. {{ number_format($row['paid'], 2) }}</td>
-                        <td class="text-right font-mono" style="font-weight: bold;">Rs. {{ number_format($row['net'], 2) }}</td>
+                        <td>{{ $row['unit'] ? 'Unit ' . $row['unit'] : '—' }}</td>
+                        <td class="text-right font-mono text-red" style="font-weight: bold;">Rs. {{ number_format($row['net'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center" style="color: #94A3B8; padding: 15px 0;">No active payables found matching filters.</td>
+                        <td colspan="3" class="text-center" style="color: #94A3B8; padding: 15px 0;">No active payables found matching filters.</td>
                     </tr>
                 @endforelse
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="3">Total Building Payables</td>
-                    <td class="text-right">Rs. {{ number_format(collect($payables)->sum('due'), 2) }}</td>
-                    <td class="text-right">Rs. {{ number_format(collect($payables)->sum('paid'), 2) }}</td>
-                    <td class="text-right font-mono">Rs. {{ number_format($totalPayables, 2) }}</td>
+                    <td colspan="2">Total Building Payables</td>
+                    <td class="text-right font-mono text-red">Rs. {{ number_format($totalPayablesNet, 2) }}</td>
                 </tr>
             </tfoot>
         </table>
@@ -143,38 +111,30 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="width: 30%;">Entity Name</th>
-                    <th style="width: 20%;">Category</th>
-                    <th style="width: 20%;">Details</th>
-                    <th style="width: 10%;" class="text-right">Due/Credit</th>
-                    <th style="width: 10%;" class="text-right">Paid/Received</th>
-                    <th style="width: 10%;" class="text-right">Net Receivable</th>
+                    <th style="width: 50%;">Entity Name</th>
+                    <th style="width: 30%;">Flat / Shop</th>
+                    <th style="width: 20%;" class="text-right">Amount</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($receivables as $row)
                     <tr>
                         <td style="font-weight: bold;">{{ $row['name'] }}</td>
-                        <td>{{ $row['category'] }}</td>
-                        <td style="color: #64748B;">{{ $row['unit'] ? 'Unit ' . $row['unit'] : '—' }}</td>
-                        <td class="text-right">Rs. {{ number_format($row['due'], 2) }}</td>
-                        <td class="text-right text-green">Rs. {{ number_format($row['paid'], 2) }}</td>
-                        <td class="text-right font-mono" style="font-weight: bold;">Rs. {{ number_format($row['net'], 2) }}</td>
+                        <td>{{ $row['unit'] ? 'Unit ' . $row['unit'] : '—' }}</td>
+                        <td class="text-right font-mono text-green" style="font-weight: bold;">Rs. {{ number_format($row['net'], 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center" style="color: #94A3B8; padding: 15px 0;">No active receivables found matching filters.</td>
+                        <td colspan="3" class="text-center" style="color: #94A3B8; padding: 15px 0;">No active receivables found matching filters.</td>
                     </tr>
                 @endforelse
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="3">
+                    <td colspan="2">
                         {{ ($receivableScope ?? 'pm_mall') === 'other' ? 'Total Other Receivables (Not Managed by PM Mall)' : 'Total PM Mall Receivables' }}
                     </td>
-                    <td class="text-right">Rs. {{ number_format(collect($receivables)->sum('due'), 2) }}</td>
-                    <td class="text-right">Rs. {{ number_format(collect($receivables)->sum('paid'), 2) }}</td>
-                    <td class="text-right font-mono">Rs. {{ number_format($totalReceivables, 2) }}</td>
+                    <td class="text-right font-mono text-green">Rs. {{ number_format($totalReceivablesNet, 2) }}</td>
                 </tr>
             </tfoot>
         </table>

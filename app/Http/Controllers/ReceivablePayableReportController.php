@@ -73,8 +73,8 @@ class ReceivablePayableReportController extends Controller
      */
     private function buildReportData(Request $request): array
     {
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        $dateFrom = $request->filled('date_from') ? $request->query('date_from') : now()->startOfMonth()->toDateString();
+        $dateTo = $request->filled('date_to') ? $request->query('date_to') : now()->endOfMonth()->toDateString();
         $type = $request->query('type', 'receivables'); // 'receivables' or 'payables'
         $receivableScope = $request->query('receivable_scope', 'pm_mall'); // 'pm_mall' or 'other'
         $categories = $request->query('categories', []); // selected category checkboxes
@@ -92,100 +92,126 @@ class ReceivablePayableReportController extends Controller
 
         if ($type === 'payables') {
             // 1a. Security Deposits (collected amount is a Payable)
-            $securityPayments = $allPayments->where('type', 'security_deposit');
-            $groupedSecurity = $securityPayments->groupBy(function ($p) {
-                return ($p->tenant_id ?? 0) . '_' . ($p->unit_id ?? 0);
-            });
-
-            // Fetch all tenant security deposit refund vouchers
-            $refundVouchers = PaymentVoucher::whereNotNull('tenant_id')
-                ->whereNotNull('unit_id')
-                ->get()
-                ->groupBy(function ($v) {
-                    return $v->tenant_id . '_' . $v->unit_id;
+            if (empty($categories) || in_array('Tenant Security Deposit', $categories)) {
+                $securityPayments = $allPayments->where('type', 'security_deposit');
+                $groupedSecurity = $securityPayments->groupBy(function ($p) {
+                    return ($p->tenant_id ?? 0) . '_' . ($p->unit_id ?? 0);
                 });
 
-            foreach ($groupedSecurity as $key => $group) {
-                $first = $group->first();
-                $totalCollected = (float) $group->sum('amount_paid');
+                // Fetch all tenant security deposit refund vouchers
+                $refundVouchers = PaymentVoucher::whereNotNull('tenant_id')
+                    ->whereNotNull('unit_id')
+                    ->get()
+                    ->groupBy(function ($v) {
+                        return $v->tenant_id . '_' . $v->unit_id;
+                    });
 
-                $refundedGroup = $refundVouchers->get(($first->tenant_id ?? 0) . '_' . ($first->unit_id ?? 0));
-                $totalRefunded = $refundedGroup ? (float) $refundedGroup->sum('amount') : 0.00;
+                foreach ($groupedSecurity as $key => $group) {
+                    $first = $group->first();
+                    $totalCollected = (float) $group->sum('amount_paid');
 
-                $netPayable = round($totalCollected - $totalRefunded, 2);
+                    $refundedGroup = $refundVouchers->get(($first->tenant_id ?? 0) . '_' . ($first->unit_id ?? 0));
+                    $totalRefunded = $refundedGroup ? (float) $refundedGroup->sum('amount') : 0.00;
 
-                if ($netPayable > 0.01 || $totalRefunded > 0.01) {
-                    $tenantName = $first->otherTenant
-                        ? $first->otherTenant->name
-                        : ($first->tenant ? $first->tenant->name : 'Other Owned');
-                    $unitNo = $first->unit ? $first->unit->unit_number : '';
-                    $payables[] = [
-                        'category' => 'Tenant Security Deposit',
-                        'name' => $tenantName,
-                        'unit' => $unitNo,
-                        'due' => $totalCollected,
-                        'paid' => $totalRefunded,
-                        'net' => $netPayable,
-                        'is_self' => (bool) ($first->unit ? $first->unit->is_self : false),
-                    ];
+                    $netPayable = round($totalCollected - $totalRefunded, 2);
+
+                    if ($netPayable > 0.01 || $totalRefunded > 0.01) {
+                        $tenantName = $first->otherTenant
+                            ? $first->otherTenant->name
+                            : ($first->tenant ? $first->tenant->name : 'Other Owned');
+                        $unitNo = $first->unit ? $first->unit->unit_number : '';
+                        $payables[] = [
+                            'category' => 'Tenant Security Deposit',
+                            'name' => $tenantName,
+                            'unit' => $unitNo,
+                            'due' => $totalCollected,
+                            'paid' => $totalRefunded,
+                            'net' => $netPayable,
+                            'is_self' => (bool) ($first->unit ? $first->unit->is_self : false),
+                        ];
+                    }
                 }
             }
         } else {
-            // 1b. Tenant Rent, Maintenance, Utilities, Fines — each as a separate row
-            $groupedDues = $allPayments->groupBy(function ($p) {
-                $chargeType = in_array($p->type, ['electricity', 'water', 'gas']) ? 'utility' : $p->type;
-                return ($p->tenant_id ?? 0) . '_' . ($p->unit_id ?? 0) . '_' . $chargeType;
-            });
+            // 1b. Tenant Rent, Maintenance, Utilities, Fines — aggregated per unit (one row per unit)
+            $duesOnlyPayments = $allPayments->where('type', '!=', 'security_deposit');
 
-            foreach ($groupedDues as $key => $group) {
-                $first = $group->first();
-                $chargeType = in_array($first->type, ['electricity', 'water', 'gas']) ? 'utility' : $first->type;
+            if (!empty($categories)) {
+                $duesOnlyPayments = $duesOnlyPayments->filter(function ($p) use ($categories) {
+                    $cat = match ($p->type) {
+                        'rent'                  => 'Tenant Rent',
+                        'maintenance'           => 'Tenant Maintenance',
+                        'extra_payment', 'other' => 'Tenant Extra',
+                        'fine'                  => 'Tenant Fine',
+                        'electricity', 'water', 'gas' => 'Tenant Utilities',
+                        default                 => 'Tenant Other',
+                    };
+                    return in_array($cat, $categories);
+                });
+            }
 
-                // Security deposits are payables — skip here
-                if ($chargeType === 'security_deposit') {
-                    continue;
-                }
+            // Group by unit_id ONLY — matches monthly matrix which sums all payment types per unit.
+            // This merges extra_payment (tenant_id=null) with rent/maintenance (tenant_id=X)
+            // into a single row per unit so totals align with the matrix.
+            $groupedDues = $duesOnlyPayments->groupBy(fn($p) => $p->unit_id ?? 0);
 
+            foreach ($groupedDues as $unitId => $group) {
                 $totalDue = (float) $group->sum('amount');
                 $totalPaid = (float) $group->sum('amount_paid');
                 $netReceivable = round($totalDue - $totalPaid, 2);
 
+                // Only show records where amounts are not received yet (netReceivable > 0.01)
                 if ($netReceivable > 0.01) {
-                    $tenantName = $first->otherTenant
-                        ? $first->otherTenant->name
-                        : ($first->tenant ? $first->tenant->name : 'Other Owned');
+                    // Resolve name: scan whole group for best name (otherTenant > tenant > unit number)
+                    // A unit may have extra_payment with null tenant_id alongside rent with real tenant_id
+                    $first = $group->first();
                     $unitNo = $first->unit ? $first->unit->unit_number : '';
-                    $isSelf = (bool) ($first->unit ? $first->unit->is_self : false);
 
-                    $category = match ($chargeType) {
-                        'rent' => 'Tenant Rent',
-                        'maintenance' => 'Tenant Maintenance',
-                        'fine' => 'Tenant Fine',
-                        'utility' => 'Tenant Utilities',
-                        default => 'Tenant Other',
-                    };
-
-                    // Apply category filter — skip if categories selected but this category not in list
-                    if (!empty($categories) && !in_array($category, $categories)) {
-                        continue;
+                    $tenantName = null;
+                    foreach ($group as $p) {
+                        if ($p->otherTenant) {
+                            $tenantName = $p->otherTenant->name;
+                            break;
+                        }
+                        if ($p->tenant && !$tenantName) {
+                            $tenantName = $p->tenant->name;
+                        }
                     }
+                    $tenantName = $tenantName ?? ($unitNo ?: 'Unknown Unit');
 
-                    $hasOtherTenant = (bool) ($first->other_tenant_id || ($first->unit && $first->unit->otherTenant));
-                    $isOtherReceivable = $isSelf && !$hasOtherTenant;
+                    $isSelf = (bool) ($first->unit ? $first->unit->is_self : false);
+                    $hasActiveOtherTenant = (bool) ($first->unit && ($first->unit->other_tenant_id || $first->unit->otherTenant));
+
+                    // Match the monthly matrix logic exactly:
+                    // PM Mall tab  → is_self=false (PM Mall owned) OR is_self=true WITH active otherTenant on unit
+                    // Other tab    → is_self=true WITHOUT active otherTenant on unit (self-owned vacant units)
+                    $isOtherReceivable = $isSelf && !$hasActiveOtherTenant;
+
+                    $pendingTypes = $group->filter(fn($p) => ((float)$p->amount - (float)$p->amount_paid) > 0.01)
+                        ->map(fn($p) => match($p->type) {
+                            'rent' => 'Rent',
+                            'maintenance' => 'Maintenance',
+                            'extra_payment', 'other' => 'Extra Payments',
+                            'fine' => 'Fine',
+                            'electricity', 'water', 'gas' => 'Utilities',
+                            default => ucfirst($p->type),
+                        })->unique()->values()->all();
 
                     $receivables[] = [
-                        'category' => $category,
+                        'category' => 'Tenant Dues',
+                        'types' => $pendingTypes,
                         'name' => $tenantName,
                         'unit' => $unitNo,
                         'due' => $totalDue,
                         'paid' => $totalPaid,
                         'net' => $netReceivable,
                         'is_self' => $isSelf,
-                        'has_other_tenant' => $hasOtherTenant,
+                        'has_other_tenant' => $hasActiveOtherTenant,
                         'is_other_receivable' => $isOtherReceivable,
                     ];
                 }
             }
+
         }
 
         // ── 2. Party Balances (Payables and Receivables) ───────────────────────
@@ -222,12 +248,16 @@ class ReceivablePayableReportController extends Controller
             $totalReceivableDue = (float) $dQueryReceivable->sum('amount');
 
             if ($type === 'payables') {
+                if (!empty($categories) && !in_array('Party Payable', $categories)) {
+                    continue;
+                }
                 // Payables Side calculation: GRV + payable_dues - PV
                 $netPayable = round(($totalReceived + $totalPayableDue) - $totalPaid, 2);
 
                 if ($netPayable > 0.01) {
                     $payables[] = [
                         'category' => 'Party Payable',
+                        'types' => ['Party Payable'],
                         'name' => $party->name,
                         'unit' => '',
                         'due' => $totalReceived + $totalPayableDue,
@@ -238,6 +268,9 @@ class ReceivablePayableReportController extends Controller
                     ];
                 }
             } else {
+                if (!empty($categories) && !in_array('Party Receivable', $categories)) {
+                    continue;
+                }
                 // Receivables Side calculation: dues_receivable + max(0, total_paid - total_received - dues_payable)
                 $excessPaid = max(0.00, $totalPaid - ($totalReceived + $totalPayableDue));
                 $netReceivable = round($totalReceivableDue + $excessPaid, 2);
@@ -245,6 +278,7 @@ class ReceivablePayableReportController extends Controller
                 if ($netReceivable > 0.01) {
                     $receivables[] = [
                         'category' => 'Party Receivable',
+                        'types' => ['Party Receivable'],
                         'name' => $party->name,
                         'unit' => '',
                         'due' => $totalReceivableDue + $totalPaid,
@@ -259,40 +293,43 @@ class ReceivablePayableReportController extends Controller
 
         // ── 3. Landlord Credit & Landlord Payables ────────────────────────────
         if ($type === 'receivables') {
-            $landlords = Landlord::with(['ownerships'])->get();
+            if (empty($categories) || in_array('Landlord Credit', $categories)) {
+                $landlords = Landlord::with(['ownerships'])->get();
 
-            foreach ($landlords as $landlord) {
-                // Receivables side (Opening Credit remaining)
-                $openingBalance = (float) $landlord->ownerships->sum('credit_amount'); // credit remaining on purchase
+                foreach ($landlords as $landlord) {
+                    // Receivables side (Opening Credit remaining)
+                    $openingBalance = (float) $landlord->ownerships->sum('credit_amount'); // credit remaining on purchase
 
-                $rvQuery = ReceivingVoucher::where('owner_id', $landlord->id);
-                if ($dateFrom)
-                    $rvQuery->where('date', '>=', $dateFrom);
-                if ($dateTo)
-                    $rvQuery->where('date', '<=', $dateTo);
-                $totalReceived = (float) $rvQuery->sum('amount');
+                    $rvQuery = ReceivingVoucher::where('owner_id', $landlord->id);
+                    if ($dateFrom)
+                        $rvQuery->where('date', '>=', $dateFrom);
+                    if ($dateTo)
+                        $rvQuery->where('date', '<=', $dateTo);
+                    $totalReceived = (float) $rvQuery->sum('amount');
 
-                $grvQuery = GeneralReceivingVoucher::where('landlord_id', $landlord->id);
-                if ($dateFrom)
-                    $grvQuery->where('date', '>=', $dateFrom);
-                if ($dateTo)
-                    $grvQuery->where('date', '<=', $dateTo);
-                $totalReceived += (float) $grvQuery->sum('amount');
+                    $grvQuery = GeneralReceivingVoucher::where('landlord_id', $landlord->id);
+                    if ($dateFrom)
+                        $grvQuery->where('date', '>=', $dateFrom);
+                    if ($dateTo)
+                        $grvQuery->where('date', '<=', $dateTo);
+                    $totalReceived += (float) $grvQuery->sum('amount');
 
-                $netReceivable = round($openingBalance - $totalReceived, 2);
+                    $netReceivable = round($openingBalance - $totalReceived, 2);
 
-                if ($netReceivable > 0.01) {
-                    $receivables[] = [
-                        'category' => 'Landlord Credit',
-                        'name' => $landlord->name,
-                        'unit' => '',
-                        'details' => 'Landlord Opening Credit',
-                        'due' => $openingBalance,
-                        'paid' => $totalReceived,
-                        'net' => $netReceivable,
-                        'is_self' => false,
-                        'is_other_receivable' => false,
-                    ];
+                    if ($netReceivable > 0.01) {
+                        $receivables[] = [
+                            'category' => 'Landlord Credit',
+                            'types' => ['Landlord Credit'],
+                            'name' => $landlord->name,
+                            'unit' => '',
+                            'details' => 'Landlord Opening Credit',
+                            'due' => $openingBalance,
+                            'paid' => $totalReceived,
+                            'net' => $netReceivable,
+                            'is_self' => false,
+                            'is_other_receivable' => false,
+                        ];
+                    }
                 }
             }
         } else {
@@ -329,6 +366,7 @@ class ReceivablePayableReportController extends Controller
                 if ($netPayable > 0.01 || $totalPaid > 0.01) {
                     $payables[] = [
                         'category' => 'Landlord Payable',
+                        'types' => ['Landlord Payable'],
                         'name' => $name,
                         'unit' => $unitNo,
                         'details' => 'Extra Payment' . ($ep->notes ? ' - ' . $ep->notes : ''),
@@ -343,9 +381,28 @@ class ReceivablePayableReportController extends Controller
         }
 
         // Apply category filter checkboxes if set
+        // NOTE: Tenant dues rows are tagged 'Tenant Dues' but checkboxes are sub-categories
+        // (Tenant Rent, Tenant Maintenance, etc). Handle by passing through any 'Tenant Dues'
+        // row when at least one tenant sub-category is selected (they were already pre-filtered
+        // per payment type above). All other categories are matched exactly.
         if (!empty($categories)) {
-            $payables = collect($payables)->filter(fn($p) => in_array($p['category'], $categories))->values()->all();
-            $receivables = collect($receivables)->filter(fn($r) => in_array($r['category'], $categories))->values()->all();
+            $tenantSubCategories = ['Tenant Rent', 'Tenant Maintenance', 'Tenant Extra', 'Tenant Fine', 'Tenant Utilities', 'Tenant Other', 'Tenant Security Deposit'];
+            $hasAnyTenantCategory = count(array_intersect($categories, $tenantSubCategories)) > 0;
+
+            $payables = collect($payables)->filter(function ($p) use ($categories, $tenantSubCategories, $hasAnyTenantCategory) {
+                if ($p['category'] === 'Tenant Security Deposit') {
+                    return $hasAnyTenantCategory || in_array('Tenant Security Deposit', $categories);
+                }
+                return in_array($p['category'], $categories);
+            })->values()->all();
+
+            $receivables = collect($receivables)->filter(function ($r) use ($categories, $hasAnyTenantCategory) {
+                if ($r['category'] === 'Tenant Dues') {
+                    // Tenant dues rows were already pre-filtered by type; pass through if any tenant category selected
+                    return $hasAnyTenantCategory;
+                }
+                return in_array($r['category'], $categories);
+            })->values()->all();
         }
 
         // Separate receivables into PM Mall managed vs Other (Not managed by PM Mall without attached other tenant)
