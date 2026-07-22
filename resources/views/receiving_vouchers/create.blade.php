@@ -6,6 +6,7 @@
     <x-common.component-card title="Record Receipt Voucher" desc="Log payments collected from tenants and allocate them to outstanding flat/shop bills.">
         
         <form action="{{ route('receiving-vouchers.store') }}" method="POST"
+            @submit.prevent="handleSubmit($event)"
             x-data="{
                 unitId: '{{ old('unit_id', '') }}',
                 voucherAmount: '{{ old('amount', '') }}',
@@ -28,6 +29,40 @@
                     },
                     @endforeach
                 ],
+
+                handleSubmit(event) {
+                    let amt = parseFloat(this.voucherAmount || 0);
+                    if (isNaN(amt) || amt <= 0) {
+                        Swal.fire({
+                            title: 'Invalid Amount',
+                            text: 'Please enter a valid voucher amount greater than zero.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                            },
+                            buttonsStyling: false
+                        });
+                        return;
+                    }
+
+                    let maxAllowed = (this.selectedPaymentIds.length > 0 && this.selectedPaymentsTotal > 0) ? this.selectedPaymentsTotal : this.totalBalance;
+                    if (amt > maxAllowed + 0.01) {
+                        Swal.fire({
+                            title: 'Exceed Amount Error',
+                            text: 'The voucher amount (Rs. ' + amt.toLocaleString('en-US', {minimumFractionDigits: 2}) + ') exceeds the total outstanding balance of selected payments (Rs. ' + maxAllowed.toLocaleString('en-US', {minimumFractionDigits: 2}) + ').',
+                            icon: 'error',
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                            },
+                            buttonsStyling: false
+                        });
+                        return;
+                    }
+
+                    event.target.submit();
+                },
 
                 init() {
                     this.$watch('unitId', (val) => {
@@ -257,50 +292,52 @@
                     <input type="hidden" name="received_from_type" value="tenant">
 
                     {{-- Dynamic Outstanding Balance Badge & Details --}}
-                    <div class="rounded-xl border p-5 transition-all shadow-sm"
-                        :class="totalBalance > 0 ? 'bg-orange-50/50 border-orange-200 text-orange-850 dark:bg-orange-950/10 dark:border-orange-900/30' : 'bg-green-50/50 border-green-200 text-green-850 dark:bg-green-950/10 dark:border-green-900/30'">
-                        <div class="flex items-center justify-between pb-3 border-b border-orange-200/40 dark:border-orange-900/20">
+                    <div class="rounded-2xl border-2 p-6 transition-all shadow-md"
+                        :class="totalBalance > 0 ? 'bg-orange-50/70 border-orange-300 text-orange-950 dark:bg-orange-950/20 dark:border-orange-800' : 'bg-emerald-50/70 border-emerald-300 text-emerald-950 dark:bg-emerald-950/20 dark:border-emerald-800'">
+                        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-orange-200 dark:border-orange-800/50">
                             <div>
-                                <h4 class="text-sm font-semibold uppercase tracking-wide">
-                                    Tenant Balance Status
-                                </h4>
-                                <p class="text-xs opacity-80 mt-1">Pending dues for this tenant in historical records.</p>
+                                <h3 class="text-base sm:text-lg font-black uppercase tracking-wide flex items-center gap-2">
+                                    <span>📊</span> Tenant Balance Status
+                                </h3>
+                                <p class="text-xs sm:text-sm font-medium opacity-90 mt-1">Pending dues for this tenant in historical records.</p>
                             </div>
                             <div class="text-right flex flex-col items-end">
-                                <span class="text-xs text-gray-500 font-medium">Total Outstanding:</span>
-                                <span class="text-lg font-bold" x-text="totalBalance > 0 ? 'Rs. ' + Math.round(totalBalance).toLocaleString() : 'No Outstanding Balance'"></span>
+                                <span class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-extrabold uppercase tracking-wider">Total Outstanding:</span>
+                                <span class="text-xl sm:text-2xl font-black font-mono" :class="totalBalance > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'" x-text="totalBalance > 0 ? 'Rs. ' + Math.round(totalBalance).toLocaleString() : 'No Outstanding Balance'"></span>
                                 
                                 <template x-if="voucherAmount > 0">
-                                    <div class="mt-1 flex flex-col items-end text-xs font-semibold text-green-600 dark:text-green-400">
-                                        <span>Remaining Balance:</span>
-                                        <span class="text-sm font-bold" x-text="'Rs. ' + Math.round(Math.max(0, totalBalance - voucherAmount)).toLocaleString()"></span>
+                                    <div class="mt-1.5 flex flex-col items-end text-xs sm:text-sm font-extrabold text-green-700 dark:text-green-400">
+                                        <span>After Payment Balance:</span>
+                                        <span class="text-base sm:text-lg font-black font-mono" x-text="'Rs. ' + Math.round(Math.max(0, totalBalance - voucherAmount)).toLocaleString()"></span>
                                     </div>
                                 </template>
                             </div>
                         </div>
 
                         {{-- Details of Pending Payments --}}
-                        <div class="mt-4" x-show="pendingPayments.length > 0">
-                            <h5 class="text-xs font-bold uppercase tracking-wider mb-2 opacity-95">Pending Bills Detail</h5>
-                            <div class="overflow-x-auto rounded-lg border border-orange-200/50 dark:border-orange-900/30 bg-white/70 dark:bg-gray-900/50">
-                                <table class="w-full text-left text-xs">
+                        <div class="mt-5" x-show="pendingPayments.length > 0">
+                            <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider mb-3 opacity-95 flex items-center gap-1.5">
+                                <span>📋</span> Pending Bills Detail
+                            </h4>
+                            <div class="overflow-x-auto rounded-xl border-2 border-orange-200 dark:border-orange-800/60 bg-white dark:bg-gray-900 shadow-2xs">
+                                <table class="w-full text-left text-xs sm:text-sm">
                                     <thead>
-                                        <tr class="border-b border-orange-200/50 dark:border-orange-900/30 bg-orange-100/30 dark:bg-orange-950/20 text-orange-900 dark:text-orange-350 uppercase font-semibold">
-                                            <th class="px-4 py-2.5">Billing Month</th>
-                                            <th class="px-4 py-2.5">Bill Type</th>
-                                            <th class="px-4 py-2.5 text-right">Amount Due</th>
-                                            <th class="px-4 py-2.5 text-right">Paid So Far</th>
-                                            <th class="px-4 py-2.5 text-right">Remaining Balance</th>
+                                        <tr class="border-b-2 border-orange-200 dark:border-orange-800/60 bg-orange-100/60 dark:bg-orange-950/40 text-orange-950 dark:text-orange-200 uppercase font-black tracking-wider">
+                                            <th class="px-4 py-3">Billing Month</th>
+                                            <th class="px-4 py-3">Bill Type</th>
+                                            <th class="px-4 py-3 text-right">Amount Due</th>
+                                            <th class="px-4 py-3 text-right">Paid So Far</th>
+                                            <th class="px-4 py-3 text-right">Remaining Balance</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-orange-100/50 dark:divide-orange-900/20 text-gray-800 dark:text-gray-200">
+                                    <tbody class="divide-y divide-orange-100 dark:divide-orange-900/30 text-gray-900 dark:text-gray-100 font-semibold">
                                         <template x-for="p in pendingPayments" :key="p.id">
-                                            <tr class="hover:bg-orange-50/20 dark:hover:bg-orange-950/10">
-                                                <td class="px-4 py-2.5 font-mono" x-text="p.month"></td>
-                                                <td class="px-4 py-2.5 font-semibold" x-text="p.type"></td>
-                                                <td class="px-4 py-2.5 text-right" x-text="'Rs. ' + Math.round(p.amount_due).toLocaleString()"></td>
-                                                <td class="px-4 py-2.5 text-right" x-text="'Rs. ' + Math.round(p.amount_paid).toLocaleString()"></td>
-                                                <td class="px-4 py-2.5 text-right font-bold text-orange-600 dark:text-orange-400" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></td>
+                                            <tr class="hover:bg-orange-50/50 dark:hover:bg-orange-950/20">
+                                                <td class="px-4 py-3 font-mono font-bold" x-text="p.month"></td>
+                                                <td class="px-4 py-3 font-extrabold text-brand-700 dark:text-brand-300" x-text="p.type"></td>
+                                                <td class="px-4 py-3 text-right font-mono" x-text="'Rs. ' + Math.round(p.amount_due).toLocaleString()"></td>
+                                                <td class="px-4 py-3 text-right font-mono text-gray-500" x-text="'Rs. ' + Math.round(p.amount_paid).toLocaleString()"></td>
+                                                <td class="px-4 py-3 text-right font-mono font-black text-orange-600 dark:text-orange-400 text-sm" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></td>
                                             </tr>
                                         </template>
                                     </tbody>
@@ -337,26 +374,27 @@
                             </div>
 
                             {{-- Payment Selection Checkboxes (Positioned directly after Voucher Amount field) --}}
-                            <div class="col-span-full rounded-xl border border-brand-200 bg-brand-50/20 p-4 dark:border-brand-900/40 dark:bg-brand-950/10 shadow-2xs"
+                            <div class="col-span-full rounded-2xl border-2 border-brand-300 bg-brand-50/30 p-5 dark:border-brand-800 dark:bg-brand-950/20 shadow-sm"
                                 x-show="pendingPayments.length > 0">
-                                <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-3 border-b border-brand-100 dark:border-brand-900/30">
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-xs font-bold uppercase tracking-wider text-brand-900 dark:text-brand-300 flex items-center gap-1.5">
-                                            <span>☑️</span> Select Payment(s) To Receive Amount Against:
+                                <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 mb-4 border-b border-brand-200 dark:border-brand-800/60">
+                                    <div class="flex items-center gap-2.5">
+                                        <span class="text-xl">☑️</span>
+                                        <span class="text-base sm:text-lg font-extrabold uppercase tracking-wide text-brand-950 dark:text-brand-200">
+                                            Select Payment(s) To Receive Amount Against:
                                         </span>
-                                        <span class="rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/60 dark:text-brand-300 px-2 py-0.5 text-[10px] font-extrabold font-mono"
+                                        <span class="rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/80 dark:text-brand-200 px-3 py-1 text-xs font-extrabold font-mono shadow-2xs"
                                             x-text="selectedPaymentIds.length + ' / ' + pendingPayments.length + ' Selected'"></span>
                                     </div>
-                                    <div class="flex items-center gap-3 text-xs">
-                                        <label class="inline-flex items-center gap-1.5 cursor-pointer text-gray-700 dark:text-gray-300 font-semibold select-none">
+                                    <div class="flex items-center gap-4 text-sm">
+                                        <label class="inline-flex items-center gap-2 cursor-pointer text-gray-800 dark:text-gray-200 font-bold select-none hover:text-brand-600">
                                             <input type="checkbox"
                                                 :checked="selectedPaymentIds.length === pendingPayments.length && pendingPayments.length > 0"
                                                 @change="toggleAllPayments($event)"
-                                                class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
+                                                class="h-5 w-5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
                                             <span>Select All</span>
                                         </label>
                                         <template x-if="selectedPaymentIds.length > 0 && selectedPaymentsTotal > 0">
-                                            <button type="button" @click="useSelectedTotal()" class="text-brand-600 hover:text-brand-700 dark:text-brand-400 font-bold underline cursor-pointer">
+                                            <button type="button" @click="useSelectedTotal()" class="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400 font-extrabold underline cursor-pointer">
                                                 Set Amount to Selected (Rs. <span x-text="Math.round(selectedPaymentsTotal).toLocaleString()"></span>)
                                             </button>
                                         </template>
@@ -364,35 +402,35 @@
                                 </div>
 
                                 {{-- Individual Payment Checkboxes --}}
-                                <div class="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                <div class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                                     <template x-for="p in pendingPayments" :key="p.id">
-                                        <label class="flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer select-none"
+                                        <label class="flex items-center justify-between p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none"
                                             :class="selectedPaymentIds.includes(String(p.id)) 
-                                                ? 'border-brand-400 bg-white dark:bg-gray-850 dark:border-brand-600 ring-1 ring-brand-500/20 shadow-xs' 
-                                                : 'border-gray-200 bg-white/60 dark:border-gray-800/80 dark:bg-gray-900/40 opacity-70 hover:opacity-100'">
-                                            <div class="flex items-center gap-3">
+                                                ? 'border-brand-500 bg-white dark:bg-gray-850 dark:border-brand-500 ring-2 ring-brand-500/20 shadow-xs' 
+                                                : 'border-gray-200 bg-white/70 dark:border-gray-800/80 dark:bg-gray-900/40 opacity-75 hover:opacity-100'">
+                                            <div class="flex items-center gap-3.5">
                                                 <input type="checkbox" name="payment_ids[]" :value="p.id" x-model="selectedPaymentIds"
-                                                    class="h-4.5 w-4.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                                                    class="h-5 w-5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer shrink-0">
                                                 <div>
-                                                    <div class="flex items-center gap-2">
-                                                        <span class="font-bold text-xs text-gray-900 dark:text-white font-mono" x-text="p.month"></span>
-                                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border"
+                                                    <div class="flex items-center gap-2.5">
+                                                        <span class="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white font-mono" x-text="p.month"></span>
+                                                        <span class="px-2.5 py-0.5 rounded-md text-xs font-extrabold uppercase tracking-wider border"
                                                             :class="p.type.toLowerCase().includes('rent') 
-                                                                ? 'bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60' 
-                                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'"
+                                                                ? 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60' 
+                                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'"
                                                             x-text="p.type"></span>
                                                     </div>
-                                                    <div class="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                                                        Bill Amount: <span class="font-semibold text-gray-800 dark:text-gray-200">Rs. <span x-text="Math.round(p.amount_due).toLocaleString()"></span></span>
+                                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                                        Bill Amount: <span class="font-bold text-gray-900 dark:text-gray-100">Rs. <span x-text="Math.round(p.amount_due).toLocaleString()"></span></span>
                                                         <template x-if="p.amount_paid > 0">
-                                                            <span class="ml-1 text-gray-400">(Paid: Rs. <span x-text="Math.round(p.amount_paid).toLocaleString()"></span>)</span>
+                                                            <span class="ml-1.5 text-gray-500">(Paid So Far: Rs. <span x-text="Math.round(p.amount_paid).toLocaleString()"></span>)</span>
                                                         </template>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="text-right shrink-0">
-                                                <span class="text-xs font-extrabold text-brand-600 dark:text-brand-400 font-mono" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></span>
-                                                <div class="text-[10px] text-gray-400 uppercase font-semibold">Pending Balance</div>
+                                                <span class="text-sm sm:text-base font-black text-brand-600 dark:text-brand-400 font-mono" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></span>
+                                                <div class="text-xs text-gray-500 uppercase font-bold tracking-wide">Pending Balance</div>
                                             </div>
                                         </label>
                                     </template>
@@ -470,15 +508,14 @@
                     {{-- Action Buttons --}}
                     <div class="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
                         <button type="submit"
-                            :disabled="totalBalance > 0 && (voucherAmount <= 0 || voucherAmount > totalBalance)"
-                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                             </svg>
                             Save Voucher
                         </button>
                         <a href="{{ route('receiving-vouchers.index') }}"
-                            class="inline-flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
+                            class="inline-flex items-center rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
                             Cancel
                         </a>
                     </div>
@@ -503,6 +540,19 @@
                     defaultDate: '{{ old('date', now()->toDateString()) }}'
                 });
             }
+
+            @if ($errors->has('amount') || session('error'))
+                Swal.fire({
+                    title: 'Exceed Amount Error',
+                    text: "{{ $errors->first('amount') ?: session('error') }}",
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                    },
+                    buttonsStyling: false
+                });
+            @endif
         });
     </script>
 @endpush
