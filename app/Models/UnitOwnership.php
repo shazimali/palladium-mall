@@ -48,9 +48,9 @@ class UnitOwnership extends Model
     protected static function booted(): void
     {
         static::saving(function (UnitOwnership $ownership) {
-            if ($ownership->total_amount !== null && $ownership->received_amount !== null) {
-                $ownership->credit_amount = $ownership->total_amount - $ownership->received_amount;
-            }
+            $total = (float) ($ownership->total_amount ?? 0);
+            $received = (float) ($ownership->received_amount ?? 0);
+            $ownership->credit_amount = max(0, $total - $received);
         });
     }
 

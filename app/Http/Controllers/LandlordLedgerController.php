@@ -182,17 +182,15 @@ class LandlordLedgerController extends Controller
         $landlord = Landlord::with(['ownerships.unit'])->findOrFail($landlordId);
         $entries = collect();
 
-        // 1. Calculate opening unit value debt (credit_amount sum on ownership records)
+        // 1. Total unit value owed across all ownership records
         $openingBalance = (float) $landlord->ownerships->sum('credit_amount');
 
-        // Landlord's owned units summary string (e.g. "101, 102")
-        $landlordUnitsStr = $landlord->ownerships
-            ->map(fn($o) => $o->unit?->unit_number)
-            ->filter()
-            ->unique()
-            ->implode(', ');
+        // Fallback unit number if landlord owns exactly 1 unit
+        $singleUnitNo = $landlord->ownerships->count() === 1
+            ? $landlord->ownerships->first()->unit?->unit_number
+            : null;
 
-        // 2. Prior payments (all-time ReceivingVouchers + GeneralReceivingVouchers prior to dateFrom + all-time paid extra_payments prior to dateFrom)
+        // 2. Prior payments / payouts if dateFrom filter is provided
         $priorPaid = 0.00;
         $priorCharged = 0.00;
         if ($dateFrom) {
@@ -220,21 +218,90 @@ class LandlordLedgerController extends Controller
                 ->sum('amount');
         }
 
-        $carriedForwardBalance = $openingBalance + $priorCharged - $priorPaid;
+        // 3. Push a separate entry row for EACH unit record (ownership) of the landlord
+        if ($landlord->ownerships->isNotEmpty()) {
+            foreach ($landlord->ownerships as $ownership) {
+                $unitNo = $ownership->unit?->unit_number ?? '—';
+                $startDate = $ownership->start_date
+                    ? Carbon::parse($ownership->start_date)
+                    : ($ownership->created_at ? Carbon::parse($ownership->created_at) : ($landlord->created_at ? Carbon::parse($landlord->created_at) : Carbon::now()));
 
-        // Prepend opening balance carried forward row
-        $entries->push([
-            'date' => $dateFrom ? Carbon::parse($dateFrom)->subDay() : ($landlord->created_at ?? Carbon::now()),
-            'voucher_no' => '—',
-            'type' => 'Opening Balance',
-            'description' => $dateFrom ? 'Opening Balance (Carried Forward)' : 'Opening Balance',
-            'debit' => $carriedForwardBalance,
-            'credit' => 0.00,
-            'is_opening' => true,
-            'unit_number' => $landlordUnitsStr ?: '—',
-        ]);
+                // Check if this ownership record is prior to dateFrom or within period
+                $isPrior = $dateFrom && $startDate->format('Y-m-d') < $dateFrom;
+                $entryDate = $isPrior ? Carbon::parse($dateFrom)->subDay() : $startDate;
 
-        // 3. Current period payments (owner receiving vouchers)
+                $descParts = [];
+                if ($ownership->total_amount > 0) {
+                    $descParts[] = 'Total: Rs. ' . number_format($ownership->total_amount, 2);
+                }
+                if ($ownership->received_amount > 0) {
+                    $descParts[] = 'Received: Rs. ' . number_format($ownership->received_amount, 2);
+                }
+                $detailsStr = !empty($descParts) ? ' (' . implode(', ', $descParts) . ')' : '';
+
+                $typeStr = $isPrior ? 'Opening Balance' : 'Unit Record';
+                $descStr = $isPrior
+                    ? 'Opening Balance (Carried Forward) — ' . $unitNo . $detailsStr
+                    : 'Unit Record — ' . $unitNo . $detailsStr;
+
+                $entries->push([
+                    'date'        => $entryDate,
+                    'voucher_no'  => $ownership->file_no ?? '—',
+                    'type'        => $typeStr,
+                    'description' => $descStr,
+                    'debit'       => (float) $ownership->credit_amount,
+                    'credit'      => 0.00,
+                    'is_opening'  => true,
+                    'unit_number' => $unitNo,
+                    'model'       => null,
+                ]);
+            }
+        } else {
+            // Fallback opening row if landlord has no registered unit ownership records
+            $entries->push([
+                'date'        => $dateFrom ? Carbon::parse($dateFrom)->subDay() : ($landlord->created_at ?? Carbon::now()),
+                'voucher_no'  => '—',
+                'type'        => 'Opening Balance',
+                'description' => $dateFrom ? 'Opening Balance (Carried Forward)' : 'Opening Balance',
+                'debit'       => 0.00,
+                'credit'      => 0.00,
+                'is_opening'  => true,
+                'unit_number' => '—',
+                'model'       => null,
+            ]);
+        }
+
+        // If filtering by dateFrom and there are prior payments or prior payouts, add carried forward adjustment entries
+        if ($dateFrom) {
+            if ($priorPaid > 0) {
+                $entries->push([
+                    'date'        => Carbon::parse($dateFrom)->subDay(),
+                    'voucher_no'  => '—',
+                    'type'        => 'Opening Balance',
+                    'description' => 'Prior Payments Received (Carried Forward)',
+                    'debit'       => 0.00,
+                    'credit'      => $priorPaid,
+                    'is_opening'  => true,
+                    'unit_number' => '—',
+                    'model'       => null,
+                ]);
+            }
+            if ($priorCharged > 0) {
+                $entries->push([
+                    'date'        => Carbon::parse($dateFrom)->subDay(),
+                    'voucher_no'  => '—',
+                    'type'        => 'Opening Balance',
+                    'description' => 'Prior Payouts (Carried Forward)',
+                    'debit'       => $priorCharged,
+                    'credit'      => 0.00,
+                    'is_opening'  => true,
+                    'unit_number' => '—',
+                    'model'       => null,
+                ]);
+            }
+        }
+
+        // 4. Current period payments (owner receiving vouchers)
         $payments = ReceivingVoucher::where('received_from_type', 'owner')
             ->where('owner_id', $landlordId)
             ->with(['payments.unit', 'tenant.unit'])
@@ -244,21 +311,21 @@ class LandlordLedgerController extends Controller
             ->get();
 
         foreach ($payments as $v) {
-            $unitNo = $v->payments->first()?->unit?->unit_number ?? $v->tenant?->unit?->unit_number ?? $landlordUnitsStr;
+            $unitNo = $v->payments->first()?->unit?->unit_number ?? $v->tenant?->unit?->unit_number ?? $singleUnitNo;
             $entries->push([
-                'date' => $v->date,
-                'voucher_no' => $v->voucher_no,
-                'type' => 'Payment',
+                'date'        => $v->date,
+                'voucher_no'  => $v->voucher_no,
+                'type'        => 'Payment',
                 'description' => 'Payment Received: ' . $v->voucher_no . ($v->notes ? ' - ' . $v->notes : ''),
-                'debit' => 0.00,
-                'credit' => (float)$v->amount,
-                'is_opening' => false,
-                'model' => $v,
+                'debit'       => 0.00,
+                'credit'      => (float) $v->amount,
+                'is_opening'  => false,
+                'model'       => $v,
                 'unit_number' => $unitNo ?: '—',
             ]);
         }
 
-        // 3b. Current period General Receiving Vouchers
+        // 4b. Current period General Receiving Vouchers
         $grvPayments = GeneralReceivingVoucher::where('landlord_id', $landlordId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
@@ -266,20 +333,21 @@ class LandlordLedgerController extends Controller
             ->get();
 
         foreach ($grvPayments as $grv) {
+            $unitNo = $singleUnitNo;
             $entries->push([
-                'date' => $grv->date,
-                'voucher_no' => $grv->voucher_no,
-                'type' => 'General Receipt',
+                'date'        => $grv->date,
+                'voucher_no'  => $grv->voucher_no,
+                'type'        => 'General Receipt',
                 'description' => 'General Receipt: ' . $grv->voucher_no . ($grv->notes ? ' - ' . $grv->notes : ''),
-                'debit' => 0.00,
-                'credit' => (float)$grv->amount,
-                'is_opening' => false,
-                'model' => $grv,
-                'unit_number' => $landlordUnitsStr ?: '—',
+                'debit'       => 0.00,
+                'credit'      => (float) $grv->amount,
+                'is_opening'  => false,
+                'model'       => $grv,
+                'unit_number' => $unitNo ?: '—',
             ]);
         }
 
-        // 4. Current period extra payments
+        // 5. Current period extra payments
         $extraPayments = \App\Models\Payment::where('landlord_id', $landlordId)
             ->where('type', 'extra_payment')
             ->where('amount_paid', '>', 0)
@@ -296,22 +364,22 @@ class LandlordLedgerController extends Controller
 
         foreach ($extraPayments as $ep) {
             $v = $ep->receivingVouchers->first();
-            $unitNo = $ep->unit?->unit_number ?? $landlordUnitsStr;
+            $unitNo = $ep->unit?->unit_number ?? $singleUnitNo;
             $desc = 'Extra Payment Paid' . ($unitNo ? ' (Unit ' . $unitNo . ')' : '') . ': ' . $ep->notes;
             $entries->push([
-                'date' => $ep->paid_at ? Carbon::parse($ep->paid_at) : $ep->month,
-                'voucher_no' => $v?->voucher_no ?? $ep->receipt_no ?? '—',
-                'type' => 'Extra Payment',
+                'date'        => $ep->paid_at ? Carbon::parse($ep->paid_at) : $ep->month,
+                'voucher_no'  => $v?->voucher_no ?? $ep->receipt_no ?? '—',
+                'type'        => 'Extra Payment',
                 'description' => $desc,
-                'debit' => 0.00,
-                'credit' => (float)$ep->amount_paid,
-                'is_opening' => false,
-                'model' => $v,
+                'debit'       => 0.00,
+                'credit'      => (float) $ep->amount_paid,
+                'is_opening'  => false,
+                'model'       => $v,
                 'unit_number' => $unitNo ?: '—',
             ]);
         }
 
-        // 5. Current period payouts (payment vouchers paid to landlord)
+        // 6. Current period payouts (payment vouchers paid to landlord)
         $payouts = \App\Models\PaymentVoucher::where('paid_to_type', 'landlord')
             ->where('landlord_id', $landlordId)
             ->with('unit')
@@ -321,41 +389,40 @@ class LandlordLedgerController extends Controller
             ->get();
 
         foreach ($payouts as $pv) {
-            $unitNo = $pv->unit?->unit_number ?? $landlordUnitsStr;
+            $unitNo = $pv->unit?->unit_number ?? $singleUnitNo;
             $entries->push([
-                'date' => $pv->date,
-                'voucher_no' => $pv->voucher_no,
-                'type' => 'Payout',
+                'date'        => $pv->date,
+                'voucher_no'  => $pv->voucher_no,
+                'type'        => 'Payout',
                 'description' => 'Payout: ' . $pv->voucher_no . ($pv->notes ? ' - ' . $pv->notes : ''),
-                'debit' => (float)$pv->amount,
-                'credit' => 0.00,
-                'is_opening' => false,
-                'model' => $pv,
+                'debit'       => (float) $pv->amount,
+                'credit'      => 0.00,
+                'is_opening'  => false,
+                'model'       => $pv,
                 'unit_number' => $unitNo ?: '—',
             ]);
         }
 
-        // Sort all entries chronologically, keeping opening balance row first
+        // Sort all entries: unit opening entries first (sorted by date/unit), then non-opening entries (sorted by date)
         $entries = $entries->sortBy(function ($e) {
-            return ($e['is_opening'] ?? false) ? '0000-00-00' : $e['date']->format('Y-m-d');
+            $prefix = ($e['is_opening'] ?? false) ? '0000-00-00_' : '1111-11-11_';
+            return $prefix . $e['date']->format('Y-m-d') . '_' . ($e['unit_number'] ?? '');
         })->values();
 
-        // 6. Calculate running balance
-        $runningBalance = $carriedForwardBalance;
+        // 7. Calculate continuous running balance
+        $runningBalance = 0.00;
         $totalDebit = 0.00;
         $totalCredit = 0.00;
 
         $entries = $entries->map(function ($entry) use (&$runningBalance, &$totalDebit, &$totalCredit) {
-            if (empty($entry['is_opening'])) {
-                $runningBalance += $entry['debit'] - $entry['credit'];
-                $totalDebit += $entry['debit'];
-                $totalCredit += $entry['credit'];
-            }
+            $runningBalance += $entry['debit'] - $entry['credit'];
+            $totalDebit += $entry['debit'];
+            $totalCredit += $entry['credit'];
             $entry['running_balance'] = $runningBalance;
             return $entry;
         });
 
-        // Cumulative aggregates
+        // Cumulative aggregates for summary cards
         $allTimePaid = (float) ReceivingVoucher::where('received_from_type', 'owner')
             ->where('owner_id', $landlordId)
             ->sum('amount');
@@ -383,7 +450,7 @@ class LandlordLedgerController extends Controller
             'pendingBalance' => $pendingBalance,
             'summary'        => [
                 'opening_balance' => $openingBalance,
-                'total_debit'  => $openingBalance + $totalDebit,
+                'total_debit'  => $totalDebit,
                 'total_credit' => $totalCredit,
                 'net_balance'  => $pendingBalance,
             ]

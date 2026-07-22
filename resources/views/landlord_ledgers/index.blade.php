@@ -244,9 +244,9 @@
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
                                 <td class="px-5 py-3.5 text-xs font-semibold whitespace-nowrap">
-                                    @if(!empty($entry['unit_number']))
+                                    @if(!empty($entry['unit_number']) && $entry['unit_number'] !== '—')
                                         <span class="unit-badge-lg px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
-                                            Unit {{ $entry['unit_number'] }}
+                                            {{ \Illuminate\Support\Str::startsWith(strtolower($entry['unit_number']), ['unit', 'shop', 'flat', 'off']) ? $entry['unit_number'] : 'Unit ' . $entry['unit_number'] }}
                                         </span>
                                     @else
                                         —
