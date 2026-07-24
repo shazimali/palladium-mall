@@ -109,8 +109,86 @@ window.addEventListener('resize', checkMobile);">
     <x-common.preloader />
     {{-- preloader end --}}
 
-    @yield('content')
+    <!-- Single-Tab / Unique View Guard Script -->
+    <script>
+        (function () {
+            const currentPath = window.location.pathname;
+            // Set deterministic window name so named target links natively reuse this tab
+            window.name = 'pm_tab_' + encodeURIComponent(currentPath);
 
+            // Automatically enforce target names on _blank links
+            document.addEventListener('click', function (e) {
+                const link = e.target.closest('a[target="_blank"]');
+                if (link && link.href) {
+                    try {
+                        const url = new URL(link.href, window.location.origin);
+                        if (url.origin === window.location.origin) {
+                            link.target = 'pm_tab_' + encodeURIComponent(url.pathname);
+                        }
+                    } catch (err) {}
+                }
+            }, true);
+
+            // Intercept window.open calls without explicit target name
+            const originalOpen = window.open;
+            window.open = function (url, target, features) {
+                if (!target || target === '_blank') {
+                    try {
+                        const parsed = new URL(url, window.location.origin);
+                        if (parsed.origin === window.location.origin) {
+                            target = 'pm_tab_' + encodeURIComponent(parsed.pathname);
+                        }
+                    } catch (err) {}
+                }
+                return originalOpen.call(window, url, target, features);
+            };
+
+            // BroadcastChannel check for tabs opened directly or via navigation
+            if ('BroadcastChannel' in window) {
+                const tabId = 'tab_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+                const channel = new BroadcastChannel('pm_single_view_channel');
+
+                // Ask if any tab is already on this pathname
+                channel.postMessage({
+                    type: 'CHECK_VIEW_OPEN',
+                    pathname: currentPath,
+                    tabId: tabId
+                });
+
+                channel.onmessage = function (event) {
+                    const data = event.data;
+                    if (!data) return;
+
+                    // Existing tab receiving check request
+                    if (data.type === 'CHECK_VIEW_OPEN' && data.pathname === currentPath && data.tabId !== tabId) {
+                        // Focus current window
+                        window.focus();
+                        // Reply to new tab that this view is already open
+                        channel.postMessage({
+                            type: 'VIEW_ALREADY_OPEN',
+                            pathname: currentPath,
+                            requestingTabId: data.tabId,
+                            tabId: tabId
+                        });
+                    }
+
+                    // New tab receiving response that view is already open in another tab
+                    if (data.type === 'VIEW_ALREADY_OPEN' && data.requestingTabId === tabId && data.pathname === currentPath) {
+                        setTimeout(() => {
+                            try {
+                                window.close();
+                            } catch (e) {}
+                            if (!window.closed) {
+                                if (document.referrer && document.referrer !== window.location.href) {
+                                    window.location.href = document.referrer;
+                                }
+                            }
+                        }, 800);
+                    }
+                };
+            }
+        })();
+    </script>
 </body>
 
 @stack('scripts')
