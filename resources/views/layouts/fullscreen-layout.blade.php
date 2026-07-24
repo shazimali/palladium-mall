@@ -84,16 +84,16 @@
             const theme = savedTheme || systemTheme;
             if (theme === 'dark') {
                 document.documentElement.classList.add('dark');
-                document.body.classList.add('dark', 'bg-gray-900');
+                if (document.body) document.body.classList.add('dark', 'bg-gray-900');
             } else {
                 document.documentElement.classList.remove('dark');
-                document.body.classList.remove('dark', 'bg-gray-900');
+                if (document.body) document.body.classList.remove('dark', 'bg-gray-900');
             }
         })();
     </script>
 </head>
 
-<body x-data="{ 'loaded': true}" x-init="$store.sidebar.isExpanded = window.innerWidth >= 1280;
+<body x-data="{ 'loaded': false}" x-init="$store.sidebar.isExpanded = window.innerWidth >= 1280;
 const checkMobile = () => {
     if (window.innerWidth < 1280) {
         $store.sidebar.setMobileOpen(false);
@@ -109,106 +109,9 @@ window.addEventListener('resize', checkMobile);">
     <x-common.preloader />
     {{-- preloader end --}}
 
-    <!-- Single-Tab / Unique View Guard Script -->
-    <script>
-        (function () {
-            const currentPath = window.location.pathname;
+    @yield('content')
 
-            // Exempt voucher creation, edit, and entry pages from single-tab locking
-            const isExemptFromSingleTab = currentPath.includes('/create') || 
-                                          currentPath.includes('/edit') || 
-                                          currentPath.includes('vouchers');
 
-            if (!isExemptFromSingleTab) {
-                // Set deterministic window name so named target links natively reuse this tab
-                window.name = 'pm_tab_' + encodeURIComponent(currentPath);
-            }
-
-            // Automatically enforce target names on _blank links (excluding exempt paths)
-            document.addEventListener('click', function (e) {
-                const link = e.target.closest('a[target="_blank"]');
-                if (link && link.href) {
-                    try {
-                        const url = new URL(link.href, window.location.origin);
-                        if (url.origin === window.location.origin) {
-                            const linkPath = url.pathname;
-                            const isLinkExempt = linkPath.includes('/create') || 
-                                                 linkPath.includes('/edit') || 
-                                                 linkPath.includes('vouchers');
-                            if (!isLinkExempt) {
-                                link.target = 'pm_tab_' + encodeURIComponent(linkPath);
-                            }
-                        }
-                    } catch (err) {}
-                }
-            }, true);
-
-            // Intercept window.open calls without explicit target name
-            const originalOpen = window.open;
-            window.open = function (url, target, features) {
-                if (!target || target === '_blank') {
-                    try {
-                        const parsed = new URL(url, window.location.origin);
-                        if (parsed.origin === window.location.origin) {
-                            const linkPath = parsed.pathname;
-                            const isLinkExempt = linkPath.includes('/create') || 
-                                                 linkPath.includes('/edit') || 
-                                                 linkPath.includes('vouchers');
-                            if (!isLinkExempt) {
-                                target = 'pm_tab_' + encodeURIComponent(linkPath);
-                            }
-                        }
-                    } catch (err) {}
-                }
-                return originalOpen.call(window, url, target, features);
-            };
-
-            // BroadcastChannel check for tabs (skipped for create/edit/voucher paths)
-            if ('BroadcastChannel' in window && !isExemptFromSingleTab) {
-                const tabId = 'tab_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
-                const channel = new BroadcastChannel('pm_single_view_channel');
-
-                // Ask if any tab is already on this pathname
-                channel.postMessage({
-                    type: 'CHECK_VIEW_OPEN',
-                    pathname: currentPath,
-                    tabId: tabId
-                });
-
-                channel.onmessage = function (event) {
-                    const data = event.data;
-                    if (!data) return;
-
-                    // Existing tab receiving check request
-                    if (data.type === 'CHECK_VIEW_OPEN' && data.pathname === currentPath && data.tabId !== tabId) {
-                        // Focus current window
-                        window.focus();
-                        // Reply to new tab that this view is already open
-                        channel.postMessage({
-                            type: 'VIEW_ALREADY_OPEN',
-                            pathname: currentPath,
-                            requestingTabId: data.tabId,
-                            tabId: tabId
-                        });
-                    }
-
-                    // New tab receiving response that view is already open in another tab
-                    if (data.type === 'VIEW_ALREADY_OPEN' && data.requestingTabId === tabId && data.pathname === currentPath) {
-                        setTimeout(() => {
-                            try {
-                                window.close();
-                            } catch (e) {}
-                            if (!window.closed) {
-                                if (document.referrer && document.referrer !== window.location.href) {
-                                    window.location.href = document.referrer;
-                                }
-                            }
-                        }, 800);
-                    }
-                };
-            }
-        })();
-    </script>
 </body>
 
 @stack('scripts')
