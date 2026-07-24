@@ -53,24 +53,38 @@
     </thead>
     <tbody>
         @foreach($incomeBreakdown as $type => $amount)
-            <tr>
-                <td>
-                    @switch($type)
-                        @case('rent')
-                            Rent Collected
-                            @break
-                        @case('maintenance')
-                            Maintenance Charges
-                            @break
-                        @case('fine')
-                            Fines Collected
-                            @break
-                        @default
-                            Utility: {{ ucfirst($type) }}
-                    @endswitch
-                </td>
-                <td style="text-align: right;">{{ $amount }}</td>
-            </tr>
+            @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
+                <tr>
+                    <td>
+                        @switch($type)
+                            @case('rent_pm_mall')
+                                Rent Collected (PM Mall Units)
+                                @break
+                            @case('maint_pm_mall')
+                                Maintenance Charges (PM Mall Units)
+                                @break
+                            @case('extra_pm_mall')
+                                Extra Payments (PM Mall Units)
+                                @break
+                            @case('rent_other_owned')
+                                Rent Collected (Landlord / Other-Owned Units)
+                                @break
+                            @case('maint_other_owned')
+                                Maintenance Charges (Landlord / Other-Owned Units)
+                                @break
+                            @case('extra_other_owned')
+                                Extra Payments (Landlord / Other-Owned Units)
+                                @break
+                            @case('other')
+                                Other Tenant Receipts (Unallocated Vouchers)
+                                @break
+                            @default
+                                Utility: {{ ucfirst($type) }}
+                        @endswitch
+                    </td>
+                    <td style="text-align: right;">{{ $amount }}</td>
+                </tr>
+            @endif
         @endforeach
         <tr>
             <td style="font-weight: bold;">Miscellaneous Receipts (Vouchers)</td>

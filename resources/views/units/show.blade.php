@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Unit — {{ $unit->unit_number }}" />
+    <x-common.page-breadcrumb pageTitle="Flat/Shop — {{ $unit->unit_number }}" />
 
     {{-- KPI Indicator Cards --}}
     <div class="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -94,7 +94,7 @@
                 <x-common.component-card title="Unit Specifications" desc="Technical and physical specifications of the unit">
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         @foreach([
-                            ['Unit Number',   $unit->unit_number, null],
+                            ['Flat/Shop Number',   $unit->unit_number, null],
                             ['File No.',      $unit->file_no ?? '—', null],
                             ['Type',          ucfirst($unit->type), null],
                             ['Floor',         $unit->floor->name ?? '—', null],

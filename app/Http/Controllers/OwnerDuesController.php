@@ -37,12 +37,12 @@ class OwnerDuesController extends Controller
             ->where('receiving_vouchers.received_from_type', 'tenant')
             ->where(function ($q) {
                 $q->where('payments.type', 'security_deposit')
-                  ->orWhere('payments.landlord_id', '>', 0);
+                    ->orWhere('payments.landlord_id', '>', 0);
             })
             ->when($dateFrom && $dateTo, function ($q) use ($dateFrom, $dateTo) {
                 $q->where(function ($sq) use ($dateFrom, $dateTo) {
                     $sq->whereBetween('payments.month', [$dateFrom, $dateTo])
-                       ->orWhereBetween('payments.due_date', [$dateFrom, $dateTo]);
+                        ->orWhereBetween('payments.due_date', [$dateFrom, $dateTo]);
                 });
             })
             ->sum('receiving_voucher_payments.amount_allocated');
