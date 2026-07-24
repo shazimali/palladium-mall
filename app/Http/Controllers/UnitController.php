@@ -14,6 +14,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 use App\Models\Landlord;
 use App\Models\ActivityLog;
+use App\Exports\UnitsExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -21,24 +24,37 @@ class UnitController extends Controller
 {
     public function index(Request $request)
     {
-        $baseQuery = Unit::query()
+        // Context query for counts (scoped by Owner, Floor, Block, Area, Search)
+        $contextQuery = Unit::query()
             ->when($request->search, fn($q) => $q->search($request->search))
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->type, fn($q) => $q->where('type', $request->type))
             ->when($request->floor_id, fn($q) => $q->where('floor_id', $request->floor_id))
             ->when($request->block_id, fn($q) => $q->where('block_id', $request->block_id))
             ->when($request->area_id, fn($q) => $q->where('area_id', $request->area_id))
             ->when($request->filled('is_self'), fn($q) => $q->where('is_self', (bool) $request->is_self));
 
+        $statusFilteredQuery = (clone $contextQuery)->when($request->status, fn($q) => $q->where('status', $request->status));
+        $typeFilteredQuery   = (clone $contextQuery)->when($request->type, fn($q) => $q->where('type', $request->type));
+
         $counts = [
-            'total'   => (clone $baseQuery)->count(),
-            'vacant'  => (clone $baseQuery)->where('status', 'vacant')->count(),
-            'rented'  => (clone $baseQuery)->where('status', 'rented')->count(),
-            'self'    => (clone $baseQuery)->where('status', 'self')->count(),
-            'is_self' => (clone $baseQuery)->where('is_self', true)->count(),
+            'total'   => (clone $contextQuery)
+                            ->when($request->status, fn($q) => $q->where('status', $request->status))
+                            ->when($request->type, fn($q) => $q->where('type', $request->type))
+                            ->count(),
+            'flat'    => (clone $statusFilteredQuery)->where('type', 'flat')->count(),
+            'shop'    => (clone $statusFilteredQuery)->where('type', 'shop')->count(),
+            'office'  => (clone $statusFilteredQuery)->where('type', 'office')->count(),
+            'vacant'  => (clone $typeFilteredQuery)->where('status', 'vacant')->count(),
+            'rented'  => (clone $typeFilteredQuery)->where('status', 'rented')->count(),
+            'self'    => (clone $typeFilteredQuery)->where('status', 'self')->count(),
+            'is_self' => (clone $contextQuery)->where('is_self', true)->count(),
         ];
 
-        $units = $baseQuery
+        // Full query for data table (with type and status applied)
+        $fullQuery = (clone $contextQuery)
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->type, fn($q) => $q->where('type', $request->type));
+
+        $units = $fullQuery
             ->with(['floor', 'block', 'area', 'landlord'])
             ->orderBy('unit_number')
             ->paginate(20)
@@ -55,10 +71,13 @@ class UnitController extends Controller
         };
 
         if ($request->ajax() || $request->has('ajax')) {
-            return view('units._table', [
-                'units' => $units,
-                'highlight' => $highlight,
-            ])->render();
+            return response()->json([
+                'html' => view('units._table', [
+                    'units' => $units,
+                    'highlight' => $highlight,
+                ])->render(),
+                'counts' => $counts,
+            ]);
         }
 
         $floors = Floor::orderBy('name')->get();
@@ -94,6 +113,48 @@ class UnitController extends Controller
             'title' => 'Flat / Shop Master List',
             'units' => $units,
         ]);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $units = Unit::query()
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->type, fn($q) => $q->where('type', $request->type))
+            ->when($request->floor_id, fn($q) => $q->where('floor_id', $request->floor_id))
+            ->when($request->block_id, fn($q) => $q->where('block_id', $request->block_id))
+            ->when($request->area_id, fn($q) => $q->where('area_id', $request->area_id))
+            ->when($request->filled('is_self'), fn($q) => $q->where('is_self', (bool) $request->is_self))
+            ->with(['floor', 'block', 'area', 'landlord'])
+            ->orderBy('unit_number')
+            ->get();
+
+        return Excel::download(
+            new UnitsExport($units),
+            'units_list_' . now()->format('Y-m-d') . '.xlsx'
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $units = Unit::query()
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->type, fn($q) => $q->where('type', $request->type))
+            ->when($request->floor_id, fn($q) => $q->where('floor_id', $request->floor_id))
+            ->when($request->block_id, fn($q) => $q->where('block_id', $request->block_id))
+            ->when($request->area_id, fn($q) => $q->where('area_id', $request->area_id))
+            ->when($request->filled('is_self'), fn($q) => $q->where('is_self', (bool) $request->is_self))
+            ->with(['floor', 'block', 'area', 'landlord'])
+            ->orderBy('unit_number')
+            ->get();
+
+        $pdf = Pdf::loadView('units.pdf', [
+            'title' => 'Flat / Shop Master List',
+            'units' => $units,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('units_list_' . now()->format('Y-m-d') . '.pdf');
     }
 
     public function printOne(Unit $unit): View
