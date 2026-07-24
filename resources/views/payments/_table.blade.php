@@ -42,16 +42,16 @@
 
 <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
     <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-        <thead class="text-xs uppercase bg-brand-500 text-white dark:bg-brand-600 dark:text-white">
+        <thead class="text-xs sm:text-sm uppercase font-black bg-brand-500 text-white dark:bg-brand-600 dark:text-white">
             <tr>
-                <th class="px-4 py-3">#</th>
-                <th class="px-4 py-3">Flat/Shop Number</th>
-                <th class="px-4 py-3">Tenant</th>
-                <th class="px-4 py-3">Month</th>
-                <th class="px-4 py-3">Billing Details</th>
-                <th class="px-4 py-3">Total Amount</th>
-                <th class="px-4 py-3">Total Paid</th>
-                <th class="px-4 py-3">Consolidated Status</th>
+                <th class="px-4 py-3.5 text-white">#</th>
+                <th class="px-4 py-3.5 text-white">Flat/Shop Number</th>
+                <th class="px-4 py-3.5 text-white">Tenant</th>
+                <th class="px-4 py-3.5 text-white">Month</th>
+                <th class="px-4 py-3.5 text-white">Billing Details</th>
+                <th class="px-4 py-3.5 text-white">Total Amount</th>
+                <th class="px-4 py-3.5 text-white">Total Paid</th>
+                <th class="px-4 py-3.5 text-white">Consolidated Status</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">

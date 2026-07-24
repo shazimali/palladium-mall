@@ -212,6 +212,7 @@ class ProfitLossController extends Controller
             'expensesByHead' => $expensesByHead,
             'totalExpenses' => $totalExpenses,
             'netProfitLoss' => $netProfitLoss,
+            'netProfit' => $netProfitLoss,
             'distribution' => $distribution,
             'totalOwnerSharePct' => (float) $totalOwnerPercentage,
         ];

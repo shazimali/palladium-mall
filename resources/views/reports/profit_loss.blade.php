@@ -36,8 +36,8 @@
                 </div>
                 <div class="text-right">
                     <span class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 block">Net Profit</span>
-                    <span class="text-2xl sm:text-3xl font-black font-mono {{ $netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
-                        Rs. {{ number_format($netProfit) }}
+                    <span class="text-2xl sm:text-3xl font-black font-mono {{ ($netProfitLoss ?? $netProfit ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                        Rs. {{ number_format($netProfitLoss ?? $netProfit ?? 0) }}
                     </span>
                 </div>
             </div>
