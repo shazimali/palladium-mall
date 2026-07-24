@@ -142,7 +142,7 @@ class MenuHelper
         if (auth()->check() && $user->can('parties.view')) {
             $mainItems[] = [
                 'icon' => 'user-profile',
-                'name' => 'Party Heads',
+                'name' => 'New Parties',
                 'path' => '/parties',
             ];
         }
@@ -159,7 +159,7 @@ class MenuHelper
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [
                 'icon' => 'ecommerce',
-                'name' => 'Billings',
+                'name' => 'Monthly Billings',
                 'path' => '/payments',
             ];
         }
@@ -167,7 +167,7 @@ class MenuHelper
         $voucherSubItems = [];
         if (auth()->check()) {
             if ($user->can('receiving_vouchers.view')) {
-                $voucherSubItems[] = ['name' => 'Receiving Vouchers', 'path' => '/receiving-vouchers'];
+                $voucherSubItems[] = ['name' => 'Tenants Receiving Vouchers', 'path' => '/receiving-vouchers'];
             }
             if ($user->can('general_receiving_vouchers.view')) {
                 $voucherSubItems[] = ['name' => 'General Receiving Vouchers', 'path' => '/general-receiving-vouchers'];

@@ -142,10 +142,17 @@
                 'other' => 'Other-Owned Billings',
                 default => 'All Billings',
             };
+            $selectedMonth = request('month')
+                ? \Carbon\Carbon::parse(request('month'))->format('F Y')
+                : \Carbon\Carbon::now()->format('F Y');
         @endphp
         <x-common.component-card :title="$cardTitle" desc="Track rent, maintenance and fine billings">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex flex-wrap gap-2 items-center">
+                    <span
+                        class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-theme-xs">
+                        <span>📅</span> <span id="badge-month-label" class="font-bold text-gray-800 dark:text-gray-200">{{ $selectedMonth }}</span>
+                    </span>
                     <span
                         class="inline-flex items-center rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 shadow-theme-xs">
                         Total: <span id="badge-total-count"
@@ -663,6 +670,14 @@
                     const total = meta.getAttribute('data-total');
                     const totalBadge = document.getElementById('badge-total-count');
                     if (totalBadge && total !== null) totalBadge.innerText = total;
+
+                    const monthInput = document.getElementById('filter_month');
+                    if (monthInput) {
+                        const altInput = monthInput.nextElementSibling;
+                        const monthText = (altInput && altInput.classList.contains('flatpickr-input') && altInput.value) ? altInput.value : '';
+                        const monthBadge = document.getElementById('badge-month-label');
+                        if (monthBadge && monthText) monthBadge.innerText = monthText;
+                    }
 
                     const types = ['grand_total', 'rent', 'services', 'security_deposit'];
                     types.forEach(key => {
