@@ -26,7 +26,7 @@
                     {{ $type === 'receivables' ? 'Net Outstanding Receivable' : 'Net Outstanding Payable' }}
                 </span>
                 <span class="text-2xl sm:text-3xl font-black font-mono {{ $type === 'receivables' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400' }}">
-                    Rs. {{ number_format($totalNetBalance) }}
+                    Rs. {{ number_format($totalNetBalance ?? ($type === 'receivables' ? ($totalReceivablesNet ?? $totalReceivables ?? 0) : ($totalPayablesNet ?? $totalPayables ?? 0))) }}
                 </span>
             </div>
         </div>

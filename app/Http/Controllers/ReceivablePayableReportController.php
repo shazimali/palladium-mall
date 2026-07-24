@@ -453,6 +453,7 @@ class ReceivablePayableReportController extends Controller
             'totalCashBalance' => $totalCashBalance,
             'totalPayables' => $totalPayablesNet,
             'totalReceivables' => $totalReceivablesNet,
+            'totalNetBalance' => $type === 'receivables' ? $totalReceivablesNet : $totalPayablesNet,
             'netPosition' => $netPosition,
 
             // PM Mall vs Other stats
