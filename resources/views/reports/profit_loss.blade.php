@@ -3,6 +3,47 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Profit & Loss Statement" />
 
+    {{-- STICKY PROFIT & LOSS HEADER --}}
+    <div class="sticky mb-6 rounded-2xl border-2 border-emerald-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+        style="position: sticky; top: 72px; z-index: 990;">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md text-3xl font-black">
+                    📈
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                        Profit & Loss Financial Summary
+                    </p>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
+                        {{ !empty($filters['date_from']) ? date('d M Y', strtotime($filters['date_from'])) : 'Start' }} — {{ !empty($filters['date_to']) ? date('d M Y', strtotime($filters['date_to'])) : 'End' }}
+                    </h2>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-6">
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Total Revenue</span>
+                    <span class="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        Rs. {{ number_format($totalIncome) }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400 block">Total Expenses</span>
+                    <span class="text-xl sm:text-2xl font-black font-mono text-red-600 dark:text-red-400">
+                        Rs. {{ number_format($totalExpenses) }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 block">Net Profit</span>
+                    <span class="text-2xl sm:text-3xl font-black font-mono {{ $netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                        Rs. {{ number_format($netProfit) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @php
         $thisMonthFrom = date('Y-m-01');
         $thisMonthTo = date('Y-m-t');

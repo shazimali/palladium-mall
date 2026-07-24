@@ -3,6 +3,35 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Receivables & Payables Summary" />
 
+    {{-- STICKY RECEIVABLES & PAYABLES HEADER --}}
+    <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+        style="position: sticky; top: 72px; z-index: 990;">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md text-3xl font-black">
+                    {{ $type === 'receivables' ? '📥' : '📤' }}
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                        {{ $type === 'receivables' ? 'Due Receivables Summary' : 'Due Payables Summary' }}
+                    </p>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
+                        {{ $type === 'receivables' ? ($receivableScope === 'pm_mall' ? 'PM Mall Receivables' : 'Other Landlord Receivables') : 'Total Outstanding Payables' }}
+                    </h2>
+                </div>
+            </div>
+
+            <div class="text-right">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">
+                    {{ $type === 'receivables' ? 'Net Outstanding Receivable' : 'Net Outstanding Payable' }}
+                </span>
+                <span class="text-2xl sm:text-3xl font-black font-mono {{ $type === 'receivables' ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400' }}">
+                    Rs. {{ number_format($totalNetBalance) }}
+                </span>
+            </div>
+        </div>
+    </div>
+
     <form action="{{ route('reports.receivables-payables') }}" method="GET" id="report-filter-form" class="space-y-6">
 
         {{-- Segmented Tab Switcher --}}

@@ -29,7 +29,7 @@
         {{ $button }}
     </div>
 
-    <div class="z-50 fixed" x-ref="content">
+    <div class="z-[99999] fixed" x-ref="content">
         <div x-show="isOpen" x-cloak class="p-2 bg-white border border-gray-200 rounded-2xl shadow-lg dark:border-gray-800 dark:bg-gray-dark w-40">
             <div class="space-y-1" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                 {{ $content }}

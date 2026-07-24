@@ -3,6 +3,38 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Cash & Bank Account Details" />
 
+    {{-- STICKY ACCOUNT LEDGER HEADER --}}
+    <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+        style="position: sticky; top: 72px; z-index: 990;">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md text-3xl font-black">
+                    🏦
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                        Account Ledger & History
+                    </p>
+                    <div class="flex flex-wrap items-baseline gap-3 mt-0.5">
+                        <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+                            {{ $paymentAccount->name }}
+                        </h2>
+                        <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-bold text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                            {{ ucfirst($paymentAccount->type) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-right">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Current Balance</span>
+                <span class="text-2xl sm:text-3xl font-black font-mono {{ $paymentAccount->current_balance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                    Rs. {{ number_format($paymentAccount->current_balance) }}
+                </span>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {{-- Profile Panel --}}
         <div class="lg:col-span-1 space-y-6">

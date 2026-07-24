@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="mx-auto max-w-3xl px-4 py-6">
-        <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+    <div class="mx-auto max-w-7xl px-4 py-6">
+        <div class="mb-6 flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
             <a href="{{ route('payment-vouchers.index') }}" class="hover:text-brand-500">Paid Vouchers</a>
             <span>/</span>
-            <span class="text-gray-800 dark:text-white/90">Edit Paid Voucher</span>
+            <span class="text-gray-800 dark:text-white/90">Edit Paid Voucher: {{ $voucher->voucher_no }}</span>
         </div>
 
         <x-common.component-card :title="'Edit Paid Voucher: ' . $voucher->voucher_no"
@@ -156,9 +156,40 @@
                 @method('PUT')
 
                 @php
-                    $input = 'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600';
-                    $label = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300';
+                    $input = 'w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base sm:text-lg font-semibold text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-600';
+                    $label = 'mb-1.5 block text-xs sm:text-sm font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300';
                 @endphp
+
+                {{-- STICKY BIG HEADING BANNER --}}
+                <div class="sticky mb-6 rounded-2xl border-2 border-red-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+                    style="position: sticky; top: 72px; z-index: 990;">
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-4 min-w-0">
+                            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-md text-3xl font-black">
+                                💸
+                            </div>
+                            <div class="min-w-0">
+                                <p class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400">
+                                    Edit Payment Voucher: {{ $voucher->voucher_no }}
+                                </p>
+                                <div class="flex flex-wrap items-baseline gap-2 mt-0.5">
+                                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white"
+                                        x-text="paidToType === 'tenant' ? (selectedLabel ? 'Tenant: ' + selectedLabel : 'Select Tenant...') : (paidToType === 'landlord' ? 'Landlord Payout' : (paidToType === 'account' ? 'Account Transfer' : 'Party / Supplier'))"></h2>
+                                </div>
+                                <div class="flex items-center gap-2 mt-1 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                    <span>Paid From Account:</span>
+                                    <span class="text-brand-600 dark:text-brand-400 font-extrabold" x-text="selectedAccountName || 'Not Selected'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-right">
+                            <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Voucher Amount</span>
+                            <span class="text-2xl sm:text-3xl font-black font-mono text-red-600 dark:text-red-400"
+                                  x-text="displayAmount ? 'Rs. ' + displayAmount : 'Rs. 0.00'"></span>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     {{-- Paid To Type --}}
@@ -232,7 +263,7 @@
                         <input type="hidden" name="tenant_id" :value="selectedId" :required="paidToType === 'tenant'">
                         <input type="hidden" name="tenant_name" :value="selectedLabel">
 
-                        <div class="relative">
+                        <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
                             <div tabindex="0"
                                 @click="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
                                 @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
@@ -249,7 +280,7 @@
                             </div>
 
                             <div x-show="open"
-                                class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
+                                class="absolute left-0 z-[99999] mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
                                 <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
                                     <input x-ref="tenantSearchInput" x-model="search"
                                         @keydown.arrow-down.prevent="moveHighlight(1)"
@@ -370,7 +401,7 @@
                         <input type="hidden" name="landlord_id" :value="selectedId" :required="paidToType === 'landlord'">
                         <input type="hidden" name="landlord_name" :value="selectedLabel">
 
-                        <div class="relative">
+                        <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
                             <div tabindex="0"
                                 @click="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
                                 @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
@@ -387,7 +418,7 @@
                             </div>
 
                             <div x-show="open"
-                                class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
+                                class="absolute left-0 z-[99999] mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
                                 <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
                                     <input x-ref="landlordSearchInput" x-model="search"
                                         @keydown.arrow-down.prevent="moveHighlight(1)"
@@ -478,7 +509,7 @@
                         <input type="hidden" name="party_id" :value="selectedId" :required="paidToType === 'other'">
                         <input type="hidden" name="party_name" :value="selectedLabel">
 
-                        <div class="relative">
+                        <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
                             {{-- Trigger --}}
                             <div tabindex="0"
                                 @click="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
@@ -502,7 +533,7 @@
                                 x-transition:leave="transition ease-in duration-75"
                                 x-transition:leave-start="opacity-100 transform scale-100"
                                 x-transition:leave-end="opacity-0 transform scale-95"
-                                class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                                class="absolute left-0 z-[99999] mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
                                 style="display: none;">
 
                                 <!-- Search Input -->

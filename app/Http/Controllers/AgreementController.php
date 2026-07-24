@@ -89,11 +89,21 @@ class AgreementController extends Controller
 
     public function show(Agreement $agreement): View
     {
-        $agreement->load(['tenant', 'unit']);
+        $agreement->load(['tenant', 'unit', 'payments.paymentAccount']);
+
+        $payments = $agreement->payments->sortByDesc('due_date');
+
+        $totalBilled  = $payments->sum('amount');
+        $totalPaid    = $payments->sum('amount_paid');
+        $totalBalance = max(0, $totalBilled - $totalPaid);
 
         return view('agreements.show', [
-            'title' => 'Agreement — ' . $agreement->tenant->name,
-            'agreement' => $agreement,
+            'title'        => 'Agreement — ' . ($agreement->tenant->name ?? 'Deleted Tenant'),
+            'agreement'    => $agreement,
+            'payments'     => $payments,
+            'totalBilled'  => $totalBilled,
+            'totalPaid'    => $totalPaid,
+            'totalBalance' => $totalBalance,
         ]);
     }
 

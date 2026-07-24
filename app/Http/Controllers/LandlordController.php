@@ -15,24 +15,75 @@ use Illuminate\View\View;
 
 class LandlordController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request)
     {
-        $landlords = Landlord::query()
+        $query = Landlord::query()
             ->with(['units'])
             ->withCount('units')
             ->when($request->search, function ($q) use ($request) {
-                $q->where('name', 'like', "%{$request->search}%")
-                    ->orWhere('email', 'like', "%{$request->search}%")
-                    ->orWhere('phone', 'like', "%{$request->search}%")
-                    ->orWhere('cnic', 'like', "%{$request->search}%");
+                $search = $request->search;
+                $q->where(function ($sq) use ($search) {
+                    $sq->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('cnic', 'like', "%{$search}%")
+                        ->orWhereHas('units', function ($uq) use ($search) {
+                            $uq->where('unit_number', 'like', "%{$search}%");
+                        });
+                });
             })
+            ->when($request->has_properties === 'with_units', function ($q) {
+                $q->has('units');
+            })
+            ->when($request->has_properties === 'without_units', function ($q) {
+                $q->doesntHave('units');
+            })
+            ->when($request->floor_id, function ($q) use ($request) {
+                $q->whereHas('units', fn($uq) => $uq->where('floor_id', $request->floor_id));
+            })
+            ->when($request->block_id, function ($q) use ($request) {
+                $q->whereHas('units', fn($uq) => $uq->where('block_id', $request->block_id));
+            });
+
+        // Counts calculation
+        $counts = [
+            'total' => (clone $query)->count(),
+            'with_units' => (clone $query)->has('units')->count(),
+            'without_units' => (clone $query)->doesntHave('units')->count(),
+        ];
+
+        $landlords = $query
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();
 
+        $search = $request->input('search');
+        $highlight = function($text) use ($search) {
+            if (empty($text)) return '';
+            if (empty($search)) {
+                return e($text);
+            }
+            $escapedSearch = preg_quote($search, '/');
+            return preg_replace('/(' . $escapedSearch . ')/i', '<mark class="bg-amber-100 text-amber-900 rounded px-0.5 dark:bg-amber-950/70 dark:text-amber-300 font-medium">$1</mark>', e($text));
+        };
+
+        if ($request->ajax() || $request->has('ajax')) {
+            return view('landlords._table', [
+                'landlords' => $landlords,
+                'highlight' => $highlight,
+            ])->render();
+        }
+
+        $floors = Floor::orderBy('name')->get();
+        $blocks = Block::orderBy('name')->get();
+
         return view('landlords.index', [
             'title'     => 'Landlords',
             'landlords' => $landlords,
+            'counts'    => $counts,
+            'floors'    => $floors,
+            'blocks'    => $blocks,
+            'highlight' => $highlight,
         ]);
     }
 

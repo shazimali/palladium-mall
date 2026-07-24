@@ -7,14 +7,14 @@
         
         <form action="{{ route('ledgers.expense') }}" method="GET" id="expense-ledger-form">
             <!-- Filters -->
-            <div class="grid grid-cols-1 gap-5 md:grid-cols-4 items-end mb-6">
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-4 items-end mb-6">
                 <!-- Category Dropdown -->
                 <div class="md:col-span-2">
-                    <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Select Expense Category <span class="text-red-500">*</span>
                     </label>
                     <select name="expense_head_id" onchange="this.form.submit()" required
-                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                         <option value="">Choose a Category</option>
                         @foreach($heads as $head)
                             <option value="{{ $head->id }}" {{ $expenseHeadId == $head->id ? 'selected' : '' }}>
@@ -26,53 +26,53 @@
 
                 <!-- Date From -->
                 <div>
-                    <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Date From
                     </label>
                     <input type="text" id="date_from" name="date_from" value="{{ $dateFrom }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                 </div>
 
                 <!-- Date To -->
                 <div>
-                    <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Date To
                     </label>
                     <input type="text" id="date_to" name="date_to" value="{{ $dateTo }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                 </div>
             </div>
 
             <!-- Action Buttons -->
-            <div class="flex items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-800 pb-5 mb-6">
-                <div class="flex items-center gap-2">
+            <div class="flex items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-6 mb-6">
+                <div class="flex items-center gap-3">
                     <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors">
+                        class="inline-flex items-center gap-3 rounded-2xl bg-brand-600 px-6 py-3.5 text-base font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
                         Filter Ledger
                     </button>
                     @if($expenseHeadId || $dateFrom || $dateTo)
                         <a href="{{ route('ledgers.expense') }}"
-                            class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
+                            class="rounded-2xl border-2 border-gray-300 px-6 py-3.5 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                             Clear
                         </a>
                     @endif
                 </div>
 
                 @if($ledgerData)
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-3">
                         <!-- Excel Export -->
                         <a href="{{ route('ledgers.expense.excel', request()->all()) }}"
-                            class="inline-flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors dark:border-emerald-900/30 dark:bg-emerald-950/10 dark:text-emerald-400">
-                            🟢 Export Excel
+                            class="inline-flex items-center gap-2 rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-5 py-3.5 text-base font-extrabold text-emerald-700 hover:bg-emerald-100 transition-colors dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-400">
+                            🟢 Excel
                         </a>
                         <!-- PDF Export -->
                         <a href="{{ route('ledgers.expense.pdf', request()->all()) }}"
-                            class="inline-flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 transition-colors dark:border-red-900/30 dark:bg-red-950/10 dark:text-red-400">
-                            🔴 Export PDF
+                            class="inline-flex items-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-5 py-3.5 text-base font-extrabold text-red-700 hover:bg-red-100 transition-colors dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
+                            🔴 PDF
                         </a>
                         <a href="{{ route('ledgers.expense.print', request()->all()) }}"
                             onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
-                            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
+                            class="inline-flex items-center gap-2 rounded-2xl border-2 border-gray-300 px-5 py-3.5 text-base font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                             🖨️ Print
                         </a>
                     </div>
@@ -81,25 +81,45 @@
         </form>
 
         @if($ledgerData)
-            {{-- Summary Card --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-                <div class="bg-amber-50/50 dark:bg-amber-950/10 p-5 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-amber-500 dark:text-amber-400 font-bold">Total Spent Under Head</span>
-                    <span class="block mt-2 text-2xl font-bold text-gray-800 dark:text-white">Rs. {{ number_format($ledgerData['summary']['total_amount'], 2) }}</span>
+            {{-- STICKY BIG HEADING & SUMMARY BANNER --}}
+            <div class="sticky mb-6 rounded-2xl border-2 border-amber-500 bg-white dark:bg-gray-900 p-6 shadow-xl backdrop-blur-md"
+                style="position: sticky; top: 72px; z-index: 990;">
+                
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-amber-600 text-white shadow-md text-3xl font-black">
+                            🧾
+                        </div>
+                        <div>
+                            <p class="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                                Expense Category Ledger
+                            </p>
+                            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+                                {{ $ledgerData['head']->name ?? ($ledgerData['expense_head']->name ?? 'Category') }}
+                            </h2>
+                        </div>
+                    </div>
+
+                    <div class="text-right bg-amber-50/80 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/40 min-w-[240px]">
+                        <span class="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 block">Total Spent Under Category</span>
+                        <span class="text-2xl sm:text-3xl font-black font-mono text-amber-700 dark:text-amber-400">
+                            Rs. {{ number_format($ledgerData['summary']['total_amount'], 2) }}
+                        </span>
+                    </div>
                 </div>
             </div>
 
             {{-- Table --}}
-            <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
-                <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                    <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
+                <table class="w-full text-base sm:text-lg text-left text-gray-800 dark:text-gray-200">
+                    <thead class="text-xs font-black uppercase tracking-wider bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="px-5 py-3.5">Date</th>
-                            <th class="px-5 py-3.5">Voucher #</th>
-                            <th class="px-5 py-3.5">Spent On / Notes</th>
-                            <th class="px-5 py-3.5">Payment Account</th>
-                            <th class="px-5 py-3.5">Reference</th>
-                            <th class="px-5 py-3.5 text-right">Amount</th>
+                            <th class="px-5 py-4">Date</th>
+                            <th class="px-5 py-4">Voucher #</th>
+                            <th class="px-5 py-4">Spent On / Notes</th>
+                            <th class="px-5 py-4">Payment Account</th>
+                            <th class="px-5 py-4">Reference</th>
+                            <th class="px-5 py-4 text-right">Amount</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">

@@ -2,10 +2,10 @@
 
 {{-- Helper class string --}}
 @php
-$input = 'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600';
-$select = 'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
-$label = 'mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300';
-$error = 'mt-1 text-xs text-red-500';
+$input = 'w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white';
+$select = 'w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white';
+$label = 'mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300';
+$error = 'mt-1.5 text-sm font-semibold text-red-500';
 @endphp
 
 @php
@@ -119,25 +119,25 @@ $error = 'mt-1 text-xs text-red-500';
                  style="display: none;">
                 
                 <!-- Search Input -->
-                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                <div class="px-3.5 pb-2.5 pt-1.5 border-b border-gray-100 dark:border-gray-700">
                     <input x-ref="searchInput"
                            x-model="search"
                            type="text"
                            placeholder="Type to search unit number, floor, or block..."
-                           class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                           class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base sm:text-lg text-gray-900 font-bold focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                 </div>
 
                 <!-- Options List -->
-                <ul class="max-h-60 overflow-y-auto mt-1">
+                <ul class="max-h-72 overflow-y-auto mt-1 p-1 space-y-1">
                     <template x-if="filteredUnits.length === 0">
-                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching units found.</li>
+                        <li class="px-5 py-3 text-sm font-semibold text-gray-500 dark:text-gray-400">No matching units found.</li>
                     </template>
                     <template x-for="unit in filteredUnits" :key="unit.id">
                         <li @click="selectUnit(unit)"
-                            class="px-4 py-2 text-sm text-gray-800 dark:text-white/90 hover:bg-brand-50 dark:hover:bg-brand-900/20 cursor-pointer flex justify-between items-center transition-colors">
+                            class="px-5 py-3.5 text-base sm:text-lg font-bold text-gray-900 dark:text-white hover:bg-brand-500 hover:text-white rounded-xl cursor-pointer flex justify-between items-center transition-colors">
                             <span x-text="unit.label"></span>
                             <span x-text="unit.status_label" 
-                                  :class="unit.status === 'vacant' ? 'text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' : 'text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400'"></span>
+                                  :class="unit.status === 'vacant' ? 'text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-extrabold' : 'text-xs px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 font-extrabold'"></span>
                         </li>
                     </template>
                 </ul>

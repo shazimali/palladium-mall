@@ -3,9 +3,59 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Daily Transactions Book Report" />
 
+    {{-- STICKY DAY BOOK LEDGER HEADER --}}
+    <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+        style="position: sticky; top: 72px; z-index: 990;">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div
+                    class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md text-3xl font-black">
+                    📖
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                        Daily Transactions Ledger
+                    </p>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
+                        {{ date('d M Y', strtotime($startDate)) }} — {{ date('d M Y', strtotime($endDate)) }}
+                    </h2>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-6">
+                <div class="text-right">
+                    <span
+                        class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Total
+                        Inflows</span>
+                    <span class="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        Rs. {{ number_format($totalInflows) }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400 block">Total
+                        Outflows</span>
+                    <span class="text-xl sm:text-2xl font-black font-mono text-red-600 dark:text-red-400">
+                        Rs. {{ number_format($totalOutflows) }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span
+                        class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 block">Net
+                        Flow</span>
+                    <span
+                        class="text-xl sm:text-2xl font-black font-mono {{ ($totalInflows - $totalOutflows) >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-red-600 dark:text-red-400' }}">
+                        Rs. {{ number_format($totalInflows - $totalOutflows) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Date Range Selector Panel --}}
-    <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-        <form action="{{ route('reports.day-book') }}" method="GET" class="flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
+    <div
+        class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+        <form action="{{ route('reports.day-book') }}" method="GET"
+            class="flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
             <div class="flex flex-col sm:flex-row gap-4 flex-1">
                 @php
                     $dateInput = 'dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 w-full sm:w-48';
@@ -13,20 +63,23 @@
                 @endphp
                 <div>
                     <label class="{{ $dateLabel }}">Start Date</label>
-                    <input type="text" id="start_date" name="start_date" value="{{ $startDate }}" placeholder="YYYY-MM-DD" autocomplete="off" class="{{ $dateInput }}" />
+                    <input type="text" id="start_date" name="start_date" value="{{ $startDate }}" placeholder="YYYY-MM-DD"
+                        autocomplete="off" class="{{ $dateInput }}" />
                 </div>
                 <div>
                     <label class="{{ $dateLabel }}">End Date</label>
-                    <input type="text" id="end_date" name="end_date" value="{{ $endDate }}" placeholder="YYYY-MM-DD" autocomplete="off" class="{{ $dateInput }}" />
+                    <input type="text" id="end_date" name="end_date" value="{{ $endDate }}" placeholder="YYYY-MM-DD"
+                        autocomplete="off" class="{{ $dateInput }}" />
                 </div>
                 <div class="flex gap-2 items-end w-full sm:w-auto">
-                    <button type="submit" class="h-10 rounded-lg bg-brand-500 px-5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors w-full sm:w-auto">
+                    <button type="submit"
+                        class="h-10 rounded-lg bg-brand-500 px-5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors w-full sm:w-auto">
                         Apply Filter
                     </button>
                     @if($ledgerEntries->isNotEmpty())
                         <a href="{{ route('reports.day-book.print', request()->all()) }}"
-                           onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
-                           class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors w-full sm:w-auto">
+                            onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
+                            class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors w-full sm:w-auto">
                             🖨️ Print
                         </a>
                     @endif
@@ -36,77 +89,24 @@
 
             <div class="flex gap-2">
                 <a href="{{ route('reports.day-book', ['start_date' => date('Y-m-d'), 'end_date' => date('Y-m-d')]) }}"
-                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                     Today
                 </a>
                 <a href="{{ route('reports.day-book', ['start_date' => date('Y-m-d', strtotime('-1 day')), 'end_date' => date('Y-m-d', strtotime('-1 day'))]) }}"
-                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                     Yesterday
                 </a>
                 <a href="{{ route('reports.day-book', ['start_date' => date('Y-m-01'), 'end_date' => date('Y-m-t')]) }}"
-                   class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                    class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                     This Month
                 </a>
             </div>
         </form>
     </div>
 
-    {{-- Metrics Summary Cards --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <!-- Inflows (Receipts) -->
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Inflows (Receipts)</p>
-                    <h4 class="mt-2 text-2xl font-bold text-green-600 dark:text-green-400">
-                        Rs. {{ number_format($totalInflows, 2) }}
-                    </h4>
-                </div>
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-green-500 dark:bg-green-950/20 dark:text-green-400">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Outflows (Expenses) -->
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Outflows (Expenses)</p>
-                    <h4 class="mt-2 text-2xl font-bold text-red-600 dark:text-red-400">
-                        Rs. {{ number_format($totalOutflows, 2) }}
-                    </h4>
-                </div>
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500 dark:bg-red-950/20 dark:text-red-400">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4" />
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Net Balance -->
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Net Position / Balance</p>
-                    <h4 class="mt-2 text-2xl font-bold {{ $netFlow >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400' }}">
-                        Rs. {{ number_format($netFlow, 2) }}
-                    </h4>
-                </div>
-                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/20 dark:text-blue-400">
-                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {{-- Unified Ledger Table --}}
-    <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] mb-6">
+    <div
+        class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] mb-6">
         <div class="mb-4 flex items-center justify-between">
             <h3 class="text-lg font-bold text-gray-900 dark:text-white/90">
                 Ledger Statement / Transaction History
@@ -135,31 +135,35 @@
                             <td class="px-4 py-3 text-xs font-mono">
                                 {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
                             </td>
-                             <td class="px-4 py-3 text-xs font-mono font-semibold">
-                                 @if(!empty($entry['model_type']) && !empty($entry['model_id']))
-                                     @if($entry['model_type'] === 'receiving_voucher')
-                                         <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
-                                             {{ $entry['voucher_no'] }}
-                                         </a>
-                                     @elseif($entry['model_type'] === 'general_receiving_voucher')
-                                         <a href="{{ route('general-receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
-                                             {{ $entry['voucher_no'] }}
-                                         </a>
-                                     @elseif($entry['model_type'] === 'payment_voucher')
-                                         <a href="{{ route('payment-vouchers.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
-                                             {{ $entry['voucher_no'] }}
-                                         </a>
-                                     @elseif($entry['model_type'] === 'expense')
-                                         <a href="{{ route('expenses.show', $entry['model_id']) }}" class="text-brand-500 hover:underline">
-                                             {{ $entry['voucher_no'] }}
-                                         </a>
-                                     @else
-                                         {{ $entry['voucher_no'] }}
-                                     @endif
-                                 @else
-                                     {{ $entry['voucher_no'] }}
-                                 @endif
-                             </td>
+                            <td class="px-4 py-3 text-xs font-mono font-semibold">
+                                @if(!empty($entry['model_type']) && !empty($entry['model_id']))
+                                    @if($entry['model_type'] === 'receiving_voucher')
+                                        <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}"
+                                            class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @elseif($entry['model_type'] === 'general_receiving_voucher')
+                                        <a href="{{ route('general-receiving-vouchers.show', $entry['model_id']) }}"
+                                            class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @elseif($entry['model_type'] === 'payment_voucher')
+                                        <a href="{{ route('payment-vouchers.show', $entry['model_id']) }}"
+                                            class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @elseif($entry['model_type'] === 'expense')
+                                        <a href="{{ route('expenses.show', $entry['model_id']) }}"
+                                            class="text-brand-500 hover:underline">
+                                            {{ $entry['voucher_no'] }}
+                                        </a>
+                                    @else
+                                        {{ $entry['voucher_no'] }}
+                                    @endif
+                                @else
+                                    {{ $entry['voucher_no'] }}
+                                @endif
+                            </td>
                             <td class="px-4 py-3 text-xs font-medium">
                                 {!! $entry['details'] !!}
                             </td>
@@ -228,5 +232,3 @@
         });
     </script>
 @endpush
-
-

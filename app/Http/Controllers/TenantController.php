@@ -20,7 +20,7 @@ class TenantController extends Controller
     // Index
     // -----------------------------------------------------------------------
 
-    public function index(Request $request): View
+    public function index(Request $request)
     {
         $query = Tenant::with(['unit', 'activeAgreement', 'agreements'])
             ->when($request->search, fn($q) => $q->search($request->search))
@@ -51,6 +51,23 @@ class TenantController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $search = $request->input('search');
+        $highlight = function($text) use ($search) {
+            if (empty($text)) return '';
+            if (empty($search)) {
+                return e($text);
+            }
+            $escapedSearch = preg_quote($search, '/');
+            return preg_replace('/(' . $escapedSearch . ')/i', '<mark class="bg-amber-100 text-amber-900 rounded px-0.5 dark:bg-amber-950/70 dark:text-amber-300 font-medium">$1</mark>', e($text));
+        };
+
+        if ($request->ajax() || $request->has('ajax')) {
+            return view('tenants._table', [
+                'tenants' => $tenants,
+                'highlight' => $highlight,
+            ])->render();
+        }
+
         $landlords = \App\Models\Landlord::orderBy('name')->get();
 
         return view('tenants.index', [
@@ -58,6 +75,7 @@ class TenantController extends Controller
             'tenants' => $tenants,
             'counts' => $counts,
             'landlords' => $landlords,
+            'highlight' => $highlight,
         ]);
     }
 

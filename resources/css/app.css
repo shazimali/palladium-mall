@@ -35,12 +35,12 @@
   --text-title-md--line-height: 44px;
   --text-title-sm: 30px;
   --text-title-sm--line-height: 38px;
-  --text-theme-xl: 20px;
-  --text-theme-xl--line-height: 30px;
-  --text-theme-sm: 14px;
-  --text-theme-sm--line-height: 20px;
-  --text-theme-xs: 12px;
-  --text-theme-xs--line-height: 18px;
+  --text-theme-xl: 22px;
+  --text-theme-xl--line-height: 32px;
+  --text-theme-sm: 15px;
+  --text-theme-sm--line-height: 22px;
+  --text-theme-xs: 13px;
+  --text-theme-xs--line-height: 19px;
 
   --color-current: currentColor;
   --color-transparent: transparent;
@@ -191,8 +191,47 @@
   [x-cloak] {
     display: none !important;
   }
+  html {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
   body {
-    @apply relative font-normal font-outfit z-1 bg-gray-50;
+    @apply relative font-outfit text-base font-normal z-1 bg-gray-50 text-gray-800 dark:text-gray-200 leading-normal;
+  }
+
+  /* Global Headings */
+  h1 {
+    @apply font-outfit text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight;
+  }
+  h2 {
+    @apply font-outfit text-2xl font-bold text-gray-900 dark:text-white tracking-tight;
+  }
+  h3 {
+    @apply font-outfit text-xl font-bold text-gray-900 dark:text-white;
+  }
+  h4 {
+    @apply font-outfit text-lg font-bold text-gray-900 dark:text-white;
+  }
+
+  /* Global Tables */
+  table {
+    @apply font-outfit text-base;
+  }
+  thead th {
+    @apply font-outfit text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400;
+  }
+  tbody td {
+    @apply font-outfit text-base font-semibold text-gray-800 dark:text-gray-200;
+  }
+
+  /* Form Elements */
+  input, select, textarea {
+    @apply font-outfit text-base sm:text-lg font-semibold text-gray-900 dark:text-white;
+  }
+  label {
+    @apply font-outfit text-xs sm:text-sm font-extrabold text-gray-700 dark:text-gray-300;
   }
 }
 
@@ -442,7 +481,8 @@
   @apply w-full;
 }
 .flatpickr-calendar {
-  @apply mt-2 !rounded-xl bg-black !p-5 !border !border-transparent dark:!border-white/5 !text-gray-500 dark:!bg-gray-dark dark:!text-gray-400 dark:!shadow-theme-xl 2xsm:!w-auto;
+  @apply mt-2 !rounded-xl bg-black !p-5 !border !border-transparent dark:!border-white/5 !text-gray-500 dark:!bg-gray-dark dark:!text-gray-400 dark:!shadow-theme-xl 2xsm:!w-auto !z-[999999];
+  z-index: 999999 !important;
 }
 .flatpickr-time input {
   background-color: #f9fafb !important;

@@ -120,7 +120,7 @@
             @include('layouts.sidebar')
         @endif
 
-        <div class="flex-1 min-w-0 overflow-x-clip transition-all duration-300 ease-in-out"
+        <div class="flex-1 min-w-0 transition-all duration-300 ease-in-out"
              @if(!$hideSidebar)
              :class="{
                  'xl:ml-[290px]': $store.sidebar.isExpanded || $store.sidebar.isHovered,
@@ -171,17 +171,31 @@
     <script>
         (function () {
             const currentPath = window.location.pathname;
-            // Set deterministic window name so named target links natively reuse this tab
-            window.name = 'pm_tab_' + encodeURIComponent(currentPath);
 
-            // Automatically enforce target names on _blank links
+            // Exempt voucher creation, edit, and entry pages from single-tab locking
+            const isExemptFromSingleTab = currentPath.includes('/create') || 
+                                          currentPath.includes('/edit') || 
+                                          currentPath.includes('vouchers');
+
+            if (!isExemptFromSingleTab) {
+                // Set deterministic window name so named target links natively reuse this tab
+                window.name = 'pm_tab_' + encodeURIComponent(currentPath);
+            }
+
+            // Automatically enforce target names on _blank links (excluding exempt paths)
             document.addEventListener('click', function (e) {
                 const link = e.target.closest('a[target="_blank"]');
                 if (link && link.href) {
                     try {
                         const url = new URL(link.href, window.location.origin);
                         if (url.origin === window.location.origin) {
-                            link.target = 'pm_tab_' + encodeURIComponent(url.pathname);
+                            const linkPath = url.pathname;
+                            const isLinkExempt = linkPath.includes('/create') || 
+                                                 linkPath.includes('/edit') || 
+                                                 linkPath.includes('vouchers');
+                            if (!isLinkExempt) {
+                                link.target = 'pm_tab_' + encodeURIComponent(linkPath);
+                            }
                         }
                     } catch (err) {}
                 }
@@ -194,15 +208,21 @@
                     try {
                         const parsed = new URL(url, window.location.origin);
                         if (parsed.origin === window.location.origin) {
-                            target = 'pm_tab_' + encodeURIComponent(parsed.pathname);
+                            const linkPath = parsed.pathname;
+                            const isLinkExempt = linkPath.includes('/create') || 
+                                                 linkPath.includes('/edit') || 
+                                                 linkPath.includes('vouchers');
+                            if (!isLinkExempt) {
+                                target = 'pm_tab_' + encodeURIComponent(linkPath);
+                            }
                         }
                     } catch (err) {}
                 }
                 return originalOpen.call(window, url, target, features);
             };
 
-            // BroadcastChannel check for tabs opened directly or via navigation
-            if ('BroadcastChannel' in window) {
+            // BroadcastChannel check for tabs (skipped for create/edit/voucher paths)
+            if ('BroadcastChannel' in window && !isExemptFromSingleTab) {
                 const tabId = 'tab_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
                 const channel = new BroadcastChannel('pm_single_view_channel');
 

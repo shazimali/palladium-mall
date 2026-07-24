@@ -72,18 +72,18 @@
                 }">
 
             <!-- Selector Dropdown -->
-            <div class="grid grid-cols-1 gap-5 md:grid-cols-3 items-end mb-6">
-                <div class="md:col-span-2 relative" @click.away="open = false; highlightedIndex = -1">
-                    <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-3 items-end mb-6">
+                <div class="md:col-span-2 relative" :class="open ? 'relative z-[99999]' : 'relative'" @click.away="open = false; highlightedIndex = -1">
+                    <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Select Party Head <span class="text-red-500">*</span>
                     </label>
 
                     {{-- Trigger Button --}}
                     <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                        class="w-full flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 text-left focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        class="w-full flex items-center justify-between rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 text-left focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                         <span x-text="selectedText"
-                            :class="partyId ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'"></span>
-                        <svg class="h-4 w-4 text-gray-500 transition-transform" :class="open ? 'rotate-180' : ''"
+                            :class="partyId ? 'font-extrabold text-brand-600 dark:text-brand-400' : 'text-gray-400 dark:text-gray-500'"></span>
+                        <svg class="h-5 w-5 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
                             fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
@@ -94,41 +94,41 @@
 
                     {{-- Dropdown Container --}}
                     <div x-show="open" x-transition x-cloak
-                        class="absolute left-0 right-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-950">
+                        class="absolute left-0 right-0 z-[99999] mt-2 w-full rounded-2xl border-2 border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900">
 
                         {{-- Search field --}}
-                        <div class="p-2 border-b border-gray-100 dark:border-gray-800">
+                        <div class="p-3 border-b border-gray-100 dark:border-gray-800">
                             <div class="relative">
-                                <input type="text" x-ref="searchInput" x-model="search" placeholder="Type to search..."
+                                <input type="text" x-ref="searchInput" x-model="search" placeholder="Type party name or phone..."
                                     @keydown.arrow-down.prevent="moveHighlight(1)"
                                     @keydown.arrow-up.prevent="moveHighlight(-1)"
                                     @keydown.enter.prevent="selectHighlighted()"
                                     @keydown.escape.prevent="open = false; highlightedIndex = -1"
-                                    class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 pl-8 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:bg-white focus:outline-none dark:border-gray-850 dark:bg-gray-900/50 dark:text-white/90">
-                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px]">🔍</span>
+                                    class="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-2.5 pl-10 text-base font-semibold text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:bg-white focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">🔍</span>
                             </div>
                         </div>
 
                         {{-- Options --}}
-                        <div class="max-h-60 overflow-y-auto p-1">
+                        <div class="max-h-64 overflow-y-auto p-2">
                             <button type="button" @click="clearSelection()"
-                                class="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md">
+                                class="w-full text-left px-4 py-2 text-sm font-semibold text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl">
                                 Clear Selection
                             </button>
 
                             <template x-for="(opt, index) in filteredOptions" :key="opt.id">
                                 <button type="button" @click="selectOption(opt)" @mouseenter="highlightedIndex = index"
-                                    class="w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between"
-                                    :class="partyId == opt.id ? 'bg-brand-500 text-white font-semibold' : (highlightedIndex === index ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5')">
+                                    class="w-full text-left px-4 py-3 text-base rounded-xl transition-colors flex items-center justify-between"
+                                    :class="partyId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedIndex === index ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/40 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5')">
                                     <span class="flex items-center justify-between w-full">
                                         <span x-text="opt.text" class="font-bold"></span>
-                                        <span x-text="opt.phone" class="text-[10px] opacity-75"></span>
+                                        <span x-text="opt.phone" class="text-xs opacity-80 font-mono"></span>
                                     </span>
                                 </button>
                             </template>
 
                             <div x-show="filteredOptions.length === 0"
-                                class="px-3 py-4 text-center text-xs text-gray-450 dark:text-gray-500">
+                                class="px-4 py-6 text-center text-sm font-semibold text-gray-500">
                                 No matching Party Head found
                             </div>
                         </div>
@@ -138,86 +138,94 @@
         </form>
 
         @if($selectedParty)
-            <!-- Actions Toolbar -->
-            <div
-                class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-150 pb-5 mb-6 dark:border-gray-850">
-                <div class="flex items-center gap-2">
-                    <!-- <button type="button" @click="$dispatch('open-due-modal')"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Add Due Record
-                    </button> -->
-                    <a href="{{ route('ledgers.party.print', ['party_id' => $selectedParty->id]) }}"
-                        onclick="window.open(this.href,'_blank','width=800,height=800,scrollbars=yes'); return false;"
-                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
-                        🖨️ Print Ledger
-                    </a>
-                </div>
-            </div>
-
-            <!-- Financial Summary Widgets -->
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-2 mb-8">
-
-                {{-- Receivable Summary --}}
-                <div class="rounded-xl border border-gray-150 bg-gray-50/50 p-5 dark:border-gray-800 dark:bg-white/[0.01]">
-                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                        <span class="text-lg">📥</span> Mall Receivables from Party
-                    </h3>
-                    <div class="grid grid-cols-3 gap-2 text-center">
-                        <div class="rounded-lg bg-white p-3 shadow-theme-xs dark:bg-gray-900">
-                            <p class="text-[10px] uppercase font-bold text-gray-400">Total Dues</p>
-                            <p class="mt-1 text-sm font-bold font-mono text-gray-800 dark:text-white">Rs.
-                                {{ number_format($summary['total_due_receivable'], 0) }}</p>
+            {{-- STICKY BIG HEADING & SUMMARY BANNER --}}
+            <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-6 shadow-xl backdrop-blur-md"
+                style="position: sticky; top: 72px; z-index: 990;">
+                
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4">
+                    <div class="flex items-center gap-4">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-md text-3xl font-black">
+                            🤝
                         </div>
-                        <div class="rounded-lg bg-white p-3 shadow-theme-xs dark:bg-gray-900">
-                            <p class="text-[10px] uppercase font-bold text-gray-400">Total Recv</p>
-                            <p class="mt-1 text-sm font-bold font-mono text-green-600">Rs.
-                                {{ number_format($summary['total_received'], 0) }}</p>
-                        </div>
-                        <div class="rounded-lg bg-white p-3 shadow-theme-xs dark:bg-gray-900">
-                            <p class="text-[10px] uppercase font-bold text-gray-400">Net Due</p>
-                            <p
-                                class="mt-1 text-sm font-bold font-mono {{ $summary['net_receivable'] > 0 ? 'text-red-500' : 'text-gray-600 dark:text-gray-300' }}">
-                                Rs. {{ number_format($summary['net_receivable'], 0) }}
+                        <div>
+                            <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                                Party Statement of Account
                             </p>
+                            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+                                {{ $selectedParty->name }}
+                            </h2>
                         </div>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <a href="{{ route('ledgers.party.print', ['party_id' => $selectedParty->id]) }}"
+                            onclick="window.open(this.href,'_blank','width=800,height=800,scrollbars=yes'); return false;"
+                            class="inline-flex items-center gap-2 rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-base font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-sm">
+                            🖨️ Print Ledger
+                        </a>
                     </div>
                 </div>
 
-                {{-- Payable Summary --}}
-                <div class="rounded-xl border border-gray-150 bg-gray-50/50 p-5 dark:border-gray-800 dark:bg-white/[0.01]">
-                    <h3 class="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4 flex items-center gap-2">
-                        <span class="text-lg">📤</span> Mall Payables to Party
-                    </h3>
-                    <div class="grid grid-cols-3 gap-2 text-center">
-                        <div class="rounded-lg bg-white p-3 shadow-theme-xs dark:bg-gray-900">
-                            <p class="text-[10px] uppercase font-bold text-gray-400">Total Dues</p>
-                            <p class="mt-1 text-sm font-bold font-mono text-gray-800 dark:text-white">Rs.
-                                {{ number_format($summary['total_due_payable'], 0) }}</p>
-                        </div>
-                        <div class="rounded-lg bg-white p-3 shadow-theme-xs dark:bg-gray-900">
-                            <p class="text-[10px] uppercase font-bold text-gray-400">Total Paid</p>
-                            <p class="mt-1 text-sm font-bold font-mono text-brand-600">Rs.
-                                {{ number_format($summary['total_paid'], 0) }}</p>
-                        </div>
-                        <div class="rounded-lg bg-white p-3 shadow-theme-xs dark:bg-gray-900">
-                            <p class="text-[10px] uppercase font-bold text-gray-400">Net Due</p>
-                            <p
-                                class="mt-1 text-sm font-bold font-mono {{ $summary['net_payable'] > 0 ? 'text-red-500' : 'text-gray-600 dark:text-gray-300' }}">
-                                Rs. {{ number_format($summary['net_payable'], 0) }}
-                            </p>
+                <!-- Financial Summary Widgets -->
+                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+                    {{-- Receivable Summary --}}
+                    <div class="rounded-2xl border-2 border-blue-200 bg-blue-50/70 p-5 dark:border-blue-900/40 dark:bg-blue-950/20">
+                        <h3 class="text-base font-black text-blue-900 dark:text-blue-300 mb-3 flex items-center gap-2">
+                            <span>📥</span> Mall Receivables from Party
+                        </h3>
+                        <div class="grid grid-cols-3 gap-3 text-center">
+                            <div class="rounded-xl bg-white p-3.5 shadow-sm dark:bg-gray-900">
+                                <p class="text-xs uppercase font-extrabold text-gray-400">Total Dues</p>
+                                <p class="mt-1 text-lg font-black font-mono text-gray-900 dark:text-white">
+                                    Rs. {{ number_format($summary['total_due_receivable'], 0) }}</p>
+                            </div>
+                            <div class="rounded-xl bg-white p-3.5 shadow-sm dark:bg-gray-900">
+                                <p class="text-xs uppercase font-extrabold text-gray-400">Total Recv</p>
+                                <p class="mt-1 text-lg font-black font-mono text-green-600 dark:text-green-400">
+                                    Rs. {{ number_format($summary['total_received'], 0) }}</p>
+                            </div>
+                            <div class="rounded-xl bg-white p-3.5 shadow-sm dark:bg-gray-900">
+                                <p class="text-xs uppercase font-extrabold text-gray-400">Net Due</p>
+                                <p class="mt-1 text-lg font-black font-mono {{ $summary['net_receivable'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300' }}">
+                                    Rs. {{ number_format($summary['net_receivable'], 0) }}
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
 
+                    {{-- Payable Summary --}}
+                    <div class="rounded-2xl border-2 border-emerald-200 bg-emerald-50/70 p-5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                        <h3 class="text-base font-black text-emerald-900 dark:text-emerald-300 mb-3 flex items-center gap-2">
+                            <span>📤</span> Mall Payables to Party
+                        </h3>
+                        <div class="grid grid-cols-3 gap-3 text-center">
+                            <div class="rounded-xl bg-white p-3.5 shadow-sm dark:bg-gray-900">
+                                <p class="text-xs uppercase font-extrabold text-gray-400">Total Dues</p>
+                                <p class="mt-1 text-lg font-black font-mono text-gray-900 dark:text-white">
+                                    Rs. {{ number_format($summary['total_due_payable'], 0) }}</p>
+                            </div>
+                            <div class="rounded-xl bg-white p-3.5 shadow-sm dark:bg-gray-900">
+                                <p class="text-xs uppercase font-extrabold text-gray-400">Total Paid</p>
+                                <p class="mt-1 text-lg font-black font-mono text-brand-600 dark:text-brand-400">
+                                    Rs. {{ number_format($summary['total_paid'], 0) }}</p>
+                            </div>
+                            <div class="rounded-xl bg-white p-3.5 shadow-sm dark:bg-gray-900">
+                                <p class="text-xs uppercase font-extrabold text-gray-400">Net Due</p>
+                                <p class="mt-1 text-lg font-black font-mono {{ $summary['net_payable'] > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300' }}">
+                                    Rs. {{ number_format($summary['net_payable'], 0) }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
 
             <!-- Ledger Entries Table -->
-            <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
-                <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                    <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
+                <table class="w-full text-base sm:text-lg text-left text-gray-800 dark:text-gray-200">
+                    <thead class="text-xs font-black uppercase tracking-wider bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-700">
                         <tr>
                             <th class="px-4 py-3">Date</th>
                             <th class="px-4 py-3">Ref/Voucher #</th>

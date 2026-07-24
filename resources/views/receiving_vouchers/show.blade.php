@@ -3,6 +3,33 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Voucher Details — {{ $voucher->voucher_no }}" />
 
+    {{-- STICKY RECEIVING VOUCHER HEADER --}}
+    <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+        style="position: sticky; top: 72px; z-index: 990;">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md text-3xl font-black">
+                    🧾
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                        Receiving Voucher: {{ $voucher->voucher_no }}
+                    </p>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
+                        {{ $voucher->unit ? 'Flat/Shop ' . $voucher->unit->unit_number : ($voucher->tenant ? $voucher->tenant->name : 'Receiving Voucher') }}
+                    </h2>
+                </div>
+            </div>
+
+            <div class="text-right">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Total Amount Collected</span>
+                <span class="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    Rs. {{ number_format($voucher->amount) }}
+                </span>
+            </div>
+        </div>
+    </div>
+
     <x-common.component-card title="Receiving Voucher Details" desc="Voucher Reference #{{ $voucher->voucher_no }}">
         
         <div class="mb-6 flex justify-end gap-3 no-print">

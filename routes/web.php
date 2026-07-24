@@ -164,6 +164,8 @@ Route::middleware('auth')->group(function () {
         ->name('ajax.previous-reading');
     Route::post('ajax/landlord-units/check-unique', [AjaxUnitController::class, 'checkUnique'])
         ->name('ajax.landlord-units.check-unique');
+    Route::get('ajax/unit-search', [AjaxUnitController::class, 'search'])
+        ->name('ajax.unit-search');
 
     // Meter AJAX routes (embedded in Unit create/edit)
     Route::get('ajax/meters/{unit}', [MeterController::class, 'byUnit'])->name('ajax.meters.by-unit');

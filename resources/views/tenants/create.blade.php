@@ -23,25 +23,25 @@
             @csrf
             @include('tenants.wizard._step1_fields', ['tenant' => null])
 
-            <div class="flex items-center justify-between pt-2 gap-3">
+            <div class="flex items-center justify-between pt-4 gap-4 border-t-2 border-gray-100 dark:border-gray-800">
                 <a href="{{ route('tenants.index') }}"
-                   class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                   class="inline-flex items-center gap-2 rounded-2xl border-2 border-gray-300 bg-white px-6 py-3.5 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
                     Cancel
                 </a>
                 <div class="flex items-center gap-3">
                     {{-- Save Only --}}
                     <button type="submit" name="save_only" value="1"
-                        class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 transition-colors">
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        class="inline-flex items-center gap-2.5 rounded-2xl border-2 border-gray-300 bg-white px-6 py-3.5 text-base font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 transition-colors shadow-xs cursor-pointer">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                         </svg>
                         Save Only
                     </button>
                     {{-- Continue --}}
                     <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors">
+                        class="inline-flex items-center gap-2.5 rounded-2xl bg-brand-600 px-7 py-3.5 text-base font-extrabold text-white shadow-md hover:bg-brand-700 focus:outline-none transition-colors cursor-pointer">
                         Continue — Step 2
-                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                         </svg>
                     </button>

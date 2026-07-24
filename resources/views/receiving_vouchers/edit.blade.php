@@ -1,287 +1,294 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="mb-6 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+    <div class="mb-6 flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
         <a href="{{ route('receiving-vouchers.index') }}" class="hover:text-brand-500">Receiving Vouchers</a>
         <span>/</span>
-        <span class="text-gray-800 dark:text-white/90">Edit Receiving Voucher</span>
+        <span class="text-gray-800 dark:text-white/90">Edit Receiving Voucher: {{ $voucher->voucher_no }}</span>
     </div>
 
-    <x-common.component-card :title="'Edit Receiving Voucher: ' . $voucher->voucher_no" desc="Modify payments collected from tenants. Restricted to Super Administrators only.">
-        
-        <form action="{{ route('receiving-vouchers.update', $voucher) }}" method="POST"
-            @submit.prevent="handleSubmit($event)"
-            x-data="{
-                unitId: '{{ old('unit_id', $voucherUnitId) }}',
-                voucherAmount: '{{ old('amount', $voucher->amount) }}',
-                displayAmount: '',
-                pendingPayments: [],
-                selectedPaymentIds: @js(old('payment_ids', $voucher->payments->pluck('id')->map(fn($id) => (string)$id)->toArray())),
-                totalBalance: 0,
-                loading: false,
-                search: '',
-                open: false,
-                highlightedIndex: -1,
-                options: [
-                    @foreach($units as $unit)
-                    {
-                        id: '{{ $unit->id }}',
-                        unit: 'Flat/Shop: {{ addslashes($unit->unit_number) }}',
-                        tenant: '{{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
-                        text: 'Flat/Shop: {{ addslashes($unit->unit_number) }} {{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
-                        searchLabel: '{{ strtolower($unit->unit_number . " " . ($unit->tenant?->name ?? ($unit->otherTenant?->name ?? "vacant"))) }}'
-                    },
-                    @endforeach
-                ],
-
-                handleSubmit(event) {
-                    let amt = parseFloat(this.voucherAmount || 0);
-                    if (isNaN(amt) || amt <= 0) {
-                        Swal.fire({
-                            title: 'Invalid Amount',
-                            text: 'Please enter a valid voucher amount greater than zero.',
-                            icon: 'warning',
-                            confirmButtonText: 'OK',
-                            customClass: {
-                                confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
-                            },
-                            buttonsStyling: false
-                        });
-                        return;
-                    }
-
-                    let maxAllowed = (this.selectedPaymentIds.length > 0 && this.selectedPaymentsTotal > 0) ? this.selectedPaymentsTotal : this.totalBalance;
-                    if (amt > maxAllowed + 0.01) {
-                        Swal.fire({
-                            title: 'Exceed Amount Error',
-                            text: 'The voucher amount (Rs. ' + amt.toLocaleString('en-US', {minimumFractionDigits: 2}) + ') exceeds the total outstanding balance of selected payments (Rs. ' + maxAllowed.toLocaleString('en-US', {minimumFractionDigits: 2}) + ').',
-                            icon: 'error',
-                            confirmButtonText: 'OK',
-                            customClass: {
-                                confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
-                            },
-                            buttonsStyling: false
-                        });
-                        return;
-                    }
-
-                    event.target.submit();
+    <form action="{{ route('receiving-vouchers.update', $voucher) }}" method="POST"
+        @submit.prevent="handleSubmit($event)"
+        x-data="{
+            unitId: '{{ old('unit_id', $voucherUnitId) }}',
+            voucherAmount: '{{ old('amount', $voucher->amount) }}',
+            displayAmount: '',
+            pendingPayments: [],
+            selectedPaymentIds: @js(old('payment_ids', $voucher->payments->pluck('id')->map(fn($id) => (string)$id)->toArray())),
+            totalBalance: 0,
+            loading: false,
+            search: '',
+            open: false,
+            highlightedIndex: -1,
+            options: [
+                @foreach($units as $unit)
+                {
+                    id: '{{ $unit->id }}',
+                    unit: 'Flat/Shop: {{ addslashes($unit->unit_number) }}',
+                    tenant: '{{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
+                    text: 'Flat/Shop: {{ addslashes($unit->unit_number) }} {{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
+                    searchLabel: '{{ strtolower($unit->unit_number . " " . ($unit->tenant?->name ?? ($unit->otherTenant?->name ?? "vacant"))) }}'
                 },
+                @endforeach
+            ],
 
-                init() {
-                    this.$watch('unitId', (val) => {
-                        if (val) this.fetchPendingPayments(val);
-                        else {
-                            this.pendingPayments = [];
-                            this.selectedPaymentIds = [];
-                            this.totalBalance = 0;
-                        }
+            handleSubmit(event) {
+                let amt = parseFloat(this.voucherAmount || 0);
+                if (isNaN(amt) || amt <= 0) {
+                    Swal.fire({
+                        title: 'Invalid Amount',
+                        text: 'Please enter a valid voucher amount greater than zero.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
                     });
-
-                    if (this.unitId) {
-                        this.fetchPendingPayments(this.unitId);
-                    }
-
-                    if (this.voucherAmount) {
-                        this.formatAmount(String(this.voucherAmount));
-                    }
-                },
-
-                formatAmount(val) {
-                    let clean = val.replace(/[^\d.]/g, '');
-                    let parts = clean.split('.');
-                    if (parts.length > 2) {
-                        parts = [parts[0], parts.slice(1).join('')];
-                    }
-                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                    this.displayAmount = parts.join('.');
-                    this.voucherAmount = clean ? parseFloat(clean) : '';
-                },
-
-                fetchPendingPayments(unitId) {
-                    this.loading = true;
-                    fetch(`/ajax/tenant-pending-payments?unit_id=${unitId}&exclude_voucher_id={{ $voucher->id }}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            this.pendingPayments = data.payments;
-                            if (this.selectedPaymentIds.length === 0) {
-                                this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
-                            }
-                            this.totalBalance = this.pendingPayments.reduce((sum, p) => sum + p.balance, 0);
-                            this.loading = false;
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            this.loading = false;
-                        });
-                },
-
-                get selectedPaymentsTotal() {
-                    return this.pendingPayments
-                        .filter(p => this.selectedPaymentIds.includes(String(p.id)))
-                        .reduce((sum, p) => sum + p.balance, 0);
-                },
-
-                toggleAllPayments(event) {
-                    if (event.target.checked) {
-                        this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
-                    } else {
-                        this.selectedPaymentIds = [];
-                    }
-                },
-
-                useSelectedTotal() {
-                    let total = this.selectedPaymentsTotal;
-                    if (total > 0) {
-                        this.formatAmount(String(total));
-                    }
-                },
-
-                get filteredOptions() {
-                    if (!this.search) return this.options;
-                    let s = this.search.toLowerCase();
-                    return this.options.filter(opt => opt.searchLabel.includes(s));
-                },
-
-                get selectedUnit() {
-                    let selected = this.options.find(opt => opt.id == this.unitId);
-                    return selected ? selected.unit : '';
-                },
-
-                get selectedTenant() {
-                    let selected = this.options.find(opt => opt.id == this.unitId);
-                    return selected ? selected.tenant : '';
-                },
-
-                get selectedText() {
-                    let selected = this.options.find(opt => opt.id == this.unitId);
-                    return selected ? selected.text : 'Choose a Flat / Shop';
-                },
-
-                selectOption(opt) {
-                    this.unitId = opt.id;
-                    this.open = false;
-                    this.search = '';
-                    this.highlightedIndex = -1;
-                },
-
-                moveHighlight(dir) {
-                    let list = this.filteredOptions;
-                    if (list.length === 0) return;
-                    this.highlightedIndex = (this.highlightedIndex + dir + list.length) % list.length;
-                },
-
-                selectHighlighted() {
-                    let list = this.filteredOptions;
-                    if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
-                        this.selectOption(list[this.highlightedIndex]);
-                    }
-                },
-
-                clearSelection() {
-                    this.unitId = '';
-                    this.open = false;
-                    this.search = '';
-                    this.highlightedIndex = -1;
+                    return;
                 }
-            }">
 
-            @csrf
-            @method('PUT')
+                let maxAllowed = (this.selectedPaymentIds.length > 0 && this.selectedPaymentsTotal > 0) ? this.selectedPaymentsTotal : this.totalBalance;
+                if (amt > maxAllowed + 0.01) {
+                    Swal.fire({
+                        title: 'Exceed Amount Error',
+                        text: 'The voucher amount (Rs. ' + amt.toLocaleString('en-US', {minimumFractionDigits: 2}) + ') exceeds the total outstanding balance of selected payments (Rs. ' + maxAllowed.toLocaleString('en-US', {minimumFractionDigits: 2}) + ').',
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
 
-            <div class="space-y-6">
-                
-                {{-- Flat / Shop Selector Card (Always Visible) --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
-                    <div class="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
-                        <span class="text-lg">🏢</span>
-                        <h4 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                            Select Flat / Shop
-                        </h4>
+                event.target.submit();
+            },
+
+            init() {
+                this.$watch('unitId', (val) => {
+                    if (val) this.fetchPendingPayments(val);
+                    else {
+                        this.pendingPayments = [];
+                        this.selectedPaymentIds = [];
+                        this.totalBalance = 0;
+                    }
+                });
+
+                if (this.unitId) {
+                    this.fetchPendingPayments(this.unitId);
+                }
+
+                if (this.voucherAmount) {
+                    this.formatAmount(String(this.voucherAmount));
+                }
+            },
+
+            formatAmount(val) {
+                let clean = val.replace(/[^\d.]/g, '');
+                let parts = clean.split('.');
+                if (parts.length > 2) {
+                    parts = [parts[0], parts.slice(1).join('')];
+                }
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                this.displayAmount = parts.join('.');
+                this.voucherAmount = clean ? parseFloat(clean) : '';
+            },
+
+            fetchPendingPayments(unitId) {
+                this.loading = true;
+                fetch(`/ajax/tenant-pending-payments?unit_id=${unitId}&exclude_voucher_id={{ $voucher->id }}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        this.pendingPayments = data.payments;
+                        if (this.selectedPaymentIds.length === 0) {
+                            this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
+                        }
+                        this.totalBalance = this.pendingPayments.reduce((sum, p) => sum + p.balance, 0);
+                        this.loading = false;
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        this.loading = false;
+                    });
+            },
+
+            get selectedPaymentsTotal() {
+                return this.pendingPayments
+                    .filter(p => this.selectedPaymentIds.includes(String(p.id)))
+                    .reduce((sum, p) => sum + p.balance, 0);
+            },
+
+            toggleAllPayments(event) {
+                if (event.target.checked) {
+                    this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
+                } else {
+                    this.selectedPaymentIds = [];
+                }
+            },
+
+            useSelectedTotal() {
+                let total = this.selectedPaymentsTotal;
+                if (total > 0) {
+                    this.formatAmount(String(total));
+                }
+            },
+
+            get filteredOptions() {
+                if (!this.search) return this.options;
+                let s = this.search.toLowerCase();
+                return this.options.filter(opt => opt.searchLabel.includes(s));
+            },
+
+            get selectedUnit() {
+                let selected = this.options.find(opt => opt.id == this.unitId);
+                return selected ? selected.unit : '';
+            },
+
+            get selectedTenant() {
+                let selected = this.options.find(opt => opt.id == this.unitId);
+                return selected ? selected.tenant : '';
+            },
+
+            get selectedText() {
+                let selected = this.options.find(opt => opt.id == this.unitId);
+                return selected ? selected.text : 'Choose a Flat / Shop';
+            },
+
+            selectOption(opt) {
+                this.unitId = opt.id;
+                this.open = false;
+                this.search = '';
+                this.highlightedIndex = -1;
+            },
+
+            moveHighlight(dir) {
+                let list = this.filteredOptions;
+                if (list.length === 0) return;
+                this.highlightedIndex = (this.highlightedIndex + dir + list.length) % list.length;
+            },
+
+            selectHighlighted() {
+                let list = this.filteredOptions;
+                if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                    this.selectOption(list[this.highlightedIndex]);
+                }
+            },
+
+            clearSelection() {
+                this.unitId = '';
+                this.open = false;
+                this.search = '';
+                this.highlightedIndex = -1;
+            }
+        }">
+
+        @csrf
+        @method('PUT')
+
+        {{-- STICKY BIG HEADING BANNER --}}
+        <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+            style="position: sticky; top: 72px; z-index: 990;"
+            @click.away="open = false; highlightedIndex = -1">
+            
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-4 min-w-0">
+                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md text-3xl font-black">
+                        🏢
                     </div>
-
-                    <div class="relative" @click.away="open = false; highlightedIndex = -1">
-                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                            Flat / Shop (Tenant) <span class="text-red-500">*</span>
-                        </label>
-                        
-                        {{-- Trigger Button --}}
-                        <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                            class="w-full flex items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 text-left focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                    <div class="min-w-0">
+                        <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                            <template x-if="unitId"><span>Active Selected Unit / Shop</span></template>
+                            <template x-if="!unitId"><span>Select Flat / Shop</span></template>
+                        </p>
+                        <div class="flex flex-wrap items-baseline gap-2 mt-0.5">
                             <template x-if="unitId">
-                                <span class="flex items-center gap-1.5">
-                                    <span x-text="selectedUnit" class="font-bold text-gray-900 dark:text-white"></span>
-                                    <span x-text="selectedTenant" class="text-gray-500 dark:text-gray-400 font-normal"></span>
-                                </span>
+                                <div class="flex flex-wrap items-baseline gap-2">
+                                    <h2 x-text="selectedUnit" class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white"></h2>
+                                    <span x-text="selectedTenant" class="text-base sm:text-xl font-bold text-gray-600 dark:text-gray-300"></span>
+                                </div>
                             </template>
                             <template x-if="!unitId">
-                                <span class="text-gray-400 dark:text-gray-500">Choose a Flat / Shop</span>
+                                <h2 class="text-xl sm:text-2xl font-bold text-gray-400 dark:text-gray-500">Choose a Flat / Shop to begin...</h2>
                             </template>
-                            <svg class="h-4 w-4 text-gray-500 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-
-                        {{-- Hidden Input for HTML5 native validation and submission --}}
-                        <input type="text" name="unit_id" x-model="unitId" required
-                            class="absolute inset-0 -z-10 w-0 h-0 opacity-0 pointer-events-none"
-                            @focus="open = true">
-
-                        {{-- Dropdown Container --}}
-                        <div x-show="open" x-transition x-cloak
-                            class="absolute left-0 right-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-800 dark:bg-gray-955">
-                            
-                            {{-- Search field --}}
-                            <div class="p-2 border-b border-gray-100 dark:border-gray-800">
-                                <div class="relative">
-                                    <input type="text" x-ref="searchInput" x-model="search" placeholder="Type to search..."
-                                        @keydown.arrow-down.prevent="moveHighlight(1)"
-                                        @keydown.arrow-up.prevent="moveHighlight(-1)"
-                                        @keydown.enter.prevent="selectHighlighted()"
-                                        @keydown.escape="open = false; highlightedIndex = -1"
-                                        class="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 pl-8 text-xs text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:bg-white focus:outline-none dark:border-gray-850 dark:bg-gray-900/50 dark:text-white/90">
-                                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
-                                        🔍
-                                    </span>
-                                    <button type="button" x-show="search" @click="search = ''; highlightedIndex = -1" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xs">
-                                        Clear
-                                    </button>
-                                </div>
-                            </div>
-
-                            {{-- Options --}}
-                            <div class="max-h-60 overflow-y-auto p-1">
-                                <button type="button" @click="clearSelection()"
-                                    class="w-full text-left px-3 py-2 text-xs text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md">
-                                    Clear Selection
-                                </button>
-                                
-                                <template x-for="(opt, index) in filteredOptions" :key="opt.id">
-                                    <button type="button" @click="selectOption(opt)"
-                                        @mouseenter="highlightedIndex = index"
-                                        class="w-full text-left px-3 py-2 text-xs rounded-md transition-colors flex items-center justify-between"
-                                        :class="unitId == opt.id ? 'bg-brand-500 text-white font-semibold' : (highlightedIndex === index ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5')">
-                                    <template x-if="true">
-                                        <span class="flex items-center gap-1.5 flex-1 min-w-0">
-                                            <span x-text="opt.unit" class="font-bold"></span>
-                                            <span x-text="opt.tenant" class="font-normal opacity-75 truncate"></span>
-                                        </span>
-                                    </template>
-                                        <span x-show="unitId == opt.id" class="text-[10px]">✔️</span>
-                                    </button>
-                                </template>
-
-                                <div x-show="filteredOptions.length === 0" class="px-3 py-4 text-center text-xs text-gray-400 dark:text-gray-500">
-                                    No matching Flat / Shop found
-                                </div>
-                            </div>
                         </div>
-
-                        @error('unit_id')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
                     </div>
                 </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
+                        class="inline-flex items-center gap-2 rounded-xl bg-brand-50 px-5 py-3 text-sm font-extrabold text-brand-700 hover:bg-brand-100 dark:bg-brand-900/40 dark:text-brand-300 transition-colors shadow-sm cursor-pointer">
+                        <span x-text="unitId ? '🔄 Change Flat / Shop' : '🔍 Browse Flat / Shop'"></span>
+                        <svg class="h-4 w-4 text-brand-600 dark:text-brand-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            {{-- Hidden Input for HTML5 native validation and submission --}}
+            <input type="text" name="unit_id" x-model="unitId" required
+                class="absolute inset-0 -z-10 w-0 h-0 opacity-0 pointer-events-none"
+                @focus="open = true">
+
+            {{-- Dropdown Container --}}
+            <div x-show="open" x-transition x-cloak
+                class="absolute left-0 right-0 top-full z-[99999] mt-2 w-full rounded-2xl border-2 border-brand-500 bg-white shadow-2xl dark:border-brand-500 dark:bg-gray-900 overflow-hidden">
+                
+                {{-- Search field --}}
+                <div class="p-3.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02]">
+                    <div class="relative">
+                        <input type="text" x-ref="searchInput" x-model="search" placeholder="Type unit number or tenant name to search..."
+                            @keydown.arrow-down.prevent="moveHighlight(1)"
+                            @keydown.arrow-up.prevent="moveHighlight(-1)"
+                            @keydown.enter.prevent="selectHighlighted()"
+                            @keydown.escape="open = false; highlightedIndex = -1"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-5 py-3 pl-11 text-base sm:text-lg text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:bg-white focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white font-bold">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg">
+                            🔍
+                        </span>
+                        <button type="button" x-show="search" @click="search = ''; highlightedIndex = -1" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black uppercase text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Options list --}}
+                <div class="max-h-80 overflow-y-auto p-2 space-y-1">
+                    <button type="button" @click="clearSelection()"
+                        class="w-full text-left px-5 py-3 text-xs font-black uppercase tracking-wider text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20 rounded-xl transition-colors">
+                        ❌ Clear Selection
+                    </button>
+                    
+                    <template x-for="(opt, index) in filteredOptions" :key="opt.id">
+                        <button type="button" @click="selectOption(opt)"
+                            @mouseenter="highlightedIndex = index"
+                            class="w-full text-left px-5 py-3.5 text-base sm:text-lg rounded-xl transition-colors flex items-center justify-between"
+                            :class="unitId == opt.id ? 'bg-brand-600 text-white font-black shadow-sm' : (highlightedIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/40 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
+                            <span class="flex items-center gap-3 flex-1 min-w-0">
+                                <span x-text="opt.unit" class="font-black text-lg sm:text-xl"></span>
+                                <span x-text="opt.tenant" class="font-bold text-base opacity-90 truncate"></span>
+                            </span>
+                            <span x-show="unitId == opt.id" class="text-lg font-black ml-2">✓</span>
+                        </button>
+                    </template>
+
+                    <div x-show="filteredOptions.length === 0" class="px-4 py-6 text-center text-sm font-semibold text-gray-400 dark:text-gray-500">
+                        No matching Flat / Shop found
+                    </div>
+                </div>
+            </div>
+
+            @error('unit_id')
+                <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
+            @enderror
+        </div>
+
+        {{-- MAIN FORM CONTAINER --}}
+        <x-common.component-card :title="'Edit Receiving Voucher: ' . $voucher->voucher_no" desc="Modify payments collected from tenants. Restricted to Super Administrators only.">
+
+            <div class="space-y-6">
 
                 {{-- Loading Indicator --}}
                 <div x-show="loading" class="py-8 text-center text-gray-400">
@@ -380,7 +387,7 @@
                                 @enderror
                             </div>
 
-                            {{-- Payment Selection Checkboxes (Positioned directly after Voucher Amount field) --}}
+                            {{-- Payment Selection Checkboxes --}}
                             <div class="col-span-full rounded-2xl border-2 border-brand-300 bg-brand-50/30 p-5 dark:border-brand-800 dark:bg-brand-950/20 shadow-sm"
                                 x-show="pendingPayments.length > 0">
                                 <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 mb-4 border-b border-brand-200 dark:border-brand-800/60">
@@ -530,8 +537,8 @@
                 </div>
 
             </div>
-        </form>
-    </x-common.component-card>
+        </x-common.component-card>
+    </form>
 @endsection
 
 @push('scripts')

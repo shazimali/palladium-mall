@@ -335,4 +335,57 @@ class AjaxUnitController extends Controller
             'start_date'              => $o?->start_date?->toDateString(),
         ];
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // GET ajax/unit-search?q={term}
+    // Global unit search for the header search bar.
+    // ──────────────────────────────────────────────────────────────
+    public function search(Request $request): JsonResponse
+    {
+        $term = trim($request->query('q', ''));
+
+        if (strlen($term) < 1) {
+            return response()->json(['results' => []]);
+        }
+
+        $units = Unit::query()
+            ->with(['floor', 'block', 'area', 'landlord', 'activeAgreement.tenant', 'otherTenant'])
+            ->where(function ($q) use ($term) {
+                $q->where('unit_number', 'like', "%{$term}%")
+                  ->orWhereHas('landlord', fn($lq) => $lq->where('name', 'like', "%{$term}%"))
+                  ->orWhereHas('floor',    fn($fq) => $fq->where('name', 'like', "%{$term}%"))
+                  ->orWhereHas('block',    fn($bq) => $bq->where('name', 'like', "%{$term}%"))
+                  ->orWhereHas('area',     fn($aq) => $aq->where('name', 'like', "%{$term}%"))
+                  ->orWhereHas('activeAgreement.tenant', fn($tq) => $tq->where('name', 'like', "%{$term}%"))
+                  ->orWhereHas('otherTenant', fn($otq) => $otq->where('name', 'like', "%{$term}%"));
+            })
+            ->orderByRaw("CASE WHEN unit_number LIKE ? THEN 0 ELSE 1 END", ["{$term}%"])
+            ->orderBy('unit_number')
+            ->limit(10)
+            ->get();
+
+        $results = $units->map(function (Unit $unit) {
+            // Determine active tenant name
+            $tenantName = null;
+            if ($unit->activeAgreement?->tenant) {
+                $tenantName = $unit->activeAgreement->tenant->name;
+            } elseif ($unit->otherTenant) {
+                $tenantName = $unit->otherTenant->name;
+            }
+
+            return [
+                'id'          => $unit->id,
+                'unit_number' => $unit->unit_number,
+                'status'      => $unit->status,
+                'type'        => ucfirst($unit->type ?? 'unit'),
+                'floor'       => $unit->floor?->name ?? null,
+                'block'       => $unit->block?->name ?? null,
+                'landlord'    => $unit->landlord?->name ?? null,
+                'tenant'      => $tenantName,
+                'url'         => route('units.show', $unit->id),
+            ];
+        });
+
+        return response()->json(['results' => $results]);
+    }
 }

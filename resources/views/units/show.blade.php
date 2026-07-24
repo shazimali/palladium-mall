@@ -310,51 +310,169 @@
         </div>
 
         {{-- ── TIMELINE TAB ─────────────────────────────────────────────── --}}
-        <div x-show="activeTab === 'timeline'" class="max-w-3xl">
-            <x-common.component-card title="Historical Performance Timeline" desc="Chronological performance history of the unit from day one">
+        <div x-show="activeTab === 'timeline'">
+            <div class="rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-white/[0.02] shadow-sm overflow-hidden">
+
+                {{-- Header --}}
+                <div class="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900 dark:text-white">Activity Timeline</h3>
+                        <p class="text-xs text-gray-400 mt-0.5">Complete chronological history of this unit</p>
+                    </div>
+                    @if($timeline->isNotEmpty())
+                        <span class="inline-flex items-center rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
+                            {{ $timeline->count() }} events
+                        </span>
+                    @endif
+                </div>
+
                 @if($timeline->isEmpty())
-                    <div class="py-12 text-center text-gray-400">
-                        <span class="text-3xl">🗓️</span>
-                        <p class="text-sm font-medium mt-2">No historical events recorded for this unit.</p>
+                    <div class="py-20 text-center">
+                        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
+                            </svg>
+                        </div>
+                        <p class="text-sm font-semibold text-gray-500 dark:text-gray-400">No events recorded yet</p>
+                        <p class="text-xs text-gray-400 mt-1">Events will appear here as activity occurs on this unit.</p>
                     </div>
                 @else
-                    <div class="relative pl-6 border-l-2 border-gray-200 dark:border-gray-800 ml-4 space-y-8 py-2">
-                        @foreach($timeline as $event)
-                            <div class="relative">
-                                {{-- Icon badge positioned over the vertical line --}}
-                                <span class="absolute -left-[37px] top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-xs border border-gray-200 shadow-sm dark:bg-gray-900 dark:border-gray-800">
-                                    {{ $event['icon'] }}
-                                </span>
+                    <div class="px-6 py-6">
+                        @php
+                            // Group timeline events by year for visual section headers
+                            $grouped = $timeline->groupBy(fn($e) => $e['date'] ? $e['date']->format('Y') : 'Unknown');
+                        @endphp
 
-                                <div class="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-gray-800 dark:bg-white/[0.02]">
-                                    <div class="flex flex-wrap items-center justify-between gap-2">
-                                        <h4 class="text-sm font-semibold text-gray-800 dark:text-white">
-                                            {{ $event['title'] }}
-                                        </h4>
-                                        <span class="text-xs text-gray-400 font-medium">
-                                            {{ $event['date'] ? $event['date']->format('d M Y') : '—' }}
-                                        </span>
-                                    </div>
-                                    <p class="text-xs font-medium text-gray-500 mt-1 dark:text-gray-400">
-                                        {{ $event['subtitle'] }}
-                                    </p>
-                                    <p class="text-xs text-gray-600 mt-2 bg-gray-50/50 p-2.5 rounded-lg border border-gray-100/50 dark:bg-black/20 dark:border-gray-800/20 dark:text-gray-300">
-                                        {{ $event['details'] }}
-                                    </p>
-                                    <div class="mt-3 flex items-center justify-between">
-                                        <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-medium {{ $event['status_badge'] }}">
-                                            {{ ucfirst($event['status']) }}
-                                        </span>
-                                        <a href="{{ $event['url'] }}" class="text-[11px] font-semibold text-brand-500 hover:underline">
-                                            View Details &rarr;
-                                        </a>
-                                    </div>
+                        @foreach($grouped as $year => $events)
+                            {{-- Year separator --}}
+                            <div class="flex items-center gap-3 mb-6 {{ !$loop->first ? 'mt-10' : '' }}">
+                                <span class="text-xs font-bold tracking-widest uppercase text-gray-400 dark:text-gray-500">{{ $year }}</span>
+                                <div class="flex-1 h-px bg-gray-100 dark:bg-gray-800"></div>
+                                <span class="text-xs text-gray-400 dark:text-gray-600">{{ $events->count() }} {{ Str::plural('event', $events->count()) }}</span>
+                            </div>
+
+                            {{-- Events for this year --}}
+                            <div class="relative">
+                                {{-- Vertical connector line --}}
+                                <div class="absolute left-5 top-0 bottom-0 w-px bg-gradient-to-b from-gray-200 via-gray-150 to-transparent dark:from-gray-700 dark:via-gray-800"></div>
+
+                                <div class="space-y-4">
+                                    @foreach($events as $event)
+                                        @php
+                                            // Determine icon bg + ring color by event type
+                                            $typeStyles = match($event['type']) {
+                                                'agreement'             => ['ring' => 'ring-blue-200 dark:ring-blue-800',   'bg' => 'bg-blue-500',   'dot' => 'bg-blue-100 dark:bg-blue-900/40', 'line' => 'border-blue-200 dark:border-blue-900/50',  'label_bg' => 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'],
+                                                'agreement_terminated'  => ['ring' => 'ring-red-200 dark:ring-red-800',    'bg' => 'bg-red-500',    'dot' => 'bg-red-100 dark:bg-red-900/40',   'line' => 'border-red-200 dark:border-red-900/50',    'label_bg' => 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400'],
+                                                'payment'               => match($event['status']) {
+                                                    'paid'    => ['ring' => 'ring-emerald-200 dark:ring-emerald-800', 'bg' => 'bg-emerald-500', 'dot' => 'bg-emerald-100 dark:bg-emerald-900/40', 'line' => 'border-emerald-200 dark:border-emerald-900/50', 'label_bg' => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'],
+                                                    'partial' => ['ring' => 'ring-amber-200 dark:ring-amber-800',   'bg' => 'bg-amber-500',   'dot' => 'bg-amber-100 dark:bg-amber-900/40',   'line' => 'border-amber-200 dark:border-amber-900/50',   'label_bg' => 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'],
+                                                    default   => ['ring' => 'ring-gray-200 dark:ring-gray-700',     'bg' => 'bg-gray-400',    'dot' => 'bg-gray-100 dark:bg-gray-800',        'line' => 'border-gray-200 dark:border-gray-800',        'label_bg' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'],
+                                                },
+                                                'ownership_current'     => ['ring' => 'ring-violet-200 dark:ring-violet-800', 'bg' => 'bg-violet-500', 'dot' => 'bg-violet-100 dark:bg-violet-900/40', 'line' => 'border-violet-200 dark:border-violet-900/50', 'label_bg' => 'bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400'],
+                                                'ownership_transfer'    => ['ring' => 'ring-purple-200 dark:ring-purple-800', 'bg' => 'bg-purple-400', 'dot' => 'bg-purple-100 dark:bg-purple-900/40', 'line' => 'border-purple-200 dark:border-purple-900/50', 'label_bg' => 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'],
+                                                'other_tenant_attached' => ['ring' => 'ring-orange-200 dark:ring-orange-800', 'bg' => 'bg-orange-500', 'dot' => 'bg-orange-100 dark:bg-orange-900/40', 'line' => 'border-orange-200 dark:border-orange-900/50', 'label_bg' => 'bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'],
+                                                'other_tenant_detached' => ['ring' => 'ring-slate-200 dark:ring-slate-700',  'bg' => 'bg-slate-400',  'dot' => 'bg-slate-100 dark:bg-slate-800',      'line' => 'border-slate-200 dark:border-slate-800',      'label_bg' => 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'],
+                                                default                 => ['ring' => 'ring-gray-200 dark:ring-gray-700',     'bg' => 'bg-gray-400',    'dot' => 'bg-gray-100 dark:bg-gray-800',        'line' => 'border-gray-200 dark:border-gray-800',        'label_bg' => 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'],
+                                            };
+
+                                            // SVG icons per type
+                                            $svgIcon = match($event['type']) {
+                                                'agreement'             => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+                                                'agreement_terminated'  => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+                                                'payment'               => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
+                                                'ownership_current'     => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+                                                'ownership_transfer'    => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
+                                                'other_tenant_attached' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>',
+                                                'other_tenant_detached' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>',
+                                                default                 => '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>',
+                                            };
+
+                                            // Parse detail string into key-value chips
+                                            $detailPairs = [];
+                                            foreach(explode(' | ', $event['details']) as $part) {
+                                                $pieces = explode(': ', $part, 2);
+                                                $detailPairs[] = count($pieces) === 2 ? ['label' => trim($pieces[0]), 'value' => trim($pieces[1])] : ['label' => '', 'value' => trim($part)];
+                                            }
+                                        @endphp
+
+                                        <div class="relative flex gap-4 group">
+                                            {{-- Circle icon on the line --}}
+                                            <div class="relative z-10 flex-shrink-0">
+                                                <div class="h-10 w-10 rounded-full {{ $typeStyles['bg'] }} ring-4 {{ $typeStyles['ring'] }} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200">
+                                                    {!! $svgIcon !!}
+                                                </div>
+                                            </div>
+
+                                            {{-- Event card --}}
+                                            <div class="flex-1 mb-2 rounded-2xl border {{ $typeStyles['line'] }} bg-white dark:bg-gray-900/50 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+
+                                                {{-- Card top accent bar --}}
+                                                <div class="h-0.5 w-full {{ $typeStyles['bg'] }} opacity-60"></div>
+
+                                                <div class="px-4 py-3.5">
+                                                    {{-- Title row --}}
+                                                    <div class="flex flex-wrap items-start justify-between gap-2">
+                                                        <div class="flex items-center gap-2 flex-wrap">
+                                                            <h4 class="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                                                                {{ $event['title'] }}
+                                                            </h4>
+                                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide {{ $typeStyles['label_bg'] }}">
+                                                                {{ ucfirst(str_replace('_', ' ', $event['status'])) }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="flex-shrink-0 text-right">
+                                                            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                                                {{ $event['date'] ? $event['date']->format('d M Y') : '—' }}
+                                                            </span>
+                                                            @if($event['date'])
+                                                                <p class="text-[10px] text-gray-400 mt-0.5">
+                                                                    {{ $event['date']->diffForHumans() }}
+                                                                </p>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+
+                                                    {{-- Subtitle --}}
+                                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                                                        {{ $event['subtitle'] }}
+                                                    </p>
+
+                                                    {{-- Details as chips --}}
+                                                    @if(!empty($detailPairs))
+                                                        <div class="mt-3 flex flex-wrap gap-2">
+                                                            @foreach($detailPairs as $pair)
+                                                                @if($pair['value'] && $pair['value'] !== '—' && $pair['value'] !== 'Rs. 0')
+                                                                    <div class="flex items-center gap-1 rounded-lg {{ $typeStyles['dot'] }} px-2.5 py-1.5">
+                                                                        @if($pair['label'])
+                                                                            <span class="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">{{ $pair['label'] }}:</span>
+                                                                        @endif
+                                                                        <span class="text-xs font-semibold text-gray-700 dark:text-gray-200">{{ $pair['value'] }}</span>
+                                                                    </div>
+                                                                @endif
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+
+                                                    {{-- Footer action --}}
+                                                    <div class="mt-3 flex justify-end">
+                                                        <a href="{{ $event['url'] }}"
+                                                           class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-500 hover:text-brand-700 dark:hover:text-brand-300 transition-colors group/link">
+                                                            View Details
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 group-hover/link:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                                <polyline points="9 18 15 12 9 6"/>
+                                                            </svg>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
                                 </div>
                             </div>
                         @endforeach
                     </div>
                 @endif
-            </x-common.component-card>
+            </div>
         </div>
 
         {{-- ── AGREEMENTS TAB ───────────────────────────────────────────── --}}

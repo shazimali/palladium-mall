@@ -3,6 +3,47 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Managing Owner Dues" />
 
+    {{-- STICKY OWNER DUES LEDGER HEADER --}}
+    <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+        style="position: sticky; top: 72px; z-index: 990;">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md text-3xl font-black">
+                    🏛️
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                        Managing Owner Dues Ledger
+                    </p>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
+                        {{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }} — {{ \Carbon\Carbon::parse($dateTo)->format('d M Y') }}
+                    </h2>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-6">
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Gross Revenue</span>
+                    <span class="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                        Rs. {{ number_format($totalIncome) }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400 block">Mall Expenses</span>
+                    <span class="text-xl sm:text-2xl font-black font-mono text-red-600 dark:text-red-400">
+                        Rs. {{ number_format($totalExpenses) }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 block">Net Profit Pool</span>
+                    <span class="text-2xl sm:text-3xl font-black font-mono {{ $netProfit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                        Rs. {{ number_format($netProfit) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- Filter Bar --}}
     <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
         <form action="{{ route('owners.dues') }}" method="GET" class="flex flex-wrap items-end justify-between gap-4">

@@ -19,7 +19,7 @@ use Carbon\Carbon;
 
 class UnitController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request)
     {
         $baseQuery = Unit::query()
             ->when($request->search, fn($q) => $q->search($request->search))
@@ -44,6 +44,23 @@ class UnitController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $search = $request->input('search');
+        $highlight = function($text) use ($search) {
+            if (empty($text)) return '';
+            if (empty($search)) {
+                return e($text);
+            }
+            $escapedSearch = preg_quote($search, '/');
+            return preg_replace('/(' . $escapedSearch . ')/i', '<mark class="bg-amber-100 text-amber-900 rounded px-0.5 dark:bg-amber-950/70 dark:text-amber-300 font-medium">$1</mark>', e($text));
+        };
+
+        if ($request->ajax() || $request->has('ajax')) {
+            return view('units._table', [
+                'units' => $units,
+                'highlight' => $highlight,
+            ])->render();
+        }
+
         $floors = Floor::orderBy('name')->get();
         $blocks = Block::orderBy('name')->get();
         $areas = Area::orderBy('name')->get();
@@ -55,6 +72,7 @@ class UnitController extends Controller
             'floors' => $floors,
             'blocks' => $blocks,
             'areas' => $areas,
+            'highlight' => $highlight,
         ]);
     }
 

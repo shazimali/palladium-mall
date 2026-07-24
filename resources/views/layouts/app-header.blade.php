@@ -65,28 +65,229 @@
                 </svg>
             </button>
 
-            <!-- Search Bar (desktop only) -->
-            <div class="hidden xl:block">
-                <form>
-                    <div class="relative">
-                        <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2">
-                            <!-- Search Icon -->
-                            <svg class="fill-gray-500 dark:fill-gray-400" width="20" height="20"
-                                viewBox="0 0 20 20" fill="none">
-                                <path fill-rule="evenodd" clip-rule="evenodd"
-                                    d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z"
-                                    fill="" />
-                            </svg>
-                        </span>
-                        <input type="text" placeholder="Search or type command..."
-                            class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/3 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]" />
-                        <button
-                            class="absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
-                            <span> ⌘ </span>
-                            <span> K </span>
-                        </button>
+            <!-- Search Bar (desktop only) — Global Unit Search -->
+            <div class="hidden xl:block"
+                x-data="{
+                    query: '',
+                    results: [],
+                    loading: false,
+                    open: false,
+                    activeIndex: -1,
+                    debounceTimer: null,
+
+                    init() {
+                        // ⌘K / Ctrl+K focuses the input
+                        document.addEventListener('keydown', (e) => {
+                            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                                e.preventDefault();
+                                this.$refs.searchInput.focus();
+                            }
+                            if (e.key === 'Escape') {
+                                this.close();
+                                this.$refs.searchInput.blur();
+                            }
+                        });
+                    },
+
+                    onInput() {
+                        this.activeIndex = -1;
+                        clearTimeout(this.debounceTimer);
+                        if (this.query.trim().length < 1) {
+                            this.results = [];
+                            this.open = false;
+                            return;
+                        }
+                        this.debounceTimer = setTimeout(() => this.fetch(), 250);
+                    },
+
+                    async fetch() {
+                        this.loading = true;
+                        try {
+                            const res = await fetch('/ajax/unit-search?q=' + encodeURIComponent(this.query.trim()), {
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            });
+                            const data = await res.json();
+                            this.results = data.results ?? [];
+                            this.open = true;
+                            this.activeIndex = -1;
+                        } catch(e) {
+                            this.results = [];
+                        } finally {
+                            this.loading = false;
+                        }
+                    },
+
+                    onKeyDown(e) {
+                        if (!this.open) return;
+                        if (e.key === 'ArrowDown') {
+                            e.preventDefault();
+                            this.activeIndex = Math.min(this.activeIndex + 1, this.results.length - 1);
+                        } else if (e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            this.activeIndex = Math.max(this.activeIndex - 1, -1);
+                        } else if (e.key === 'Enter') {
+                            e.preventDefault();
+                            if (this.activeIndex >= 0 && this.results[this.activeIndex]) {
+                                window.location.href = this.results[this.activeIndex].url;
+                            }
+                        }
+                    },
+
+                    navigate(url) {
+                        this.close();
+                        window.location.href = url;
+                    },
+
+                    close() {
+                        this.open = false;
+                        this.activeIndex = -1;
+                    },
+
+                    statusBadge(status) {
+                        const map = {
+                            rented: { label: 'Rented',  cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' },
+                            vacant: { label: 'Vacant',  cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' },
+                            self:   { label: 'Self',    cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' },
+                            sp:     { label: 'SP',      cls: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400' },
+                        };
+                        return map[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600' };
+                    }
+                }"
+                @click.outside="close()"
+            >
+                <div class="relative">
+                    <span class="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2 z-10">
+                        <!-- Search Icon -->
+                        <svg x-show="!loading" class="fill-gray-500 dark:fill-gray-400" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path fill-rule="evenodd" clip-rule="evenodd"
+                                d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z"
+                                fill="" />
+                        </svg>
+                        <!-- Spinner -->
+                        <svg x-show="loading" class="animate-spin text-brand-500" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                    </span>
+
+                    <input
+                        x-ref="searchInput"
+                        id="global-unit-search"
+                        type="text"
+                        placeholder="Search unit, tenant, landlord..."
+                        autocomplete="off"
+                        x-model="query"
+                        @input="onInput()"
+                        @keydown="onKeyDown($event)"
+                        @focus="query.trim().length >= 1 && results.length > 0 && (open = true)"
+                        class="dark:bg-dark-900 h-11 w-full rounded-lg border border-gray-200 bg-transparent py-2.5 pl-12 pr-14 text-sm text-gray-800 shadow-theme-xs placeholder:text-gray-400 focus:border-brand-300 focus:outline-hidden focus:ring-3 focus:ring-brand-500/10 dark:border-gray-800 dark:bg-white/3 dark:text-white/90 dark:placeholder:text-white/30 dark:focus:border-brand-800 xl:w-[430px]"
+                    />
+                    <button
+                        type="button"
+                        class="absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400"
+                        @click="$refs.searchInput.focus()"
+                    >
+                        <span> ⌘ </span><span> K </span>
+                    </button>
+
+                    <!-- Dropdown Results -->
+                    <div
+                        x-show="open"
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-100"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-1"
+                        class="absolute top-full left-0 z-[99999] mt-1.5 w-full min-w-[430px] rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900 overflow-hidden"
+                        style="display: none;"
+                    >
+                        <!-- Results list -->
+                        <template x-if="results.length > 0">
+                            <ul class="max-h-[420px] overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                                <template x-for="(result, index) in results" :key="result.id">
+                                    <li>
+                                        <button
+                                            type="button"
+                                            class="w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                            :class="{ 'bg-brand-50 dark:bg-brand-900/20': activeIndex === index }"
+                                            @click="navigate(result.url)"
+                                            @mouseenter="activeIndex = index"
+                                        >
+                                            <!-- Unit Icon -->
+                                            <div class="flex-shrink-0 mt-0.5 w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                                    <polyline points="9 22 9 12 15 12 15 22"/>
+                                                </svg>
+                                            </div>
+
+                                            <!-- Content -->
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <span class="font-semibold text-sm text-gray-900 dark:text-white" x-text="result.unit_number"></span>
+                                                    <span class="text-xs font-medium px-2 py-0.5 rounded-full"
+                                                        :class="statusBadge(result.status).cls"
+                                                        x-text="statusBadge(result.status).label">
+                                                    </span>
+                                                    <span class="text-xs text-gray-400 dark:text-gray-500" x-text="result.type"></span>
+                                                </div>
+                                                <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                                    <template x-if="result.tenant">
+                                                        <span class="flex items-center gap-1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                                            <span x-text="result.tenant"></span>
+                                                        </span>
+                                                    </template>
+                                                    <template x-if="!result.tenant">
+                                                        <span class="text-gray-400 italic">No tenant</span>
+                                                    </template>
+                                                    <template x-if="result.landlord">
+                                                        <span>·</span>
+                                                    </template>
+                                                    <template x-if="result.landlord">
+                                                        <span x-text="result.landlord"></span>
+                                                    </template>
+                                                    <template x-if="result.floor">
+                                                        <span>·</span>
+                                                    </template>
+                                                    <template x-if="result.floor">
+                                                        <span x-text="result.floor"></span>
+                                                    </template>
+                                                </div>
+                                            </div>
+
+                                            <!-- Arrow -->
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="flex-shrink-0 mt-1 w-4 h-4 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="9 18 15 12 9 6"/>
+                                            </svg>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+
+                        <!-- Empty state (only after typing 1+ chars with no results and not loading) -->
+                        <template x-if="results.length === 0 && !loading && query.trim().length >= 1">
+                            <div class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mx-auto mb-2 text-gray-300 dark:text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                    <line x1="8" y1="11" x2="14" y2="11"/>
+                                </svg>
+                                No units found for <strong x-text="'&quot;' + query + '&quot;'"></strong>
+                            </div>
+                        </template>
+
+                        <!-- Footer hint -->
+                        <template x-if="results.length > 0">
+                            <div class="px-4 py-2 border-t border-gray-100 dark:border-gray-800 flex items-center gap-3 text-[11px] text-gray-400 dark:text-gray-600">
+                                <span><kbd class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">↑↓</kbd> navigate</span>
+                                <span><kbd class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">↵</kbd> open</span>
+                                <span><kbd class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">Esc</kbd> close</span>
+                            </div>
+                        </template>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
 

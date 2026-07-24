@@ -95,10 +95,10 @@
 
                 {{-- Tenant Billing --}}
                 <button type="button" @click="mode = 'tenant'" :class="mode === 'tenant'
-                                        ? 'bg-white text-gray-800 shadow-sm dark:bg-gray-900 dark:text-white'
-                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="relative inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        ? 'bg-white text-gray-900 shadow-md dark:bg-gray-900 dark:text-white font-black'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 font-bold'"
+                    class="relative inline-flex items-center gap-2.5 rounded-xl px-6 py-3 text-base sm:text-lg transition-all duration-200 focus:outline-none cursor-pointer">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
@@ -107,10 +107,10 @@
 
                 {{-- Maintenance-Only (Other-Owned) --}}
                 <button type="button" @click="mode = 'self'" :class="mode === 'self'
-                                        ? 'bg-white text-gray-800 shadow-sm dark:bg-gray-900 dark:text-white'
-                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="relative inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        ? 'bg-white text-gray-900 shadow-md dark:bg-gray-900 dark:text-white font-black'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 font-bold'"
+                    class="relative inline-flex items-center gap-2.5 rounded-xl px-6 py-3 text-base sm:text-lg transition-all duration-200 focus:outline-none cursor-pointer">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                     </svg>
@@ -119,10 +119,10 @@
 
                 {{-- Extra Billing --}}
                 <button type="button" @click="mode = 'extra'" :class="mode === 'extra'
-                                        ? 'bg-white text-gray-800 shadow-sm dark:bg-gray-900 dark:text-white'
-                                        : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'"
-                    class="relative inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus:outline-none">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        ? 'bg-white text-gray-900 shadow-md dark:bg-gray-900 dark:text-white font-black'
+                                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 font-bold'"
+                    class="relative inline-flex items-center gap-2.5 rounded-xl px-6 py-3 text-base sm:text-lg transition-all duration-200 focus:outline-none cursor-pointer">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
                     Extra Billing
@@ -374,12 +374,12 @@
                                          @click.outside="extraCbOpen = false"
                                          @keydown.enter.prevent.stop="extraCbOpen = !extraCbOpen; if(extraCbOpen) { $nextTick(() => $refs.extraCbSearch.focus()) }"
                                          @keydown.space.prevent.stop="extraCbOpen = !extraCbOpen; if(extraCbOpen) { $nextTick(() => $refs.extraCbSearch.focus()) }"
-                                         class="w-full cursor-pointer flex justify-between items-center rounded-lg border bg-white px-4 py-2.5 text-sm dark:bg-gray-900 {{ $errors->has('unit_id') && old('payment_mode') === 'extra' ? 'border-red-400' : 'border-gray-300 dark:border-gray-700' }}">
+                                         class="w-full cursor-pointer flex justify-between items-center rounded-2xl border-2 bg-white px-5 py-3.5 text-lg font-bold dark:bg-gray-900 {{ $errors->has('unit_id') && old('payment_mode') === 'extra' ? 'border-red-400' : 'border-gray-300 dark:border-gray-700' }}">
                                         <span x-text="extraCbSelectedLabel || 'Select Flat/Shop…'"
-                                              :class="extraCbSelectedLabel ? 'text-gray-800 dark:text-white/90' : 'text-gray-400 dark:text-gray-600'"></span>
-                                        <svg class="h-4 w-4 text-gray-500 flex-shrink-0 transition-transform duration-200"
+                                              :class="extraCbSelectedLabel ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'"></span>
+                                        <svg class="h-5 w-5 text-gray-500 flex-shrink-0 transition-transform duration-200"
                                              :class="extraCbOpen ? 'rotate-180' : ''"
-                                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                         </svg>
                                     </div>
@@ -392,30 +392,30 @@
                                          x-transition:leave="transition ease-in duration-75"
                                          x-transition:leave-start="opacity-100 scale-100"
                                          x-transition:leave-end="opacity-0 scale-95"
-                                         class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                                         class="absolute left-0 z-[99999] mt-2 w-full rounded-2xl border-2 border-brand-500 bg-white shadow-2xl dark:border-brand-500 dark:bg-gray-900 overflow-hidden py-2"
                                          style="display:none;">
 
-                                        <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                        <div class="px-3.5 pb-2.5 pt-1.5 border-b border-gray-100 dark:border-gray-800">
                                             <input x-ref="extraCbSearch"
                                                    x-model="extraCbSearch"
                                                    type="text"
                                                    placeholder="Type to search flat/shop…"
-                                                   class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                                   class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base sm:text-lg text-gray-900 font-bold focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white">
                                         </div>
 
-                                        <ul class="max-h-60 overflow-y-auto mt-1" x-ref="extraOptionsList">
+                                        <ul class="max-h-72 overflow-y-auto mt-1 p-1 space-y-1" x-ref="extraOptionsList">
                                             <template x-if="filteredExtraUnits.length === 0">
-                                                <li class="px-4 py-2 text-xs text-gray-400 dark:text-gray-500">No matching flats/shops found.</li>
+                                                <li class="px-5 py-3 text-sm font-semibold text-gray-400 dark:text-gray-500">No matching flats/shops found.</li>
                                             </template>
                                             <template x-for="(u, index) in filteredExtraUnits" :key="u.id">
                                                 <li @click="pickExtraUnit(u)"
                                                     @mouseenter="extraCbActiveIndex = index"
                                                     :data-index="index"
-                                                    :class="extraCbActiveIndex === index ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-400' : 'text-gray-800 dark:text-white/90'"
-                                                    class="px-4 py-2 text-sm cursor-pointer flex items-center justify-between gap-3 transition-colors">
-                                                    <span x-text="u.label" class="font-medium"></span>
+                                                    :class="extraCbActiveIndex === index ? 'bg-brand-600 text-white font-black' : 'text-gray-900 dark:text-white font-bold hover:bg-gray-100 dark:hover:bg-white/5'"
+                                                    class="px-5 py-3.5 text-base sm:text-lg cursor-pointer flex items-center justify-between gap-3 rounded-xl transition-colors">
+                                                    <span x-text="u.label" class="font-black text-lg sm:text-xl"></span>
                                                     <span x-text="u.landlord_name ? u.landlord_name : ''"
-                                                          class="text-xs text-gray-400 dark:text-gray-500 truncate"></span>
+                                                          class="text-base font-bold opacity-90 truncate"></span>
                                                 </li>
                                             </template>
                                         </ul>

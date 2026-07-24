@@ -18,10 +18,36 @@
         <form action="{{ route('general-receiving-vouchers.store') }}" method="POST"
             x-data="{
                 receivedFromType: '{{ old('received_from_type', 'party') }}',
+                partyId: '{{ old('party_id') }}',
+                partyName: '{{ old('party_name') }}',
+                landlordId: '{{ old('landlord_id') }}',
+                landlordName: '',
+                fromAccountId: '{{ old('from_payment_account_id') }}',
+                paymentAccountId: '{{ old('payment_account_id') }}',
                 amount: '{{ old('amount') }}',
                 displayAmount: '',
                 landlordReceivables: null,
                 landlordLoading: false,
+                accounts: [
+                    @foreach($paymentAccounts as $acc)
+                        { id: '{{ $acc->id }}', name: '{{ addslashes($acc->name) }} ({{ strtoupper($acc->type) }})' },
+                    @endforeach
+                ],
+                get selectedDepositAccountName() {
+                    let acc = this.accounts.find(a => a.id == this.paymentAccountId);
+                    return acc ? acc.name : '';
+                },
+                get receivedFromDetail() {
+                    if (this.receivedFromType === 'party') {
+                        return this.partyName ? 'Party: ' + this.partyName : 'Select Registered Party Head';
+                    } else if (this.receivedFromType === 'landlord') {
+                        return this.landlordName ? 'Landlord: ' + this.landlordName : 'Select Landlord / Owner';
+                    } else if (this.receivedFromType === 'account') {
+                        let srcAcc = this.accounts.find(a => a.id == this.fromAccountId);
+                        return srcAcc ? 'Transfer From: ' + srcAcc.name : 'Select Source Account';
+                    }
+                    return 'General Voucher';
+                },
                 formatAmount(val) {
                     let clean = val.replace(/[^\d.]/g, '');
                     let parts = clean.split('.');
@@ -53,23 +79,60 @@
                     }
                 }
             }"
-            @landlord-selected.window="fetchLandlordReceivables($event.detail.id)">
+            @party-selected.window="partyId = $event.detail.id; partyName = $event.detail.name"
+            @landlord-selected.window="landlordId = $event.detail.id; landlordName = $event.detail.name; fetchLandlordReceivables($event.detail.id)">
             @csrf
 
+            {{-- STICKY BIG HEADING BANNER --}}
+            <div class="sticky mb-6 rounded-2xl border-2 border-emerald-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+                style="position: sticky; top: 72px; z-index: 990;">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md text-3xl font-black">
+                            📥
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                New General Receiving Voucher
+                            </p>
+                            <div class="flex flex-wrap items-baseline gap-2 mt-0.5">
+                                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white"
+                                    x-text="receivedFromDetail"></h2>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1 text-xs font-bold text-gray-600 dark:text-gray-300">
+                                <span>Deposit Account:</span>
+                                <span class="text-brand-600 dark:text-brand-400 font-extrabold" x-text="selectedDepositAccountName || 'Not Selected'"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-right">
+                        <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Voucher Amount</span>
+                        <span class="text-2xl sm:text-3xl font-black font-mono text-emerald-600 dark:text-emerald-400"
+                              x-text="displayAmount ? 'Rs. ' + displayAmount : 'Rs. 0.00'"></span>
+                    </div>
+                </div>
+            </div>
+
+            @php
+                $input = 'w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg sm:text-xl font-bold text-gray-900 shadow-xs focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white';
+                $label = 'mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300';
+            @endphp
+
             <div class="space-y-6">
-                <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02]">
-                    <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                        Voucher Information
+                <div class="rounded-2xl border-2 border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-white/[0.02] shadow-sm">
+                    <h4 class="mb-5 text-base font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 flex items-center gap-2">
+                        <span>⚙️</span> Voucher Information
                     </h4>
 
-                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
                         
                         {{-- Received From Type --}}
                         <div class="sm:col-span-2 md:col-span-3">
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="{{ $label }}">
                                 Received From Type <span class="text-red-500">*</span>
                             </label>
-                            <select name="received_from_type" x-model="receivedFromType" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" required>
+                            <select name="received_from_type" x-model="receivedFromType" class="{{ $input }}" required>
                                 <option value="party" {{ old('received_from_type', 'party') === 'party' ? 'selected' : '' }}>Party / Vendor Head</option>
                                 <option value="landlord" {{ old('received_from_type') === 'landlord' ? 'selected' : '' }}>Landlord / Property Owner</option>
                                 <option value="account" {{ old('received_from_type') === 'account' ? 'selected' : '' }}>Payment Account (Inter-Account Transfer In)</option>
@@ -100,6 +163,7 @@
                                     this.open = false;
                                     this.search = '';
                                     this.highlightedIndex = -1;
+                                    $dispatch('party-selected', { id: p.id, name: p.name });
                                 },
                                 moveHighlight(direction) {
                                     let list = this.filteredParties;
@@ -113,7 +177,7 @@
                                     }
                                 }
                              }">
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="{{ $label }}">
                                 Party Head <span class="text-red-500">*</span>
                             </label>
                             
@@ -121,16 +185,16 @@
                             <input type="hidden" name="party_id" :value="selectedId">
                             <input type="hidden" name="party_name" :value="selectedLabel">
 
-                            <div class="relative">
+                            <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
                                 {{-- Trigger --}}
                                 <div tabindex="0"
                                      @click="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
                                      @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
                                      @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
                                      @click.outside="open = false"
-                                     class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700">
-                                    <span x-text="selectedLabel || 'Select Registered Party Head'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
-                                    <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                     class="{{ $input }} cursor-pointer flex justify-between items-center">
+                                    <span x-text="selectedLabel || 'Select Registered Party Head'" :class="selectedLabel ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-400 dark:text-gray-500 font-normal'"></span>
+                                    <svg class="h-6 w-6 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </div>
@@ -143,11 +207,11 @@
                                      x-transition:leave="transition ease-in duration-75"
                                      x-transition:leave-start="opacity-100 transform scale-100"
                                      x-transition:leave-end="opacity-0 transform scale-95"
-                                     class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                                     class="absolute left-0 z-[99999] mt-2 w-full rounded-2xl border-2 border-brand-500 bg-white shadow-2xl dark:border-brand-500 dark:bg-gray-900 overflow-hidden"
                                      style="display: none;">
                                     
                                     <!-- Search Input -->
-                                    <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                    <div class="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02]">
                                         <input x-ref="partySearchInput"
                                                x-model="search"
                                                @keydown.arrow-down.prevent="moveHighlight(1)"
@@ -156,24 +220,24 @@
                                                @keydown.escape.prevent="open = false; highlightedIndex = -1"
                                                type="text"
                                                placeholder="Type to search party head..."
-                                               class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white font-medium">
                                     </div>
 
                                     <!-- Options List -->
-                                    <ul class="max-h-60 overflow-y-auto mt-1">
+                                    <ul class="max-h-64 overflow-y-auto p-2 space-y-1">
                                         <template x-if="filteredParties.length === 0">
-                                            <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching party heads found.</li>
+                                            <li class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-medium">No matching party heads found.</li>
                                         </template>
                                         <template x-for="(p, index) in filteredParties" :key="p.id">
                                             <li @click="selectParty(p)"
                                                 @mouseenter="highlightedIndex = index"
                                                 :class="{
-                                                    'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                    'bg-brand-500 text-white font-bold shadow-xs': highlightedIndex === index,
                                                     'text-gray-800 dark:text-gray-200': highlightedIndex !== index
                                                 }"
-                                                class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
-                                                <span x-text="p.name" class="font-medium"></span>
-                                                <span x-text="p.phone" class="text-[10px] text-gray-400"></span>
+                                                class="px-4 py-3 text-base rounded-xl cursor-pointer hover:bg-brand-500 hover:text-white transition-colors flex justify-between items-center">
+                                                <span x-text="p.name" class="font-bold"></span>
+                                                <span x-text="p.phone" class="text-xs opacity-75"></span>
                                             </li>
                                         </template>
                                     </ul>
@@ -205,7 +269,7 @@
                                     this.open = false;
                                     this.search = '';
                                     this.highlightedIndex = -1;
-                                    $dispatch('landlord-selected', { id: l.id });
+                                    $dispatch('landlord-selected', { id: l.id, name: l.name });
                                 },
                                 moveHighlight(direction) {
                                     let list = this.filteredLandlords;
@@ -219,23 +283,23 @@
                                     }
                                 }
                              }">
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="{{ $label }}">
                                 Landlord <span class="text-red-500">*</span>
                             </label>
 
                             {{-- Hidden form field --}}
                             <input type="hidden" name="landlord_id" :value="selectedId">
 
-                            <div class="relative">
+                            <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
                                 {{-- Trigger --}}
                                 <div tabindex="0"
                                      @click="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
                                      @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
                                      @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
                                      @click.outside="open = false"
-                                     class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700">
-                                    <span x-text="selectedLabel || 'Select Landlord'" :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
-                                    <svg class="h-4 w-4 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                     class="{{ $input }} cursor-pointer flex justify-between items-center">
+                                    <span x-text="selectedLabel || 'Select Landlord'" :class="selectedLabel ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-400 dark:text-gray-500 font-normal'"></span>
+                                    <svg class="h-6 w-6 text-gray-500 transition-transform duration-200" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                     </svg>
                                 </div>
@@ -248,11 +312,11 @@
                                      x-transition:leave="transition ease-in duration-75"
                                      x-transition:leave-start="opacity-100 transform scale-100"
                                      x-transition:leave-end="opacity-0 transform scale-95"
-                                     class="absolute left-0 z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
+                                     class="absolute left-0 z-[99999] mt-2 w-full rounded-2xl border-2 border-brand-500 bg-white shadow-2xl dark:border-brand-500 dark:bg-gray-900 overflow-hidden"
                                      style="display: none;">
 
                                     <!-- Search Input -->
-                                    <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
+                                    <div class="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02]">
                                         <input x-ref="landlordSearchInput"
                                                x-model="search"
                                                @keydown.arrow-down.prevent="moveHighlight(1)"
@@ -261,24 +325,24 @@
                                                @keydown.escape.prevent="open = false; highlightedIndex = -1"
                                                type="text"
                                                placeholder="Type to search landlord..."
-                                               class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                                               class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-base text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white font-medium">
                                     </div>
 
                                     <!-- Options List -->
-                                    <ul class="max-h-60 overflow-y-auto mt-1">
+                                    <ul class="max-h-64 overflow-y-auto p-2 space-y-1">
                                         <template x-if="filteredLandlords.length === 0">
-                                            <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching landlords found.</li>
+                                            <li class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 font-medium">No matching landlords found.</li>
                                         </template>
                                         <template x-for="(l, index) in filteredLandlords" :key="l.id">
                                             <li @click="selectLandlord(l)"
                                                 @mouseenter="highlightedIndex = index"
                                                 :class="{
-                                                    'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                    'bg-brand-500 text-white font-bold shadow-xs': highlightedIndex === index,
                                                     'text-gray-800 dark:text-gray-200': highlightedIndex !== index
                                                 }"
-                                                class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
-                                                <span x-text="l.name" class="font-medium"></span>
-                                                <span x-text="l.phone" class="text-[10px] text-gray-400"></span>
+                                                class="px-4 py-3 text-base rounded-xl cursor-pointer hover:bg-brand-500 hover:text-white transition-colors flex justify-between items-center">
+                                                <span x-text="l.name" class="font-bold"></span>
+                                                <span x-text="l.phone" class="text-xs opacity-75"></span>
                                             </li>
                                         </template>
                                     </ul>
@@ -289,45 +353,46 @@
                         {{-- Landlord Pending Receivables Panel --}}
                         <div class="sm:col-span-2 md:col-span-3" x-show="receivedFromType === 'landlord'" x-cloak>
                             <!-- Loading state -->
-                            <div x-show="landlordLoading" class="flex items-center gap-2 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                <svg class="h-4 w-4 animate-spin text-brand-500" fill="none" viewBox="0 0 24 24">
+                            <div x-show="landlordLoading" class="flex items-center gap-3 py-6 px-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-base font-bold text-amber-800 dark:text-amber-300">
+                                <svg class="h-6 w-6 animate-spin text-amber-600" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                                 </svg>
-                                Loading receivables...
+                                Loading pending receivables calculation...
                             </div>
 
                             <!-- No data / not selected yet -->
                             <div x-show="!landlordLoading && !landlordReceivables"
-                                 class="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-4 px-5 text-xs text-gray-400 dark:text-gray-600 text-center">
-                                Select a landlord above to view their pending receivables.
+                                 class="rounded-2xl border-2 border-dashed border-amber-300 dark:border-amber-800 py-6 px-5 text-base font-bold text-amber-700 dark:text-amber-400 text-center bg-amber-50/50 dark:bg-amber-950/10">
+                                📌 Select a landlord above to view their complete pending receivables breakdown.
                             </div>
 
                             <!-- Receivables Summary -->
                             <div x-show="!landlordLoading && landlordReceivables" x-transition>
-                                <div class="rounded-xl border border-amber-200 bg-amber-50/60 dark:border-amber-800/40 dark:bg-amber-950/10 p-4">
-                                    <div class="flex items-center justify-between mb-3">
-                                        <h5 class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                                            <span>⚠️</span> Pending Receivables
+                                <div class="rounded-2xl border-2 border-amber-400 bg-amber-50/80 dark:border-amber-700/60 dark:bg-amber-950/20 p-6 shadow-md">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h5 class="text-base sm:text-lg font-black uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-2">
+                                            <span class="text-2xl">⚠️</span> Landlord Pending Receivables
                                         </h5>
                                         <a x-bind:href="landlordReceivables ? `{{ url('landlord-ledgers') }}?landlord_id=${landlordReceivables.landlord_id ?? ''}` : '#'"
-                                           class="text-[10px] text-brand-500 hover:underline" target="_blank">View Ledger →</a>
+                                           class="inline-flex items-center gap-1.5 rounded-xl bg-amber-200/80 px-3.5 py-1.5 text-xs sm:text-sm font-extrabold text-amber-900 hover:bg-amber-300 dark:bg-amber-900/60 dark:text-amber-200 transition-colors" target="_blank">
+                                            View Full Ledger →
+                                        </a>
                                     </div>
 
                                     <!-- Summary Cards -->
-                                    <div class="grid grid-cols-3 gap-3 mb-4">
-                                        <div class="rounded-lg bg-white dark:bg-gray-900 p-3 text-center shadow-theme-xs">
-                                            <p class="text-[10px] uppercase font-bold text-gray-400">Total Owed</p>
-                                            <p class="mt-0.5 text-sm font-bold font-mono text-gray-800 dark:text-white" x-text="landlordReceivables ? fmt(landlordReceivables.total_owed) : ''"></p>
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                                        <div class="rounded-xl border border-gray-200 bg-white p-4 text-center shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                                            <p class="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Owed</p>
+                                            <p class="mt-1 text-xl sm:text-2xl font-black font-mono text-gray-900 dark:text-white" x-text="landlordReceivables ? fmt(landlordReceivables.total_owed) : ''"></p>
                                         </div>
-                                        <div class="rounded-lg bg-white dark:bg-gray-900 p-3 text-center shadow-theme-xs">
-                                            <p class="text-[10px] uppercase font-bold text-gray-400">Total Received</p>
-                                            <p class="mt-0.5 text-sm font-bold font-mono text-green-600" x-text="landlordReceivables ? fmt(landlordReceivables.total_received) : ''"></p>
+                                        <div class="rounded-xl border border-emerald-200 bg-white p-4 text-center shadow-xs dark:border-gray-800 dark:bg-gray-900">
+                                            <p class="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Total Received</p>
+                                            <p class="mt-1 text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400" x-text="landlordReceivables ? fmt(landlordReceivables.total_received) : ''"></p>
                                         </div>
-                                        <div class="rounded-lg bg-white dark:bg-gray-900 p-3 text-center shadow-theme-xs">
-                                            <p class="text-[10px] uppercase font-bold text-gray-400">Pending Balance</p>
-                                            <p class="mt-0.5 text-sm font-bold font-mono"
-                                               :class="landlordReceivables && landlordReceivables.pending_balance > 0 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'"
+                                        <div class="rounded-xl border-2 border-red-400 bg-white p-4 text-center shadow-xs dark:border-red-800 dark:bg-gray-900">
+                                            <p class="text-xs font-black uppercase tracking-wider text-red-600 dark:text-red-400">Pending Balance</p>
+                                            <p class="mt-1 text-2xl sm:text-3xl font-black font-mono text-red-600 dark:text-red-400"
                                                x-text="landlordReceivables ? fmt(landlordReceivables.pending_balance) : ''"></p>
                                         </div>
                                     </div>
@@ -335,25 +400,27 @@
                                     <!-- Per-unit Breakdown -->
                                     <template x-if="landlordReceivables && landlordReceivables.units && landlordReceivables.units.length > 0">
                                         <div>
-                                            <p class="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-2">Unit-wise Breakdown</p>
-                                            <div class="overflow-hidden rounded-lg border border-amber-200 dark:border-amber-800/30">
-                                                <table class="w-full text-xs">
-                                                    <thead class="bg-amber-100/60 dark:bg-amber-900/20 text-gray-600 dark:text-gray-400">
+                                            <p class="text-xs font-black uppercase tracking-wider text-amber-900 dark:text-amber-300 mb-3 flex items-center gap-1.5">
+                                                <span>🏢</span> Unit-wise Pending Breakdown
+                                            </p>
+                                            <div class="overflow-hidden rounded-xl border-2 border-amber-300 dark:border-amber-800/40 bg-white dark:bg-gray-900 shadow-xs">
+                                                <table class="w-full text-base">
+                                                    <thead class="bg-amber-100 dark:bg-amber-950/50 text-amber-950 dark:text-amber-200">
                                                         <tr>
-                                                            <th class="px-3 py-2 text-left font-semibold">Unit</th>
-                                                            <th class="px-3 py-2 text-right font-semibold">Total Value</th>
-                                                            <th class="px-3 py-2 text-right font-semibold">Received</th>
-                                                            <th class="px-3 py-2 text-right font-semibold">Remaining</th>
+                                                            <th class="px-4 py-3 text-left font-extrabold uppercase tracking-wider text-xs sm:text-sm">Unit #</th>
+                                                            <th class="px-4 py-3 text-right font-extrabold uppercase tracking-wider text-xs sm:text-sm">Total Value</th>
+                                                            <th class="px-4 py-3 text-right font-extrabold uppercase tracking-wider text-xs sm:text-sm">Received</th>
+                                                            <th class="px-4 py-3 text-right font-extrabold uppercase tracking-wider text-xs sm:text-sm">Remaining Pending</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody class="divide-y divide-amber-100 dark:divide-amber-800/20 bg-white dark:bg-gray-900">
+                                                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                                                         <template x-for="unit in landlordReceivables.units" :key="unit.unit_number">
-                                                            <tr>
-                                                                <td class="px-3 py-2 font-medium text-gray-800 dark:text-white/90" x-text="unit.unit_number"></td>
-                                                                <td class="px-3 py-2 text-right font-mono text-gray-600 dark:text-gray-400" x-text="fmt(unit.total_amount)"></td>
-                                                                <td class="px-3 py-2 text-right font-mono text-green-600" x-text="fmt(unit.received_amount)"></td>
-                                                                <td class="px-3 py-2 text-right font-mono font-bold"
-                                                                    :class="unit.credit_amount > 0 ? 'text-red-500' : 'text-gray-400'"
+                                                            <tr class="hover:bg-amber-50/50 dark:hover:bg-amber-950/10 transition-colors">
+                                                                <td class="px-4 py-3.5 font-black text-brand-600 dark:text-brand-400 text-base sm:text-lg" x-text="unit.unit_number"></td>
+                                                                <td class="px-4 py-3.5 text-right font-mono text-gray-700 dark:text-gray-300 font-bold text-base sm:text-lg" x-text="fmt(unit.total_amount)"></td>
+                                                                <td class="px-4 py-3.5 text-right font-mono text-emerald-600 dark:text-emerald-400 font-bold text-base sm:text-lg" x-text="fmt(unit.received_amount)"></td>
+                                                                <td class="px-4 py-3.5 text-right font-mono font-black text-lg sm:text-xl"
+                                                                    :class="unit.credit_amount > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400'"
                                                                     x-text="fmt(unit.credit_amount)"></td>
                                                             </tr>
                                                         </template>
@@ -368,10 +435,10 @@
 
                         {{-- Source Payment Account (when receivedFromType === 'account') --}}
                         <div class="sm:col-span-2 md:col-span-3" x-show="receivedFromType === 'account'" x-transition x-cloak>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="{{ $label }}">
                                 Source Payment Account (Transfer From) <span class="text-red-500">*</span>
                             </label>
-                            <select name="from_payment_account_id" class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" :required="receivedFromType === 'account'">
+                            <select name="from_payment_account_id" x-model="fromAccountId" class="{{ $input }}" :required="receivedFromType === 'account'">
                                 <option value="">Select Source Account...</option>
                                 @foreach($paymentAccounts as $account)
                                     <option value="{{ $account->id }}" {{ old('from_payment_account_id') == $account->id ? 'selected' : '' }}>
@@ -384,35 +451,35 @@
 
                         {{-- Date --}}
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="{{ $label }}">
                                 Date <span class="text-red-500">*</span>
                             </label>
                             <input type="text" id="voucher_date" name="date" value="{{ old('date', date('Y-m-d')) }}" required
                                 placeholder="YYYY-MM-DD" autocomplete="off"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600">
+                                class="{{ $input }}">
                         </div>
 
                         {{-- Amount --}}
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="{{ $label }}">
                                 Amount (PKR) <span class="text-red-500">*</span>
                             </label>
                             <input type="text" 
                                    x-model="displayAmount"
                                    @input="formatAmount($event.target.value)"
                                    placeholder="0.00" 
-                                   class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600" required>
+                                   class="{{ $input }}" required>
                             <input type="hidden" name="amount" x-model="amount">
                         </div>
 
                         {{-- Payment Account --}}
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Payment Account / Method <span class="text-red-500">*</span>
+                            <label class="{{ $label }}">
+                                Deposit Payment Account <span class="text-red-500">*</span>
                             </label>
-                            <select name="payment_account_id" required
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                <option value="">Select Account</option>
+                            <select name="payment_account_id" x-model="paymentAccountId" required
+                                class="{{ $input }}">
+                                <option value="">Select Deposit Account</option>
                                 @foreach($paymentAccounts as $account)
                                     <option value="{{ $account->id }}" {{ old('payment_account_id') == $account->id ? 'selected' : '' }}>
                                         {{ $account->name }} ({{ strtoupper($account->type) }})
@@ -423,35 +490,35 @@
 
                         {{-- Reference --}}
                         <div>
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Reference / Cheque # <span class="text-xs text-gray-400">(Optional)</span>
+                            <label class="{{ $label }}">
+                                Reference / Cheque # <span class="text-xs text-gray-400 font-normal">(Optional)</span>
                             </label>
                             <input type="text" name="reference" value="{{ old('reference') }}"
                                 placeholder="e.g. Tx-98213"
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600">
+                                class="{{ $input }}">
                         </div>
 
                         {{-- Notes --}}
                         <div class="sm:col-span-2 md:col-span-3">
-                            <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label class="{{ $label }}">
                                 Notes / Remarks
                             </label>
                             <textarea name="notes" rows="3" placeholder="Enter remarks about the receipt..."
-                                class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600">{{ old('notes') }}</textarea>
+                                class="{{ $input }} font-medium text-base">{{ old('notes') }}</textarea>
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-4 pt-2">
                     <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        class="inline-flex items-center gap-3 rounded-2xl bg-brand-600 px-8 py-4 text-lg font-extrabold text-white shadow-lg hover:bg-brand-700 transition-all cursor-pointer">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                         Save General Voucher
                     </button>
                     <a href="{{ route('general-receiving-vouchers.index') }}"
-                        class="inline-flex items-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
+                        class="inline-flex items-center rounded-2xl border-2 border-gray-300 px-6 py-4 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
                         Cancel
                     </a>
                 </div>

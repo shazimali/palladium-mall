@@ -65,7 +65,7 @@
 
         <!-- Dropdown Options List -->
         <div x-show="open"
-            class="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+            class="absolute z-[99999] mt-1 w-full overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
             style="max-height: 16rem">
             <div class="overflow-y-auto" style="max-height: 16rem">
                 <template x-for="option in options" :key="option.id">

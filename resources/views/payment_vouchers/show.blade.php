@@ -3,6 +3,33 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Voucher Details — {{ $voucher->voucher_no }}" />
 
+    {{-- STICKY PAYMENT VOUCHER HEADER --}}
+    <div class="sticky mb-6 rounded-2xl border-2 border-red-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+        style="position: sticky; top: 72px; z-index: 990;">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4 min-w-0">
+                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-md text-3xl font-black">
+                    💸
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400">
+                        Paid Voucher: {{ $voucher->voucher_no }}
+                    </p>
+                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
+                        {{ $voucher->paid_to_type === 'tenant' ? ($voucher->tenant ? $voucher->tenant->name : 'Tenant Payout') : ($voucher->paid_to_type === 'landlord' ? ($voucher->landlord ? $voucher->landlord->name : 'Landlord Payout') : ($voucher->other_name ?: 'Payment Voucher')) }}
+                    </h2>
+                </div>
+            </div>
+
+            <div class="text-right">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Total Amount Paid</span>
+                <span class="text-2xl sm:text-3xl font-black font-mono text-red-600 dark:text-red-400">
+                    Rs. {{ number_format($voucher->amount) }}
+                </span>
+            </div>
+        </div>
+    </div>
+
     <x-common.component-card title="Paid Voucher Details" desc="Voucher Reference #{{ $voucher->voucher_no }}">
 
         <div class="mb-6 flex justify-end gap-3 no-print">
