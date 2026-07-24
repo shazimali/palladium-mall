@@ -10,6 +10,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
@@ -30,14 +31,14 @@ class UnitsExport implements
         return $this->units->map(function ($unit, $index) {
             return [
                 '#'                  => $index + 1,
-                'Unit Number'        => $unit->unit_number,
-                'Type'               => ucfirst($unit->type ?? '—'),
-                'Status'             => ($unit->is_self && $unit->otherTenant) ? 'Rented' : ucfirst($unit->status ?? '—'),
-                'Ownership'          => $unit->is_self ? 'Other-Owned' : 'Managed by PM Mall',
-                'Landlord / Owner'   => $unit->landlord->name ?? '—',
+                'Flat No.'           => $unit->unit_number,
+                'Owner'              => $unit->landlord->name ?? '—',
+                'Contact Number'     => $unit->landlord->phone ?? '—',
                 'Floor'              => $unit->floor->name ?? '—',
                 'Block'              => $unit->block->name ?? '—',
                 'Area / Zone'        => $unit->area->name ?? '—',
+                'Status'             => ($unit->is_self && $unit->otherTenant) ? 'Rented' : ucfirst($unit->status ?? '—'),
+                'Ownership'          => $unit->is_self ? 'Other-Owned' : 'Managed by PM Mall',
                 'Area (Sq. Ft.)'     => $unit->area_sqft ? number_format($unit->area_sqft, 2) : '—',
                 'Default Rent (Rs.)' => $unit->default_monthly_rent ? number_format($unit->default_monthly_rent, 2) : '0.00',
                 'Maintenance (Rs.)'  => $unit->default_maintenance_charge ? number_format($unit->default_maintenance_charge, 2) : '0.00',
@@ -49,14 +50,14 @@ class UnitsExport implements
     {
         return [
             '#',
-            'Unit Number',
-            'Type',
-            'Status',
-            'Ownership',
-            'Landlord / Owner',
+            'Flat No.',
+            'Owner',
+            'Contact Number',
             'Floor',
             'Block',
             'Area / Zone',
+            'Status',
+            'Ownership',
             'Area (Sq. Ft.)',
             'Default Monthly Rent (Rs.)',
             'Default Maintenance (Rs.)',
@@ -67,14 +68,14 @@ class UnitsExport implements
     {
         return [
             'A' => 8,
-            'B' => 18,
-            'C' => 14,
-            'D' => 14,
-            'E' => 22,
-            'F' => 25,
+            'B' => 16,
+            'C' => 25,
+            'D' => 18,
+            'E' => 16,
+            'F' => 16,
             'G' => 18,
-            'H' => 16,
-            'I' => 18,
+            'H' => 14,
+            'I' => 22,
             'J' => 16,
             'K' => 24,
             'L' => 24,
@@ -83,6 +84,14 @@ class UnitsExport implements
 
     public function styles(Worksheet $sheet): array
     {
+        $highestRow = $sheet->getHighestRow();
+        $highestColumn = $sheet->getHighestColumn();
+        $fullRange = "A1:{$highestColumn}{$highestRow}";
+
+        $sheet->getStyle($fullRange)->getBorders()->getAllBorders()
+            ->setBorderStyle(Border::BORDER_THIN)
+            ->getColor()->setRGB('94A3B8');
+
         return [
             1 => [
                 'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],

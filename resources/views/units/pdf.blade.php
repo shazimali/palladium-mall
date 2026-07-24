@@ -11,9 +11,9 @@
         .header h1 { font-size: 16px; color: #1D3461; font-weight: bold; margin-bottom: 4px; }
         .header p { font-size: 8.5px; color: #64748B; margin-top: 2px; }
         
-        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        table.data-table th { background: #1D3461; color: white; padding: 7px 8px; font-size: 8px; text-transform: uppercase; font-weight: bold; text-align: left; }
-        table.data-table td { padding: 6px 8px; border-bottom: 1px solid #E2E8F0; font-size: 8px; vertical-align: middle; }
+        table.data-table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #94A3B8; }
+        table.data-table th { background: #1D3461; color: white; padding: 7px 8px; font-size: 8px; text-transform: uppercase; font-weight: bold; text-align: left; border: 1px solid #475569; }
+        table.data-table td { padding: 6px 8px; border: 1px solid #CBD5E1; font-size: 8px; vertical-align: middle; }
         table.data-table tr:nth-child(even) td { background: #F9FBFF; }
         
         .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 7.5px; font-weight: bold; text-transform: uppercase; }
@@ -36,15 +36,14 @@
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 4%;">#</th>
-                <th style="width: 12%;">Unit No.</th>
-                <th style="width: 10%;">Type</th>
+                <th style="width: 5%;">#</th>
+                <th style="width: 14%;">Flat No.</th>
+                <th style="width: 22%;">Owner</th>
+                <th style="width: 16%;">Contact Number</th>
+                <th style="width: 11%;">Floor</th>
+                <th style="width: 11%;">Block</th>
+                <th style="width: 11%;">Area / Zone</th>
                 <th style="width: 10%;">Status</th>
-                <th style="width: 14%;">Ownership</th>
-                <th style="width: 18%;">Landlord / Owner</th>
-                <th style="width: 10%;">Floor</th>
-                <th style="width: 10%;">Block</th>
-                <th style="width: 12%;">Area (Sq. Ft.)</th>
             </tr>
         </thead>
         <tbody>
@@ -52,7 +51,11 @@
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td><strong>{{ $unit->unit_number }}</strong></td>
-                    <td>{{ ucfirst($unit->type ?? '—') }}</td>
+                    <td>{{ $unit->landlord->name ?? '—' }}</td>
+                    <td>{{ $unit->landlord->phone ?? '—' }}</td>
+                    <td>{{ $unit->floor->name ?? '—' }}</td>
+                    <td>{{ $unit->block->name ?? '—' }}</td>
+                    <td>{{ $unit->area->name ?? '—' }}</td>
                     <td>
                         @if($unit->status === 'rented' || ($unit->is_self && $unit->otherTenant))
                             <span class="badge badge-rented">Rented</span>
@@ -62,15 +65,10 @@
                             <span class="badge badge-self">{{ ucfirst($unit->status ?? 'Other') }}</span>
                         @endif
                     </td>
-                    <td>{{ $unit->is_self ? 'Other-Owned' : 'Managed by PM Mall' }}</td>
-                    <td>{{ $unit->landlord->name ?? '—' }}</td>
-                    <td>{{ $unit->floor->name ?? '—' }}</td>
-                    <td>{{ $unit->block->name ?? '—' }}</td>
-                    <td class="font-mono">{{ $unit->area_sqft ? number_format($unit->area_sqft, 2) : '—' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" style="text-align: center; padding: 15px; color: #94A3B8;">No units found.</td>
+                    <td colspan="8" style="text-align: center; padding: 15px; color: #94A3B8;">No units found.</td>
                 </tr>
             @endforelse
         </tbody>

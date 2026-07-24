@@ -101,7 +101,7 @@
                             ['Block',         $unit->block->name ?? '—', null],
                             ['Area / Zone',   $unit->area->name  ?? '—', null],
                             ['Area (sq.ft.)', $unit->area_sqft ? $unit->area_sqft.' sq.ft.' : '—', null],
-                            ['Status',        ucfirst($unit->status), null],
+                            ['Status',        ($unit->is_self && $unit->otherTenant) ? 'Rented' : ucfirst($unit->status), null],
                             ['Creation Date', $unit->date ? $unit->date->format('d M Y') : '—', null],
                             ['Elec. Meter',   $meters['electricity']->meter_ref_no ?? '—', null],
                             ['Water Meter',   $meters['water']->meter_ref_no ?? '—', null],

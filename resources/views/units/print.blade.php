@@ -41,14 +41,17 @@
             }
             .print-border {
                 border-width: 1px !important;
-                border-color: #d1d5db !important;
+                border-color: #9ca3af !important;
+            }
+            table th, table td {
+                border: 1px solid #9ca3af !important;
             }
         }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased min-h-screen py-10 px-4 sm:px-6 lg:px-8">
 
-    <div class="max-w-6xl w-full mx-auto bg-white rounded-2xl border border-gray-200 shadow-sm p-8 relative print-border">
+    <div class="max-w-6xl w-full mx-auto bg-white rounded-2xl border border-gray-300 shadow-sm p-8 relative print-border">
         
         <!-- Action Buttons (Hidden during print) -->
         <div class="absolute top-6 right-6 flex items-center gap-3 no-print">
@@ -63,7 +66,7 @@
             </button>
         </div>
 
-        <div class="border-b border-gray-100 pb-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 print-border">
+        <div class="border-b border-gray-200 pb-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-6 print-border">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900">Palladium Mall</h1>
                 <p class="text-sm text-gray-500 mt-1">Flat / Shop Master List</p>
@@ -75,53 +78,45 @@
         </div>
 
         <!-- DataTable -->
-        <div class="overflow-hidden border border-gray-200 rounded-xl">
-            <table class="w-full text-sm text-left text-gray-600">
-                <thead class="text-xs uppercase bg-gray-50 text-gray-500 border-b border-gray-200">
+        <div class="overflow-hidden border border-gray-300 rounded-xl">
+            <table class="w-full text-sm text-left text-gray-600 border-collapse border border-gray-300">
+                <thead class="text-xs uppercase bg-gray-100 text-gray-700">
                     <tr>
-                        <th class="px-4 py-3">#</th>
-                        <th class="px-4 py-3">Flat No.</th>
-                        <th class="px-4 py-3">Floor</th>
-                        <th class="px-4 py-3">Block</th>
-                        <th class="px-4 py-3">Area / Zone</th>
-                        <th class="px-4 py-3">Landlord</th>
-                        <th class="px-4 py-3">Type</th>
-                        <th class="px-4 py-3">Status</th>
-                        <th class="px-4 py-3">Other-Owned</th>
+                        <th class="px-4 py-3 border border-gray-300">#</th>
+                        <th class="px-4 py-3 border border-gray-300">Flat No.</th>
+                        <th class="px-4 py-3 border border-gray-300">Owner</th>
+                        <th class="px-4 py-3 border border-gray-300">Contact Number</th>
+                        <th class="px-4 py-3 border border-gray-300">Floor</th>
+                        <th class="px-4 py-3 border border-gray-300">Block</th>
+                        <th class="px-4 py-3 border border-gray-300">Area / Zone</th>
+                        <th class="px-4 py-3 border border-gray-300">Status</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-100">
+                <tbody class="divide-y divide-gray-200">
                     @forelse($units as $index => $unit)
                         <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-3 text-gray-400">{{ $index + 1 }}</td>
-                            <td class="px-4 py-3 font-semibold text-gray-800">
+                            <td class="px-4 py-3 border border-gray-300 text-gray-400">{{ $index + 1 }}</td>
+                            <td class="px-4 py-3 border border-gray-300 font-semibold text-gray-800">
                                 {{ $unit->unit_number }}
                             </td>
-                            <td class="px-4 py-3">{{ $unit->floor->name ?? '—' }}</td>
-                            <td class="px-4 py-3">{{ $unit->block->name ?? '—' }}</td>
-                            <td class="px-4 py-3">{{ $unit->area->name ?? '—' }}</td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 border border-gray-300">
                                 {{ $unit->landlord->name ?? '—' }}
                             </td>
-                            <td class="px-4 py-3">
-                                <span class="capitalize">
-                                    {{ $unit->type }}
-                                </span>
+                            <td class="px-4 py-3 border border-gray-300">
+                                {{ $unit->landlord->phone ?? '—' }}
                             </td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 border border-gray-300">{{ $unit->floor->name ?? '—' }}</td>
+                            <td class="px-4 py-3 border border-gray-300">{{ $unit->block->name ?? '—' }}</td>
+                            <td class="px-4 py-3 border border-gray-300">{{ $unit->area->name ?? '—' }}</td>
+                            <td class="px-4 py-3 border border-gray-300">
                                 <span class="capitalize">
                                     {{ ($unit->is_self && $unit->otherTenant) ? 'Rented' : ucfirst($unit->status) }}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3">
-                                <span>
-                                    {{ $unit->is_self ? 'Yes' : 'No' }}
                                 </span>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-8 text-center text-gray-400">
+                            <td colspan="8" class="px-4 py-8 border border-gray-300 text-center text-gray-400">
                                 No flats or shops found.
                             </td>
                         </tr>

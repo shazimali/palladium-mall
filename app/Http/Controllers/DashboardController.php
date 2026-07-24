@@ -92,44 +92,46 @@ class DashboardController extends Controller
             ],
         ];
 
-        // 2. Calculate Flat/Shop Status Grids (3 Rows)
-        // Row 1: Overall
-        $overallTotal = Unit::count();
-        $overallRented = Unit::where('status', 'rented')->count();
-        $overallVacant = Unit::where('status', 'vacant')->count();
-
-        // Row 2: PM Mall Managed (is_self = false)
-        $pmMallTotal = Unit::where('is_self', false)->count();
-        $pmMallRented = Unit::where('is_self', false)->where('status', 'rented')->count();
-        $pmMallVacant = Unit::where('is_self', false)->where('status', 'vacant')->count();
-
-        // Row 3: Other Owned Units (is_self = true)
-        $otherOwnedTotal = Unit::where('is_self', true)->count();
-        $otherOwnedRented = Unit::where('is_self', true)->where('status', 'rented')->count();
-        $otherOwnedVacant = Unit::where('is_self', true)->where('status', 'vacant')->count();
+        // 2. Calculate Flat/Shop/Office Status Grids (3 Rows) matching /units logic
+        $allUnits = Unit::with('otherTenant')->get();
+        $pmMallUnits = $allUnits->filter(fn($u) => !$u->is_self);
+        $otherOwnedUnits = $allUnits->filter(fn($u) => $u->is_self);
 
         return view('dashboard.index', [
             'title' => 'Dashboard',
             'financialWidgets' => $financialWidgets,
             'currentMonthLabel' => $currentMonthLabel,
             'selectedMonth' => $selectedMonthVal,
-            
-            'overall' => [
-                'total' => $overallTotal,
-                'rented' => $overallRented,
-                'vacant' => $overallVacant,
-            ],
-            'pmMall' => [
-                'total' => $pmMallTotal,
-                'rented' => $pmMallRented,
-                'vacant' => $pmMallVacant,
-            ],
-            'otherOwned' => [
-                'total' => $otherOwnedTotal,
-                'rented' => $otherOwnedRented,
-                'vacant' => $otherOwnedVacant,
-            ],
+            'overall' => $this->buildUnitGroupStats($allUnits),
+            'pmMall' => $this->buildUnitGroupStats($pmMallUnits),
+            'otherOwned' => $this->buildUnitGroupStats($otherOwnedUnits),
         ]);
+    }
+
+    /**
+     * Build detailed type breakdown (total, flat, shop, office) for rented, vacant, and total units.
+     */
+    private function buildUnitGroupStats($unitsCollection): array
+    {
+        $rentedUnits = $unitsCollection->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant));
+        $vacantUnits = $unitsCollection->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant));
+
+        return [
+            'total' => $unitsCollection->count(),
+            'flat' => $unitsCollection->where('type', 'flat')->count(),
+            'shop' => $unitsCollection->where('type', 'shop')->count(),
+            'office' => $unitsCollection->where('type', 'office')->count(),
+
+            'rented' => $rentedUnits->count(),
+            'rented_flat' => $rentedUnits->where('type', 'flat')->count(),
+            'rented_shop' => $rentedUnits->where('type', 'shop')->count(),
+            'rented_office' => $rentedUnits->where('type', 'office')->count(),
+
+            'vacant' => $vacantUnits->count(),
+            'vacant_flat' => $vacantUnits->where('type', 'flat')->count(),
+            'vacant_shop' => $vacantUnits->where('type', 'shop')->count(),
+            'vacant_office' => $vacantUnits->where('type', 'office')->count(),
+        ];
     }
 
     /**
@@ -138,18 +140,27 @@ class DashboardController extends Controller
     public function unitsDetail(Request $request): View
     {
         $type = $request->input('type', 'pm_mall'); // 'pm_mall' or 'other_owned'
+        $status = $request->input('status'); // 'rented', 'vacant', or null
         $isSelf = $type === 'other_owned';
 
-        // Fetch all units of this ownership type with floor, block, and area preloaded
-        $units = Unit::where('is_self', $isSelf)
-            ->with(['floor', 'block', 'area'])
+        // Fetch all units of this ownership type with floor, block, area, and otherTenant preloaded
+        $allUnits = Unit::where('is_self', $isSelf)
+            ->with(['floor', 'block', 'area', 'otherTenant'])
             ->get();
 
         $stats = [
-            'total' => $units->count(),
-            'rented' => $units->where('status', 'rented')->count(),
-            'vacant' => $units->where('status', 'vacant')->count(),
+            'total' => $allUnits->count(),
+            'rented' => $allUnits->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant))->count(),
+            'vacant' => $allUnits->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant))->count(),
         ];
+
+        // Filter units displayed in the grid if a specific status was selected
+        $displayUnits = $allUnits;
+        if ($status === 'rented') {
+            $displayUnits = $allUnits->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant));
+        } elseif ($status === 'vacant') {
+            $displayUnits = $allUnits->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant));
+        }
 
         // Retrieve floors and blocks in order to populate combos
         $floors = Floor::orderBy('id')->get();
@@ -158,7 +169,7 @@ class DashboardController extends Controller
         $structuredGrouped = [];
         foreach ($floors as $floor) {
             foreach ($blocks as $block) {
-                $filtered = $units->filter(fn($u) => $u->floor_id == $floor->id && $u->block_id == $block->id);
+                $filtered = $displayUnits->filter(fn($u) => $u->floor_id == $floor->id && $u->block_id == $block->id);
                 if ($filtered->isNotEmpty()) {
                     $structuredGrouped[$floor->name][$block->name] = $filtered->sortBy('unit_number');
                 }
@@ -166,19 +177,38 @@ class DashboardController extends Controller
         }
 
         // Add fallback for units without floor or block
-        $noFloorOrBlock = $units->filter(fn($u) => is_null($u->floor_id) || is_null($u->block_id));
+        $noFloorOrBlock = $displayUnits->filter(fn($u) => is_null($u->floor_id) || is_null($u->block_id));
         if ($noFloorOrBlock->isNotEmpty()) {
             $structuredGrouped['Other']['Other'] = $noFloorOrBlock->sortBy('unit_number');
         }
 
-        $typeLabel = $type === 'pm_mall' ? 'Palladium Mall Managed' : 'Other-Owned';
+        $baseLabel = $type === 'pm_mall' ? 'Palladium Mall Managed' : 'Other-Owned';
+        $typeLabel = $status ? ucfirst($status) . ' — ' . $baseLabel : $baseLabel;
+
+        $rentedUnits = $allUnits->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant));
+        $vacantUnits = $allUnits->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant));
+
+        $counts = [
+            'total' => $allUnits->count(),
+            'flats' => $allUnits->where('type', 'flat')->count(),
+            'shops' => $allUnits->where('type', 'shop')->count(),
+            'offices' => $allUnits->where('type', 'office')->count(),
+            'rented_flats' => $rentedUnits->where('type', 'flat')->count(),
+            'rented_shops' => $rentedUnits->where('type', 'shop')->count(),
+            'rented_offices' => $rentedUnits->where('type', 'office')->count(),
+            'vacant_flats' => $vacantUnits->where('type', 'flat')->count(),
+            'vacant_shops' => $vacantUnits->where('type', 'shop')->count(),
+            'vacant_offices' => $vacantUnits->where('type', 'office')->count(),
+        ];
 
         return view('dashboard.units_detail', [
             'title' => $typeLabel . ' — Detail List',
             'typeLabel' => $typeLabel,
             'type' => $type,
+            'status' => $status,
             'grouped' => $structuredGrouped,
             'stats' => $stats,
+            'counts' => $counts,
         ]);
     }
 }
