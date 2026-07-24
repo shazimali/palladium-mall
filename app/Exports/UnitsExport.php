@@ -32,7 +32,7 @@ class UnitsExport implements
                 '#'                  => $index + 1,
                 'Unit Number'        => $unit->unit_number,
                 'Type'               => ucfirst($unit->type ?? '—'),
-                'Status'             => ucfirst($unit->status ?? '—'),
+                'Status'             => ($unit->is_self && $unit->otherTenant) ? 'Rented' : ucfirst($unit->status ?? '—'),
                 'Ownership'          => $unit->is_self ? 'Other-Owned' : 'Managed by PM Mall',
                 'Landlord / Owner'   => $unit->landlord->name ?? '—',
                 'Floor'              => $unit->floor->name ?? '—',

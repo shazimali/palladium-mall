@@ -54,7 +54,7 @@
                     <td><strong>{{ $unit->unit_number }}</strong></td>
                     <td>{{ ucfirst($unit->type ?? '—') }}</td>
                     <td>
-                        @if($unit->status === 'rented')
+                        @if($unit->status === 'rented' || ($unit->is_self && $unit->otherTenant))
                             <span class="badge badge-rented">Rented</span>
                         @elseif($unit->status === 'vacant')
                             <span class="badge badge-vacant">Vacant</span>

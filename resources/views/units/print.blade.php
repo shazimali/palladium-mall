@@ -110,7 +110,7 @@
                             </td>
                             <td class="px-4 py-3">
                                 <span class="capitalize">
-                                    {{ $unit->status }}
+                                    {{ ($unit->is_self && $unit->otherTenant) ? 'Rented' : ucfirst($unit->status) }}
                                 </span>
                             </td>
                             <td class="px-4 py-3">

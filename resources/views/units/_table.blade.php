@@ -44,13 +44,17 @@
                         </span>
                     </td>
                     <td class="px-4 py-3">
+                        @php
+                            $isEffectiveRented = $unit->status === 'rented' || ($unit->is_self && $unit->otherTenant);
+                            $isEffectiveVacant = $unit->status === 'vacant' && !($unit->is_self && $unit->otherTenant);
+                        @endphp
                         <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold
-                            {{ $unit->status === 'rented'
+                            {{ $isEffectiveRented
                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : ($unit->status === 'vacant'
+                                : ($isEffectiveVacant
                                     ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                                     : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400') }}">
-                            {{ ucfirst($unit->status) }}
+                            {{ $isEffectiveRented ? 'Rented' : ucfirst($unit->status) }}
                         </span>
                     </td>
 
