@@ -306,6 +306,34 @@
                 </div>
             </div>
 
+            {{-- Electricity Breaker & Final Meter Reading --}}
+            <div class="rounded-xl border-2 border-red-200 bg-red-50/40 p-5 dark:border-red-900/40 dark:bg-white/[0.01]">
+                <h4 class="mb-2 text-sm font-black uppercase tracking-wide text-red-700 dark:text-red-400 flex items-center gap-2">
+                    <span>⚡ Electricity Breaker OFF &amp; Final Meter Reading</span>
+                </h4>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Record final meter reading, photo proof, and officer verification statement to safely turn breaker <strong>OFF</strong> upon unit vacancy.</p>
+                
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label class="{{ $label }}">Final Meter Reading (kWh) <span class="text-red-500">*</span></label>
+                        <input type="number" step="0.01" name="final_meter_reading" value="{{ old('final_meter_reading') }}" placeholder="e.g. 15200.00" class="{{ $input }}" required>
+                        @error('final_meter_reading') <p class="{{ $error }}">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="{{ $label }}">Final Meter Photo Proof</label>
+                        <input type="file" name="final_meter_image" accept="image/*" class="{{ $input }}">
+                        @error('final_meter_image') <p class="{{ $error }}">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="{{ $label }}">Breaker OFF Statement / Officer Verification <span class="text-red-500">*</span></label>
+                        <textarea name="breaker_off_statement" rows="2" class="{{ $input }}" required>I inspect and confirm final meter reading and turn electricity breaker OFF upon tenant move-out.</textarea>
+                        @error('breaker_off_statement') <p class="{{ $error }}">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            </div>
+
             {{-- Nav --}}
             <div class="flex items-center justify-between pt-4 border-t-2 border-gray-100 dark:border-gray-800">
                 <a href="{{ route('tenants.show', $tenant) }}"

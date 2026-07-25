@@ -11,6 +11,7 @@
                 <th class="px-4 py-3">Landlord</th>
                 <th class="px-4 py-3">Type</th>
                 <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Breaker</th>
                 <th class="px-4 py-3">Other-Owned</th>
                 <th class="px-4 py-3 text-right">Actions</th>
             </tr>
@@ -56,6 +57,21 @@
                                     : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400') }}">
                             {{ $isEffectiveRented ? 'Rented' : ucfirst($unit->status) }}
                         </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        @if($unit->hasVacantBreakerWarning())
+                            <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-300 animate-pulse" title="Breaker ON while Vacant!">
+                                ⚠️ ON (Vacant)
+                            </span>
+                        @elseif($unit->isBreakerOn())
+                            <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                                ⚡ ON
+                            </span>
+                        @else
+                            <span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-bold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+                                ⚡ OFF
+                            </span>
+                        @endif
                     </td>
 
                     {{-- External Owner (is_self) --}}

@@ -3,6 +3,27 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Flat/Shop — {{ $unit->unit_number }}" />
 
+    {{-- Vacant Breaker Alert Banner --}}
+    @if($unit->hasVacantBreakerWarning())
+        <div class="mb-6 rounded-2xl border-2 border-red-300 bg-red-50 p-5 text-red-800 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300 shadow-md">
+            <div class="flex items-start gap-4">
+                <span class="text-3xl">⚠️</span>
+                <div class="flex-1">
+                    <h3 class="text-lg font-black text-red-900 dark:text-red-200">Breaker Alert: Electricity Breaker is ON on Vacant Unit!</h3>
+                    <p class="mt-1 text-sm font-semibold text-red-700 dark:text-red-300">
+                        This unit is currently vacant, but its electricity breaker status is set to <strong>ON</strong>.
+                        To prevent power theft, unauthorized usage, and meter corruption, please turn off the physical breaker and record the inspection.
+                    </p>
+                    <div class="mt-3">
+                        <button type="button" onclick="openBreakerModal('off')" class="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-xs font-black text-white hover:bg-red-700 transition-colors shadow-sm cursor-pointer">
+                            ⚡ Record Breaker OFF Inspection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- KPI Indicator Cards --}}
     <div class="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
         {{-- Total Earnings --}}
@@ -51,12 +72,20 @@
     </div>
 
     {{-- Main Tabbed Panel --}}
-    <div x-data="{ activeTab: 'overview' }" class="space-y-6">
+    <div x-data="{ activeTab: 'overview', showBreakerModal: false, breakerStatus: '{{ $unit->breaker_status }}' }"
+        x-init="window.openBreakerModal = (status) => { if (status) breakerStatus = status; showBreakerModal = true; }"
+        class="space-y-6">
+
         {{-- Navigation Tabs --}}
         <div class="flex flex-wrap border-b-2 border-gray-200 dark:border-gray-800 gap-2">
             <button @click="activeTab = 'overview'" :class="activeTab === 'overview' ? 'border-brand-500 text-brand-600 dark:text-brand-400 font-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 font-bold'"
                 class="whitespace-nowrap border-b-4 px-6 py-4 text-base sm:text-lg transition-all cursor-pointer">
                 Overview &amp; Details
+            </button>
+            <button @click="activeTab = 'breaker_inspections'" :class="activeTab === 'breaker_inspections' ? 'border-brand-500 text-brand-600 dark:text-brand-400 font-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 font-bold'"
+                class="whitespace-nowrap border-b-4 px-6 py-4 text-base sm:text-lg transition-all cursor-pointer">
+                ⚡ Breaker Inspections
+                <span class="ml-1.5 inline-flex items-center rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-black text-gray-700 dark:bg-gray-800 dark:text-gray-300">{{ $unit->breakerInspections->count() }}</span>
             </button>
             <button @click="activeTab = 'ownership'" :class="activeTab === 'ownership' ? 'border-brand-500 text-brand-600 dark:text-brand-400 font-black' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 font-bold'"
                 class="whitespace-nowrap border-b-4 px-6 py-4 text-base sm:text-lg transition-all cursor-pointer">
@@ -112,6 +141,46 @@
                                 <p class="mt-1 {{ $label === 'Flat/Shop Number' ? 'unit-badge-lg text-lg font-black' : 'text-base sm:text-lg font-bold text-gray-900 dark:text-white' }}">{{ $value }}</p>
                             </div>
                         @endforeach
+                    </div>
+
+                    {{-- Breaker Status Card --}}
+                    <div class="mt-6 rounded-2xl border-2 border-gray-200 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.02]">
+                        <div class="flex items-center justify-between flex-wrap gap-3">
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Electricity Breaker Status</p>
+                                <div class="mt-2 flex items-center gap-3">
+                                    @if($unit->isBreakerOn())
+                                        <span class="inline-flex items-center gap-2 rounded-xl bg-green-100 px-3.5 py-1.5 text-sm font-black text-green-800 dark:bg-green-950/60 dark:text-green-300 border border-green-300 dark:border-green-800">
+                                            <span class="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse"></span>
+                                            ⚡ BREAKER ON
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-2 rounded-xl bg-red-100 px-3.5 py-1.5 text-sm font-black text-red-800 dark:bg-red-950/60 dark:text-red-300 border border-red-300 dark:border-red-800">
+                                            <span class="h-2.5 w-2.5 rounded-full bg-red-500"></span>
+                                            ⚡ BREAKER OFF
+                                        </span>
+                                    @endif
+                                </div>
+                            </div>
+                            <button type="button" @click="openBreakerModal()" class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-xs font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors cursor-pointer shadow-xs">
+                                ⚡ Update Inspection / Reading
+                            </button>
+                        </div>
+                        
+                        @php
+                            $latestInsp = $unit->breakerInspections->first();
+                        @endphp
+                        <div class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-800">
+                            @if($latestInsp)
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                    <div><span class="font-bold text-gray-800 dark:text-gray-200">Last Reading:</span> {{ number_format($latestInsp->meter_reading, 2) }} kWh</div>
+                                    <div><span class="font-bold text-gray-800 dark:text-gray-200">Officer:</span> {{ $latestInsp->inspection_officer_name }}</div>
+                                    <div><span class="font-bold text-gray-800 dark:text-gray-200">Date:</span> {{ $latestInsp->inspected_at ? $latestInsp->inspected_at->format('d M Y h:i A') : $latestInsp->created_at->format('d M Y h:i A') }}</div>
+                                </div>
+                            @else
+                                <p class="text-xs text-amber-600 dark:text-amber-400 font-medium">⚠️ No baseline inspection photo/reading recorded yet. Click Update Inspection to record baseline.</p>
+                            @endif
+                        </div>
                     </div>
 
                     @if($unit->notes)
@@ -189,121 +258,138 @@
                                         <p class="mt-1 text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ $unit->otherTenant->phone }}</p>
                                     </div>
                                 @endif
-                                @if($unit->otherTenant->whatsapp_number)
-                                    <div>
-                                        <p class="text-xs sm:text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">WhatsApp</p>
-                                        <p class="mt-1 text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ $unit->otherTenant->whatsapp_number }}</p>
-                                    </div>
-                                @endif
                             </div>
                         @else
-                            <div class="py-4 text-center text-gray-400 dark:text-gray-600">
-                                <span class="text-3xl">🔑</span>
-                                <p class="text-sm font-semibold mt-1">This unit is currently unoccupied.</p>
-                            </div>
-                        @endif
-                    </x-common.component-card>
-                @else
-                    <x-common.component-card title="Current Active Tenant" desc="Active tenancy details">
-                        @if($unit->tenant)
-                            <div class="space-y-4">
-                                <div>
-                                    <p class="text-xs sm:text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Name</p>
-                                    <p class="mt-1 text-base sm:text-lg font-bold text-brand-600 hover:underline">
-                                        <a href="{{ route('tenants.show', $unit->tenant->id) }}">{{ $unit->tenant->name }}</a>
-                                    </p>
-                                </div>
-                                @if($unit->tenant->phone)
-                                    <div>
-                                        <p class="text-xs sm:text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Phone</p>
-                                        <p class="mt-1 text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ $unit->tenant->phone }}</p>
-                                    </div>
-                                @endif
-                                @if($unit->tenant->email)
-                                    <div>
-                                        <p class="text-xs sm:text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Email</p>
-                                        <p class="mt-1 text-base sm:text-lg font-bold text-gray-900 dark:text-white">{{ $unit->tenant->email }}</p>
-                                    </div>
-                                @endif
-                            </div>
-                        @else
-                            <div class="py-4 text-center text-gray-400 dark:text-gray-600">
-                                <span class="text-3xl">🔑</span>
-                                <p class="text-sm font-semibold mt-1">This unit is currently vacant.</p>
-                            </div>
+                            <p class="text-base font-semibold text-gray-400 dark:text-gray-600">No other tenant attached to this unit.</p>
                         @endif
                     </x-common.component-card>
                 @endif
             </div>
         </div>
 
-        {{-- ── OWNERSHIP HISTORY TAB ──────────────────────────────── --}}
-        <div x-show="activeTab === 'ownership'">
-            <x-common.component-card title="Ownership History" desc="Full record of every landlord who has owned this unit from day one">
-                @if($ownerships->isEmpty())
+        {{-- ── BREAKER INSPECTIONS TAB ───────────────────────────────────────── --}}
+        <div x-show="activeTab === 'breaker_inspections'">
+            <x-common.component-card title="Electricity Breaker Inspections &amp; Readings" desc="Audit trail of all meter readings, officer statements, and photo proof for breaker ON/OFF actions">
+                <div class="mb-4 flex justify-end">
+                    <button type="button" @click="openBreakerModal()" class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-xs font-black text-white hover:bg-brand-700 transition-colors shadow-sm cursor-pointer">
+                        ⚡ Add New Breaker Inspection
+                    </button>
+                </div>
+
+                @if($unit->breakerInspections->isEmpty())
                     <div class="py-12 text-center text-gray-400">
-                        <span class="text-4xl">🏗️</span>
-                        <p class="text-base font-bold mt-2">No ownership records found for this unit.</p>
-                        <p class="text-sm font-medium mt-1 text-gray-400">Assign a landlord via the Landlord form to start tracking.</p>
+                        <span class="text-4xl">⚡</span>
+                        <p class="text-base font-bold mt-2">No breaker inspection records found for this unit.</p>
+                        <p class="text-xs text-gray-400 mt-1">Record the baseline meter photo &amp; reading using the button above.</p>
                     </div>
                 @else
-                    <div class="relative pl-6 border-l-2 border-brand-200 dark:border-brand-800 ml-4 space-y-6 py-2">
-                        @foreach($ownerships as $ownership)
-                            <div class="relative">
-                                {{-- Timeline dot --}}
-                                <span class="absolute -left-[37px] top-1 flex h-8 w-8 items-center justify-center rounded-full {{ $ownership->is_current ? 'bg-green-500 text-white' : 'bg-white border-2 border-gray-300 dark:bg-gray-900 dark:border-gray-700' }} text-sm font-black shadow-sm">
-                                    {{ $ownership->is_current ? '✓' : '↩' }}
-                                </span>
+                    <div class="overflow-x-auto font-sans border-2 border-gray-200 rounded-2xl dark:border-gray-800">
+                        <table class="w-full text-base text-left text-gray-700 dark:text-gray-300">
+                            <thead class="text-xs sm:text-sm uppercase font-black bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">
+                                <tr>
+                                    <th class="px-5 py-4">Inspected Date</th>
+                                    <th class="px-5 py-4">Breaker Status</th>
+                                    <th class="px-5 py-4">Meter Reading</th>
+                                    <th class="px-5 py-4">Meter Picture</th>
+                                    <th class="px-5 py-4">Inspection Officer</th>
+                                    <th class="px-5 py-4">Officer Statement</th>
+                                    <th class="px-5 py-4">Signed PDF Document</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach($unit->breakerInspections as $inspection)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                        <td class="px-5 py-4 font-bold text-gray-900 dark:text-white whitespace-nowrap text-sm">
+                                            {{ $inspection->inspected_at ? $inspection->inspected_at->format('d M Y h:i A') : $inspection->created_at->format('d M Y h:i A') }}
+                                        </td>
+                                        <td class="px-5 py-4 whitespace-nowrap">
+                                            @if($inspection->breaker_status === 'on')
+                                                <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-black bg-green-100 text-green-800 dark:bg-green-950/60 dark:text-green-300">
+                                                    ⚡ ON
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-black bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300">
+                                                    ⚡ OFF
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-4 font-black text-gray-900 dark:text-white text-base">
+                                            {{ number_format($inspection->meter_reading, 2) }} <span class="text-xs font-normal text-gray-500">kWh</span>
+                                        </td>
+                                        <td class="px-5 py-4">
+                                            @if($inspection->meter_image)
+                                                <a href="{{ $inspection->meter_image_url }}" target="_blank" class="inline-block">
+                                                    <img src="{{ $inspection->meter_image_url }}" alt="Meter Photo" class="h-12 w-12 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shadow-xs hover:scale-105 transition-transform">
+                                                </a>
+                                            @else
+                                                <span class="text-xs text-gray-400">No Photo</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-5 py-4 font-extrabold text-gray-900 dark:text-white text-sm">
+                                            {{ $inspection->inspection_officer_name }}
+                                        </td>
+                                        <td class="px-5 py-4 text-xs font-medium text-gray-600 dark:text-gray-300 max-w-xs">
+                                            "{{ $inspection->officer_statement }}"
+                                        </td>
+                                        <td class="px-5 py-4 whitespace-nowrap">
+                                            @if($inspection->signed_inspection_doc)
+                                                <a href="{{ $inspection->signed_inspection_doc_url }}" target="_blank"
+                                                    class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-brand-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-brand-400">
+                                                    📄 View Signed PDF
+                                                </a>
+                                            @else
+                                                <span class="text-xs text-gray-400">No Signed Doc</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </x-common.component-card>
+        </div>
 
-                                <div class="rounded-2xl border-2 {{ $ownership->is_current ? 'border-green-300 bg-green-50/40 dark:border-green-900/40 dark:bg-green-900/10' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.02]' }} p-5 shadow-sm">
-                                    {{-- Header row --}}
-                                    <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
-                                        <div>
-                                            <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-black {{ $ownership->is_current ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-400' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' }}">
-                                                {{ $ownership->is_current ? 'CURRENT OWNER' : 'TRANSFERRED' }}
-                                            </span>
-                                            <a href="{{ route('landlords.show', $ownership->landlord_id) }}"
-                                               class="ml-3 text-base sm:text-lg font-black text-brand-600 hover:underline">
-                                                {{ $ownership->landlord?->name ?? '—' }}
-                                            </a>
-                                        </div>
-                                        <span class="text-sm text-gray-500 font-bold">{{ $ownership->period }}</span>
-                                    </div>
-
-                                    {{-- Nominee --}}
-                                    @if($ownership->nominee_name)
-                                        <div class="mb-4 rounded-xl bg-blue-50/70 p-3 dark:bg-blue-900/20 border-2 border-blue-100 dark:border-blue-900/30">
-                                            <p class="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">Nominee</p>
-                                            <p class="text-base text-gray-900 dark:text-gray-100 font-bold">{{ $ownership->nominee_full_line }}</p>
-                                        </div>
-                                    @endif
-
-                                    {{-- Financial + Office --}}
-                                    <div class="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 text-sm">
-                                        @foreach([
-                                            ['Total Amount',   $ownership->total_amount    ? 'Rs. '.number_format($ownership->total_amount)    : '—'],
-                                            ['Received',       $ownership->received_amount ? 'Rs. '.number_format($ownership->received_amount) : '—'],
-                                            ['Credit / Bal.',  $ownership->credit_amount   ? 'Rs. '.number_format($ownership->credit_amount)   : '—'],
-                                            ['Received From',  $ownership->received_from ?? '—'],
-                                            ['Approved By',    $ownership->approved_by ?? '—'],
-                                            ['Received By',    $ownership->received_by ?? '—'],
-                                            ['Approved Date',  $ownership->approved_date ? $ownership->approved_date->format('d M Y') : '—'],
-                                        ] as [$lbl, $val])
-                                            <div>
-                                                <p class="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ $lbl }}</p>
-                                                <p class="font-bold text-gray-900 dark:text-gray-100 text-sm sm:text-base mt-0.5">{{ $val }}</p>
-                                            </div>
-                                        @endforeach
-                                    </div>
-
-                                    @if($ownership->notes)
-                                        <div class="mt-3 rounded-xl bg-gray-50 p-3 text-sm font-semibold text-gray-700 dark:bg-white/[0.03] dark:text-gray-300">
-                                            {{ $ownership->notes }}
-                                        </div>
-                                    @endif
-                                </div>
-                            </div>
-                        @endforeach
+        {{-- ── OWNERSHIP TAB ─────────────────────────────────────────────── --}}
+        <div x-show="activeTab === 'ownership'">
+            <x-common.component-card title="Ownership History" desc="History of landlords for this unit">
+                @if($ownerships->isEmpty())
+                    <div class="py-12 text-center text-gray-400">
+                        <span class="text-4xl">🏢</span>
+                        <p class="text-base font-bold mt-2">No ownership history records found for this unit.</p>
+                    </div>
+                @else
+                    <div class="overflow-x-auto font-sans border-2 border-gray-200 rounded-2xl dark:border-gray-800">
+                        <table class="w-full text-base text-left text-gray-700 dark:text-gray-300">
+                            <thead class="text-xs sm:text-sm uppercase font-black bg-brand-500 text-white dark:bg-brand-600 dark:text-white">
+                                <tr>
+                                    <th class="px-5 py-4 text-white">Owner Name</th>
+                                    <th class="px-5 py-4 text-white">CNIC</th>
+                                    <th class="px-5 py-4 text-white">Phone</th>
+                                    <th class="px-5 py-4 text-white">Transfer Date</th>
+                                    <th class="px-5 py-4 text-white">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                @foreach($ownerships as $ownership)
+                                    <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                        <td class="px-5 py-4 font-black text-gray-900 dark:text-white">
+                                            {{ $ownership->landlord->name ?? '—' }}
+                                        </td>
+                                        <td class="px-5 py-4 font-bold">{{ $ownership->landlord->cnic ?? '—' }}</td>
+                                        <td class="px-5 py-4 font-bold">{{ $ownership->landlord->phone ?? '—' }}</td>
+                                        <td class="px-5 py-4 font-bold">{{ $ownership->created_at->format('d M Y') }}</td>
+                                        <td class="px-5 py-4">
+                                            @if($ownership->is_current)
+                                                <span class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-black bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">Current Owner</span>
+                                            @else
+                                                <span class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-black bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">Previous Owner</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 @endif
             </x-common.component-card>
@@ -311,214 +397,27 @@
 
         {{-- ── TIMELINE TAB ─────────────────────────────────────────────── --}}
         <div x-show="activeTab === 'timeline'">
-            <div class="rounded-2xl border-2 border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.02] shadow-sm overflow-hidden">
-
-                {{-- Header --}}
-                <div class="px-6 py-5 border-b-2 border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                    <div>
-                        <h3 class="text-lg font-black text-gray-900 dark:text-white">Activity Timeline</h3>
-                        <p class="text-sm font-semibold text-gray-500 mt-0.5">Complete chronological history of this unit</p>
-                    </div>
-                    @if($timeline->isNotEmpty())
-                        <span class="inline-flex items-center rounded-full bg-brand-50 px-3.5 py-1.5 text-xs sm:text-sm font-black text-brand-600 dark:bg-brand-900/20 dark:text-brand-400">
-                            {{ $timeline->count() }} events
-                        </span>
-                    @endif
-                </div>
-
+            <x-common.component-card title="Timeline History" desc="Chronological timeline of events for this unit">
                 @if($timeline->isEmpty())
-                    <div class="py-20 text-center">
-                        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z" />
-                            </svg>
-                        </div>
-                        <p class="text-base font-bold text-gray-600 dark:text-gray-400">No events recorded yet</p>
-                        <p class="text-sm font-semibold text-gray-400 mt-1">Events will appear here as activity occurs on this unit.</p>
+                    <div class="py-12 text-center text-gray-400">
+                        <span class="text-4xl">🕒</span>
+                        <p class="text-base font-bold mt-2">No timeline records found for this unit.</p>
                     </div>
                 @else
-                    <div class="px-6 py-6">
-                        @php
-                            $grouped = $timeline->groupBy(fn($e) => $e['date'] ? $e['date']->format('Y') : 'Unknown');
-                        @endphp
-
-                        @foreach($grouped as $year => $events)
-                            {{-- Year separator --}}
-                            <div class="flex items-center gap-3 mb-6 {{ !$loop->first ? 'mt-10' : '' }}">
-                                <span class="text-sm font-black tracking-widest uppercase text-gray-500 dark:text-gray-400">{{ $year }}</span>
-                                <div class="flex-1 h-0.5 bg-gray-200 dark:bg-gray-800"></div>
-                                <span class="text-xs font-bold text-gray-400 dark:text-gray-500">{{ $events->count() }} {{ Str::plural('event', $events->count()) }}</span>
-                            </div>
-
-                            {{-- Events for this year --}}
-                            <div class="relative">
-                                {{-- Vertical connector line --}}
-                                <div class="absolute left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-gray-300 via-gray-200 to-transparent dark:from-gray-700 dark:via-gray-800"></div>
-
-                                <div class="space-y-5">
-                                    @foreach($events as $event)
-                                        @php
-                                            $typeStyles = match($event['type']) {
-                                                'agreement'             => ['ring' => 'ring-blue-200 dark:ring-blue-800',   'bg' => 'bg-blue-500',   'dot' => 'bg-blue-100 dark:bg-blue-900/40', 'line' => 'border-blue-200 dark:border-blue-900/50',  'label_bg' => 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'],
-                                                'agreement_terminated'  => ['ring' => 'ring-red-200 dark:ring-red-800',    'bg' => 'bg-red-500',    'dot' => 'bg-red-100 dark:bg-red-900/40',   'line' => 'border-red-200 dark:border-red-900/50',    'label_bg' => 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300'],
-                                                'payment'               => match($event['status']) {
-                                                    'paid'    => ['ring' => 'ring-emerald-200 dark:ring-emerald-800', 'bg' => 'bg-emerald-500', 'dot' => 'bg-emerald-100 dark:bg-emerald-900/40', 'line' => 'border-emerald-200 dark:border-emerald-900/50', 'label_bg' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300'],
-                                                    'partial' => ['ring' => 'ring-amber-200 dark:ring-amber-800',   'bg' => 'bg-amber-500',   'dot' => 'bg-amber-100 dark:bg-amber-900/40',   'line' => 'border-amber-200 dark:border-amber-900/50',   'label_bg' => 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'],
-                                                    default   => ['ring' => 'ring-gray-200 dark:ring-gray-700',     'bg' => 'bg-gray-400',    'dot' => 'bg-gray-100 dark:bg-gray-800',        'line' => 'border-gray-200 dark:border-gray-800',        'label_bg' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'],
-                                                },
-                                                'ownership_current'     => ['ring' => 'ring-violet-200 dark:ring-violet-800', 'bg' => 'bg-violet-500', 'dot' => 'bg-violet-100 dark:bg-violet-900/40', 'line' => 'border-violet-200 dark:border-violet-900/50', 'label_bg' => 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300'],
-                                                'ownership_transfer'    => ['ring' => 'ring-purple-200 dark:ring-purple-800', 'bg' => 'bg-purple-400', 'dot' => 'bg-purple-100 dark:bg-purple-900/40', 'line' => 'border-purple-200 dark:border-purple-900/50', 'label_bg' => 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'],
-                                                'other_tenant_attached' => ['ring' => 'ring-orange-200 dark:ring-orange-800', 'bg' => 'bg-orange-500', 'dot' => 'bg-orange-100 dark:bg-orange-900/40', 'line' => 'border-orange-200 dark:border-orange-900/50', 'label_bg' => 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300'],
-                                                'other_tenant_detached' => ['ring' => 'ring-slate-200 dark:ring-slate-700',  'bg' => 'bg-slate-400',  'dot' => 'bg-slate-100 dark:bg-slate-800',      'line' => 'border-slate-200 dark:border-slate-800',      'label_bg' => 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'],
-                                                default                 => ['ring' => 'ring-gray-200 dark:ring-gray-700',     'bg' => 'bg-gray-400',    'dot' => 'bg-gray-100 dark:bg-gray-800',        'line' => 'border-gray-200 dark:border-gray-800',        'label_bg' => 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'],
-                                            };
-
-                                            $svgIcon = match($event['type']) {
-                                                'agreement'             => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
-                                                'agreement_terminated'  => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-                                                'payment'               => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>',
-                                                'ownership_current'     => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
-                                                'ownership_transfer'    => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>',
-                                                'other_tenant_attached' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>',
-                                                'other_tenant_detached' => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="22" y1="11" x2="16" y2="11"/></svg>',
-                                                default                 => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>',
-                                            };
-
-                                            $detailPairs = [];
-                                            foreach(explode(' | ', $event['details']) as $part) {
-                                                $pieces = explode(': ', $part, 2);
-                                                $detailPairs[] = count($pieces) === 2 ? ['label' => trim($pieces[0]), 'value' => trim($pieces[1])] : ['label' => '', 'value' => trim($part)];
-                                            }
-                                        @endphp
-
-                                        <div class="relative flex gap-4 group">
-                                            {{-- Circle icon on the line --}}
-                                            <div class="relative z-10 flex-shrink-0">
-                                                <div class="h-10 w-10 rounded-full {{ $typeStyles['bg'] }} ring-4 {{ $typeStyles['ring'] }} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200">
-                                                    {!! $svgIcon !!}
-                                                </div>
-                                            </div>
-
-                                            {{-- Event card --}}
-                                            <div class="flex-1 mb-2 rounded-2xl border-2 {{ $typeStyles['line'] }} bg-white dark:bg-gray-900/50 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                                                <div class="h-1 w-full {{ $typeStyles['bg'] }} opacity-70"></div>
-
-                                                <div class="px-5 py-4">
-                                                    {{-- Title row --}}
-                                                    <div class="flex flex-wrap items-start justify-between gap-2">
-                                                        <div class="flex items-center gap-2.5 flex-wrap">
-                                                            <h4 class="text-base font-black text-gray-900 dark:text-white leading-tight">
-                                                                {{ $event['title'] }}
-                                                            </h4>
-                                                            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-black uppercase tracking-wider {{ $typeStyles['label_bg'] }}">
-                                                                {{ ucfirst(str_replace('_', ' ', $event['status'])) }}
-                                                            </span>
-                                                        </div>
-                                                        <div class="flex-shrink-0 text-right">
-                                                            <span class="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-300">
-                                                                {{ $event['date'] ? $event['date']->format('d M Y') : '—' }}
-                                                            </span>
-                                                            @if($event['date'])
-                                                                <p class="text-xs text-gray-400 mt-0.5 font-medium">
-                                                                    {{ $event['date']->diffForHumans() }}
-                                                                </p>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-
-                                                    {{-- Subtitle --}}
-                                                    <p class="text-sm text-gray-600 dark:text-gray-400 mt-1 font-bold">
-                                                        {{ $event['subtitle'] }}
-                                                    </p>
-
-                                                    {{-- Details as chips --}}
-                                                    @if(!empty($detailPairs))
-                                                        <div class="mt-3 flex flex-wrap gap-2">
-                                                            @foreach($detailPairs as $pair)
-                                                                @if($pair['value'] && $pair['value'] !== '—' && $pair['value'] !== 'Rs. 0')
-                                                                    <div class="flex items-center gap-1.5 rounded-xl {{ $typeStyles['dot'] }} px-3 py-1.5 border border-gray-200/50">
-                                                                        @if($pair['label'])
-                                                                            <span class="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">{{ $pair['label'] }}:</span>
-                                                                        @endif
-                                                                        <span class="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100">{{ $pair['value'] }}</span>
-                                                                    </div>
-                                                                @endif
-                                                            @endforeach
-                                                        </div>
-                                                    @endif
-
-                                                    {{-- Footer action --}}
-                                                    <div class="mt-4 flex justify-end">
-                                                        <a href="{{ $event['url'] }}"
-                                                           class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-black text-brand-600 hover:text-brand-800 dark:hover:text-brand-300 transition-colors group/link">
-                                                            View Details
-                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 group-hover/link:translate-x-0.5 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                                                <polyline points="9 18 15 12 9 6"/>
-                                                            </svg>
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    @endforeach
+                    <div class="relative border-l-2 border-brand-500 ml-4 space-y-6">
+                        @foreach($timeline as $event)
+                            <div class="relative pl-6">
+                                <span class="absolute -left-2.5 top-1.5 h-5 w-5 rounded-full bg-brand-500 border-4 border-white dark:border-gray-900"></span>
+                                <div class="rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-black uppercase text-brand-600 dark:text-brand-400">{{ $event['type'] }}</span>
+                                        <span class="text-xs text-gray-400 font-bold">{{ $event['date'] ? \Carbon\Carbon::parse($event['date'])->format('d M Y') : '—' }}</span>
+                                    </div>
+                                    <h4 class="text-base font-black text-gray-900 dark:text-white mt-1">{{ $event['title'] }}</h4>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{{ $event['desc'] }}</p>
                                 </div>
                             </div>
                         @endforeach
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        {{-- ── AGREEMENTS TAB ───────────────────────────────────────────── --}}
-        <div x-show="activeTab === 'agreements'">
-            <x-common.component-card title="Tenancy Agreements" desc="Active and historical leases for this unit">
-                @if($unit->agreements->isEmpty())
-                    <div class="py-12 text-center text-gray-400">
-                        <span class="text-4xl">📄</span>
-                        <p class="text-base font-bold mt-2">No agreements signed for this unit yet.</p>
-                    </div>
-                @else
-                    <div class="overflow-x-auto font-sans border-2 border-gray-200 rounded-2xl dark:border-gray-800">
-                        <table class="w-full text-base text-left text-gray-700 dark:text-gray-300">
-                            <thead class="text-xs sm:text-sm uppercase font-black bg-brand-500 text-white dark:bg-brand-600 dark:text-white">
-                                <tr>
-                                    <th class="px-5 py-4 text-white">Tenant</th>
-                                    <th class="px-5 py-4 text-white">Monthly Rent</th>
-                                    <th class="px-5 py-4 text-white">Security Deposit</th>
-                                    <th class="px-5 py-4 text-white">Start Date</th>
-                                    <th class="px-5 py-4 text-white">End Date</th>
-                                    <th class="px-5 py-4 text-white">Status</th>
-                                    <th class="px-5 py-4 text-right text-white">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                                @foreach($unit->agreements as $agreement)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                        <td class="px-5 py-4 font-extrabold text-gray-900 dark:text-white">
-                                            {{ $agreement->tenant->name ?? '—' }}
-                                        </td>
-                                        <td class="px-5 py-4 font-black text-gray-900 dark:text-white">
-                                            {{ $agreement->monthly_rent ? 'Rs. ' . number_format($agreement->monthly_rent) : '—' }}
-                                        </td>
-                                        <td class="px-5 py-4 font-bold">
-                                            {{ $agreement->security_deposit ? 'Rs. ' . number_format($agreement->security_deposit) : '—' }}
-                                        </td>
-                                        <td class="px-5 py-4 font-bold">{{ $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft' }}</td>
-                                        <td class="px-5 py-4 font-bold">{{ $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft' }}</td>
-                                        <td class="px-5 py-4">
-                                            <span class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-black {{ $agreement->status_badge_class }}">
-                                                {{ ucfirst($agreement->status) }}
-                                            </span>
-                                        </td>
-                                        <td class="px-5 py-4 text-right">
-                                            <a href="{{ route('agreements.show', $agreement->id) }}" class="text-brand-600 hover:underline font-black text-sm">
-                                                View
-                                            </a>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
                     </div>
                 @endif
             </x-common.component-card>
@@ -593,8 +492,62 @@
                     @endif
                 </x-common.component-card>
             </div>
+        @else
+            {{-- ── AGREEMENTS TAB ─────────────────────────────────────────────── --}}
+            <div x-show="activeTab === 'agreements'">
+                <x-common.component-card title="Agreements History" desc="All tenancy contracts signed for this unit">
+                    @if($agreements->isEmpty())
+                        <div class="py-12 text-center text-gray-400">
+                            <span class="text-4xl">📄</span>
+                            <p class="text-base font-bold mt-2">No agreements signed yet.</p>
+                        </div>
+                    @else
+                        <div class="overflow-x-auto font-sans border-2 border-gray-200 rounded-2xl dark:border-gray-800">
+                            <table class="w-full text-base text-left text-gray-700 dark:text-gray-300">
+                                <thead class="text-xs sm:text-sm uppercase font-black bg-brand-500 text-white dark:bg-brand-600 dark:text-white">
+                                    <tr>
+                                        <th class="px-5 py-4 text-white">Tenant</th>
+                                        <th class="px-5 py-4 text-white">Rent</th>
+                                        <th class="px-5 py-4 text-white">Security Deposit</th>
+                                        <th class="px-5 py-4 text-white">Start Date</th>
+                                        <th class="px-5 py-4 text-white">End Date</th>
+                                        <th class="px-5 py-4 text-white">Status</th>
+                                        <th class="px-5 py-4 text-right text-white">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                                    @foreach($agreements as $agreement)
+                                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                            <td class="px-5 py-4 font-extrabold text-gray-900 dark:text-white">
+                                                {{ $agreement->tenant->name ?? '—' }}
+                                            </td>
+                                            <td class="px-5 py-4 font-black text-gray-900 dark:text-white">
+                                                {{ $agreement->monthly_rent ? 'Rs. ' . number_format($agreement->monthly_rent) : '—' }}
+                                            </td>
+                                            <td class="px-5 py-4 font-bold">
+                                                {{ $agreement->security_deposit ? 'Rs. ' . number_format($agreement->security_deposit) : '—' }}
+                                            </td>
+                                            <td class="px-5 py-4 font-bold">{{ $agreement->start_date ? $agreement->start_date->format('d M Y') : 'Draft' }}</td>
+                                            <td class="px-5 py-4 font-bold">{{ $agreement->end_date ? $agreement->end_date->format('d M Y') : 'Draft' }}</td>
+                                            <td class="px-5 py-4">
+                                                <span class="inline-flex items-center rounded-lg px-3 py-1 text-xs font-black {{ $agreement->status_badge_class }}">
+                                                    {{ ucfirst($agreement->status) }}
+                                                </span>
+                                            </td>
+                                            <td class="px-5 py-4 text-right">
+                                                <a href="{{ route('agreements.show', $agreement->id) }}" class="text-brand-600 hover:underline font-black text-sm">
+                                                    View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </x-common.component-card>
+            </div>
         @endif
-
 
         {{-- ── PAYMENTS TAB ────────────────────────────────────────────────── --}}
         <div x-show="activeTab === 'payments'">
@@ -656,5 +609,91 @@
                 @endif
             </x-common.component-card>
         </div>
+
+        {{-- ── BREAKER INSPECTION MODAL ────────────────────────────────────── --}}
+        <div x-show="showBreakerModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
+            <div @click.outside="showBreakerModal = false" class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900 border border-gray-200 dark:border-gray-800">
+                <div class="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-800 mb-4">
+                    <div>
+                        <h3 class="text-lg font-black text-gray-900 dark:text-white">⚡ Electricity Breaker Inspection</h3>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Unit {{ $unit->unit_number }} &mdash; Meter Reading &amp; Officer Verification</p>
+                    </div>
+                    <button type="button" @click="showBreakerModal = false" class="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10">
+                        ✕
+                    </button>
+                </div>
+
+                <form action="{{ route('units.breaker-inspections.store', $unit) }}" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    @csrf
+                    
+                    {{-- Breaker Status --}}
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1.5">Breaker Status *</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
+                                :class="breakerStatus === 'on' ? 'border-green-500 bg-green-50 text-green-900 dark:bg-green-950/40 dark:text-green-300 font-bold' : 'border-gray-200 text-gray-600 dark:border-gray-700'">
+                                <input type="radio" name="breaker_status" value="on" x-model="breakerStatus" class="sr-only">
+                                <span>⚡ BREAKER ON</span>
+                            </label>
+                            <label class="flex items-center justify-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all"
+                                :class="breakerStatus === 'off' ? 'border-red-500 bg-red-50 text-red-900 dark:bg-red-950/40 dark:text-red-300 font-bold' : 'border-gray-200 text-gray-600 dark:border-gray-700'">
+                                <input type="radio" name="breaker_status" value="off" x-model="breakerStatus" class="sr-only">
+                                <span>⚡ BREAKER OFF</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Meter Reading --}}
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1">Current Meter Reading (kWh) *</label>
+                        <input type="number" step="0.01" name="meter_reading" required placeholder="e.g. 12450.50" value="{{ $latestInsp?->meter_reading ?? '' }}"
+                            class="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white font-bold focus:ring-2 focus:ring-brand-500/30">
+                    </div>
+
+                    {{-- Meter Image Upload --}}
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1">Meter Reading Picture (Photo Proof)</label>
+                        <input type="file" name="meter_image" accept="image/*"
+                            class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-950 dark:file:text-brand-300">
+                    </div>
+
+                    {{-- Inspection Officer --}}
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1">Inspection Officer *</label>
+                        <select name="inspection_person_id" required
+                            class="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white font-semibold">
+                            <option value="">Select Inspection Officer</option>
+                            @foreach($inspectionPersons as $person)
+                                <option value="{{ $person->id }}">{{ $person->name }} ({{ $person->role ?? 'Inspector' }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Upload Signed Inspection PDF --}}
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1">Upload Signed Inspection PDF / Form (Optional)</label>
+                        <input type="file" name="signed_inspection_doc" accept="application/pdf,image/*"
+                            class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-950 dark:file:text-brand-300">
+                    </div>
+
+                    {{-- Officer Statement --}}
+                    <div>
+                        <label class="block text-xs font-black uppercase text-gray-600 dark:text-gray-400 mb-1">Officer Statement / Verification Notes *</label>
+                        <textarea name="officer_statement" rows="3" required placeholder="e.g., I inspect and confirm that electricity meter reading is recorded and breaker status is verified."
+                            class="w-full rounded-xl border border-gray-300 px-3.5 py-2 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white">I inspect and confirm electricity meter reading and breaker status.</textarea>
+                    </div>
+
+                    <div class="pt-3 flex justify-end gap-2 border-t border-gray-100 dark:border-gray-800">
+                        <button type="button" @click="showBreakerModal = false" class="rounded-xl border border-gray-300 px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300">
+                            Cancel
+                        </button>
+                        <button type="submit" class="rounded-xl bg-brand-600 px-5 py-2 text-xs font-black text-white hover:bg-brand-700 transition-colors shadow-sm">
+                            Save Inspection Record
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
 @endsection

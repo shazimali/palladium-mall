@@ -532,6 +532,7 @@ class TenantController extends Controller
             ])),
             3 => view('tenants.wizard.step3', array_merge($data, [
                 'agreement' => $draftAgreement,
+                'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
                 'units' => Unit::where('is_self', false)
                     ->where(function ($q) use ($tenant) {
                             $q->where('status', 'vacant')
@@ -547,6 +548,7 @@ class TenantController extends Controller
                 'checklist' => $draftAgreement ? $draftAgreement->moveInChecklist : null,
                 'agreement' => $draftAgreement,
                 'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
+                'defaultMeterReading' => $draftAgreement?->initial_meter_reading ?? ($tenant->unit?->getLatestMeterReading() ?? ($draftAgreement?->unit_id ? \App\Models\Unit::find($draftAgreement->unit_id)?->getLatestMeterReading() : null)),
             ])),
             6 => view('tenants.wizard.step6', array_merge($data, [
                 'partners' => $draftAgreement ? $draftAgreement->partners()->get() : collect(),
@@ -556,6 +558,7 @@ class TenantController extends Controller
                 'agreement' => $draftAgreement,
                 'docChecklist' => $draftAgreement ? $draftAgreement->documentChecklist : null,
                 'moveInChecklist' => $draftAgreement ? $draftAgreement->moveInChecklist : null,
+                'breakerInspection' => $draftAgreement?->unit?->breakerInspections()->where('breaker_status', 'on')->latest('inspected_at')->first() ?? $draftAgreement?->unit?->latestBreakerInspection,
             ])),
             default => redirect()->route('tenants.showStep', [$tenant, 1]),
         };
@@ -764,7 +767,16 @@ class TenantController extends Controller
             'fine_per_day' => 'required|numeric|min:0',
             'terms' => 'nullable|string',
             'govt_document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'meter_reading' => 'nullable|numeric|min:0',
+            'meter_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'inspection_person_id' => 'nullable|exists:inspection_persons,id',
+            'officer_statement' => 'nullable|string|max:1000',
+            'signed_inspection_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
+
+        if (isset($data['meter_reading']) && $data['meter_reading'] !== null) {
+            $data['initial_meter_reading'] = $data['meter_reading'];
+        }
 
         // Handle govt_document upload
         if ($request->hasFile('govt_document')) {
@@ -805,11 +817,49 @@ class TenantController extends Controller
         $existingActive = $tenant->agreements()->where('status', 'active')->latest()->first();
         if ($existingActive) {
             $existingActive->update(array_merge($data, ['unit_id' => $unitId ?? $existingActive->unit_id]));
+            $agreementId = $existingActive->id;
         } else {
-            $tenant->agreements()->updateOrCreate(
+            $ag = $tenant->agreements()->updateOrCreate(
                 ['tenant_id' => $tenant->id, 'status' => 'draft'],
                 array_merge($data, ['status' => 'draft'])
             );
+            $agreementId = $ag->id;
+        }
+
+        // Record Breaker ON inspection log if meter reading provided
+        if ($unitId && $request->filled('meter_reading')) {
+            $unit = Unit::find($unitId);
+            if ($unit) {
+                $meterImagePath = null;
+                if ($request->hasFile('meter_image')) {
+                    $meterImagePath = $request->file('meter_image')->store('breaker_inspections', 'public');
+                }
+
+                $signedDocPath = null;
+                if ($request->hasFile('signed_inspection_doc')) {
+                    $signedDocPath = $request->file('signed_inspection_doc')->store('breaker_inspections/signed_docs', 'public');
+                }
+
+                $inspector = $request->filled('inspection_person_id')
+                    ? \App\Models\InspectionPerson::find($request->input('inspection_person_id'))
+                    : null;
+                $inspectorName = $inspector?->name ?? auth()->user()->name;
+
+                \App\Models\UnitBreakerInspection::create([
+                    'unit_id'                 => $unit->id,
+                    'agreement_id'            => $agreementId,
+                    'inspection_person_id'    => $inspector?->id,
+                    'breaker_status'          => 'on',
+                    'meter_reading'           => (float) $request->input('meter_reading'),
+                    'meter_image'             => $meterImagePath,
+                    'signed_inspection_doc'   => $signedDocPath,
+                    'inspection_officer_name' => $inspectorName,
+                    'officer_statement'       => $request->input('officer_statement', 'Initial move-in inspection. Breaker turned ON for tenant agreement.'),
+                    'inspected_at'            => now(),
+                ]);
+
+                $unit->update(['breaker_status' => 'on']);
+            }
         }
 
         if ($request->input('save_only')) {
@@ -959,13 +1009,17 @@ class TenantController extends Controller
     private function saveStep5(Request $request, Tenant $tenant): RedirectResponse
     {
         $data = $request->validate([
-            'inspection_person_id' => 'required|exists:inspection_persons,id',
-            'checklist_date' => 'required|date',
-            'damage_notes' => 'nullable|string',
-            'inventory_notes' => 'nullable|string',
-            'flat_condition' => 'nullable|in:good,needs_repair',
-            'deposit_deduction' => 'nullable|numeric|min:0',
-            'final_remarks' => 'nullable|string',
+            'inspection_person_id'  => 'required|exists:inspection_persons,id',
+            'checklist_date'        => 'required|date',
+            'meter_reading'         => 'nullable|numeric|min:0',
+            'meter_image'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'signed_inspection_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'officer_statement'     => 'nullable|string|max:1000',
+            'damage_notes'          => 'nullable|string',
+            'inventory_notes'       => 'nullable|string',
+            'flat_condition'        => 'nullable|in:good,needs_repair',
+            'deposit_deduction'     => 'nullable|numeric|min:0',
+            'final_remarks'         => 'nullable|string',
         ]);
 
         $inspector = \App\Models\InspectionPerson::findOrFail($request->inspection_person_id);
@@ -1014,6 +1068,45 @@ class TenantController extends Controller
         }
         $data['agreement_id'] = $agreement->id;
         $data['tenant_id'] = $tenant->id; // fallback
+
+        // Save Breaker & Initial Meter Inspection for Move-In
+        if ($request->filled('meter_reading')) {
+            $meterReading = (float) $request->input('meter_reading');
+
+            $meterImagePath = null;
+            if ($request->hasFile('meter_image')) {
+                $meterImagePath = $request->file('meter_image')->store('breaker_inspections', 'public');
+            }
+
+            $signedDocPath = null;
+            if ($request->hasFile('signed_inspection_doc')) {
+                $signedDocPath = $request->file('signed_inspection_doc')->store('breaker_inspections/signed_docs', 'public');
+            }
+
+            $agreement->update(['initial_meter_reading' => $meterReading]);
+
+            $unit = $tenant->unit ?: ($agreement->unit_id ? \App\Models\Unit::find($agreement->unit_id) : null);
+
+            if ($unit) {
+                \App\Models\UnitBreakerInspection::create([
+                    'unit_id'                 => $unit->id,
+                    'agreement_id'            => $agreement->id,
+                    'inspection_person_id'    => $inspector->id,
+                    'breaker_status'          => 'on',
+                    'meter_reading'           => $meterReading,
+                    'meter_image'             => $meterImagePath,
+                    'signed_inspection_doc'   => $signedDocPath,
+                    'inspection_officer_name' => $inspector->name,
+                    'officer_statement'       => $request->input('officer_statement', "Move-in inspection completed by {$inspector->name}. Initial meter reading recorded and breaker turned ON."),
+                    'inspected_at'            => now(),
+                ]);
+
+                $unit->update(['breaker_status' => 'on']);
+            }
+        }
+
+        // Remove non-checklist fields from $data before saving MoveInChecklist
+        unset($data['meter_reading'], $data['meter_image'], $data['signed_inspection_doc'], $data['officer_statement']);
 
         $agreement->checklists()
             ->where('type', 'move_in')

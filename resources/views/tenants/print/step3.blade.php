@@ -70,12 +70,34 @@
         <p>No active/draft agreement details exist for this tenant.</p>
     @endif
 
+    @php
+        $latestBreakerInsp = $tenant->unit ? $tenant->unit->breakerInspections()->where('breaker_status', 'on')->first() : null;
+        $initialMeter = $agreement?->initial_meter_reading ?? $latestBreakerInsp?->meter_reading;
+    @endphp
+    @if($initialMeter || $latestBreakerInsp)
+        <div class="section-title">⚡ Electricity Breaker &amp; Initial Meter Handover Verification</div>
+        <div class="grid">
+            <div class="item"><span class="label">Breaker Status:</span><span class="value" style="font-weight: bold; color: #16a34a;">ON (Switched ON for Move-In Handover)</span></div>
+            <div class="item"><span class="label">Initial Meter Reading:</span><span class="value" style="font-weight: bold;">{{ number_format($initialMeter ?? 0, 2) }} kWh</span></div>
+            @if($latestBreakerInsp)
+                <div class="item"><span class="label">Inspection Officer:</span><span class="value">{{ $latestBreakerInsp->inspection_officer_name }}</span></div>
+                <div class="item" style="grid-column: span 2;"><span class="label">Officer Statement:</span><span class="value">"{{ $latestBreakerInsp->officer_statement }}"</span></div>
+            @endif
+        </div>
+        @if($latestBreakerInsp?->meter_image)
+            <div style="margin-top: 10px; margin-bottom: 15px;">
+                <span class="label" style="display: block; margin-bottom: 5px;">Initial Meter Photo Proof:</span>
+                <img src="{{ $latestBreakerInsp->meter_image_url }}" alt="Meter Photo Proof" style="max-height: 140px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+        @endif
+    @endif
+
     <div class="signature-area">
         <div class="sig-box">
             Tenant's Signature
         </div>
         <div class="sig-box">
-            Guarantor's Signature
+            Inspection Officer's Signature
         </div>
         <div class="sig-box">
             Owner / Representative

@@ -63,13 +63,43 @@ class MoveOutController extends Controller
 
         MoveInChecklist::create(array_merge($data, ['tenant_id' => $tenant->id]));
 
-        // Terminate agreement & vacate unit
+        if ($tenant->activeAgreement) {
+            $tenant->activeAgreement->update([
+                'final_meter_reading' => (float) $request->input('final_meter_reading', 0),
+            ]);
+        }
+
+        // Record Breaker OFF inspection log & turn breaker OFF on Unit
+        if ($tenant->unit) {
+            $meterImagePath = null;
+            if ($request->hasFile('final_meter_image')) {
+                $meterImagePath = $request->file('final_meter_image')->store('breaker_inspections', 'public');
+            }
+
+            \App\Models\UnitBreakerInspection::create([
+                'unit_id'                 => $tenant->unit->id,
+                'agreement_id'            => $tenant->activeAgreement?->id,
+                'inspection_person_id'    => $inspector->id,
+                'breaker_status'          => 'off',
+                'meter_reading'           => (float) $request->input('final_meter_reading', 0),
+                'meter_image'             => $meterImagePath,
+                'inspection_officer_name' => $inspector->name,
+                'officer_statement'       => $request->input('breaker_off_statement', "Final move-out inspection completed by {$inspector->name}. Breaker turned OFF to prevent electricity corruption on vacant unit."),
+                'inspected_at'            => now(),
+            ]);
+
+            $tenant->unit->update([
+                'status'         => 'vacant',
+                'breaker_status' => 'off',
+            ]);
+        }
+
+        // Terminate agreement & update tenant
         $tenant->activeAgreement?->update(['status' => 'terminated']);
-        $tenant->unit?->update(['status' => 'vacant']);
         $tenant->update(['status' => 'inactive', 'unit_id' => null]);
 
         return redirect()->route('tenants.show', $tenant)
-            ->with('success', 'Move-out inspection saved. Unit is now vacant.');
+            ->with('success', 'Move-out inspection saved. Unit is now vacant and electricity breaker is turned OFF.');
     }
 
     public function printMoveOut(Tenant $tenant): View

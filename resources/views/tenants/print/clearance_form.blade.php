@@ -339,6 +339,28 @@
     </div>
     @endif
 
+    @php
+        $latestBreakerOffInsp = $tenant->unit ? $tenant->unit->breakerInspections()->where('breaker_status', 'off')->first() : null;
+        $finalMeter = $agreement?->final_meter_reading ?? $latestBreakerOffInsp?->meter_reading;
+    @endphp
+    @if($finalMeter || $latestBreakerOffInsp)
+    <div class="section-title">⚡ Electricity Breaker &amp; Final Meter Off Verification</div>
+    <div class="grid">
+        <div class="item"><span class="label">Breaker Status:</span><span class="value font-bold" style="color: #dc2626;">OFF (Safely Switched OFF upon Vacancy)</span></div>
+        <div class="item"><span class="label">Final Meter Reading:</span><span class="value font-bold">{{ number_format($finalMeter ?? 0, 2) }} kWh</span></div>
+        @if($latestBreakerOffInsp)
+            <div class="item"><span class="label">Inspection Officer:</span><span class="value">{{ $latestBreakerOffInsp->inspection_officer_name }}</span></div>
+            <div class="item" style="grid-column: span 2;"><span class="label">Officer Statement:</span><span class="value">"{{ $latestBreakerOffInsp->officer_statement }}"</span></div>
+        @endif
+    </div>
+    @if($latestBreakerOffInsp?->meter_image)
+        <div style="margin-top: 10px; margin-bottom: 15px;">
+            <span class="label" style="display: block; margin-bottom: 5px;">Final Meter Photo Proof:</span>
+            <img src="{{ $latestBreakerOffInsp->meter_image_url }}" alt="Meter Photo Proof" style="max-height: 140px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+    @endif
+    @endif
+
     <div class="declaration">
         <strong>Declaration:</strong> I, the undersigned tenant, hereby declare that I am vacating Unit {{ $tenant->unit ? $tenant->unit->unit_number : '' }} at Palladium Mall. I confirm that I have cleared all utilities, gas, water, maintenance, and rent dues as listed above, and that the unit's inventory has been handed back to the management. The security deposit refund calculations (Initial Deposit: {{ number_format($agreement->security_deposit) }} PKR, Dues Deducted: {{ number_format($outstanding) }} PKR, Damages Deducted: {{ number_format($damageDeduction ?? 0) }} PKR, Net Refund: {{ number_format($netRefund ?? max(0, $agreement->security_deposit - $outstanding)) }} PKR) are agreed upon, and no further claims remain pending against either party.
     </div>

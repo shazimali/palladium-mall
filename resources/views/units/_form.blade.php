@@ -182,6 +182,21 @@ Structural and ownership fields managed directly in the Units module.
                     <p class="mt-1.5 text-sm font-semibold text-red-500">{{ $message }}</p>
                 @enderror
             </div>
+
+            {{-- Breaker Status --}}
+            <div>
+                <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    Electricity Breaker Status
+                </label>
+                <select name="breaker_status"
+                    class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    <option value="off" {{ old('breaker_status', $unit->breaker_status ?? 'off') === 'off' ? 'selected' : '' }}>⚡ BREAKER OFF</option>
+                    <option value="on" {{ old('breaker_status', $unit->breaker_status ?? 'off') === 'on' ? 'selected' : '' }}>⚡ BREAKER ON</option>
+                </select>
+                @error('breaker_status')
+                    <p class="mt-1.5 text-sm font-semibold text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
         </div>
     </div>
 

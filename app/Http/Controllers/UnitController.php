@@ -263,6 +263,7 @@ class UnitController extends Controller
             'payments.paymentAccount',
             'otherTenant',
             'otherTenantHistory.otherTenant',
+            'breakerInspections',
         ]);
 
         $agreements = $unit->agreements;
@@ -389,16 +390,20 @@ class UnitController extends Controller
 
         // Sort chronological timeline by date descending
         $timeline = $timeline->sortByDesc('date')->values();
+        $inspectionPersons = \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get();
 
         return view('units.show', [
-            'title' => 'Unit — ' . $unit->unit_number,
-            'unit' => $unit,
-            'meters' => $unit->meters->keyBy('type'),
-            'ownerships' => $unit->ownerships,
-            'total_earnings' => $total_earnings,
+            'title'             => 'Unit — ' . $unit->unit_number,
+            'unit'              => $unit,
+            'agreements'        => $agreements,
+            'payments'          => $payments,
+            'ownerships'        => $unit->ownerships,
+            'total_earnings'    => $total_earnings,
             'total_outstanding' => $total_outstanding,
-            'agreements_count' => $agreements_count,
-            'timeline' => $timeline,
+            'agreements_count'  => $agreements_count,
+            'timeline'          => $timeline,
+            'meters'            => $unit->meters->keyBy('type'),
+            'inspectionPersons' => $inspectionPersons,
         ]);
     }
 

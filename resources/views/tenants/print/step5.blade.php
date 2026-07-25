@@ -129,6 +129,25 @@
         @endif
     </div>
 
+    @php
+        $latestBreakerInsp = $tenant->unit ? $tenant->unit->breakerInspections()->where('breaker_status', 'on')->first() : null;
+    @endphp
+    @if($latestBreakerInsp)
+        <div class="section-title">⚡ Electricity Breaker &amp; Initial Meter Handover Verification</div>
+        <div class="info-grid">
+            <div class="info-item"><span class="info-label">Breaker Status:</span><span class="info-value" style="font-weight: bold; color: #16a34a;">ON (Breaker Switched ON for Move-In)</span></div>
+            <div class="info-item"><span class="info-label">Initial Meter Reading:</span><span class="info-value" style="font-weight: bold;">{{ number_format($latestBreakerInsp->meter_reading, 2) }} kWh</span></div>
+            <div class="info-item"><span class="info-label">Inspection Officer:</span><span class="info-value">{{ $latestBreakerInsp->inspection_officer_name }}</span></div>
+            <div class="info-item" style="grid-column: span 2;"><span class="info-label">Officer Statement:</span><span class="info-value">"{{ $latestBreakerInsp->officer_statement }}"</span></div>
+        </div>
+        @if($latestBreakerInsp->meter_image)
+            <div style="margin-top: 10px; margin-bottom: 15px;">
+                <span class="info-label" style="display: block; margin-bottom: 5px;">Initial Meter Photo Proof:</span>
+                <img src="{{ $latestBreakerInsp->meter_image_url }}" alt="Meter Photo Proof" style="max-height: 140px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+        @endif
+    @endif
+
     <div class="signature-area">
         <div class="sig-box">
             Tenant's Signature

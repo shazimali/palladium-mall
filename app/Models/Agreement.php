@@ -72,6 +72,8 @@ class Agreement extends Model
         'status',
         'document',
         'govt_document',
+        'initial_meter_reading',
+        'final_meter_reading',
     ];
 
     protected $casts = [
@@ -84,6 +86,8 @@ class Agreement extends Model
         'grace_period_days' => 'integer',
         'payment_due_day' => 'integer',
         'notice_period_months' => 'integer',
+        'initial_meter_reading' => 'decimal:2',
+        'final_meter_reading' => 'decimal:2',
     ];
 
     // -----------------------------------------------------------------------

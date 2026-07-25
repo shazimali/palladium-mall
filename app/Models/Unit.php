@@ -26,6 +26,7 @@ class Unit extends Model
         'area_id',
         'type',
         'status',
+        'breaker_status',
         'is_self',
         'default_maintenance_charge',
         'default_monthly_rent',
@@ -206,5 +207,84 @@ class Unit extends Model
     public function otherTenantHistory(): HasMany
     {
         return $this->hasMany(OtherTenantUnitHistory::class)->orderBy('attached_at', 'desc');
+    }
+
+    public function breakerInspections(): HasMany
+    {
+        return $this->hasMany(UnitBreakerInspection::class)->orderBy('inspected_at', 'desc')->orderBy('id', 'desc');
+    }
+
+    public function latestBreakerInspection(): HasOne
+    {
+        return $this->hasOne(UnitBreakerInspection::class)->latestOfMany();
+    }
+
+    public function isBreakerOn(): bool
+    {
+        return $this->breaker_status === 'on';
+    }
+
+    public function isBreakerOff(): bool
+    {
+        return $this->breaker_status === 'off';
+    }
+
+    public function hasVacantBreakerWarning(): bool
+    {
+        $isEffectiveVacant = $this->status === 'vacant' && !($this->is_self && $this->otherTenant);
+        return $isEffectiveVacant && $this->isBreakerOn();
+    }
+
+    public function getLatestMeterReading(): ?float
+    {
+        // 1. Check latest electricity payment for this unit with current_reading
+        $latestPaymentReading = Payment::where('unit_id', $this->id)
+            ->where(function ($q) {
+                $q->where('type', 'electricity')->orWhere('type', 'meter');
+            })
+            ->whereNotNull('current_reading')
+            ->where('current_reading', '>', 0)
+            ->latest('id')
+            ->value('current_reading');
+
+        if ($latestPaymentReading !== null) {
+            return (float) $latestPaymentReading;
+        }
+
+        // 2. Check latest Breaker Inspection
+        $latestInspectionReading = $this->breakerInspections()
+            ->whereNotNull('meter_reading')
+            ->where('meter_reading', '>', 0)
+            ->value('meter_reading');
+
+        if ($latestInspectionReading !== null) {
+            return (float) $latestInspectionReading;
+        }
+
+        // 3. Check latest Agreement final or initial meter reading for this unit
+        $latestAgreementReading = Agreement::where('unit_id', $this->id)
+            ->where(function ($q) {
+                $q->whereNotNull('final_meter_reading')->orWhereNotNull('initial_meter_reading');
+            })
+            ->latest('id')
+            ->first();
+
+        if ($latestAgreementReading) {
+            if ($latestAgreementReading->final_meter_reading > 0) {
+                return (float) $latestAgreementReading->final_meter_reading;
+            }
+            if ($latestAgreementReading->initial_meter_reading > 0) {
+                return (float) $latestAgreementReading->initial_meter_reading;
+            }
+        }
+
+        // 4. Check Meter model if exists for this unit
+        $meterReading = $this->meters()
+            ->where('type', 'electricity')
+            ->whereNotNull('current_reading')
+            ->where('current_reading', '>', 0)
+            ->value('current_reading');
+
+        return $meterReading ? (float) $meterReading : null;
     }
 }

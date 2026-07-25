@@ -248,6 +248,80 @@
             @endif
         </div>
 
+        {{-- Electricity Breaker & Initial Meter Inspection --}}
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
+            <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
+                <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide flex items-center gap-2">
+                    <span>⚡ Electricity Breaker &amp; Meter Handover Details</span>
+                </h3>
+                <div class="flex items-center gap-3">
+                    <a href="{{ route('tenants.printStep', [$tenant, 5]) }}" target="_blank"
+                       class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Print Breaker Inspection
+                    </a>
+                    <span class="text-gray-300 dark:text-gray-700">|</span>
+                    <a href="{{ route('tenants.showStep', [$tenant, 5]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                </div>
+            </div>
+
+            @php
+                $insp = $breakerInspection;
+                $initialMeterVal = $agreement?->initial_meter_reading ?? $insp?->meter_reading;
+            @endphp
+
+            @if($initialMeterVal || $insp)
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                    <div>
+                        <span class="text-gray-500 block text-xs">Breaker Status</span>
+                        <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-black bg-green-100 text-green-800 dark:bg-green-950/60 dark:text-green-300 mt-1">
+                            ⚡ BREAKER ON
+                        </span>
+                    </div>
+                    <div>
+                        <span class="text-gray-500 block text-xs">Initial Meter Reading</span>
+                        <span class="font-black text-gray-900 dark:text-white text-base">
+                            {{ number_format($initialMeterVal ?? 0, 2) }} <span class="text-xs font-normal text-gray-500">kWh</span>
+                        </span>
+                    </div>
+                    @if($insp?->inspection_officer_name)
+                        <div>
+                            <span class="text-gray-500 block text-xs">Inspection Officer</span>
+                            <span class="font-semibold text-gray-800 dark:text-gray-200">{{ $insp->inspection_officer_name }}</span>
+                        </div>
+                    @endif
+                    @if($insp?->signed_inspection_doc)
+                        <div>
+                            <span class="text-gray-500 block text-xs">Signed Inspection Document</span>
+                            <a href="{{ $insp->signed_inspection_doc_url }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:underline mt-1">
+                                📄 View Signed PDF / Form
+                            </a>
+                        </div>
+                    @endif
+                    @if($insp?->officer_statement)
+                        <div class="md:col-span-2">
+                            <span class="text-gray-500 block text-xs">Officer Verification Statement</span>
+                            <p class="text-xs text-gray-700 dark:text-gray-300 italic bg-gray-50 dark:bg-white/[0.02] p-2.5 rounded-lg border border-gray-100 dark:border-gray-800 mt-1">
+                                "{{ $insp->officer_statement }}"
+                            </p>
+                        </div>
+                    @endif
+                    @if($insp?->meter_image)
+                        <div class="md:col-span-2">
+                            <span class="text-gray-500 block text-xs mb-1">Meter Photo Proof</span>
+                            <a href="{{ $insp->meter_image_url }}" target="_blank" class="inline-block">
+                                <img src="{{ $insp->meter_image_url }}" alt="Meter Photo Proof" class="h-20 w-20 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shadow-xs hover:scale-105 transition-transform">
+                            </a>
+                        </div>
+                    @endif
+                </div>
+            @else
+                <p class="text-sm text-yellow-500">Breaker inspection record not completed yet.</p>
+            @endif
+        </div>
+
         {{-- Checklists --}}
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">

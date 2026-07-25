@@ -82,6 +82,54 @@
                 </div>
             </div>
 
+            {{-- ⚡ Electricity Breaker & Initial Meter Inspection --}}
+            <div class="{{ $sectionClass }}">
+                <h4 class="{{ $sectionTitle }} flex items-center gap-2">
+                    <span>⚡ Electricity Breaker &amp; Initial Meter Inspection</span>
+                </h4>
+                <p class="text-xs text-gray-500 mb-4">Record initial meter reading, officer verification statement, photo proof, and upload the signed handover form to safely switch breaker <strong>ON</strong> for tenant move-in.</p>
+                
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label class="{{ $label }}">Initial Meter Reading (kWh) <span class="text-red-500">*</span></label>
+                        <input type="number" step="0.01" name="meter_reading" value="{{ old('meter_reading', $defaultMeterReading ?? '') }}" placeholder="e.g. 14850.50" class="{{ $input }}" required>
+                        @error('meter_reading') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="{{ $label }}">Meter Reading Photo Proof</label>
+                        <input type="file" name="meter_image" accept="image/*" class="{{ $input }}">
+                        @error('meter_image') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="{{ $label }}">Inspection Officer <span class="text-red-500">*</span></label>
+                        <select name="inspection_person_id" class="{{ $input }}" required>
+                            <option value="">Select Inspection Officer</option>
+                            @foreach($inspectionPersons as $person)
+                                <option value="{{ $person->id }}" {{ old('inspection_person_id', $cl?->inspection_person_id ?? '') == $person->id ? 'selected' : '' }}>
+                                    {{ $person->name }} ({{ $person->role ?? $person->designation ?? 'Inspector' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('inspection_person_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="{{ $label }}">Upload Signed Inspection PDF / Form</label>
+                        <input type="file" name="signed_inspection_doc" accept="application/pdf,image/*" class="{{ $input }}">
+                        <p class="mt-1 text-xs text-gray-400">Download/print handover PDF, get physical signatures, then upload here.</p>
+                        @error('signed_inspection_doc') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="{{ $label }}">Officer Statement / Handover Verification <span class="text-red-500">*</span></label>
+                        <textarea name="officer_statement" rows="2" class="{{ $input }}" required>I inspect and confirm initial electricity meter reading and switch breaker ON for tenant move-in.</textarea>
+                        @error('officer_statement') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+            </div>
+
             @php
             $sections = [
                 '1. General Cleanliness' => [
