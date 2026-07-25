@@ -37,7 +37,7 @@ class OtherTenantController extends Controller
             }
         }
 
-        $query = OtherTenant::with(['unit.floor', 'unit.block', 'unitHistory'])
+        $query = OtherTenant::with(['unit.floor', 'unit.block', 'unitHistory.unit'])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($filterYear, function ($q) use ($filterMonth, $filterYear) {
                 return $q->whereHas('unitHistory', function ($historyQ) use ($filterMonth, $filterYear) {
@@ -85,6 +85,52 @@ class OtherTenantController extends Controller
             'otherTenants' => $otherTenants,
             'counts'       => $counts,
             'selfUnits'    => $selfUnits,
+        ]);
+    }
+
+    /**
+     * Print the list of other tenants.
+     */
+    public function print(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('other_tenants.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $filterMonth = null;
+        $filterYear = null;
+
+        if ($request->filled('filter_month')) {
+            try {
+                $date = Carbon::parse($request->filter_month);
+                $filterMonth = $date->month;
+                $filterYear = $date->year;
+            } catch (\Exception $e) {
+                // Ignore parse errors
+            }
+        }
+
+        $otherTenants = OtherTenant::with(['unit.floor', 'unit.block', 'unitHistory.unit'])
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($filterYear, function ($q) use ($filterMonth, $filterYear) {
+                return $q->whereHas('unitHistory', function ($historyQ) use ($filterMonth, $filterYear) {
+                    $start = Carbon::create($filterYear, $filterMonth, 1)->startOfMonth()->toDateString();
+                    $end = Carbon::create($filterYear, $filterMonth, 1)->endOfMonth()->toDateString();
+                    return $historyQ->where('attached_at', '<=', $end)
+                        ->where(function ($sub) use ($start) {
+                            $sub->whereNull('detached_at')
+                                ->orWhere('detached_at', '>=', $start);
+                        });
+                });
+            })
+            ->when($request->status === 'attached', fn($q) => $q->whereNotNull('unit_id'))
+            ->when($request->status === 'detached', fn($q) => $q->whereNull('unit_id'))
+            ->latest()
+            ->get();
+
+        return view('other-tenants.print', [
+            'title'        => 'Other Flat/Shop Tenants List',
+            'otherTenants' => $otherTenants,
         ]);
     }
 
@@ -150,13 +196,20 @@ class OtherTenantController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        if ($request->has('monthly_rent') && $request->input('monthly_rent') !== null) {
+            $request->merge(['monthly_rent' => str_replace(',', '', $request->input('monthly_rent'))]);
+        }
+        if ($request->has('maintenance_charge') && $request->input('maintenance_charge') !== null) {
+            $request->merge(['maintenance_charge' => str_replace(',', '', $request->input('maintenance_charge'))]);
+        }
+
         $data = $request->validate([
             'name'               => ['required', 'string', 'max:255'],
             'cnic'               => ['nullable', 'string', 'max:15', 'unique:other_tenants,cnic', 'regex:/^\d{5}-\d{7}-\d{1}$/'],
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
-            'monthly_rent'       => ['nullable', 'numeric', 'min:0'],
+            'monthly_rent'       => ['required', 'numeric', 'min:0'],
             'attached_at'        => ['nullable', 'date'],
             'photo'              => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'unit_id'            => [
@@ -170,9 +223,13 @@ class OtherTenantController extends Controller
                 }
             ],
         ], [
-            'cnic.regex'    => 'CNIC format must be: 35201-1234567-1',
-            'cnic.unique'   => 'This CNIC is already registered to another tenant.',
+            'monthly_rent.required' => 'Monthly rent is required.',
+            'cnic.regex'            => 'CNIC format must be: 35201-1234567-1',
+            'cnic.unique'           => 'This CNIC is already registered to another tenant.',
         ]);
+
+        $data['monthly_rent'] = isset($data['monthly_rent']) && $data['monthly_rent'] !== '' ? $data['monthly_rent'] : 0;
+        $data['maintenance_charge'] = isset($data['maintenance_charge']) && $data['maintenance_charge'] !== '' ? $data['maintenance_charge'] : 0;
 
         if ($request->hasFile('photo')) {
             $data['photo'] = $request->file('photo')->store('other_tenants/photos', 'public');
@@ -228,13 +285,20 @@ class OtherTenantController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
+        if ($request->has('monthly_rent') && $request->input('monthly_rent') !== null) {
+            $request->merge(['monthly_rent' => str_replace(',', '', $request->input('monthly_rent'))]);
+        }
+        if ($request->has('maintenance_charge') && $request->input('maintenance_charge') !== null) {
+            $request->merge(['maintenance_charge' => str_replace(',', '', $request->input('maintenance_charge'))]);
+        }
+
         $data = $request->validate([
             'name'               => ['required', 'string', 'max:255'],
             'cnic'               => ['nullable', 'string', 'max:15', 'unique:other_tenants,cnic,' . $otherTenant->id, 'regex:/^\d{5}-\d{7}-\d{1}$/'],
             'phone'              => ['nullable', 'string', 'max:20'],
             'whatsapp_number'    => ['nullable', 'string', 'max:20'],
             'maintenance_charge' => ['nullable', 'numeric', 'min:0'],
-            'monthly_rent'       => ['nullable', 'numeric', 'min:0'],
+            'monthly_rent'       => ['required', 'numeric', 'min:0'],
             'attached_at'        => ['nullable', 'date'],
             'photo'              => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'delete_photo'       => ['nullable', 'boolean'],
@@ -251,9 +315,13 @@ class OtherTenantController extends Controller
                 }
             ],
         ], [
-            'cnic.regex'    => 'CNIC format must be: 35201-1234567-1',
-            'cnic.unique'   => 'This CNIC is already registered to another tenant.',
+            'monthly_rent.required' => 'Monthly rent is required.',
+            'cnic.regex'            => 'CNIC format must be: 35201-1234567-1',
+            'cnic.unique'           => 'This CNIC is already registered to another tenant.',
         ]);
+
+        $data['monthly_rent'] = isset($data['monthly_rent']) && $data['monthly_rent'] !== '' ? $data['monthly_rent'] : 0;
+        $data['maintenance_charge'] = isset($data['maintenance_charge']) && $data['maintenance_charge'] !== '' ? $data['maintenance_charge'] : 0;
 
         if ($request->boolean('delete_photo')) {
             if ($otherTenant->photo) {

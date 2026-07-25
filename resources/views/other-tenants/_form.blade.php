@@ -285,7 +285,7 @@
         }
     }">
         <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Monthly Rent (Rs.) <span class="text-xs text-gray-400">(Landlord's Share)</span>
+            Monthly Rent (Rs.) <span class="text-red-500">*</span> <span class="text-xs text-gray-400">(Landlord's Share)</span>
         </label>
         {{-- Hidden raw value submitted to backend --}}
         <input type="hidden" name="monthly_rent" :value="rentRaw">
