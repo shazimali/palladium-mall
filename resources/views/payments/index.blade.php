@@ -172,36 +172,13 @@
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors {{ $hasActiveFilters ? '' : 'hidden' }}">
                         Clear
                     </button>
-                    {{-- Bulk Generate button --}}
-                    @if(auth()->user()->hasPermission('payments.create') || auth()->user()->isSuperAdmin())
-                        <button type="button" x-data @click="$dispatch('open-bulk-generate')"
-                            class="inline-flex items-center gap-2 rounded-lg border border-brand-500 px-4 py-2 text-sm font-medium text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Bulk Generate
-                        </button>
-
-                        @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
-                            <button type="button" x-data @click="$dispatch('open-bulk-edit')"
-                                class="inline-flex items-center gap-2 rounded-lg border border-amber-600 px-4 py-2 text-sm font-medium text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20 transition-colors">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Bulk Edit
-                            </button>
-
-                            <button type="button" x-data @click="$dispatch('open-bulk-delete')"
-                                class="inline-flex items-center gap-2 rounded-lg border border-red-500 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Bulk Delete
-                            </button>
-                        @endif
+                    {{-- Bulk Operations Tool Button --}}
+                    @if(auth()->user()->hasPermission('payments.bulk-generate') || auth()->user()->isSuperAdmin())
+                        <a href="{{ route('payments.bulk-management') }}"
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-black text-white hover:bg-brand-700 transition-colors shadow-sm">
+                            ⚡ Bulk Operations Tool
+                        </a>
+                    @endif
 
                         <a href="{{ route('payments.history') }}"
                             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.03] transition-colors">
@@ -224,7 +201,6 @@
                             </svg>
                             Billing
                         </a>
-                    @endif
                 </div>
             </div>
             <!-- Filters & Search -->
@@ -821,130 +797,6 @@
                         fetchResults();
                     }
                 });
-
-                flatpickr('#bulk_month', {
-                    dateFormat: 'Y-m-01',
-                    altInput: true,
-                    altFormat: 'F Y',
-                    allowInput: false,
-                    disableMobile: true,
-                    plugins: [
-                        new monthSelectPlugin({
-                            shorthand: false,
-                            dateFormat: 'Y-m-01',
-                            altFormat: 'F Y',
-                            theme: 'light',
-                        })
-                    ],
-                });
-
-                flatpickr('#bulk_due_date', {
-                    dateFormat: 'Y-m-d',
-                    allowInput: true,
-                    disableMobile: true,
-                });
-
-                flatpickr('#bulk_edit_source_month', {
-                    dateFormat: 'Y-m-01',
-                    altInput: true,
-                    altFormat: 'F Y',
-                    allowInput: false,
-                    disableMobile: true,
-                    plugins: [
-                        new monthSelectPlugin({
-                            shorthand: false,
-                            dateFormat: 'Y-m-01',
-                            altFormat: 'F Y',
-                            theme: 'light',
-                        })
-                    ],
-                });
-
-                flatpickr('#bulk_edit_target_month', {
-                    dateFormat: 'Y-m-01',
-                    altInput: true,
-                    altFormat: 'F Y',
-                    allowInput: false,
-                    disableMobile: true,
-                    plugins: [
-                        new monthSelectPlugin({
-                            shorthand: false,
-                            dateFormat: 'Y-m-01',
-                            altFormat: 'F Y',
-                            theme: 'light',
-                        })
-                    ],
-                });
-
-                flatpickr('#bulk_edit_target_due_date', {
-                    dateFormat: 'Y-m-d',
-                    allowInput: true,
-                    disableMobile: true,
-                });
-
-                // Bulk Delete month picker
-                flatpickr('#bulk_delete_month', {
-                    dateFormat: 'Y-m-01',
-                    altInput: true,
-                    altFormat: 'F Y',
-                    allowInput: false,
-                    disableMobile: true,
-                    plugins: [
-                        new monthSelectPlugin({
-                            shorthand: false,
-                            dateFormat: 'Y-m-01',
-                            altFormat: 'F Y',
-                            theme: 'light',
-                        })
-                    ],
-                });
             });
-
-            // ── Bulk Delete SweetAlert Confirmation ──────────────────────────
-            function confirmBulkDelete() {
-                const monthInput = document.getElementById('bulk_delete_month');
-                const checkedTypes = document.querySelectorAll('.bulk-delete-type-cb:checked');
-
-                if (!monthInput || !monthInput.value) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Month Required',
-                        text: 'Please select a billing month before deleting.',
-                        confirmButtonColor: '#ef4444',
-                    });
-                    return;
-                }
-
-                if (checkedTypes.length === 0) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Type Required',
-                        text: 'Please select at least one billing type to delete.',
-                        confirmButtonColor: '#ef4444',
-                    });
-                    return;
-                }
-
-                // Get a readable month label from the altInput
-                const altInput = monthInput.nextElementSibling;
-                const monthLabel = (altInput && altInput.classList.contains('flatpickr-input')) ? altInput.value : monthInput.value;
-                const typeLabels = Array.from(checkedTypes).map(cb => cb.closest('label').textContent.trim()).join(', ');
-
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Delete Unpaid Billings?',
-                    html: `This will permanently delete all <strong>unpaid</strong> billings for <strong>${monthLabel}</strong> of type: <strong>${typeLabels}</strong>.<br><br>Partial and paid records will <strong>not</strong> be affected. This action cannot be undone.`,
-                    showCancelButton: true,
-                    confirmButtonColor: '#dc2626',
-                    cancelButtonColor: '#6b7280',
-                    confirmButtonText: 'Yes, Delete Unpaid',
-                    cancelButtonText: 'Cancel',
-                    reverseButtons: true,
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        document.getElementById('bulk-delete-form').submit();
-                    }
-                });
-            }
         </script>
     @endpush

@@ -188,6 +188,12 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:payments.bulk-generate')->group(function () {
+        Route::get('payments/bulk-management', [PaymentController::class, 'bulkManagementForm'])
+            ->name('payments.bulk-management');
+        Route::post('payments/bulk-preview', [PaymentController::class, 'bulkPreview'])
+            ->name('payments.bulk-preview');
+        Route::post('payments/bulk-commit', [PaymentController::class, 'bulkCommit'])
+            ->name('payments.bulk-commit');
         Route::post('payments/bulk-generate', [PaymentController::class, 'bulkGenerate'])
             ->name('payments.bulk-generate');
         Route::post('payments/bulk-edit', [PaymentController::class, 'bulkEdit'])

@@ -846,6 +846,285 @@ class PaymentController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // Bulk Operations & Staging Management Tool
+    // -----------------------------------------------------------------------
+
+    public function bulkManagementForm(Request $request): View
+    {
+        return view('payments.bulk_management', [
+            'title'        => 'Bulk Payments Operations & Staging Management',
+            'action'       => old('action', $request->query('action', 'bulk_generate')),
+            'month'        => old('month', $request->query('month', now()->format('Y-m'))),
+            'types'        => old('types', $request->query('types', ['rent', 'maintenance'])),
+            'dueDate'      => old('due_date', $request->query('due_date', now()->startOfMonth()->addDays(9)->format('Y-m-d'))),
+            'newMonth'     => old('new_month', $request->query('new_month', '')),
+            'newDueDate'   => old('new_due_date', $request->query('new_due_date', '')),
+            'newAmount'    => old('new_amount', $request->query('new_amount', '')),
+            'stagingItems' => null,
+            'summaryInfo'  => null,
+        ]);
+    }
+
+    public function bulkPreview(Request $request): View
+    {
+        $validated = $request->validate([
+            'action'        => ['required', 'in:bulk_generate,bulk_edit,bulk_delete'],
+            'month'         => ['required', 'date'],
+            'types'         => ['required', 'array', 'min:1'],
+            'types.*'       => ['in:rent,maintenance'],
+            'due_date'      => ['nullable', 'date'],
+            'new_month'     => ['nullable', 'date'],
+            'new_due_date'  => ['nullable', 'date'],
+            'new_amount'    => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $action   = $validated['action'];
+        $parsed   = Carbon::parse($validated['month']);
+        $month    = $parsed->copy()->startOfMonth()->toDateString();
+        $dueDate  = !empty($validated['due_date']) ? Carbon::parse($validated['due_date'])->toDateString() : $parsed->copy()->startOfMonth()->addDays(9)->toDateString();
+        $types    = $validated['types'];
+
+        $stagingItems = [];
+        $summaryInfo  = [
+            'action'       => $action,
+            'month_label'  => $parsed->format('F Y'),
+            'total_count'  => 0,
+            'total_amount' => 0,
+            'types_list'   => implode(', ', array_map('ucfirst', $types)),
+        ];
+
+        if ($action === 'bulk_generate') {
+            $agreements = Agreement::with(['tenant', 'unit.landlord'])
+                ->where('status', 'active')
+                ->get();
+
+            foreach ($agreements as $ag) {
+                foreach ($types as $type) {
+                    if (!in_array($type, ['rent', 'maintenance'])) {
+                        continue;
+                    }
+                    $amount = $type === 'rent' ? (float) $ag->monthly_rent : (float) ($ag->maintenance_charge ?? 0);
+                    if ($amount <= 0) {
+                        continue;
+                    }
+
+                    $exists = Payment::where('agreement_id', $ag->id)
+                        ->where('type', $type)
+                        ->where('month', $month)
+                        ->exists();
+
+                    $stagingItems[] = [
+                        'key'             => "gen_{$ag->id}_{$type}",
+                        'agreement_id'    => $ag->id,
+                        'tenant_id'       => $ag->tenant_id,
+                        'tenant_name'     => $ag->tenant?->name ?? '—',
+                        'unit_id'         => $ag->unit_id,
+                        'unit_number'     => $ag->unit?->unit_number ?? '—',
+                        'type'            => $type,
+                        'month'           => $month,
+                        'current_amount'  => 0,
+                        'proposed_amount' => $amount,
+                        'due_date'        => $dueDate,
+                        'exists'          => $exists,
+                        'status'          => $exists ? 'Already Exists (Will Skip)' : 'Ready to Generate',
+                        'eligible'        => !$exists,
+                    ];
+                }
+            }
+
+            if (in_array('maintenance', $types)) {
+                $selfUnits = Unit::where('is_self', true)->with(['otherTenant', 'landlord'])->get();
+                foreach ($selfUnits as $sUnit) {
+                    $charge = (float) $sUnit->default_maintenance_charge;
+                    if ($charge <= 0) continue;
+
+                    $exists = Payment::where('unit_id', $sUnit->id)->where('type', 'maintenance')->where('month', $month)->exists();
+
+                    $stagingItems[] = [
+                        'key'             => "gen_self_{$sUnit->id}_maintenance",
+                        'agreement_id'    => null,
+                        'tenant_id'       => null,
+                        'other_tenant_id' => $sUnit->otherTenant?->id,
+                        'tenant_name'     => $sUnit->otherTenant?->name ?? ($sUnit->landlord?->name . ' (Landlord)'),
+                        'unit_id'         => $sUnit->id,
+                        'unit_number'     => $sUnit->unit_number,
+                        'type'            => 'maintenance',
+                        'month'           => $month,
+                        'current_amount'  => 0,
+                        'proposed_amount' => $charge,
+                        'due_date'        => $dueDate,
+                        'exists'          => $exists,
+                        'status'          => $exists ? 'Already Exists (Will Skip)' : 'Ready to Generate',
+                        'eligible'        => !$exists,
+                    ];
+                }
+            }
+
+        } elseif ($action === 'bulk_edit') {
+            $newMonth = !empty($validated['new_month']) ? Carbon::parse($validated['new_month'])->startOfMonth()->toDateString() : $month;
+            $newDueDate = !empty($validated['new_due_date']) ? Carbon::parse($validated['new_due_date'])->toDateString() : $dueDate;
+            $newAmount = !empty($validated['new_amount']) ? (float) $validated['new_amount'] : null;
+
+            $payments = Payment::with(['tenant', 'unit', 'otherTenant'])
+                ->where('month', $month)
+                ->whereIn('type', $types)
+                ->where('status', 'unpaid')
+                ->get();
+
+            foreach ($payments as $p) {
+                $proposedAmount = $newAmount !== null ? $newAmount : (float) $p->amount;
+                $stagingItems[] = [
+                    'key'             => "edit_{$p->id}",
+                    'payment_id'      => $p->id,
+                    'tenant_name'     => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
+                    'unit_number'     => $p->unit?->unit_number ?? '—',
+                    'type'            => $p->type,
+                    'month'           => $p->month->format('Y-m-d'),
+                    'new_month'       => $newMonth,
+                    'current_amount'  => (float) $p->amount,
+                    'proposed_amount' => $proposedAmount,
+                    'current_due_date'=> $p->due_date->format('Y-m-d'),
+                    'new_due_date'    => $newDueDate,
+                    'status'          => 'Ready to Update',
+                    'eligible'        => true,
+                ];
+            }
+
+        } elseif ($action === 'bulk_delete') {
+            $payments = Payment::with(['tenant', 'unit', 'otherTenant'])
+                ->where('month', $month)
+                ->whereIn('type', $types)
+                ->where('status', 'unpaid')
+                ->get();
+
+            foreach ($payments as $p) {
+                $stagingItems[] = [
+                    'key'             => "del_{$p->id}",
+                    'payment_id'      => $p->id,
+                    'tenant_name'     => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
+                    'unit_number'     => $p->unit?->unit_number ?? '—',
+                    'type'            => $p->type,
+                    'month'           => $p->month->format('Y-m-d'),
+                    'current_amount'  => (float) $p->amount,
+                    'proposed_amount' => 0,
+                    'due_date'        => $p->due_date->format('Y-m-d'),
+                    'status'          => 'Ready to Delete',
+                    'eligible'        => true,
+                ];
+            }
+        }
+
+        $summaryInfo['total_count'] = count(array_filter($stagingItems, fn($i) => $i['eligible']));
+        $summaryInfo['total_amount'] = array_sum(array_map(fn($i) => $i['eligible'] ? $i['proposed_amount'] : 0, $stagingItems));
+
+        return view('payments.bulk_management', [
+            'title'        => 'Bulk Payments Operations & Staging Management',
+            'action'       => $action,
+            'month'        => $validated['month'],
+            'types'        => $types,
+            'dueDate'      => $dueDate,
+            'newMonth'     => $validated['new_month'] ?? '',
+            'newDueDate'   => $validated['new_due_date'] ?? '',
+            'newAmount'    => $validated['new_amount'] ?? '',
+            'stagingItems' => $stagingItems,
+            'summaryInfo'  => $summaryInfo,
+        ]);
+    }
+
+    public function bulkCommit(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'action'        => ['required', 'in:bulk_generate,bulk_edit,bulk_delete'],
+            'selected_keys' => ['required', 'array', 'min:1'],
+            'payload'       => ['required', 'string'],
+        ]);
+
+        $action       = $validated['action'];
+        $selectedKeys = array_flip($validated['selected_keys']);
+        $stagingItems = json_decode($validated['payload'], true) ?: [];
+
+        $committedCount = 0;
+        $totalAmount    = 0;
+
+        DB::transaction(function () use ($action, $selectedKeys, $stagingItems, &$committedCount, &$totalAmount) {
+            foreach ($stagingItems as $item) {
+                if (!isset($selectedKeys[$item['key']])) {
+                    continue; // skipped by user
+                }
+
+                if ($action === 'bulk_generate') {
+                    if (empty($item['eligible'])) continue;
+
+                    if (!empty($item['agreement_id'])) {
+                        Payment::create([
+                            'tenant_id'    => $item['tenant_id'],
+                            'unit_id'      => $item['unit_id'],
+                            'agreement_id' => $item['agreement_id'],
+                            'type'         => $item['type'],
+                            'month'        => $item['month'],
+                            'amount'       => $item['proposed_amount'],
+                            'amount_paid'  => 0,
+                            'status'       => 'unpaid',
+                            'due_date'     => $item['due_date'],
+                        ]);
+                    } else {
+                        Payment::create([
+                            'tenant_id'       => null,
+                            'other_tenant_id' => $item['other_tenant_id'] ?? null,
+                            'unit_id'         => $item['unit_id'],
+                            'agreement_id'    => null,
+                            'type'            => 'maintenance',
+                            'month'           => $item['month'],
+                            'amount'          => $item['proposed_amount'],
+                            'amount_paid'     => 0,
+                            'status'          => 'unpaid',
+                            'due_date'        => $item['due_date'],
+                        ]);
+                    }
+                    $committedCount++;
+                    $totalAmount += (float) $item['proposed_amount'];
+
+                } elseif ($action === 'bulk_edit') {
+                    $payment = Payment::find($item['payment_id']);
+                    if ($payment && $payment->status === 'unpaid') {
+                        $updates = [];
+                        if (!empty($item['new_month'])) {
+                            $updates['month'] = $item['new_month'];
+                        }
+                        if (!empty($item['new_due_date'])) {
+                            $updates['due_date'] = $item['new_due_date'];
+                        }
+                        if (isset($item['proposed_amount']) && $item['proposed_amount'] > 0) {
+                            $updates['amount'] = $item['proposed_amount'];
+                        }
+
+                        $payment->update($updates);
+                        $committedCount++;
+                        $totalAmount += (float) $payment->amount;
+                    }
+
+                } elseif ($action === 'bulk_delete') {
+                    $payment = Payment::find($item['payment_id']);
+                    if ($payment && $payment->status === 'unpaid') {
+                        $totalAmount += (float) $payment->amount;
+                        $payment->delete();
+                        $committedCount++;
+                    }
+                }
+            }
+        });
+
+        $actionWord = match($action) {
+            'bulk_generate' => 'generated',
+            'bulk_edit'     => 'updated',
+            'bulk_delete'   => 'deleted',
+        };
+
+        return redirect()->route('payments.index')
+            ->with('success', "Bulk operation successful: {$committedCount} payment records {$actionWord} (Total Amount: PKR " . number_format($totalAmount) . ").");
+    }
+
+    // -----------------------------------------------------------------------
     // Bulk Delete
     // -----------------------------------------------------------------------
 
