@@ -107,42 +107,8 @@ class ProfitLossController extends Controller
      */
     private function calculateProfitLossData(string $from, string $to): array
     {
-        // 1. Revenue / Income (Aligned with Cash Receiving Vouchers method)
-        // A. Tenant receiving vouchers
-        $tenantIncomeAll = (float) ReceivingVoucher::where('received_from_type', 'tenant')
-            ->whereBetween('date', [$from, $to])
-            ->sum('amount');
-
-        $excludedAmount = (float) DB::table('receiving_voucher_payments')
-            ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
-            ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
-            ->whereNull('receiving_vouchers.deleted_at')
-            ->whereNull('payments.deleted_at')
-            ->where('receiving_vouchers.received_from_type', 'tenant')
-            ->where(function ($q) {
-                $q->where('payments.type', 'security_deposit')
-                    ->orWhere('payments.landlord_id', '>', 0);
-            })
-            ->where(function ($sq) use ($from, $to) {
-                $sq->whereBetween('payments.month', [$from, $to])
-                    ->orWhereBetween('payments.due_date', [$from, $to]);
-            })
-            ->sum('receiving_voucher_payments.amount_allocated');
-
-        $tenantIncome = max(0.00, $tenantIncomeAll - $excludedAmount);
-
-        // B. Miscellaneous & General Receiving Vouchers
-        $miscIncomeVouchers = (float) ReceivingVoucher::where('received_from_type', 'other')
-            ->whereBetween('date', [$from, $to])
-            ->sum('amount');
-
-        $generalVoucherIncome = (float) \App\Models\GeneralReceivingVoucher::whereBetween('date', [$from, $to])
-            ->sum('amount');
-
-        $miscIncome = $miscIncomeVouchers + $generalVoucherIncome;
-        $totalIncome = $tenantIncome + $miscIncome;
-
-        // C. Detailed Category Breakdown (separating PM Mall vs Other-Owned / Landlord units)
+        // 1. Revenue / Income
+        // A. Allocations from receiving vouchers for payments received in date range
         $allocations = DB::table('receiving_voucher_payments')
             ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
             ->join('units', 'payments.unit_id', '=', 'units.id')
@@ -155,26 +121,38 @@ class ProfitLossController extends Controller
             ->groupBy('units.is_self', 'payments.type')
             ->get();
 
-        $rentPmMall       = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
-        $maintPmMall      = (float) $allocations->where('is_self', false)->where('type', 'maintenance')->sum('total');
-        $extraPmMall      = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
+        $rentPmMall      = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
+        $maintPmMall     = (float) $allocations->where('is_self', false)->where('type', 'maintenance')->sum('total');
+        $maintOtherOwned = (float) $allocations->where('is_self', true)->where('type', 'maintenance')->sum('total');
+        $extraPmMall     = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
 
-        $rentOtherOwned   = (float) $allocations->where('is_self', true)->where('type', 'rent')->sum('total');
-        $maintOtherOwned  = (float) $allocations->where('is_self', true)->where('type', 'maintenance')->sum('total');
-        $extraOtherOwned  = (float) $allocations->where('is_self', true)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
+        // Check for any unallocated tenant vouchers in this date range
+        $tenantIncomeAll = (float) ReceivingVoucher::where('received_from_type', 'tenant')
+            ->whereBetween('date', [$from, $to])
+            ->sum('amount');
 
-        $sumAllocatedTypes = $rentPmMall + $maintPmMall + $extraPmMall + $rentOtherOwned + $maintOtherOwned + $extraOtherOwned;
-        $unallocatedTenantIncome = max(0.00, $tenantIncome - $sumAllocatedTypes);
+        $totalAllocatedTenantVouchers = (float) DB::table('receiving_voucher_payments')
+            ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
+            ->whereNull('receiving_vouchers.deleted_at')
+            ->where('receiving_vouchers.received_from_type', 'tenant')
+            ->whereBetween('receiving_vouchers.date', [$from, $to])
+            ->sum('receiving_voucher_payments.amount_allocated');
+
+        $unallocatedTenantIncome = max(0.00, $tenantIncomeAll - $totalAllocatedTenantVouchers);
+
+        $miscIncome  = 0.00;
+        $totalIncome = $rentPmMall + $maintPmMall + $maintOtherOwned + $extraPmMall + $unallocatedTenantIncome;
 
         $incomeBreakdown = [
-            'rent_pm_mall'       => $rentPmMall,
-            'maint_pm_mall'      => $maintPmMall,
-            'extra_pm_mall'      => $extraPmMall,
-            'rent_other_owned'   => $rentOtherOwned,
-            'maint_other_owned'  => $maintOtherOwned,
-            'extra_other_owned'  => $extraOtherOwned,
-            'other'              => $unallocatedTenantIncome,
+            'rent_pm_mall'      => $rentPmMall,
+            'maint_pm_mall'     => $maintPmMall,
+            'maint_other_owned' => $maintOtherOwned,
+            'extra_pm_mall'     => $extraPmMall,
         ];
+
+        if ($unallocatedTenantIncome > 0) {
+            $incomeBreakdown['other'] = $unallocatedTenantIncome;
+        }
 
         // 2. Expenses
         $expensesByHead = Expense::with('expenseHead')

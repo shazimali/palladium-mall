@@ -142,9 +142,15 @@
                 'other' => 'Other-Owned Billings',
                 default => 'All Billings',
             };
-            $selectedMonth = request('month')
-                ? \Carbon\Carbon::parse(request('month'))->format('F Y')
-                : \Carbon\Carbon::now()->format('F Y');
+            $dateFromReq = request('date_from');
+            $dateToReq = request('date_to');
+            if ($dateFromReq || $dateToReq) {
+                $selectedMonth = ($dateFromReq ? \Carbon\Carbon::parse($dateFromReq)->format('d M Y') : 'Start')
+                    . ' — ' .
+                    ($dateToReq ? \Carbon\Carbon::parse($dateToReq)->format('d M Y') : 'End');
+            } else {
+                $selectedMonth = 'All Time';
+            }
         @endphp
         <x-common.component-card :title="$cardTitle" desc="Track rent, maintenance and fine billings">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -160,12 +166,12 @@
                     </span>
                 </div>
                 @php
-                    $today = \Carbon\Carbon::now()->startOfMonth()->toDateString();
                     $hasActiveFilters = request()->filled('search')
                         || request()->filled('status')
                         || request()->filled('type')
                         || request()->filled('unit_id')
-                        || (request()->filled('month') && request('month') !== $today);
+                        || request()->filled('date_from')
+                        || request()->filled('date_to');
                 @endphp
                 <div class="flex items-center gap-2">
                     <button type="button" id="clear-filters-btn" onclick="clearFilters()"
@@ -267,12 +273,20 @@
                         </select>
                     </div>
 
-                    <!-- Month & Year Filter Datepicker -->
-                    <div class="relative max-w-[180px]">
-                        <input type="text" id="filter_month" name="month"
-                            value="{{ request('month', \Carbon\Carbon::now()->startOfMonth()->toDateString()) }}"
-                            placeholder="Select Month/Year" autocomplete="off"
-                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+                    <!-- Date From Filter -->
+                    <div class="relative max-w-[150px]">
+                        <input type="text" id="filter_date_from" name="date_from"
+                            value="{{ request('date_from') }}"
+                            placeholder="Date From" autocomplete="off"
+                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
+                    </div>
+
+                    <!-- Date To Filter -->
+                    <div class="relative max-w-[150px]">
+                        <input type="text" id="filter_date_to" name="date_to"
+                            value="{{ request('date_to') }}"
+                            placeholder="Date To" autocomplete="off"
+                            class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                     </div>
 
                     <button type="submit" class="hidden">Submit</button>
@@ -588,7 +602,8 @@
                         || params.get('status')
                         || params.get('type')
                         || params.get('unit_id')
-                        || (params.get('month') && params.get('month') !== currentMonthStr);
+                        || params.get('date_from')
+                        || params.get('date_to');
 
                     if (hasFilters) {
                         clearBtn.classList.remove('hidden');
@@ -647,12 +662,15 @@
                     const totalBadge = document.getElementById('badge-total-count');
                     if (totalBadge && total !== null) totalBadge.innerText = total;
 
-                    const monthInput = document.getElementById('filter_month');
-                    if (monthInput) {
-                        const altInput = monthInput.nextElementSibling;
-                        const monthText = (altInput && altInput.classList.contains('flatpickr-input') && altInput.value) ? altInput.value : '';
-                        const monthBadge = document.getElementById('badge-month-label');
-                        if (monthBadge && monthText) monthBadge.innerText = monthText;
+                    const df = document.getElementById('filter_date_from')?.value;
+                    const dt = document.getElementById('filter_date_to')?.value;
+                    const monthBadge = document.getElementById('badge-month-label');
+                    if (monthBadge) {
+                        if (df || dt) {
+                            monthBadge.innerText = (df || 'Start') + ' — ' + (dt || 'End');
+                        } else {
+                            monthBadge.innerText = 'All Time';
+                        }
                     }
 
                     const types = ['grand_total', 'rent', 'services', 'security_deposit'];
@@ -692,12 +710,16 @@
                     const typeSelect = form.querySelector('select[name="type"]');
                     if (typeSelect) typeSelect.value = '';
 
-                    const monthInput = document.getElementById('filter_month');
-                    if (monthInput) {
-                        const today = new Date();
-                        const currentMonthStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-01';
-                        monthInput.value = currentMonthStr;
-                        if (monthInput._flatpickr) monthInput._flatpickr.setDate(currentMonthStr);
+                    const dateFromInput = document.getElementById('filter_date_from');
+                    if (dateFromInput) {
+                        dateFromInput.value = '';
+                        if (dateFromInput._flatpickr) dateFromInput._flatpickr.clear();
+                    }
+
+                    const dateToInput = document.getElementById('filter_date_to');
+                    if (dateToInput) {
+                        dateToInput.value = '';
+                        if (dateToInput._flatpickr) dateToInput._flatpickr.clear();
                     }
                 }
 
@@ -746,8 +768,11 @@
                             const typeVal = form.querySelector('select[name="type"]')?.value;
                             if (typeVal) params.set('type', typeVal);
 
-                            const monthVal = document.getElementById('filter_month')?.value;
-                            if (monthVal) params.set('month', monthVal);
+                            const dateFromVal = document.getElementById('filter_date_from')?.value;
+                            if (dateFromVal) params.set('date_from', dateFromVal);
+
+                            const dateToVal = document.getElementById('filter_date_to')?.value;
+                            if (dateToVal) params.set('date_to', dateToVal);
                         }
 
                         const newUrl = `${window.location.pathname}?${params.toString()}`;
@@ -779,21 +804,24 @@
                     }
                 });
 
-                flatpickr('#filter_month', {
-                    dateFormat: 'Y-m-01',
+                flatpickr('#filter_date_from', {
+                    dateFormat: 'Y-m-d',
                     altInput: true,
-                    altFormat: 'F Y',
-                    allowInput: false,
+                    altFormat: 'd M Y',
+                    allowInput: true,
                     disableMobile: true,
-                    plugins: [
-                        new monthSelectPlugin({
-                            shorthand: false,
-                            dateFormat: 'Y-m-01',
-                            altFormat: 'F Y',
-                            theme: 'light',
-                        })
-                    ],
-                    onChange: function (selectedDates, dateStr, instance) {
+                    onChange: function () {
+                        fetchResults();
+                    }
+                });
+
+                flatpickr('#filter_date_to', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true,
+                    onChange: function () {
                         fetchResults();
                     }
                 });

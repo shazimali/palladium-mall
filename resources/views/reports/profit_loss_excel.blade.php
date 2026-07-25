@@ -86,10 +86,6 @@
                 </tr>
             @endif
         @endforeach
-        <tr>
-            <td style="font-weight: bold;">Miscellaneous Receipts (Vouchers)</td>
-            <td style="text-align: right; font-weight: bold;">{{ $miscIncome }}</td>
-        </tr>
         <tr style="background-color: #F1F5F9;">
             <td style="font-weight: bold;">Total Revenue</td>
             <td style="text-align: right; font-weight: bold; color: #047857;">{{ $totalIncome }}</td>

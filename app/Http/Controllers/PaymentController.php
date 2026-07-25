@@ -21,15 +21,8 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
-        $monthVal = $request->input('month', Carbon::now()->startOfMonth()->toDateString());
-        $month = null;
-        if ($monthVal) {
-            try {
-                $month = Carbon::parse($monthVal)->startOfMonth()->toDateString();
-            } catch (\Exception $e) {
-                // Ignore invalid date formats
-            }
-        }
+        $dateFrom = $request->input('date_from');
+        $dateTo   = $request->input('date_to');
 
         // Base query with tenant constraints for other-owned units
         $baseQuery = Payment::where(function ($q) {
@@ -50,7 +43,8 @@ class PaymentController extends Controller
             ->when($request->type, fn($q) => $q->ofType($request->type))
             ->when($request->status, fn($q) => $q->where('status', $request->status))
             ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id))
-            ->when($month, fn($q) => $q->forMonth($month));
+            ->when($dateFrom, fn($q) => $q->whereDate('month', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('month', '<=', $dateTo));
 
         // Paginate by unit + month combinations to ensure they are never split across pages
         $payments = (clone $filterQuery)->select('unit_id', 'month')
@@ -67,7 +61,7 @@ class PaymentController extends Controller
                     foreach ($payments as $group) {
                         $query->orWhere(function ($q) use ($group) {
                             $q->where('unit_id', $group->unit_id)
-                              || $q->where('month', $group->month);
+                              ->where('month', $group->month);
                         });
                     }
                 })
@@ -78,10 +72,11 @@ class PaymentController extends Controller
             return $payment->unit_id . '_' . ($payment->month ? $payment->month->format('Y-m') : 'no-month');
         });
 
-        // Summary counts for selected month and unit (defaults to current month)
-        $targetMonth = $month ?: Carbon::now()->startOfMonth()->toDateString();
-        $summaryQuery = (clone $baseQuery)->forMonth($targetMonth)
-            ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id));
+        // Summary counts for selected date range
+        $summaryQuery = (clone $baseQuery)
+            ->when($request->unit_id, fn($q) => $q->where('unit_id', $request->unit_id))
+            ->when($dateFrom, fn($q) => $q->whereDate('month', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('month', '<=', $dateTo));
 
         $summary = [
             'total_due' => (float) (clone $summaryQuery)->sum('amount'),

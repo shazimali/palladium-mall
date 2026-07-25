@@ -225,16 +225,6 @@
                                 </tr>
                             @endif
                         @endforeach
-
-                        {{-- Miscellaneous Income --}}
-                        <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
-                            <td class="px-4 py-3 text-gray-700 dark:text-gray-300 font-semibold">
-                                💵 Miscellaneous Receipts (Vouchers)
-                            </td>
-                            <td class="px-4 py-3 text-right font-semibold text-gray-800 dark:text-white">
-                                {{ number_format($miscIncome, 2) }}
-                            </td>
-                        </tr>
                     </tbody>
                     <tfoot>
                         <tr class="font-bold text-sm bg-gray-50 dark:bg-gray-800">

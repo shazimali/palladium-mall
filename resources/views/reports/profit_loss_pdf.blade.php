@@ -231,10 +231,6 @@
                         </tr>
                     @endif
                 @endforeach
-                <tr>
-                    <td style="font-weight: bold;">Miscellaneous Receipts (Vouchers)</td>
-                    <td class="text-right font-bold">{{ number_format($miscIncome, 2) }}</td>
-                </tr>
             </tbody>
             <tfoot>
                 <tr>
