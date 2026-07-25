@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Cash Book Report" />
+    <x-common.page-breadcrumb pageTitle="Daily Cash Book Report" />
 
     {{-- STICKY CASH BOOK LEDGER HEADER --}}
     <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"

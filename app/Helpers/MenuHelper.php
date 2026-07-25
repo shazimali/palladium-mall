@@ -255,7 +255,7 @@ class MenuHelper
             $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];
         }
         if (auth()->check() && $user->can('reports.cashbook')) {
-            $reportsSubItems[] = ['name' => 'Cash Book', 'path' => '/reports/cash-book'];
+            $reportsSubItems[] = ['name' => 'Daily Cash Book', 'path' => '/reports/cash-book'];
         }
 
         if (!empty($reportsSubItems)) {
