@@ -23,43 +23,43 @@ class OwnerDuesController extends Controller
         $dateFrom = $request->query('date_from', now()->startOfMonth()->toDateString());
         $dateTo = $request->query('date_to', now()->endOfMonth()->toDateString());
 
-        // 1. Calculate mall financials for the date range (excluding refundable security deposits & landlord-owned unit payments)
-        $tenantIncomeAll = (float) ReceivingVoucher::where('received_from_type', 'tenant')
-            ->when($dateFrom, fn($q) => $q->whereDate('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->whereDate('date', '<=', $dateTo))
-            ->sum('amount');
-
-        $excludedAmount = (float) \DB::table('receiving_voucher_payments')
+        // 1. Calculate mall financials for the date range (using standard Profit & Loss cash-flow logic)
+        $allocations = \DB::table('receiving_voucher_payments')
             ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
             ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
             ->whereNull('receiving_vouchers.deleted_at')
             ->whereNull('payments.deleted_at')
+            ->whereDate('receiving_vouchers.date', '>=', $dateFrom)
+            ->whereDate('receiving_vouchers.date', '<=', $dateTo)
+            ->where('payments.type', '!=', 'security_deposit')
+            ->select('units.is_self', 'payments.type', \DB::raw('SUM(receiving_voucher_payments.amount_allocated) as total'))
+            ->groupBy('units.is_self', 'payments.type')
+            ->get();
+
+        $rentPmMall      = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
+        $maintPmMall     = (float) $allocations->where('is_self', false)->where('type', 'maintenance')->sum('total');
+        $maintOtherOwned = (float) $allocations->where('is_self', true)->where('type', 'maintenance')->sum('total');
+        $extraPmMall     = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
+
+        $tenantIncomeAll = (float) ReceivingVoucher::where('received_from_type', 'tenant')
+            ->whereDate('date', '>=', $dateFrom)
+            ->whereDate('date', '<=', $dateTo)
+            ->sum('amount');
+
+        $totalAllocatedTenantVouchers = (float) \DB::table('receiving_voucher_payments')
+            ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
+            ->whereNull('receiving_vouchers.deleted_at')
             ->where('receiving_vouchers.received_from_type', 'tenant')
-            ->where(function ($q) {
-                $q->where('payments.type', 'security_deposit')
-                    ->orWhere('payments.landlord_id', '>', 0);
-            })
-            ->when($dateFrom && $dateTo, function ($q) use ($dateFrom, $dateTo) {
-                $q->where(function ($sq) use ($dateFrom, $dateTo) {
-                    $sq->whereBetween('payments.month', [$dateFrom, $dateTo])
-                        ->orWhereBetween('payments.due_date', [$dateFrom, $dateTo]);
-                });
-            })
+            ->whereDate('receiving_vouchers.date', '>=', $dateFrom)
+            ->whereDate('receiving_vouchers.date', '<=', $dateTo)
             ->sum('receiving_voucher_payments.amount_allocated');
 
-        $tenantIncome = max(0.00, $tenantIncomeAll - $excludedAmount);
+        $unallocatedTenantIncome = max(0.00, $tenantIncomeAll - $totalAllocatedTenantVouchers);
 
-        $partyIncome = (float) GeneralReceivingVoucher::query()
-            ->when($dateFrom, fn($q) => $q->whereDate('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->whereDate('date', '<=', $dateTo))
-            ->sum('amount');
+        $totalIncome = $rentPmMall + $maintPmMall + $maintOtherOwned + $extraPmMall + $unallocatedTenantIncome;
 
-        $totalIncome = $tenantIncome + $partyIncome;
-
-        $totalExpenses = (float) Expense::query()
-            ->when($dateFrom, fn($q) => $q->whereDate('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->whereDate('date', '<=', $dateTo))
-            ->sum('amount');
+        $totalExpenses = (float) Expense::whereDate('date', '>=', $dateFrom)->whereDate('date', '<=', $dateTo)->sum('amount');
 
         $netProfit = max(0.00, $totalIncome - $totalExpenses);
 
