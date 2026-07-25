@@ -18,28 +18,49 @@ class DashboardController extends Controller
 {
     public function index(Request $request): View
     {
+        $fromDateInput = $request->input('from_date');
+        $toDateInput = $request->input('to_date');
         $monthInput = $request->input('month');
-        if ($monthInput) {
+
+        if ($fromDateInput && $toDateInput) {
+            try {
+                $fromDate = Carbon::parse($fromDateInput)->startOfDay();
+                $toDate = Carbon::parse($toDateInput)->endOfDay();
+            } catch (\Exception $e) {
+                $fromDate = Carbon::now()->startOfMonth()->startOfDay();
+                $toDate = Carbon::now()->endOfMonth()->endOfDay();
+            }
+        } elseif ($monthInput) {
             try {
                 $parsedDate = Carbon::parse($monthInput)->startOfMonth();
+                $fromDate = $parsedDate->copy()->startOfMonth()->startOfDay();
+                $toDate = $parsedDate->copy()->endOfMonth()->endOfDay();
             } catch (\Exception $e) {
-                $parsedDate = Carbon::now()->startOfMonth();
+                $fromDate = Carbon::now()->startOfMonth()->startOfDay();
+                $toDate = Carbon::now()->endOfMonth()->endOfDay();
             }
         } else {
-            $parsedDate = Carbon::now()->startOfMonth();
+            $fromDate = Carbon::now()->startOfMonth()->startOfDay();
+            $toDate = Carbon::now()->endOfMonth()->endOfDay();
         }
-        $currentMonth = $parsedDate->toDateString();
-        $currentMonthLabel = $parsedDate->format('F Y');
-        $selectedMonthVal = $parsedDate->format('Y-m');
 
-        $today = Carbon::today();
+        $fromDateStr = $fromDate->toDateString();
+        $toDateStr = $toDate->toDateString();
 
-        // 1. Calculate Financial Widgets (Current Month)
-        $currentMonthPayments = Payment::where('month', $currentMonth)->get();
+        if ($fromDate->format('Y-m-d') === $fromDate->copy()->startOfMonth()->format('Y-m-d') &&
+            $toDate->format('Y-m-d') === $fromDate->copy()->endOfMonth()->format('Y-m-d') &&
+            $fromDate->format('Y-m') === $toDate->format('Y-m')) {
+            $dateLabel = $fromDate->format('F Y');
+        } else {
+            $dateLabel = $fromDate->format('d M Y') . ' — ' . $toDate->format('d M Y');
+        }
 
-        $rentPayments = $currentMonthPayments->where('type', 'rent');
-        $depositPayments = $currentMonthPayments->where('type', 'security_deposit');
-        $servicePayments = $currentMonthPayments->whereNotIn('type', ['rent', 'security_deposit']);
+        // 1. Calculate Financial Widgets (Filtered by Date Range)
+        $payments = Payment::whereBetween('month', [$fromDateStr, $toDateStr])->get();
+
+        $rentPayments = $payments->where('type', 'rent');
+        $depositPayments = $payments->where('type', 'security_deposit');
+        $servicePayments = $payments->whereNotIn('type', ['rent', 'security_deposit']);
 
         // Rent sums
         $rentDue = (float) $rentPayments->sum('amount');
@@ -54,8 +75,8 @@ class DashboardController extends Controller
         $servicesPaid = (float) $servicePayments->sum('amount_paid');
 
         // Grand Total sums
-        $grandDue = (float) $currentMonthPayments->sum('amount');
-        $grandPaid = (float) $currentMonthPayments->sum('amount_paid');
+        $grandDue = (float) $payments->sum('amount');
+        $grandPaid = (float) $payments->sum('amount_paid');
 
         $financialWidgets = [
             'grand_total' => [
@@ -92,29 +113,30 @@ class DashboardController extends Controller
             ],
         ];
 
-        // 2. Calculate Flat/Shop/Office Status Grids (3 Rows) matching /units logic
-        $allUnits = Unit::with('otherTenant')->get();
+        // 2. Calculate Flat/Shop/Office Status Grids as per Date Filter Range
+        $allUnits = Unit::with(['otherTenant', 'agreements', 'payments', 'otherTenantHistory'])->get();
         $pmMallUnits = $allUnits->filter(fn($u) => !$u->is_self);
         $otherOwnedUnits = $allUnits->filter(fn($u) => $u->is_self);
 
         return view('dashboard.index', [
             'title' => 'Dashboard',
             'financialWidgets' => $financialWidgets,
-            'currentMonthLabel' => $currentMonthLabel,
-            'selectedMonth' => $selectedMonthVal,
-            'overall' => $this->buildUnitGroupStats($allUnits),
-            'pmMall' => $this->buildUnitGroupStats($pmMallUnits),
-            'otherOwned' => $this->buildUnitGroupStats($otherOwnedUnits),
+            'currentMonthLabel' => $dateLabel,
+            'fromDate' => $fromDateStr,
+            'toDate' => $toDateStr,
+            'overall' => $this->buildUnitGroupStats($allUnits, $fromDateStr, $toDateStr),
+            'pmMall' => $this->buildUnitGroupStats($pmMallUnits, $fromDateStr, $toDateStr),
+            'otherOwned' => $this->buildUnitGroupStats($otherOwnedUnits, $fromDateStr, $toDateStr),
         ]);
     }
 
     /**
      * Build detailed type breakdown (total, flat, shop, office) for rented, vacant, and total units.
      */
-    private function buildUnitGroupStats($unitsCollection): array
+    private function buildUnitGroupStats($unitsCollection, string $fromDateStr, string $toDateStr): array
     {
-        $rentedUnits = $unitsCollection->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant));
-        $vacantUnits = $unitsCollection->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant));
+        $rentedUnits = $unitsCollection->filter(fn($u) => $this->isUnitRentedInRange($u, $fromDateStr, $toDateStr));
+        $vacantUnits = $unitsCollection->filter(fn($u) => !$this->isUnitRentedInRange($u, $fromDateStr, $toDateStr));
 
         return [
             'total' => $unitsCollection->count(),
@@ -135,6 +157,61 @@ class DashboardController extends Controller
     }
 
     /**
+     * Helper to evaluate whether a unit was Rented during a given date range.
+     */
+    private function isUnitRentedInRange($u, string $fromDateStr, string $toDateStr): bool
+    {
+        // 1. Payment check: If payments exist for this unit during the date range, it was rented
+        if ($u->payments && $u->payments->isNotEmpty()) {
+            $hasPayment = $u->payments->contains(function ($p) use ($fromDateStr, $toDateStr) {
+                if (!$p->month) return false;
+                $pMonth = $p->month instanceof Carbon ? $p->month->format('Y-m-d') : substr((string) $p->month, 0, 10);
+                return $pMonth >= $fromDateStr && $pMonth <= $toDateStr;
+            });
+
+            if ($hasPayment) {
+                return true;
+            }
+        }
+
+        // 2. Agreement check (for PM Mall managed units)
+        if (!$u->is_self && $u->agreements && $u->agreements->isNotEmpty()) {
+            $hasAgreement = $u->agreements->contains(function ($a) use ($fromDateStr, $toDateStr) {
+                if (!$a->start_date) return false;
+                $startDate = $a->start_date instanceof Carbon ? $a->start_date->format('Y-m-d') : substr((string) $a->start_date, 0, 10);
+                $endDate = $a->end_date ? ($a->end_date instanceof Carbon ? $a->end_date->format('Y-m-d') : substr((string) $a->end_date, 0, 10)) : null;
+
+                $overlapsStart = $startDate <= $toDateStr;
+                $overlapsEnd = is_null($endDate) || $endDate >= $fromDateStr || $a->status === 'active';
+
+                return $overlapsStart && $overlapsEnd;
+            });
+
+            if ($hasAgreement) {
+                return true;
+            }
+        }
+
+        // 3. Other tenant history check (for Other-Owned units)
+        if ($u->is_self && $u->otherTenantHistory && $u->otherTenantHistory->isNotEmpty()) {
+            $hasHistory = $u->otherTenantHistory->contains(function ($h) use ($fromDateStr, $toDateStr) {
+                if (!$h->attached_at) return false;
+                $attached = $h->attached_at instanceof Carbon ? $h->attached_at->format('Y-m-d') : substr((string) $h->attached_at, 0, 10);
+                $detached = $h->detached_at ? ($h->detached_at instanceof Carbon ? $h->detached_at->format('Y-m-d') : substr((string) $h->detached_at, 0, 10)) : null;
+
+                return $attached <= $toDateStr && (is_null($detached) || $detached >= $fromDateStr);
+            });
+
+            if ($hasHistory) {
+                return true;
+            }
+        }
+
+        // 4. Fallback check for active current status
+        return $u->status === 'rented' || ($u->is_self && $u->otherTenant);
+    }
+
+    /**
      * Show the detailed view of flats and shops grouped by floor and block.
      */
     public function unitsDetail(Request $request): View
@@ -143,23 +220,42 @@ class DashboardController extends Controller
         $status = $request->input('status'); // 'rented', 'vacant', or null
         $isSelf = $type === 'other_owned';
 
-        // Fetch all units of this ownership type with floor, block, area, and otherTenant preloaded
+        $fromDateInput = $request->input('from_date');
+        $toDateInput = $request->input('to_date');
+        if ($fromDateInput && $toDateInput) {
+            try {
+                $fromDateStr = Carbon::parse($fromDateInput)->startOfDay()->toDateString();
+                $toDateStr = Carbon::parse($toDateInput)->endOfDay()->toDateString();
+            } catch (\Exception $e) {
+                $fromDateStr = Carbon::now()->startOfMonth()->toDateString();
+                $toDateStr = Carbon::now()->endOfMonth()->toDateString();
+            }
+        } else {
+            $fromDateStr = Carbon::now()->startOfMonth()->toDateString();
+            $toDateStr = Carbon::now()->endOfMonth()->toDateString();
+        }
+
+        // Fetch all units of this ownership type with floor, block, area, and relations preloaded
         $allUnits = Unit::where('is_self', $isSelf)
-            ->with(['floor', 'block', 'area', 'otherTenant'])
+            ->with(['floor', 'block', 'area', 'otherTenant', 'agreements', 'payments', 'otherTenantHistory'])
             ->get();
+
+        $rentedUnits = $allUnits->filter(fn($u) => $this->isUnitRentedInRange($u, $fromDateStr, $toDateStr));
+        $vacantUnits = $allUnits->filter(fn($u) => !$this->isUnitRentedInRange($u, $fromDateStr, $toDateStr));
+        $rentedUnitIds = $rentedUnits->pluck('id')->toArray();
 
         $stats = [
             'total' => $allUnits->count(),
-            'rented' => $allUnits->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant))->count(),
-            'vacant' => $allUnits->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant))->count(),
+            'rented' => $rentedUnits->count(),
+            'vacant' => $vacantUnits->count(),
         ];
 
         // Filter units displayed in the grid if a specific status was selected
         $displayUnits = $allUnits;
         if ($status === 'rented') {
-            $displayUnits = $allUnits->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant));
+            $displayUnits = $rentedUnits;
         } elseif ($status === 'vacant') {
-            $displayUnits = $allUnits->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant));
+            $displayUnits = $vacantUnits;
         }
 
         // Retrieve floors and blocks in order to populate combos
@@ -185,9 +281,6 @@ class DashboardController extends Controller
         $baseLabel = $type === 'pm_mall' ? 'Palladium Mall Managed' : 'Other-Owned';
         $typeLabel = $status ? ucfirst($status) . ' — ' . $baseLabel : $baseLabel;
 
-        $rentedUnits = $allUnits->filter(fn($u) => $u->status === 'rented' || ($u->is_self && $u->otherTenant));
-        $vacantUnits = $allUnits->filter(fn($u) => $u->status === 'vacant' && !($u->is_self && $u->otherTenant));
-
         $counts = [
             'total' => $allUnits->count(),
             'flats' => $allUnits->where('type', 'flat')->count(),
@@ -206,6 +299,9 @@ class DashboardController extends Controller
             'typeLabel' => $typeLabel,
             'type' => $type,
             'status' => $status,
+            'fromDate' => $fromDateStr,
+            'toDate' => $toDateStr,
+            'rentedUnitIds' => $rentedUnitIds,
             'grouped' => $structuredGrouped,
             'stats' => $stats,
             'counts' => $counts,

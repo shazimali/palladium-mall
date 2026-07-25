@@ -3,7 +3,7 @@
 @section('content')
     <div class="space-y-8">
 
-        {{-- Page Header & Month/Year Filter --}}
+        {{-- Page Header & Date Range Filter --}}
         <div
             class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-6 bg-white dark:bg-white/[0.03] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-theme-xs">
             <div>
@@ -14,12 +14,25 @@
                 </p>
             </div>
 
-            <form action="{{ route('dashboard') }}" method="GET" class="flex items-center gap-2" id="filter-form">
-                <div class="relative">
-                    <label class="sr-only">Filter Month/Year</label>
-                    <input type="text" id="dashboard_month" name="month" value="{{ $selectedMonth }}-01" readonly
-                        class="w-44 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 cursor-pointer">
+            <form action="{{ route('dashboard') }}" method="GET" class="flex flex-wrap items-center gap-3" id="filter-form">
+                <div class="flex items-center gap-2">
+                    <label for="from_date" class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">From:</label>
+                    <input type="text" id="from_date" name="from_date" value="{{ $fromDate }}" placeholder="From Date" readonly
+                        class="w-36 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 cursor-pointer">
                 </div>
+
+                <div class="flex items-center gap-2">
+                    <label for="to_date" class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">To:</label>
+                    <input type="text" id="to_date" name="to_date" value="{{ $toDate }}" placeholder="To Date" readonly
+                        class="w-36 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 cursor-pointer">
+                </div>
+
+                @if(request()->filled('from_date') || request()->filled('to_date') || request()->filled('month'))
+                    <a href="{{ route('dashboard') }}"
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
+                        Reset
+                    </a>
+                @endif
             </form>
         </div>
 
@@ -74,14 +87,14 @@
                     <h3 class="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <span>🏢</span> Overall Flats & Shops Status
                     </h3>
-                    <a href="{{ route('dashboard.units-detail') }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all transform hover:-translate-y-0.5">
                         <span>👁️</span> Detail
                     </a>
                 </div>
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
                     {{-- Total --}}
-                    <a href="{{ route('dashboard.units-detail') }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -113,7 +126,7 @@
                         </div>
                     </a>
                     {{-- Rented (Green) --}}
-                    <a href="{{ route('dashboard.units-detail', ['status' => 'rented']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['status' => 'rented', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -145,7 +158,7 @@
                         </div>
                     </a>
                     {{-- Vacant (Red) --}}
-                    <a href="{{ route('dashboard.units-detail', ['status' => 'vacant']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['status' => 'vacant', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -185,14 +198,14 @@
                     <h3 class="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <span>🏢</span> Palladium Mall Managed Flats & Shops
                     </h3>
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'pm_mall']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'pm_mall', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all transform hover:-translate-y-0.5">
                         <span>👁️</span> Detail
                     </a>
                 </div>
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
                     {{-- Total PM Mall --}}
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'pm_mall']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'pm_mall', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -224,7 +237,7 @@
                         </div>
                     </a>
                     {{-- Rented PM Mall (Green) --}}
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'pm_mall', 'status' => 'rented']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'pm_mall', 'status' => 'rented', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -256,7 +269,7 @@
                         </div>
                     </a>
                     {{-- Vacant PM Mall (Red) --}}
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'pm_mall', 'status' => 'vacant']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'pm_mall', 'status' => 'vacant', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -296,14 +309,14 @@
                     <h3 class="text-base font-bold text-gray-800 dark:text-white flex items-center gap-2">
                         <span>🏢</span> Other-Owned Flats & Shops
                     </h3>
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'other_owned']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'other_owned', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-blue-700 hover:shadow-lg transition-all transform hover:-translate-y-0.5">
                         <span>👁️</span> Detail
                     </a>
                 </div>
                 <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
                     {{-- Total Other-Owned --}}
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'other_owned']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'other_owned', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -335,7 +348,7 @@
                         </div>
                     </a>
                     {{-- Rented Other-Owned (Green) --}}
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'other_owned', 'status' => 'rented']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'other_owned', 'status' => 'rented', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -367,7 +380,7 @@
                         </div>
                     </a>
                     {{-- Vacant Other-Owned (Red) --}}
-                    <a href="{{ route('dashboard.units-detail', ['type' => 'other_owned', 'status' => 'vacant']) }}"
+                    <a href="{{ route('dashboard.units-detail', array_filter(['type' => 'other_owned', 'status' => 'vacant', 'from_date' => request('from_date'), 'to_date' => request('to_date')])) }}"
                         class="group relative block overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
@@ -409,21 +422,24 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (typeof flatpickr !== 'undefined') {
-                flatpickr('#dashboard_month', {
-                    dateFormat: 'Y-m-01',
+                flatpickr('#from_date', {
+                    dateFormat: 'Y-m-d',
                     altInput: true,
-                    altFormat: 'F Y',
+                    altFormat: 'd M Y',
                     allowInput: false,
                     disableMobile: true,
-                    plugins: [
-                        new monthSelectPlugin({
-                            shorthand: false,
-                            dateFormat: 'Y-m-01',
-                            altFormat: 'F Y',
-                            theme: 'light',
-                        })
-                    ],
-                    onChange: function (selectedDates, dateStr, instance) {
+                    onChange: function () {
+                        document.getElementById('filter-form').submit();
+                    }
+                });
+
+                flatpickr('#to_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: false,
+                    disableMobile: true,
+                    onChange: function () {
                         document.getElementById('filter-form').submit();
                     }
                 });
