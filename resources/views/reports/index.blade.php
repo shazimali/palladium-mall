@@ -35,7 +35,8 @@
             'other_owned' => 'Other Owned',
             'occupide' => 'Occupied (Ext)',
             'non_occupide' => 'Vacant (Ext)',
-            'monthly_matrix' => 'Monthly Matrix',
+            'monthly_matrix' => 'Monthly Matrix (Generated)',
+            'monthly_matrix_expected' => 'Monthly Matrix (Expected)',
             'potential_revenue' => 'Fully Rented Forecast',
             default => 'All Data',
         };
@@ -123,7 +124,8 @@
                         <option value="other_owned" {{ ($filters['report_type'] ?? '') === 'other_owned' ? 'selected' : '' }}>Other Owned</option>
                         <option value="occupied" {{ ($filters['report_type'] ?? '') === 'occupied' || ($filters['report_type'] ?? '') === 'occupide' ? 'selected' : '' }}>Occupied (Ext)</option>
                         <option value="non_occupied" {{ ($filters['report_type'] ?? '') === 'non_occupied' || ($filters['report_type'] ?? '') === 'non_occupide' ? 'selected' : '' }}>Vacant (Ext)</option>
-                        <option value="monthly_matrix" {{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'selected' : '' }}>Monthly Matrix</option>
+                        <option value="monthly_matrix" {{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'selected' : '' }}>Monthly Matrix (Generated Billings)</option>
+                        <option value="monthly_matrix_expected" {{ ($filters['report_type'] ?? '') === 'monthly_matrix_expected' ? 'selected' : '' }}>Monthly Matrix (Expected Revenue)</option>
                         <option value="potential_revenue" {{ ($filters['report_type'] ?? '') === 'potential_revenue' ? 'selected' : '' }}>Fully Rented Forecast</option>
                     </select>
                 </div>
@@ -131,17 +133,17 @@
                 {{-- Date From --}}
                 <div class="{{ ($filters['report_type'] ?? '') === 'potential_revenue' ? 'hidden' : '' }}">
                     <label for="date_from" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        {{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Report Month' : 'Date From' }}
+                        {{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? 'Report Month' : 'Date From' }}
                     </label>
                     <input type="text" id="date_from" name="date_from"
                         value="{{ $filters['date_from'] ?? '' }}"
-                        placeholder="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Select Month' : 'Start date' }}"
+                        placeholder="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? 'Select Month' : 'Start date' }}"
                         autocomplete="off"
                         class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600">
                 </div>
 
                 {{-- Date To --}}
-                <div class="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'potential_revenue']) ? 'hidden' : '' }}">
+                <div class="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected', 'potential_revenue']) ? 'hidden' : '' }}">
                     <label for="date_to" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
                         Date To
                     </label>
@@ -334,7 +336,7 @@
         {{-- Dynamic Summary Widgets --}}
         @if($summary)
             @php
-                $isMatrix = ($filters['report_type'] ?? '') === 'monthly_matrix';
+                $isMatrix = in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']);
 
                 // Calculate widget data
                 $wGrandDue = 0; $wGrandPaid = 0; $wGrandUnpaid = 0;
@@ -475,8 +477,8 @@
         {{-- Data Table --}}
         <div class="mt-4">
             <x-common.component-card
-                title="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix - ' . $selectedMonth : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Fully Rented Potential Revenue Forecast' : 'Report Results') }}"
-                desc="{{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Grid matrix for flat status and collections' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Potential monthly revenue snapshot for all flats and shops' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found') }}">
+                title="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? (($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix (Generated Billings) - ' . $selectedMonth : 'Monthly Matrix (Expected Revenue) - ' . $selectedMonth) : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Fully Rented Potential Revenue Forecast' : 'Report Results') }}"
+                desc="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? 'Grid matrix for flat status and collections' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Potential monthly revenue snapshot for all flats and shops' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found') }}">
 
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4 mb-4">
                     <div>
@@ -510,7 +512,7 @@
                 @else
 
 
-                    @if(($filters['report_type'] ?? '') === 'monthly_matrix')
+                    @if(in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']))
                         @include('reports.partials.matrix_table')
                     @elseif(($filters['report_type'] ?? '') === 'potential_revenue')
                         @include('reports.partials.potential_revenue_table')
@@ -753,7 +755,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Date pickers
     if (typeof flatpickr !== 'undefined') {
-        @if(($filters['report_type'] ?? '') === 'monthly_matrix')
+        @if(in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']))
             flatpickr('#date_from', {
                 dateFormat: 'Y-m-01',
                 altInput: true,

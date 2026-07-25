@@ -47,7 +47,7 @@ class ReportController extends Controller
         $summary = null;
 
         if ($hasQuery) {
-            if ($request->report_type === 'monthly_matrix') {
+            if (in_array($request->report_type, ['monthly_matrix', 'monthly_matrix_expected'])) {
                 $entries = $this->buildMatrixEntries($request);
                 $summary = $this->buildMatrixSummary($entries);
             } elseif ($request->report_type === 'potential_revenue') {
@@ -93,7 +93,7 @@ class ReportController extends Controller
         $this->prepareMatrixDate($request);
 
         $reportType = $request->report_type ?? 'all';
-        if ($reportType === 'monthly_matrix') {
+        if (in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
         } elseif ($reportType === 'potential_revenue') {
@@ -126,7 +126,7 @@ class ReportController extends Controller
         $this->prepareMatrixDate($request);
 
         $reportType = $request->report_type ?? 'all';
-        if ($reportType === 'monthly_matrix') {
+        if (in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
         } elseif ($reportType === 'potential_revenue') {
@@ -142,7 +142,7 @@ class ReportController extends Controller
             'landlord_id', 'payment_method', 'payment_account_id', 'unit_status', 'owner_type'
         ]);
 
-        if ($reportType === 'monthly_matrix') {
+        if (in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             $month = ($filters['date_from'] ?? false) ? \Carbon\Carbon::parse($filters['date_from'])->format('F Y') : \Carbon\Carbon::now()->format('F Y');
             $period = $month;
         } else {
@@ -647,6 +647,7 @@ class ReportController extends Controller
         $unitAllocations = $allocations->groupBy('unit_id');
 
         $matrixEntries = collect();
+        $isActualOnly  = $request->report_type === 'monthly_matrix';
 
         foreach ($units as $index => $unit) {
             $agreement = $agreements->get($unit->id)?->first();
@@ -672,7 +673,7 @@ class ReportController extends Controller
             $rentPayment = $unitPayments->where('type', 'rent')->first();
             if ($rentPayment) {
                 $rent_due = (float) $rentPayment->amount;
-            } elseif ($agreement) {
+            } elseif (!$isActualOnly && $agreement) {
                 $rent_due = (float) $agreement->monthly_rent;
             } else {
                 $rent_due = 0.0;
@@ -682,9 +683,9 @@ class ReportController extends Controller
             $maintPayment = $unitPayments->where('type', 'maintenance')->first();
             if ($maintPayment) {
                 $serv_due  = (float) $maintPayment->amount;
-            } elseif ($agreement && $agreement->maintenance_charge > 0) {
+            } elseif (!$isActualOnly && $agreement && $agreement->maintenance_charge > 0) {
                 $serv_due  = (float) $agreement->maintenance_charge;
-            } elseif ($unit->is_self && $unit->default_maintenance_charge > 0) {
+            } elseif (!$isActualOnly && $unit->is_self && $unit->default_maintenance_charge > 0) {
                 // Other-Owned unit: no agreement, fall back to unit's current maintenance charge
                 $serv_due  = (float) $unit->default_maintenance_charge;
             } else {
@@ -695,7 +696,7 @@ class ReportController extends Controller
             $secPayment = $unitPayments->where('type', 'security_deposit')->first();
             if ($secPayment) {
                 $sec_due = (float) $secPayment->amount;
-            } elseif ($agreement) {
+            } elseif (!$isActualOnly && $agreement) {
                 $agreementStartMonth = $agreement->start_date ? $agreement->start_date->format('Y-m') : '';
                 $selectedMonthStr = $month->format('Y-m');
                 $hasExistingPayment = in_array($agreement->id, $existingSecurityDepositAgreementIds);
@@ -944,7 +945,8 @@ class ReportController extends Controller
             'rent'                       => 'Rent Collected',
             'fines'                      => 'Fines',
             'utilities'                  => 'Utilities Paid',
-            'monthly_matrix'             => 'Monthly Matrix',
+            'monthly_matrix'             => 'Monthly Matrix (Generated Billings)',
+            'monthly_matrix_expected'    => 'Monthly Matrix (Expected Revenue)',
             'potential_revenue'          => 'Fully Rented Forecast',
             'maintinance', 'maintenance' => 'Maintenance',
             'other_owned'                => 'Other Owned Payments',
@@ -965,7 +967,7 @@ class ReportController extends Controller
             ]);
         }
 
-        if ($request->report_type === 'monthly_matrix' && !$request->filled('date_from')) {
+        if (in_array($request->report_type, ['monthly_matrix', 'monthly_matrix_expected']) && !$request->filled('date_from')) {
             $request->merge(['date_from' => \Carbon\Carbon::now()->startOfMonth()->toDateString()]);
         }
     }

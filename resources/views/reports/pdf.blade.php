@@ -213,7 +213,7 @@
                 <div class="s-value" style="color:#16A34A;">Rs. {{ number_format($summary['total_combined'], 2) }}</div>
             </div>
         </div>
-    @elseif($reportType === 'monthly_matrix')
+    @elseif(in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected']))
         <div class="summary">
             <div class="s-box total-due">
                 <div class="s-label">Total Amount Due</div>
@@ -333,7 +333,7 @@
     @endif
 
     {{-- Data Table --}}
-    @if($reportType === 'monthly_matrix')
+    @if(in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected']))
         <table>
             <thead>
                 <tr>

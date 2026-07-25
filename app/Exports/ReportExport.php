@@ -35,7 +35,7 @@ class ReportExport implements
 
     public function collection(): Collection
     {
-        if ($this->reportType === 'monthly_matrix') {
+        if (in_array($this->reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             return $this->entries->map(function ($e) {
                 $row = [
                     'SR' => $e['sr'],
@@ -113,7 +113,7 @@ class ReportExport implements
             ];
         }
 
-        if ($this->reportType === 'monthly_matrix') {
+        if (in_array($this->reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             $headers = [
                 'SR',
                 'Date',
@@ -182,7 +182,7 @@ class ReportExport implements
             $sheet->setCellValue("B" . ($summaryRow + 5), number_format($this->summary['total_maintenance'], 2));
             $sheet->setCellValue("A" . ($summaryRow + 6), 'Combined Potential Monthly Revenue (Rs.)');
             $sheet->setCellValue("B" . ($summaryRow + 6), number_format($this->summary['total_combined'], 2));
-        } elseif ($this->reportType === 'monthly_matrix') {
+        } elseif (in_array($this->reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             // Write summary block below the data for Monthly Matrix
             $sheet->setCellValue("A{$summaryRow}", 'Summary');
             $sheet->setCellValue("A" . ($summaryRow + 1), 'Total Serv (Rs.)');
@@ -270,7 +270,7 @@ class ReportExport implements
 
     public function columnWidths(): array
     {
-        if ($this->reportType === 'monthly_matrix') {
+        if (in_array($this->reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             return [];
         }
 
