@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Party extends Model
@@ -21,8 +22,18 @@ class Party extends Model
         'opening_balance' => 'decimal:2',
     ];
 
-    public function dues(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function dues(): HasMany
     {
         return $this->hasMany(PartyDue::class);
+    }
+
+    public function receivingVouchers(): HasMany
+    {
+        return $this->hasMany(GeneralReceivingVoucher::class);
+    }
+
+    public function paymentVouchers(): HasMany
+    {
+        return $this->hasMany(PaymentVoucher::class);
     }
 }
