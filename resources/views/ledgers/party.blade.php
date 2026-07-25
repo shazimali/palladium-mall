@@ -241,7 +241,7 @@
                         @forelse($ledgerEntries as $entry)
                             <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                 <td class="px-4 py-3 text-xs whitespace-nowrap">
-                                    {{ $entry['date']->format('d M Y') }}
+                                    {{ ($entry['date'] instanceof \Carbon\Carbon ? $entry['date'] : \Carbon\Carbon::parse($entry['date']))->format('d M Y') }}
                                 </td>
                                 <td class="px-4 py-3 font-mono font-semibold text-gray-800 dark:text-white/90">
                                     @if($entry['type'] === 'Receipt (General)')

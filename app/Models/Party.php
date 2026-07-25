@@ -14,20 +14,15 @@ class Party extends Model
         'name',
         'phone',
         'whatsapp_number',
+        'opening_balance',
+    ];
+
+    protected $casts = [
+        'opening_balance' => 'decimal:2',
     ];
 
     public function dues(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(PartyDue::class);
-    }
-
-    public function receivingVouchers(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(GeneralReceivingVoucher::class);
-    }
-
-    public function paymentVouchers(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(PaymentVoucher::class);
     }
 }

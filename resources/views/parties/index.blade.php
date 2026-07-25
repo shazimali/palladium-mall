@@ -77,6 +77,7 @@
                         <th class="px-4 py-3">Name</th>
                         <th class="px-4 py-3">Phone</th>
                         <th class="px-4 py-3">WhatsApp Number</th>
+                        <th class="px-4 py-3">Opening Balance</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -99,6 +100,9 @@
                                 @else
                                     —
                                 @endif
+                            </td>
+                            <td class="px-4 py-3 font-mono font-semibold {{ ($party->opening_balance ?? 0) < 0 ? 'text-red-600 dark:text-red-400' : (($party->opening_balance ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : '') }}">
+                                Rs. {{ number_format($party->opening_balance ?? 0, 2) }}
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex items-center justify-end gap-2">
@@ -125,7 +129,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
+                            <td colspan="6" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
                                 No party heads found.
                             </td>
                         </tr>

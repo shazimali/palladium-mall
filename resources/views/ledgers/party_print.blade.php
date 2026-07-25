@@ -126,7 +126,7 @@
         <tbody>
             @forelse($ledgerEntries as $entry)
                 <tr>
-                    <td class="mono">{{ $entry['date']->format('d M Y') }}</td>
+                    <td class="mono">{{ ($entry['date'] instanceof \Carbon\Carbon ? $entry['date'] : \Carbon\Carbon::parse($entry['date']))->format('d M Y') }}</td>
                     <td class="mono"><strong>{{ $entry['ref'] }}</strong></td>
                     <td>{{ $entry['type'] }}</td>
                     <td>{{ $entry['description'] }}</td>

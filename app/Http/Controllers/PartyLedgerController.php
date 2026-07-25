@@ -50,26 +50,41 @@ class PartyLedgerController extends Controller
                 ->get();
 
             // Calculate summaries
-            $summary['total_due_receivable'] = (float) $dues->where('type', 'receivable')->sum('amount');
+            $opBal = (float) ($selectedParty->opening_balance ?? 0);
+            $opReceivable = $opBal > 0 ? $opBal : 0.0;
+            $opPayable = $opBal < 0 ? abs($opBal) : 0.0;
+
+            $summary['total_due_receivable'] = (float) $dues->where('type', 'receivable')->sum('amount') + $opReceivable;
             $summary['total_received'] = (float) $receipts->sum('amount');
             $summary['net_receivable'] = $summary['total_due_receivable'] - $summary['total_received'];
 
-            $summary['total_due_payable'] = (float) $dues->where('type', 'payable')->sum('amount');
+            $summary['total_due_payable'] = (float) $dues->where('type', 'payable')->sum('amount') + $opPayable;
             $summary['total_paid'] = (float) $payments->sum('amount');
             $summary['net_payable'] = $summary['total_due_payable'] - $summary['total_paid'];
 
             // Combine into unified ledger entries
-            // Due Receivable is Dr (Debits what they owe us)
-            // Receipt is Cr (Credits what they owe us)
-            // Due Payable is Cr (Credits what we owe them)
-            // Payment is Dr (Debits what we owe them)
-            
+            // 0. Opening Balance (if any)
+            if ($opBal != 0) {
+                $createdDate = $selectedParty->created_at ? ($selectedParty->created_at instanceof Carbon ? $selectedParty->created_at : Carbon::parse($selectedParty->created_at)) : Carbon::parse('2026-01-01');
+                $ledgerEntries->push([
+                    'id' => null,
+                    'is_due' => false,
+                    'date' => $createdDate,
+                    'created_at' => $selectedParty->created_at ?? now(),
+                    'ref' => 'OP-BAL',
+                    'type' => 'Opening Balance',
+                    'description' => 'Initial Opening Balance',
+                    'debit' => $opReceivable,
+                    'credit' => $opPayable,
+                ]);
+            }
+
             // Dues
             foreach ($dues as $due) {
                 $ledgerEntries->push([
                     'id' => $due->id,
                     'is_due' => true,
-                    'date' => $due->date,
+                    'date' => $due->date instanceof Carbon ? $due->date : Carbon::parse($due->date),
                     'created_at' => $due->created_at,
                     'ref' => $due->reference ?? '—',
                     'type' => $due->type === 'receivable' ? 'Due Receivable' : 'Due Payable',
@@ -84,7 +99,7 @@ class PartyLedgerController extends Controller
                 $ledgerEntries->push([
                     'id' => $receipt->id,
                     'is_due' => false,
-                    'date' => $receipt->date,
+                    'date' => $receipt->date instanceof Carbon ? $receipt->date : Carbon::parse($receipt->date),
                     'created_at' => $receipt->created_at,
                     'ref' => $receipt->voucher_no,
                     'type' => 'Receipt (General)',
@@ -99,7 +114,7 @@ class PartyLedgerController extends Controller
                 $ledgerEntries->push([
                     'id' => $payment->id,
                     'is_due' => false,
-                    'date' => $payment->date,
+                    'date' => $payment->date instanceof Carbon ? $payment->date : Carbon::parse($payment->date),
                     'created_at' => $payment->created_at,
                     'ref' => $payment->voucher_no,
                     'type' => $payment->is_advance ? 'Payment (Advance)' : 'Payment',
@@ -190,11 +205,15 @@ class PartyLedgerController extends Controller
             ->where('paid_to_type', 'other')
             ->get();
 
+        $opBal = (float) ($selectedParty->opening_balance ?? 0);
+        $opReceivable = $opBal > 0 ? $opBal : 0.0;
+        $opPayable = $opBal < 0 ? abs($opBal) : 0.0;
+
         $summary = [
-            'total_due_receivable' => (float) $dues->where('type', 'receivable')->sum('amount'),
+            'total_due_receivable' => (float) $dues->where('type', 'receivable')->sum('amount') + $opReceivable,
             'total_received' => (float) $receipts->sum('amount'),
             'net_receivable' => 0.0,
-            'total_due_payable' => (float) $dues->where('type', 'payable')->sum('amount'),
+            'total_due_payable' => (float) $dues->where('type', 'payable')->sum('amount') + $opPayable,
             'total_paid' => (float) $payments->sum('amount'),
             'net_payable' => 0.0,
         ];
@@ -203,10 +222,24 @@ class PartyLedgerController extends Controller
 
         $ledgerEntries = collect();
 
+        // 0. Opening Balance (if any)
+        if ($opBal != 0) {
+            $createdDate = $selectedParty->created_at ? ($selectedParty->created_at instanceof Carbon ? $selectedParty->created_at : Carbon::parse($selectedParty->created_at)) : Carbon::parse('2026-01-01');
+            $ledgerEntries->push([
+                'date' => $createdDate,
+                'created_at' => $selectedParty->created_at ?? now(),
+                'ref' => 'OP-BAL',
+                'type' => 'Opening Balance',
+                'description' => 'Initial Opening Balance',
+                'debit' => $opReceivable,
+                'credit' => $opPayable,
+            ]);
+        }
+
         // Combine chronologically
         foreach ($dues as $due) {
             $ledgerEntries->push([
-                'date' => $due->date,
+                'date' => $due->date instanceof Carbon ? $due->date : Carbon::parse($due->date),
                 'created_at' => $due->created_at,
                 'ref' => $due->reference ?? '—',
                 'type' => $due->type === 'receivable' ? 'Due Receivable' : 'Due Payable',
@@ -218,7 +251,7 @@ class PartyLedgerController extends Controller
 
         foreach ($receipts as $receipt) {
             $ledgerEntries->push([
-                'date' => $receipt->date,
+                'date' => $receipt->date instanceof Carbon ? $receipt->date : Carbon::parse($receipt->date),
                 'created_at' => $receipt->created_at,
                 'ref' => $receipt->voucher_no,
                 'type' => 'Receipt (General)',
@@ -230,7 +263,7 @@ class PartyLedgerController extends Controller
 
         foreach ($payments as $payment) {
             $ledgerEntries->push([
-                'date' => $payment->date,
+                'date' => $payment->date instanceof Carbon ? $payment->date : Carbon::parse($payment->date),
                 'created_at' => $payment->created_at,
                 'ref' => $payment->voucher_no,
                 'type' => $payment->is_advance ? 'Payment (Advance)' : 'Payment',
