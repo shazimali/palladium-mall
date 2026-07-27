@@ -108,7 +108,7 @@ class ProfitLossController extends Controller
     private function calculateProfitLossData(string $from, string $to): array
     {
         // 1. Revenue / Income
-        // A. Allocations from receiving vouchers for payments received in date range
+        // A. Allocations from receiving vouchers dated in the range
         $allocations = DB::table('receiving_voucher_payments')
             ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
             ->join('units', 'payments.unit_id', '=', 'units.id')
@@ -121,10 +121,41 @@ class ProfitLossController extends Controller
             ->groupBy('units.is_self', 'payments.type')
             ->get();
 
-        $rentPmMall      = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
-        $maintPmMall     = (float) $allocations->where('is_self', false)->where('type', 'maintenance')->sum('total');
-        $maintOtherOwned = (float) $allocations->where('is_self', true)->where('type', 'maintenance')->sum('total');
-        $extraPmMall     = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
+        $allocRentPmMall      = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
+        $allocMaintPmMall     = (float) $allocations->where('is_self', false)->where('type', 'maintenance')->sum('total');
+        $allocMaintOtherOwned = (float) $allocations->where('is_self', true)->where('type', 'maintenance')->sum('total');
+        $allocExtraPmMall     = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
+
+        // B. Payments collected & billed for months in the date range
+        $monthPayments = DB::table('payments')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
+            ->whereNull('payments.deleted_at')
+            ->whereBetween('payments.month', [$from, $to])
+            ->where('payments.type', '!=', 'security_deposit')
+            ->select(
+                'units.is_self', 
+                'payments.type', 
+                DB::raw('SUM(payments.amount) as total_due'),
+                DB::raw('SUM(payments.amount_paid) as total_paid')
+            )
+            ->groupBy('units.is_self', 'payments.type')
+            ->get();
+
+        $billedRentPmMall      = (float) $monthPayments->where('is_self', false)->where('type', 'rent')->sum('total_due');
+        $billedMaintPmMall     = (float) $monthPayments->where('is_self', false)->where('type', 'maintenance')->sum('total_due');
+        $billedMaintOtherOwned = (float) $monthPayments->where('is_self', true)->where('type', 'maintenance')->sum('total_due');
+        $billedExtraPmMall     = (float) $monthPayments->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total_due');
+
+        $payRentPmMall      = (float) $monthPayments->where('is_self', false)->where('type', 'rent')->sum('total_paid');
+        $payMaintPmMall     = (float) $monthPayments->where('is_self', false)->where('type', 'maintenance')->sum('total_paid');
+        $payMaintOtherOwned = (float) $monthPayments->where('is_self', true)->where('type', 'maintenance')->sum('total_paid');
+        $payExtraPmMall     = (float) $monthPayments->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total_paid');
+
+        // Max of voucher allocations or payments collected for period
+        $rentPmMall      = max($allocRentPmMall, $payRentPmMall);
+        $maintPmMall     = max($allocMaintPmMall, $payMaintPmMall);
+        $maintOtherOwned = max($allocMaintOtherOwned, $payMaintOtherOwned);
+        $extraPmMall     = max($allocExtraPmMall, $payExtraPmMall);
 
         // Check for any unallocated tenant vouchers in this date range
         $tenantIncomeAll = (float) ReceivingVoucher::where('received_from_type', 'tenant')
@@ -153,6 +184,45 @@ class ProfitLossController extends Controller
         if ($unallocatedTenantIncome > 0) {
             $incomeBreakdown['other'] = $unallocatedTenantIncome;
         }
+
+        $incomeDetailed = [
+            'rent_pm_mall' => [
+                'label' => '🏠 Rent (PM Mall Units)',
+                'billed' => $billedRentPmMall,
+                'collected' => $rentPmMall,
+                'unpaid' => max(0.0, $billedRentPmMall - $rentPmMall),
+            ],
+            'maint_pm_mall' => [
+                'label' => '🛠️ Maintenance Charges (PM Mall Units)',
+                'billed' => $billedMaintPmMall,
+                'collected' => $maintPmMall,
+                'unpaid' => max(0.0, $billedMaintPmMall - $maintPmMall),
+            ],
+            'maint_other_owned' => [
+                'label' => '🛠️ Maintenance Charges (Landlord / Other-Owned Units)',
+                'billed' => $billedMaintOtherOwned,
+                'collected' => $maintOtherOwned,
+                'unpaid' => max(0.0, $billedMaintOtherOwned - $maintOtherOwned),
+            ],
+            'extra_pm_mall' => [
+                'label' => '💵 Extra Payments (PM Mall Units)',
+                'billed' => $billedExtraPmMall,
+                'collected' => $extraPmMall,
+                'unpaid' => max(0.0, $billedExtraPmMall - $extraPmMall),
+            ],
+        ];
+
+        if ($unallocatedTenantIncome > 0) {
+            $incomeDetailed['other'] = [
+                'label' => '📑 Other Tenant Receipts (Unallocated Vouchers)',
+                'billed' => 0.0,
+                'collected' => $unallocatedTenantIncome,
+                'unpaid' => 0.0,
+            ];
+        }
+
+        $totalBilledIncome  = array_sum(array_column($incomeDetailed, 'billed'));
+        $totalUnpaidIncome  = array_sum(array_column($incomeDetailed, 'unpaid'));
 
         // 2. Expenses
         $expensesByHead = Expense::with('expenseHead')
@@ -185,6 +255,9 @@ class ProfitLossController extends Controller
             'date_from' => $from,
             'date_to' => $to,
             'incomeBreakdown' => $incomeBreakdown,
+            'incomeDetailed' => $incomeDetailed,
+            'totalBilledIncome' => $totalBilledIncome,
+            'totalUnpaidIncome' => $totalUnpaidIncome,
             'miscIncome' => $miscIncome,
             'totalIncome' => $totalIncome,
             'expensesByHead' => $expensesByHead,

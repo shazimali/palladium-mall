@@ -24,8 +24,16 @@
     </thead>
     <tbody>
         <tr>
-            <td>Total Income (A)</td>
+            <td>Total Billed Revenue (Expected)</td>
+            <td style="text-align: right; font-weight: bold;">{{ $totalBilledIncome ?? $totalIncome }}</td>
+        </tr>
+        <tr>
+            <td>Collected Revenue (A)</td>
             <td style="text-align: right; font-weight: bold; color: #047857;">{{ $totalIncome }}</td>
+        </tr>
+        <tr>
+            <td>Unpaid / Outstanding Revenue</td>
+            <td style="text-align: right; font-weight: bold; color: #D97706;">{{ $totalUnpaidIncome ?? 0 }}</td>
         </tr>
         <tr>
             <td>Total Expenses (B)</td>
@@ -40,7 +48,7 @@
 
 <table>
     <tr>
-        <th colspan="2"></th>
+        <th colspan="4"></th>
     </tr>
 </table>
 
@@ -48,47 +56,40 @@
     <thead>
         <tr style="background-color: #1D3461; color: #FFFFFF;">
             <th style="font-weight: bold; width: 300px;">Income Breakdown</th>
-            <th style="font-weight: bold; width: 150px; text-align: right;">Amount (Rs.)</th>
+            <th style="font-weight: bold; width: 150px; text-align: right;">Billed (Rs.)</th>
+            <th style="font-weight: bold; width: 150px; text-align: right;">Collected (Rs.)</th>
+            <th style="font-weight: bold; width: 150px; text-align: right;">Unpaid (Rs.)</th>
         </tr>
     </thead>
     <tbody>
-        @foreach($incomeBreakdown as $type => $amount)
-            @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
-                <tr>
-                    <td>
-                        @switch($type)
-                            @case('rent_pm_mall')
-                                Rent Collected (PM Mall Units)
-                                @break
-                            @case('maint_pm_mall')
-                                Maintenance Charges (PM Mall Units)
-                                @break
-                            @case('extra_pm_mall')
-                                Extra Payments (PM Mall Units)
-                                @break
-                            @case('rent_other_owned')
-                                Rent Collected (Landlord / Other-Owned Units)
-                                @break
-                            @case('maint_other_owned')
-                                Maintenance Charges (Landlord / Other-Owned Units)
-                                @break
-                            @case('extra_other_owned')
-                                Extra Payments (Landlord / Other-Owned Units)
-                                @break
-                            @case('other')
-                                Other Tenant Receipts (Unallocated Vouchers)
-                                @break
-                            @default
-                                Utility: {{ ucfirst($type) }}
-                        @endswitch
-                    </td>
-                    <td style="text-align: right;">{{ $amount }}</td>
-                </tr>
-            @endif
-        @endforeach
+        @if(!empty($incomeDetailed))
+            @foreach($incomeDetailed as $type => $item)
+                @if(($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
+                    <tr>
+                        <td>{{ str_replace(['🏠 ', '🛠️ ', '💵 ', '📑 '], '', $item['label']) }}</td>
+                        <td style="text-align: right;">{{ $item['billed'] }}</td>
+                        <td style="text-align: right; font-weight: bold; color: #047857;">{{ $item['collected'] }}</td>
+                        <td style="text-align: right; font-weight: bold; color: #D97706;">{{ $item['unpaid'] }}</td>
+                    </tr>
+                @endif
+            @endforeach
+        @else
+            @foreach($incomeBreakdown as $type => $amount)
+                @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
+                    <tr>
+                        <td>{{ ucfirst(str_replace('_', ' ', $type)) }}</td>
+                        <td style="text-align: right;">0</td>
+                        <td style="text-align: right; font-weight: bold; color: #047857;">{{ $amount }}</td>
+                        <td style="text-align: right;">0</td>
+                    </tr>
+                @endif
+            @endforeach
+        @endif
         <tr style="background-color: #F1F5F9;">
             <td style="font-weight: bold;">Total Revenue</td>
+            <td style="text-align: right; font-weight: bold;">{{ $totalBilledIncome ?? $totalIncome }}</td>
             <td style="text-align: right; font-weight: bold; color: #047857;">{{ $totalIncome }}</td>
+            <td style="text-align: right; font-weight: bold; color: #D97706;">{{ $totalUnpaidIncome ?? 0 }}</td>
         </tr>
     </tbody>
 </table>

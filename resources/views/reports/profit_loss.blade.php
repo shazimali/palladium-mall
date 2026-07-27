@@ -23,9 +23,15 @@
 
             <div class="flex flex-wrap items-center gap-6">
                 <div class="text-right">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Total Revenue</span>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Collected Revenue</span>
                     <span class="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                         Rs. {{ number_format($totalIncome) }}
+                    </span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Unpaid Revenue</span>
+                    <span class="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400">
+                        Rs. {{ number_format($totalUnpaidIncome ?? 0) }}
                     </span>
                 </div>
                 <div class="text-right">
@@ -155,11 +161,16 @@
     </div>
 
     {{-- Summary Cards --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Income</p>
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Collected Revenue</p>
             <p class="mt-2 text-2xl font-bold text-green-600">Rs. {{ number_format($totalIncome, 2) }}</p>
             <p class="text-[10px] text-gray-400 mt-1">Tenant collections + Misc vouchers</p>
+        </div>
+        <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Unpaid / Outstanding Revenue</p>
+            <p class="mt-2 text-2xl font-bold text-amber-600">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</p>
+            <p class="text-[10px] text-gray-400 mt-1">Pending dues for statement period</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
             <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Expenses</p>
@@ -178,58 +189,58 @@
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
         {{-- Income Details --}}
-        <x-common.component-card title="Income Breakdown" desc="Revenue collected from billing & other sources">
+        <x-common.component-card title="Income Breakdown" desc="Revenue collected vs unpaid outstanding for period">
             <div class="space-y-4">
-                <table class="w-full text-sm text-left">
-                    <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                <table class="w-full text-xs text-left">
+                    <thead class="text-[11px] uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                         <tr>
-                            <th class="px-4 py-2.5">Revenue Category</th>
-                            <th class="px-4 py-2.5 text-right">Collected Amount (Rs.)</th>
+                            <th class="px-3 py-2.5">Revenue Category</th>
+                            <th class="px-3 py-2.5 text-right">Billed (Rs.)</th>
+                            <th class="px-3 py-2.5 text-right text-emerald-700 dark:text-emerald-400">Collected (Rs.)</th>
+                            <th class="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400">Unpaid (Rs.)</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
-                        {{-- Tenant Collections --}}
-                        @foreach($incomeBreakdown as $type => $amount)
-                            @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
-                                <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
-                                    <td class="px-4 py-3 text-gray-700 dark:text-gray-300">
-                                        @switch($type)
-                                            @case('rent_pm_mall')
-                                                🏠 Rent Collected (PM Mall Units)
-                                                @break
-                                            @case('maint_pm_mall')
-                                                🛠️ Maintenance Charges (PM Mall Units)
-                                                @break
-                                            @case('extra_pm_mall')
-                                                💵 Extra Payments (PM Mall Units)
-                                                @break
-                                            @case('rent_other_owned')
-                                                🏠 Rent Collected (Landlord / Other-Owned Units)
-                                                @break
-                                            @case('maint_other_owned')
-                                                🛠️ Maintenance Charges (Landlord / Other-Owned Units)
-                                                @break
-                                            @case('extra_other_owned')
-                                                💵 Extra Payments (Landlord / Other-Owned Units)
-                                                @break
-                                            @case('other')
-                                                📑 Other Tenant Receipts (Unallocated Vouchers)
-                                                @break
-                                            @default
-                                                ⚡ Utility: {{ ucfirst($type) }}
-                                        @endswitch
-                                    </td>
-                                    <td class="px-4 py-3 text-right font-medium text-gray-800 dark:text-white">
-                                        {{ number_format($amount, 2) }}
-                                    </td>
-                                </tr>
-                            @endif
-                        @endforeach
+                        @if(!empty($incomeDetailed))
+                            @foreach($incomeDetailed as $type => $item)
+                                @if(($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
+                                    <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                                        <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300 font-medium">
+                                            {{ $item['label'] }}
+                                        </td>
+                                        <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400">
+                                            {{ number_format($item['billed'], 2) }}
+                                        </td>
+                                        <td class="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-400">
+                                            {{ number_format($item['collected'], 2) }}
+                                        </td>
+                                        <td class="px-3 py-2.5 text-right font-semibold text-amber-700 dark:text-amber-400">
+                                            {{ number_format($item['unpaid'], 2) }}
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        @else
+                            @foreach($incomeBreakdown as $type => $amount)
+                                @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
+                                    <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                                        <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300 font-medium">
+                                            {{ ucfirst(str_replace('_', ' ', $type)) }}
+                                        </td>
+                                        <td class="px-3 py-2.5 text-right text-gray-600">—</td>
+                                        <td class="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-400">{{ number_format($amount, 2) }}</td>
+                                        <td class="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400">—</td>
+                                    </tr>
+                                @endif
+                            @endforeach
+                        @endif
                     </tbody>
                     <tfoot>
-                        <tr class="font-bold text-sm bg-gray-50 dark:bg-gray-800">
-                            <td class="px-4 py-3 text-gray-850 dark:text-white">Total Revenue:</td>
-                            <td class="px-4 py-3 text-right text-green-600">Rs. {{ number_format($totalIncome, 2) }}</td>
+                        <tr class="font-bold text-xs bg-gray-50 dark:bg-gray-800">
+                            <td class="px-3 py-2.5 text-gray-850 dark:text-white">Total Revenue:</td>
+                            <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300">Rs. {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
+                            <td class="px-3 py-2.5 text-right text-emerald-600">Rs. {{ number_format($totalIncome, 2) }}</td>
+                            <td class="px-3 py-2.5 text-right text-amber-600">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
                         </tr>
                     </tfoot>
                 </table>

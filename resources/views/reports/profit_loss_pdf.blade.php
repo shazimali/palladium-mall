@@ -168,15 +168,19 @@
 
     {{-- Summary boxes --}}
     <div class="summary-container">
-        <div class="summary-card income">
-            <div class="s-label">Total Income</div>
+        <div class="summary-card income" style="width: 25%;">
+            <div class="s-label">Collected Income</div>
             <div class="s-value">Rs. {{ number_format($totalIncome, 2) }}</div>
         </div>
-        <div class="summary-card expense">
+        <div class="summary-card" style="width: 25%; background: #FFFBEB; border: 1px solid #FCD34D;">
+            <div class="s-label">Unpaid / Outstanding</div>
+            <div class="s-value" style="color: #D97706;">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</div>
+        </div>
+        <div class="summary-card expense" style="width: 25%;">
             <div class="s-label">Total Expenses</div>
             <div class="s-value">Rs. {{ number_format($totalExpenses, 2) }}</div>
         </div>
-        <div class="summary-card profit">
+        <div class="summary-card profit" style="width: 25%;">
             <div class="s-label">Net Profit / Loss</div>
             <div class="s-value" style="color: {{ $netProfitLoss >= 0 ? '#1D4ED8' : '#B91C1C' }}">
                 Rs. {{ number_format($netProfitLoss, 2) }}
@@ -191,51 +195,42 @@
             <thead>
                 <tr>
                     <th>Revenue Category</th>
-                    <th class="text-right">Collected Amount (Rs.)</th>
+                    <th class="text-right">Billed (Rs.)</th>
+                    <th class="text-right">Collected (Rs.)</th>
+                    <th class="text-right">Unpaid (Rs.)</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($incomeBreakdown as $type => $amount)
-                    @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
-                        <tr>
-                            <td>
-                                @switch($type)
-                                    @case('rent_pm_mall')
-                                        Rent Collected (PM Mall Units)
-                                        @break
-                                    @case('maint_pm_mall')
-                                        Maintenance Charges (PM Mall Units)
-                                        @break
-                                    @case('extra_pm_mall')
-                                        Extra Payments (PM Mall Units)
-                                        @break
-                                    @case('rent_other_owned')
-                                        Rent Collected (Landlord / Other-Owned Units)
-                                        @break
-                                    @case('maint_other_owned')
-                                        Maintenance Charges (Landlord / Other-Owned Units)
-                                        @break
-                                    @case('extra_other_owned')
-                                        Extra Payments (Landlord / Other-Owned Units)
-                                        @break
-                                    @case('other')
-                                        Other Tenant Receipts (Unallocated Vouchers)
-                                        @break
-                                    @default
-                                        Utility: {{ ucfirst($type) }}
-                                @endswitch
-                            </td>
-                            <td class="text-right font-medium">
-                                {{ number_format($amount, 2) }}
-                            </td>
-                        </tr>
-                    @endif
-                @endforeach
+                @if(!empty($incomeDetailed))
+                    @foreach($incomeDetailed as $type => $item)
+                        @if(($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
+                            <tr>
+                                <td>{{ str_replace(['🏠 ', '🛠️ ', '💵 ', '📑 '], '', $item['label']) }}</td>
+                                <td class="text-right">{{ number_format($item['billed'], 2) }}</td>
+                                <td class="text-right font-medium" style="color: #047857;">{{ number_format($item['collected'], 2) }}</td>
+                                <td class="text-right font-medium" style="color: #D97706;">{{ number_format($item['unpaid'], 2) }}</td>
+                            </tr>
+                        @endif
+                    @endforeach
+                @else
+                    @foreach($incomeBreakdown as $type => $amount)
+                        @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
+                            <tr>
+                                <td>{{ ucfirst(str_replace('_', ' ', $type)) }}</td>
+                                <td class="text-right">—</td>
+                                <td class="text-right font-medium" style="color: #047857;">{{ number_format($amount, 2) }}</td>
+                                <td class="text-right" style="color: #D97706;">—</td>
+                            </tr>
+                        @endif
+                    @endforeach
+                @endif
             </tbody>
             <tfoot>
                 <tr>
                     <td>Total Revenue:</td>
+                    <td class="text-right">Rs. {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
                     <td class="text-right" style="color: #047857;">Rs. {{ number_format($totalIncome, 2) }}</td>
+                    <td class="text-right" style="color: #D97706;">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
                 </tr>
             </tfoot>
         </table>
