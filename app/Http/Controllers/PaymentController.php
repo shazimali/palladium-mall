@@ -889,8 +889,11 @@ class PaymentController extends Controller
         ];
 
         if ($action === 'bulk_generate') {
+            $monthObj = \Carbon\Carbon::parse($month)->startOfMonth();
             $agreements = Agreement::with(['tenant', 'unit.landlord'])
                 ->where('status', 'active')
+                ->where('start_date', '<=', $monthObj->copy()->endOfMonth())
+                ->where('end_date', '>=', $monthObj->copy()->startOfMonth())
                 ->get();
 
             foreach ($agreements as $ag) {
