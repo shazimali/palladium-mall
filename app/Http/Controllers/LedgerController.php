@@ -12,7 +12,7 @@ use App\Models\PaymentVoucher;
 use App\Models\Expense;
 use App\Models\Withdrawal;
 use Carbon\Carbon;
-use Barryvdh\Dompdf\Facade\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\TenantLedgerExport;
 use App\Exports\OwnerLedgerExport;

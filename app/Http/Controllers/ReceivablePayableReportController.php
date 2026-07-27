@@ -11,7 +11,7 @@ use App\Models\Payment;
 use App\Models\Landlord;
 use App\Models\LandlordPayable;
 use App\Models\Owner;
-use Barryvdh\Dompdf\Facade\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 

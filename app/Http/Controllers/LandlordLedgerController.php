@@ -6,7 +6,7 @@ use App\Models\Landlord;
 use App\Models\ReceivingVoucher;
 use App\Models\GeneralReceivingVoucher;
 use App\Exports\LandlordLedgerExport;
-use Barryvdh\Dompdf\Facade\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
