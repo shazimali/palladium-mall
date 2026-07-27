@@ -278,11 +278,13 @@ class Unit extends Model
             }
         }
 
-        // 4. Check Meter model if exists for this unit
-        $meterReading = $this->meters()
-            ->where('type', 'electricity')
+        // 4. Check Meter model payments if exists for this unit
+        $meterReading = Payment::whereHas('meter', function ($q) {
+                $q->where('unit_id', $this->id)->where('type', 'electricity');
+            })
             ->whereNotNull('current_reading')
             ->where('current_reading', '>', 0)
+            ->latest('id')
             ->value('current_reading');
 
         return $meterReading ? (float) $meterReading : null;
