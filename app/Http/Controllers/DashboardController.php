@@ -118,12 +118,18 @@ class DashboardController extends Controller
         $pmMallUnits = $allUnits->filter(fn($u) => !$u->is_self);
         $otherOwnedUnits = $allUnits->filter(fn($u) => $u->is_self);
 
+        $expiringAgreements = Agreement::expiringSoon(60)
+            ->with(['tenant', 'unit'])
+            ->orderBy('end_date', 'asc')
+            ->get();
+
         return view('dashboard.index', [
             'title' => 'Dashboard',
             'financialWidgets' => $financialWidgets,
             'currentMonthLabel' => $dateLabel,
             'fromDate' => $fromDateStr,
             'toDate' => $toDateStr,
+            'expiringAgreements' => $expiringAgreements,
             'overall' => $this->buildUnitGroupStats($allUnits, $fromDateStr, $toDateStr),
             'pmMall' => $this->buildUnitGroupStats($pmMallUnits, $fromDateStr, $toDateStr),
             'otherOwned' => $this->buildUnitGroupStats($otherOwnedUnits, $fromDateStr, $toDateStr),

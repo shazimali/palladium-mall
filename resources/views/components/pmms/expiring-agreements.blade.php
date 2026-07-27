@@ -9,7 +9,7 @@
             <h3 class="text-base font-bold text-gray-800 dark:text-white/90">Expiring Agreements</h3>
             <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Due in next 30 days</p>
         </div>
-        <a href="{{ route('agreements.index') }}"
+        <a href="{{ route('tenants.index') }}"
             class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
             style="color: #b54708; background: #fffaeb;"
             onmouseover="this.style.background='#fef0c7'" onmouseout="this.style.background='#fffaeb'">
@@ -20,7 +20,7 @@
     <div class="divide-y divide-gray-50 dark:divide-gray-800 px-4 py-2">
         @forelse($agreements as $agreement)
             @php $days = $agreement->daysRemaining(); @endphp
-            <div class="flex items-center justify-between py-3 transition-all">
+            <a href="{{ route('tenants.index', ['search' => $agreement->unit?->unit_number ?? $agreement->unit_id]) }}" class="flex items-center justify-between py-3 transition-all hover:bg-gray-50 dark:hover:bg-white/[0.02] rounded-xl px-2">
                 <div class="flex items-center gap-3">
                     {{-- Amber icon badge --}}
                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
@@ -50,7 +50,7 @@
                         {{ $agreement->end_date->format('d M Y') }}
                     </span>
                 </div>
-            </div>
+            </a>
         @empty
             <div class="py-8 text-center">
                 <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full" style="background: #fffaeb;">
