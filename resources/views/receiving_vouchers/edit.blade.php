@@ -1,11 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="mb-6 flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
-        <a href="{{ route('receiving-vouchers.index') }}" class="hover:text-brand-500">Receiving Vouchers</a>
-        <span>/</span>
-        <span class="text-gray-800 dark:text-white/90">Edit Receiving Voucher: {{ $voucher->voucher_no }}</span>
-    </div>
+    <x-common.page-breadcrumb pageTitle="Edit Tenant Receiving Voucher — {{ $voucher->voucher_no }}" />
 
     <form action="{{ route('receiving-vouchers.update', $voucher) }}" method="POST"
         @submit.prevent="handleSubmit($event)"
@@ -13,127 +9,23 @@
             unitId: '{{ old('unit_id', $voucherUnitId) }}',
             voucherAmount: '{{ old('amount', $voucher->amount) }}',
             displayAmount: '',
-            pendingPayments: [],
             selectedPaymentIds: @js(old('payment_ids', $voucher->payments->pluck('id')->map(fn($id) => (string)$id)->toArray())),
-            totalBalance: 0,
-            loading: false,
-            search: '',
+            allPayments: @js($allPayments),
             open: false,
+            search: '',
             highlightedIndex: -1,
+
             options: [
                 @foreach($units as $unit)
                 {
                     id: '{{ $unit->id }}',
-                    unit: 'Flat/Shop: {{ addslashes($unit->unit_number) }}',
+                    unit: '{{ addslashes($unit->unit_number) }}',
+                    tenantName: '{{ $unit->tenant ? addslashes($unit->tenant->name) : ($unit->otherTenant ? addslashes($unit->otherTenant->name) : "Vacant") }}',
                     tenant: '{{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
-                    text: 'Flat/Shop: {{ addslashes($unit->unit_number) }} {{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
                     searchLabel: '{{ strtolower($unit->unit_number . " " . ($unit->tenant?->name ?? ($unit->otherTenant?->name ?? "vacant"))) }}'
                 },
                 @endforeach
             ],
-
-            handleSubmit(event) {
-                let amt = parseFloat(this.voucherAmount || 0);
-                if (isNaN(amt) || amt <= 0) {
-                    Swal.fire({
-                        title: 'Invalid Amount',
-                        text: 'Please enter a valid voucher amount greater than zero.',
-                        icon: 'warning',
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
-                        },
-                        buttonsStyling: false
-                    });
-                    return;
-                }
-
-                let maxAllowed = (this.selectedPaymentIds.length > 0 && this.selectedPaymentsTotal > 0) ? this.selectedPaymentsTotal : this.totalBalance;
-                if (amt > maxAllowed + 0.01) {
-                    Swal.fire({
-                        title: 'Exceed Amount Error',
-                        text: 'The voucher amount (Rs. ' + amt.toLocaleString('en-US', {minimumFractionDigits: 2}) + ') exceeds the total outstanding balance of selected payments (Rs. ' + maxAllowed.toLocaleString('en-US', {minimumFractionDigits: 2}) + ').',
-                        icon: 'error',
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
-                        },
-                        buttonsStyling: false
-                    });
-                    return;
-                }
-
-                event.target.submit();
-            },
-
-            init() {
-                this.$watch('unitId', (val) => {
-                    if (val) this.fetchPendingPayments(val);
-                    else {
-                        this.pendingPayments = [];
-                        this.selectedPaymentIds = [];
-                        this.totalBalance = 0;
-                    }
-                });
-
-                if (this.unitId) {
-                    this.fetchPendingPayments(this.unitId);
-                }
-
-                if (this.voucherAmount) {
-                    this.formatAmount(String(this.voucherAmount));
-                }
-            },
-
-            formatAmount(val) {
-                let clean = val.replace(/[^\d.]/g, '');
-                let parts = clean.split('.');
-                if (parts.length > 2) {
-                    parts = [parts[0], parts.slice(1).join('')];
-                }
-                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                this.displayAmount = parts.join('.');
-                this.voucherAmount = clean ? parseFloat(clean) : '';
-            },
-
-            fetchPendingPayments(unitId) {
-                this.loading = true;
-                fetch(`/ajax/tenant-pending-payments?unit_id=${unitId}&exclude_voucher_id={{ $voucher->id }}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        this.pendingPayments = data.payments;
-                        if (this.selectedPaymentIds.length === 0) {
-                            this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
-                        }
-                        this.totalBalance = this.pendingPayments.reduce((sum, p) => sum + p.balance, 0);
-                        this.loading = false;
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        this.loading = false;
-                    });
-            },
-
-            get selectedPaymentsTotal() {
-                return this.pendingPayments
-                    .filter(p => this.selectedPaymentIds.includes(String(p.id)))
-                    .reduce((sum, p) => sum + p.balance, 0);
-            },
-
-            toggleAllPayments(event) {
-                if (event.target.checked) {
-                    this.selectedPaymentIds = this.pendingPayments.map(p => String(p.id));
-                } else {
-                    this.selectedPaymentIds = [];
-                }
-            },
-
-            useSelectedTotal() {
-                let total = this.selectedPaymentsTotal;
-                if (total > 0) {
-                    this.formatAmount(String(total));
-                }
-            },
 
             get filteredOptions() {
                 if (!this.search) return this.options;
@@ -146,14 +38,21 @@
                 return selected ? selected.unit : '';
             },
 
-            get selectedTenant() {
+            get selectedTenantName() {
+                if (!this.unitId) return 'Select a Flat/Shop...';
                 let selected = this.options.find(opt => opt.id == this.unitId);
-                return selected ? selected.tenant : '';
+                return selected ? selected.tenantName : 'N/A';
             },
 
-            get selectedText() {
-                let selected = this.options.find(opt => opt.id == this.unitId);
-                return selected ? selected.text : 'Choose a Flat / Shop';
+            get availablePayments() {
+                if (!this.unitId) return [];
+                return this.allPayments.filter(p => String(p.unit_id) === String(this.unitId));
+            },
+
+            get selectedPaymentsTotal() {
+                return this.availablePayments
+                    .filter(p => this.selectedPaymentIds.includes(String(p.id)))
+                    .reduce((sum, p) => sum + p.balance, 0);
             },
 
             selectOption(opt) {
@@ -161,6 +60,9 @@
                 this.open = false;
                 this.search = '';
                 this.highlightedIndex = -1;
+                this.selectedPaymentIds = [];
+                this.displayAmount = '';
+                this.voucherAmount = '';
             },
 
             moveHighlight(dir) {
@@ -181,363 +83,301 @@
                 this.open = false;
                 this.search = '';
                 this.highlightedIndex = -1;
+                this.selectedPaymentIds = [];
+                this.displayAmount = '';
+                this.voucherAmount = '';
+            },
+
+            init() {
+                if (this.voucherAmount) {
+                    this.formatAmount(String(this.voucherAmount));
+                }
+            },
+
+            formatAmount(val) {
+                let clean = val.replace(/[^\d.]/g, '');
+                let parts = clean.split('.');
+                if (parts.length > 2) {
+                    parts = [parts[0], parts.slice(1).join('')];
+                }
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                this.displayAmount = parts.join('.');
+                this.voucherAmount = clean ? parseFloat(clean) : '';
+            },
+
+            useSelectedTotal() {
+                let total = this.selectedPaymentsTotal;
+                if (total > 0) {
+                    this.formatAmount(String(total));
+                }
+            },
+
+            handleSubmit(event) {
+                if (!this.unitId) {
+                    Swal.fire({
+                        title: 'Flat/Shop Required',
+                        text: 'Please select a Flat / Shop.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                if (this.selectedPaymentIds.length === 0) {
+                    Swal.fire({
+                        title: 'Payment Selection Required',
+                        text: 'Please select at least one payment checkbox to receive amount against.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                let amt = parseFloat(this.voucherAmount || 0);
+                if (isNaN(amt) || amt <= 0) {
+                    Swal.fire({
+                        title: 'Invalid Amount',
+                        text: 'Please enter a valid voucher amount greater than zero.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                if (amt > this.selectedPaymentsTotal + 0.01) {
+                    Swal.fire({
+                        title: 'Exceed Amount Error',
+                        text: 'The voucher amount (Rs. ' + amt.toLocaleString('en-US', {minimumFractionDigits: 2}) + ') exceeds the total balance of selected payments (Rs. ' + this.selectedPaymentsTotal.toLocaleString('en-US', {minimumFractionDigits: 2}) + ').',
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                event.target.submit();
             }
         }">
 
         @csrf
         @method('PUT')
+        <input type="hidden" name="received_from_type" value="tenant">
+        <input type="hidden" name="unit_id" x-model="unitId" required>
 
-        {{-- STICKY BIG HEADING BANNER --}}
-        <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
-            style="position: sticky; top: 72px; z-index: 990;"
-            @click.away="open = false; highlightedIndex = -1">
-            
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-4 min-w-0">
-                    <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-500 text-white shadow-md text-3xl font-black">
-                        🏢
-                    </div>
-                    <div class="min-w-0">
-                        <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                            <template x-if="unitId"><span>Active Selected Unit / Shop</span></template>
-                            <template x-if="!unitId"><span>Select Flat / Shop</span></template>
-                        </p>
-                        <div class="flex flex-wrap items-baseline gap-2 mt-0.5">
-                            <template x-if="unitId">
-                                <div class="flex flex-wrap items-baseline gap-2">
-                                    <h2 x-text="selectedUnit" class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white"></h2>
-                                    <span x-text="selectedTenant" class="text-base sm:text-xl font-bold text-gray-600 dark:text-gray-300"></span>
-                                </div>
-                            </template>
-                            <template x-if="!unitId">
-                                <h2 class="text-xl sm:text-2xl font-bold text-gray-400 dark:text-gray-500">Choose a Flat / Shop to begin...</h2>
-                            </template>
-                        </div>
-                    </div>
-                </div>
+        {{-- FORM CONTAINER WITH NO OUTER BG COLOR, CENTERED TITLE, ADAPTED TO THEME --}}
+        <div class="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans relative">
 
-                <div class="flex items-center gap-2">
-                    <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                        class="inline-flex items-center gap-2 rounded-xl bg-brand-50 px-5 py-3 text-sm font-extrabold text-brand-700 hover:bg-brand-100 dark:bg-brand-900/40 dark:text-brand-300 transition-colors shadow-sm cursor-pointer">
-                        <span x-text="unitId ? '🔄 Change Flat / Shop' : '🔍 Browse Flat / Shop'"></span>
-                        <svg class="h-4 w-4 text-brand-600 dark:text-brand-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                </div>
+            {{-- CENTERED TITLE --}}
+            <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+                    Tenant Receiving Voucher
+                </h2>
             </div>
 
-            {{-- Hidden Input for HTML5 native validation and submission --}}
-            <input type="text" name="unit_id" x-model="unitId" required
-                class="absolute inset-0 -z-10 w-0 h-0 opacity-0 pointer-events-none"
-                @focus="open = true">
-
-            {{-- Dropdown Container --}}
-            <div x-show="open" x-transition x-cloak
-                class="absolute left-0 right-0 top-full z-[99999] mt-2 w-full rounded-2xl border-2 border-brand-500 bg-white shadow-2xl dark:border-brand-500 dark:bg-gray-900 overflow-hidden">
+            {{-- FORM GRID CONTAINER (OVERFLOW VISIBLE SO DROPDOWN NEVER CLIPS) --}}
+            <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-visible mb-6 border border-gray-200 dark:border-gray-700">
                 
-                {{-- Search field --}}
-                <div class="p-3.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-white/[0.02]">
-                    <div class="relative">
-                        <input type="text" x-ref="searchInput" x-model="search" placeholder="Type unit number or tenant name to search..."
-                            @keydown.arrow-down.prevent="moveHighlight(1)"
-                            @keydown.arrow-up.prevent="moveHighlight(-1)"
-                            @keydown.enter.prevent="selectHighlighted()"
-                            @keydown.escape="open = false; highlightedIndex = -1"
-                            class="w-full rounded-xl border border-gray-300 bg-white px-5 py-3 pl-11 text-base sm:text-lg text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:bg-white focus:outline-none dark:border-gray-700 dark:bg-gray-950 dark:text-white font-bold">
-                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-lg">
-                            🔍
-                        </span>
-                        <button type="button" x-show="search" @click="search = ''; highlightedIndex = -1" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black uppercase text-gray-400 hover:text-gray-600 dark:hover:text-white">
-                            Clear
-                        </button>
+                {{-- ROW 1: Voucher Date & Searchable Flat / Shop Dropdown --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-40 rounded-t-2xl">
+                    {{-- Field 1: Voucher Date --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide rounded-tl-2xl">Voucher Date</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
+                            <input type="text" id="voucher_date" name="date" value="{{ old('date', $voucher->date->format('Y-m-d')) }}" required autocomplete="off"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-extrabold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
+                        </div>
                     </div>
-                </div>
 
-                {{-- Options list --}}
-                <div class="max-h-80 overflow-y-auto p-2 space-y-1">
-                    <button type="button" @click="clearSelection()"
-                        class="w-full text-left px-5 py-3 text-xs font-black uppercase tracking-wider text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20 rounded-xl transition-colors">
-                        ❌ Clear Selection
-                    </button>
-                    
-                    <template x-for="(opt, index) in filteredOptions" :key="opt.id">
-                        <button type="button" @click="selectOption(opt)"
-                            @mouseenter="highlightedIndex = index"
-                            class="w-full text-left px-5 py-3.5 text-base sm:text-lg rounded-xl transition-colors flex items-center justify-between"
-                            :class="unitId == opt.id ? 'bg-brand-600 text-white font-black shadow-sm' : (highlightedIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/40 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
-                            <span class="flex items-center gap-3 flex-1 min-w-0">
-                                <span x-text="opt.unit" class="font-black text-lg sm:text-xl"></span>
-                                <span x-text="opt.tenant" class="font-bold text-base opacity-90 truncate"></span>
-                            </span>
-                            <span x-show="unitId == opt.id" class="text-lg font-black ml-2">✓</span>
-                        </button>
-                    </template>
+                    {{-- Field 2: Searchable Flat / Shop Dropdown --}}
+                    <div class="grid grid-cols-3 min-h-[52px] relative z-50" @click.away="open = false; highlightedIndex = -1">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Flat / Shop <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-tr-2xl">
+                            <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
+                                class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                <span x-text="selectedUnit ? 'Flat/Shop ' + selectedUnit : 'Select Flat / Shop...'" class="truncate"></span>
+                                <span class="ml-2 text-xs opacity-60">▼</span>
+                            </button>
 
-                    <div x-show="filteredOptions.length === 0" class="px-4 py-6 text-center text-sm font-semibold text-gray-400 dark:text-gray-500">
-                        No matching Flat / Shop found
-                    </div>
-                </div>
-            </div>
-
-            @error('unit_id')
-                <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
-            @enderror
-        </div>
-
-        {{-- MAIN FORM CONTAINER --}}
-        <x-common.component-card :title="'Edit Receiving Voucher: ' . $voucher->voucher_no" desc="Modify payments collected from tenants. Restricted to Super Administrators only.">
-
-            <div class="space-y-6">
-
-                {{-- Loading Indicator --}}
-                <div x-show="loading" class="py-8 text-center text-gray-400">
-                    <svg class="animate-spin mx-auto h-8 w-8 opacity-60" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p class="mt-2 text-xs">Fetching tenant balance...</p>
-                </div>
-
-                {{-- Form fields shown only when Flat is selected and NOT loading --}}
-                <div x-show="unitId && !loading" x-transition x-cloak class="space-y-6">
-                    
-                    {{-- Hidden Category Input --}}
-                    <input type="hidden" name="received_from_type" value="tenant">
-
-                    {{-- Dynamic Outstanding Balance Badge & Details --}}
-                    <div class="rounded-2xl border-2 p-6 transition-all shadow-md"
-                        :class="totalBalance > 0 ? 'bg-orange-50/70 border-orange-300 text-orange-950 dark:bg-orange-950/20 dark:border-orange-800' : 'bg-emerald-50/70 border-emerald-300 text-emerald-950 dark:bg-emerald-950/20 dark:border-emerald-800'">
-                        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-orange-200 dark:border-orange-800/50">
-                            <div>
-                                <h3 class="text-base sm:text-lg font-black uppercase tracking-wide flex items-center gap-2">
-                                    <span>📊</span> Tenant Balance Status
-                                </h3>
-                                <p class="text-xs sm:text-sm font-medium opacity-90 mt-1">Pending dues for this tenant in historical records (including this voucher's allocations).</p>
-                            </div>
-                            <div class="text-right flex flex-col items-end">
-                                <span class="text-xs sm:text-sm text-gray-700 dark:text-gray-300 font-extrabold uppercase tracking-wider">Total Outstanding (Pre-voucher):</span>
-                                <span class="text-xl sm:text-2xl font-black font-mono" :class="totalBalance > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'" x-text="totalBalance > 0 ? 'Rs. ' + Math.round(totalBalance).toLocaleString() : 'No Outstanding Balance'"></span>
+                            {{-- Expanded Searchable Dropdown Modal Floating Above All Content --}}
+                            <div x-show="open" x-transition x-cloak
+                                class="absolute left-0 right-0 top-full z-[999999] mt-2 min-w-[320px] sm:min-w-[420px] rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden text-gray-900 dark:text-white">
                                 
-                                <template x-if="voucherAmount > 0">
-                                    <div class="mt-1.5 flex flex-col items-end text-xs sm:text-sm font-extrabold text-green-700 dark:text-green-400">
-                                        <span>After Payment Balance:</span>
-                                        <span class="text-base sm:text-lg font-black font-mono" x-text="'Rs. ' + Math.round(Math.max(0, totalBalance - voucherAmount)).toLocaleString()"></span>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        {{-- Details of Pending Payments --}}
-                        <div class="mt-5" x-show="pendingPayments.length > 0">
-                            <h4 class="text-xs sm:text-sm font-extrabold uppercase tracking-wider mb-3 opacity-95 flex items-center gap-1.5">
-                                <span>📋</span> Pending Bills Detail
-                            </h4>
-                            <div class="overflow-x-auto rounded-xl border-2 border-orange-200 dark:border-orange-800/60 bg-white dark:bg-gray-900 shadow-2xs">
-                                <table class="w-full text-left text-xs sm:text-sm">
-                                    <thead>
-                                        <tr class="border-b-2 border-orange-200 dark:border-orange-800/60 bg-orange-100/60 dark:bg-orange-950/40 text-orange-950 dark:text-orange-200 uppercase font-black tracking-wider">
-                                            <th class="px-4 py-3">Billing Month</th>
-                                            <th class="px-4 py-3">Bill Type</th>
-                                            <th class="px-4 py-3 text-right">Amount Due</th>
-                                            <th class="px-4 py-3 text-right">Paid So Far (Prior to Voucher)</th>
-                                            <th class="px-4 py-3 text-right">Remaining Balance</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-orange-100 dark:divide-orange-900/30 text-gray-900 dark:text-gray-100 font-semibold">
-                                        <template x-for="p in pendingPayments" :key="p.id">
-                                            <tr class="hover:bg-orange-50/50 dark:hover:bg-orange-950/20">
-                                                <td class="px-4 py-3 font-mono font-bold" x-text="p.month"></td>
-                                                <td class="px-4 py-3 font-extrabold text-brand-700 dark:text-brand-300" x-text="p.type"></td>
-                                                <td class="px-4 py-3 text-right font-mono" x-text="'Rs. ' + Math.round(p.amount_due).toLocaleString()"></td>
-                                                <td class="px-4 py-3 text-right font-mono text-gray-500" x-text="'Rs. ' + Math.round(p.amount_paid).toLocaleString()"></td>
-                                                <td class="px-4 py-3 text-right font-mono font-black text-orange-600 dark:text-orange-400 text-sm" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Input details card --}}
-                    <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
-                        <div class="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3 dark:border-gray-800">
-                            <span class="text-lg">⚙️</span>
-                            <h4 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
-                                Voucher Details & Amount
-                            </h4>
-                        </div>
-
-                        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                            {{-- Voucher Amount --}}
-                            <div>
-                                <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    Voucher Amount (Rs.) <span class="text-red-500">*</span>
-                                </label>
-                                <input type="text" 
-                                       x-model="displayAmount"
-                                       @input="formatAmount($event.target.value)"
-                                       required
-                                       placeholder="0.00"
-                                       class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                <input type="hidden" name="amount" x-model="voucherAmount">
-                                @error('amount')
-                                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Payment Selection Checkboxes --}}
-                            <div class="col-span-full rounded-2xl border-2 border-brand-300 bg-brand-50/30 p-5 dark:border-brand-800 dark:bg-brand-950/20 shadow-sm"
-                                x-show="pendingPayments.length > 0">
-                                <div class="flex flex-wrap items-center justify-between gap-3 pb-3.5 mb-4 border-b border-brand-200 dark:border-brand-800/60">
-                                    <div class="flex items-center gap-2.5">
-                                        <span class="text-xl">☑️</span>
-                                        <span class="text-base sm:text-lg font-extrabold uppercase tracking-wide text-brand-950 dark:text-brand-200">
-                                            Select Payment(s) To Receive Amount Against:
-                                        </span>
-                                        <span class="rounded-full bg-brand-100 text-brand-800 dark:bg-brand-900/80 dark:text-brand-200 px-3 py-1 text-xs font-extrabold font-mono shadow-2xs"
-                                            x-text="selectedPaymentIds.length + ' / ' + pendingPayments.length + ' Selected'"></span>
-                                    </div>
-                                    <div class="flex items-center gap-4 text-sm">
-                                        <label class="inline-flex items-center gap-2 cursor-pointer text-gray-800 dark:text-gray-200 font-bold select-none hover:text-brand-600">
-                                            <input type="checkbox"
-                                                :checked="selectedPaymentIds.length === pendingPayments.length && pendingPayments.length > 0"
-                                                @change="toggleAllPayments($event)"
-                                                class="h-5 w-5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
-                                            <span>Select All</span>
-                                        </label>
-                                        <template x-if="selectedPaymentIds.length > 0 && selectedPaymentsTotal > 0">
-                                            <button type="button" @click="useSelectedTotal()" class="text-sm text-brand-600 hover:text-brand-700 dark:text-brand-400 font-extrabold underline cursor-pointer">
-                                                Set Amount to Selected (Rs. <span x-text="Math.round(selectedPaymentsTotal).toLocaleString()"></span>)
-                                            </button>
-                                        </template>
-                                    </div>
+                                <div class="p-3.5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                                    <input type="text" x-ref="searchInput" x-model="search" placeholder="Type flat number or tenant name to search..."
+                                        @keydown.arrow-down.prevent="moveHighlight(1)"
+                                        @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                        @keydown.enter.prevent="selectHighlighted()"
+                                        @keydown.escape="open = false; highlightedIndex = -1"
+                                        class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
                                 </div>
 
-                                {{-- Individual Payment Checkboxes --}}
-                                <div class="space-y-2.5 max-h-72 overflow-y-auto pr-1">
-                                    <template x-for="p in pendingPayments" :key="p.id">
-                                        <label class="flex items-center justify-between p-3.5 rounded-xl border-2 transition-all cursor-pointer select-none"
-                                            :class="selectedPaymentIds.includes(String(p.id)) 
-                                                ? 'border-brand-500 bg-white dark:bg-gray-850 dark:border-brand-500 ring-2 ring-brand-500/20 shadow-xs' 
-                                                : 'border-gray-200 bg-white/70 dark:border-gray-800/80 dark:bg-gray-900/40 opacity-75 hover:opacity-100'">
-                                            <div class="flex items-center gap-3.5">
-                                                <input type="checkbox" name="payment_ids[]" :value="p.id" x-model="selectedPaymentIds"
-                                                    class="h-5 w-5 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                                                <div>
-                                                    <div class="flex items-center gap-2.5">
-                                                        <span class="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white font-mono" x-text="p.month"></span>
-                                                        <span class="px-2.5 py-0.5 rounded-md text-xs font-extrabold uppercase tracking-wider border"
-                                                            :class="p.type.toLowerCase().includes('rent') 
-                                                                ? 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800/60' 
-                                                                : 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'"
-                                                            x-text="p.type"></span>
-                                                    </div>
-                                                    <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                                        Bill Amount: <span class="font-bold text-gray-900 dark:text-gray-100">Rs. <span x-text="Math.round(p.amount_due).toLocaleString()"></span></span>
-                                                        <template x-if="p.amount_paid > 0">
-                                                            <span class="ml-1.5 text-gray-500">(Paid So Far: Rs. <span x-text="Math.round(p.amount_paid).toLocaleString()"></span>)</span>
-                                                        </template>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="text-right shrink-0">
-                                                <span class="text-sm sm:text-base font-black text-brand-600 dark:text-brand-400 font-mono" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></span>
-                                                <div class="text-xs text-gray-500 uppercase font-bold tracking-wide">Pending Balance</div>
-                                            </div>
-                                        </label>
+                                <div class="max-h-[380px] overflow-y-auto p-2 space-y-1 text-sm">
+                                    <button type="button" @click="clearSelection()"
+                                        class="w-full text-left px-4 py-2.5 font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-colors">
+                                        ❌ Clear Selection
+                                    </button>
+                                    
+                                    <template x-for="(opt, index) in filteredOptions" :key="opt.id">
+                                        <button type="button" @click="selectOption(opt)"
+                                            @mouseenter="highlightedIndex = index"
+                                            class="w-full text-left px-4 py-3 rounded-xl transition-colors flex items-center justify-between"
+                                            :class="unitId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
+                                            <span class="flex items-center gap-2.5 truncate">
+                                                <span x-text="'Flat/Shop ' + opt.unit" class="font-black text-sm sm:text-base"></span>
+                                                <span x-text="opt.tenant" class="opacity-80 truncate text-xs sm:text-sm"></span>
+                                            </span>
+                                            <span x-show="unitId == opt.id" class="font-black text-base">✓</span>
+                                        </button>
+                                    </template>
+
+                                    <div x-show="filteredOptions.length === 0" class="px-4 py-4 text-center text-xs sm:text-sm font-semibold text-gray-400">
+                                        No matching Flat/Shop found
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ROW 2: Voucher Number & Tenant Name --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-20">
+                    {{-- Field 1: Voucher Number --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher No.</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400 px-4 py-3 flex items-center font-black text-base sm:text-lg font-mono">
+                            {{ $voucher->voucher_no }}
+                        </div>
+                    </div>
+
+                    {{-- Field 2: Tenant Name --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Tenant Name</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                            <span x-text="selectedTenantName"></span>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ROW 3: Payments List Checkboxes & Payment Amount --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-10">
+                    {{-- Field 1: Payments List Checkboxes --}}
+                    <div class="grid grid-cols-3 min-h-[84px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-start pt-3 font-bold text-sm tracking-wide">Payments List <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white p-3 flex flex-col justify-center">
+                            
+                            <div x-show="!unitId" class="text-xs italic text-gray-400">
+                                Select a Flat / Shop above to load pending payments...
+                            </div>
+
+                            <div x-show="unitId && availablePayments.length === 0" class="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                ✓ No outstanding dues for this Flat/Shop.
+                            </div>
+
+                            <div x-show="unitId && availablePayments.length > 0" class="space-y-2 max-h-52 overflow-y-auto pr-1">
+                                <div class="flex items-center justify-between text-[11px] font-extrabold text-brand-600 dark:text-brand-400 mb-1">
+                                    <span>Select at least 1 payment:</span>
+                                    <template x-if="selectedPaymentIds.length > 0">
+                                        <button type="button" @click="useSelectedTotal()" class="hover:underline font-black cursor-pointer">
+                                            Set Amount (Rs. <span x-text="Math.round(selectedPaymentsTotal).toLocaleString()"></span>)
+                                        </button>
                                     </template>
                                 </div>
+
+                                <template x-for="p in availablePayments" :key="p.id">
+                                    <label class="flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-850"
+                                        :class="selectedPaymentIds.includes(String(p.id)) ? 'border-brand-500 ring-1 ring-brand-500' : 'border-gray-200 dark:border-gray-700'">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <input type="checkbox" name="payment_ids[]" :value="String(p.id)" x-model="selectedPaymentIds" @change="useSelectedTotal()"
+                                                class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 cursor-pointer">
+                                            <div class="truncate">
+                                                <span class="font-extrabold text-xs text-gray-900 dark:text-white" x-text="p.month + ' - ' + p.type"></span>
+                                            </div>
+                                        </div>
+                                        <div class="text-right shrink-0 ml-2">
+                                            <span class="text-xs font-black text-brand-600 dark:text-brand-400 font-mono" x-text="'Rs. ' + Math.round(p.balance).toLocaleString()"></span>
+                                        </div>
+                                    </label>
+                                </template>
                             </div>
 
-                            {{-- Date --}}
-                            <div>
-                                <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    Voucher Date <span class="text-red-500">*</span>
-                                </label>
-                                <div class="relative">
-                                    <input type="text" id="voucher_date" name="date" value="{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}" required autocomplete="off"
-                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                </div>
-                                @error('date')
-                                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Payment Account --}}
-                            <div>
-                                <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    Deposit Account <span class="text-red-500">*</span>
-                                </label>
-                                <select name="payment_account_id" required
-                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                    <option value="">Select Account</option>
-                                    @foreach($paymentAccounts as $account)
-                                        <option value="{{ $account->id }}" {{ old('payment_account_id', $voucher->payment_account_id) == $account->id ? 'selected' : '' }}>
-                                            {{ $account->name }} ({{ ucfirst($account->type) }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('payment_account_id')
-                                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Reference --}}
-                            <div>
-                                <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                    Cheque / Transaction Ref
-                                </label>
-                                <input type="text" name="reference" value="{{ old('reference', $voucher->reference) }}" placeholder="e.g. Bank slip or Cheque #"
-                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                @error('reference')
-                                    <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                                @enderror
-                            </div>
                         </div>
                     </div>
 
-                    {{-- General Notes Card --}}
-                    <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.02]">
-                        <label class="mb-1.5 block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Voucher Notes / Remarks</label>
-                        <textarea name="notes" rows="2" placeholder="Write any specific details or remarks..."
-                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600">{{ old('notes', $voucher->notes) }}</textarea>
-                        @error('notes')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
+                    {{-- Field 2: Payment Amount --}}
+                    <div class="grid grid-cols-3 min-h-[84px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Amount <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex flex-col justify-center">
+                            <input type="text" x-model="displayAmount" @input="formatAmount($event.target.value)" required placeholder="0.00"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            <input type="hidden" name="amount" x-model="voucherAmount">
+                        </div>
                     </div>
+                </div>
 
-                    {{-- Over-allocation warnings --}}
-                    <div x-show="totalBalance > 0 && voucherAmount > totalBalance" x-cloak
-                        class="p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 dark:bg-red-955/10 dark:border-red-900/30 text-sm">
-                        ❌ <strong>Voucher amount exceeds the outstanding balance</strong> of Rs. <span x-text="Math.round(totalBalance).toLocaleString()"></span>. Please reduce the amount.
+                {{-- ROW 4: Payment Method --}}
+                <div class="grid grid-cols-1 md:grid-cols-3 min-h-[52px] bg-gray-200 dark:bg-gray-700 relative z-0 rounded-b-2xl">
+                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide md:col-span-1 rounded-bl-2xl">Payment Method <span class="text-rose-300 ml-1">*</span></div>
+                    <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center rounded-br-2xl">
+                        <select name="payment_account_id" required
+                            class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            <option value="">Select Account...</option>
+                            @foreach($paymentAccounts as $account)
+                                <option value="{{ $account->id }}" {{ old('payment_account_id', $voucher->payment_account_id) == $account->id ? 'selected' : '' }}>
+                                    {{ $account->name }} ({{ ucfirst($account->type) }})
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
-
-                    <div x-show="totalBalance === 0" x-cloak
-                        class="p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 dark:bg-amber-955/10 dark:border-amber-900/30 text-sm">
-                        ⚠️ <strong>Note:</strong> This tenant has no pending dues.
-                    </div>
-
-                    {{-- Action Buttons --}}
-                    <div class="flex items-center gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
-                        <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Save Changes
-                        </button>
-                        <a href="{{ route('receiving-vouchers.index') }}"
-                            class="inline-flex items-center rounded-xl border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
-                            Cancel
-                        </a>
-                    </div>
-
                 </div>
 
             </div>
-        </x-common.component-card>
+
+            {{-- ROW 5 / BOTTOM SECTION: Approved by & Description --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
+                {{-- Left Box: Approved by Box --}}
+                <div class="bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl p-4 flex flex-col justify-center border border-gray-200 dark:border-gray-700 shadow-xs">
+                    <p class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
+                        Approved by: <span class="text-brand-600 dark:text-brand-400 font-extrabold ml-1">{{ $voucher->user->name ?? auth()->user()->name }}</span>
+                    </p>
+                </div>
+
+                {{-- Right Box: Description of Goods/Services / Remarks --}}
+                <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-xs">
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                        Description of Goods/Services / Remarks:
+                    </label>
+                    <textarea name="notes" rows="2" placeholder="Office supplies including paper, ink cartridges, or general notes..."
+                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">{{ old('notes', $voucher->notes) }}</textarea>
+                </div>
+            </div>
+
+            {{-- ACTION BUTTONS --}}
+            <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <a href="{{ route('receiving-vouchers.index') }}" class="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold transition-all text-xs sm:text-sm">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer">
+                    Update Voucher
+                </button>
+            </div>
+
+        </div>
+
     </form>
 @endsection
 
@@ -551,7 +391,7 @@
                     altFormat: 'd M Y',
                     allowInput: true,
                     disableMobile: true,
-                    defaultDate: '{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : now()->toDateString()) }}'
+                    defaultDate: '{{ old('date', $voucher->date->format('Y-m-d')) }}'
                 });
             }
 

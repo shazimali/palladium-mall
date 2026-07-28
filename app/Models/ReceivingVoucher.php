@@ -49,6 +49,12 @@ class ReceivingVoucher extends Model
         });
     }
 
+    public static function getNextVoucherNo(): string
+    {
+        $maxId = static::withTrashed()->max('id') ?? 0;
+        return 'PM-RV-' . str_pad($maxId + 1, 5, '0', STR_PAD_LEFT);
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class)->withTrashed();

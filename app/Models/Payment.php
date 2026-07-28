@@ -103,6 +103,11 @@ class Payment extends Model
             ->withTimestamps();
     }
 
+    public function vouchers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->receivingVouchers();
+    }
+
     // -----------------------------------------------------------------------
     // Scopes
     // -----------------------------------------------------------------------

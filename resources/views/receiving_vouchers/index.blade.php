@@ -261,7 +261,7 @@
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Flat / Shop</th>
                         <th class="px-4 py-3">Payment Account</th>
-                        <th class="px-4 py-3">Method / Ref</th>
+                        <th class="px-4 py-3">Method / Remarks</th>
                         <th class="px-4 py-3">Amount</th>
                         <th class="px-4 py-3">Recorded By</th>
                         <th class="px-4 py-3 text-right">Actions</th>
@@ -307,8 +307,8 @@
                             </td>
                             <td class="px-4 py-3 text-xs">
                                 <div>{{ $voucher->payment_method ? ucfirst(str_replace('_', ' ', $voucher->payment_method)) : '—' }}</div>
-                                @if($voucher->reference)
-                                    <div class="text-[10px] text-gray-400 mt-0.5">Ref: {{ $voucher->reference }}</div>
+                                @if($voucher->notes)
+                                    <div class="text-[10px] text-gray-400 mt-0.5">{{ $voucher->notes }}</div>
                                 @endif
                             </td>
                             <td class="px-4 py-3 font-bold text-green-600">

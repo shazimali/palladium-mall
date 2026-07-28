@@ -76,11 +76,33 @@ class ReceivingVoucherController extends Controller
         $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
+        $allPayments = \App\Models\Payment::whereIn('status', ['unpaid', 'partial'])
+            ->with(['unit', 'otherTenant'])
+            ->orderBy('month', 'asc')
+            ->get()
+            ->map(function ($p) {
+                $unitNum = $p->unit->unit_number ?? '—';
+                $monthStr = $p->month ? $p->month->format('M Y') : '—';
+                $bal = (float) $p->balanceDue();
+                return [
+                    'id' => (string) $p->id,
+                    'unit_id' => (string) $p->unit_id,
+                    'month' => $monthStr,
+                    'type' => $p->type_label,
+                    'balance' => $bal,
+                    'label' => "Unit {$unitNum} - {$monthStr} ({$p->type_label}) - Rs. " . number_format($bal),
+                ];
+            });
+
+        $nextVoucherNo = ReceivingVoucher::getNextVoucherNo();
+
         return view('receiving_vouchers.create', [
             'title' => 'New Receiving Voucher',
             'units' => $units,
             'owners' => $owners,
             'paymentAccounts' => $paymentAccounts,
+            'allPayments' => $allPayments,
+            'nextVoucherNo' => $nextVoucherNo,
         ]);
     }
 
@@ -166,7 +188,7 @@ class ReceivingVoucherController extends Controller
                     'paid_at' => $payment->paid_at ?? $data['date'],
                     'payment_account_id' => $data['payment_account_id'],
                     'payment_method' => $data['payment_method'],
-                    'reference' => $data['reference'],
+                    'reference' => $data['reference'] ?? null,
                 ]);
 
                 // Attach to receiving voucher payments pivot table
@@ -284,14 +306,38 @@ class ReceivingVoucherController extends Controller
         $paymentAccounts = PaymentAccount::where('is_active', true)->orWhere('id', $receivingVoucher->payment_account_id)->orderBy('name')->get();
 
         $voucherUnitId = $receivingVoucher->payments->first()?->unit_id;
+        $existingAllocations = $receivingVoucher->payments->pluck('pivot.amount_allocated', 'id');
+
+        $allPayments = \App\Models\Payment::where(function($q) use ($receivingVoucher) {
+                $q->whereIn('status', ['unpaid', 'partial'])
+                  ->orWhereHas('receivingVouchers', fn($vq) => $vq->where('receiving_vouchers.id', $receivingVoucher->id));
+            })
+            ->with(['unit', 'otherTenant'])
+            ->orderBy('month', 'asc')
+            ->get()
+            ->map(function ($p) use ($existingAllocations) {
+                $unitNum = $p->unit->unit_number ?? '—';
+                $monthStr = $p->month ? $p->month->format('M Y') : '—';
+                $allocatedHere = (float) ($existingAllocations[$p->id] ?? 0);
+                $bal = (float) $p->balanceDue() + $allocatedHere;
+                return [
+                    'id' => (string) $p->id,
+                    'unit_id' => (string) $p->unit_id,
+                    'month' => $monthStr,
+                    'type' => $p->type_label,
+                    'balance' => $bal,
+                    'label' => "Unit {$unitNum} - {$monthStr} ({$p->type_label}) - Rs. " . number_format($bal),
+                ];
+            });
 
         return view('receiving_vouchers.edit', [
-            'title' => 'Edit Receiving Voucher — ' . $receivingVoucher->voucher_no,
+            'title' => 'Edit Tenant Receiving Voucher — ' . $receivingVoucher->voucher_no,
             'voucher' => $receivingVoucher,
             'units' => $units,
             'owners' => $owners,
             'paymentAccounts' => $paymentAccounts,
             'voucherUnitId' => $voucherUnitId,
+            'allPayments' => $allPayments,
         ]);
     }
 
@@ -353,11 +399,12 @@ class ReceivingVoucherController extends Controller
             // 2. Fetch new outstanding balance (filtered by selected payment_ids if provided)
             $selectedPaymentIds = array_filter((array) $request->input('payment_ids', []));
 
-            $paymentsQuery = Payment::where('unit_id', $data['unit_id'])
-                ->whereIn('status', ['unpaid', 'partial']);
+            $paymentsQuery = Payment::where('unit_id', $data['unit_id']);
 
             if (!empty($selectedPaymentIds)) {
                 $paymentsQuery->whereIn('id', $selectedPaymentIds);
+            } else {
+                $paymentsQuery->whereIn('status', ['unpaid', 'partial']);
             }
 
             $payments = $paymentsQuery->orderBy('month', 'asc')
@@ -398,7 +445,7 @@ class ReceivingVoucherController extends Controller
                     'paid_at' => $payment->paid_at ?? $data['date'],
                     'payment_account_id' => $data['payment_account_id'],
                     'payment_method' => $data['payment_method'],
-                    'reference' => $data['reference'],
+                    'reference' => $data['reference'] ?? null,
                 ]);
 
                 $receivingVoucher->payments()->attach($payment->id, ['amount_allocated' => $allocatedAmount]);
