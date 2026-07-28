@@ -127,7 +127,7 @@
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Received From</th>
                         <th class="px-4 py-3">Payment Account</th>
-                        <th class="px-4 py-3">Reference</th>
+                        <th class="px-4 py-3">Remarks</th>
                         <th class="px-4 py-3 text-right">Amount</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -155,7 +155,7 @@
                                 <span class="ml-1 text-[10px] text-gray-400 uppercase">({{ $voucher->payment_method }})</span>
                             </td>
                             <td class="px-4 py-3 text-xs text-gray-500">
-                                {{ $voucher->reference ?? '—' }}
+                                {{ $voucher->notes ?? '—' }}
                             </td>
                             <td class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white font-mono">
                                 Rs. {{ number_format($voucher->amount, 0) }}

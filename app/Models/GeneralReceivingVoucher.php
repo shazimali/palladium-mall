@@ -49,6 +49,12 @@ class GeneralReceivingVoucher extends Model
         });
     }
 
+    public static function getNextVoucherNo(): string
+    {
+        $maxId = static::withTrashed()->max('id') ?? 0;
+        return 'PM-GRV-' . str_pad($maxId + 1, 5, '0', STR_PAD_LEFT);
+    }
+
     public function party(): BelongsTo
     {
         return $this->belongsTo(Party::class)->withTrashed();

@@ -62,9 +62,15 @@
     <div
         class="max-w-4xl w-full mx-auto voucher-container rounded-3xl bg-white p-6 sm:p-10 border border-gray-300 shadow-xl text-gray-900 font-sans my-auto">
 
-        <!-- CENTERED TITLE -->
+        <!-- CENTERED TITLE WITH COMPANY BRANDING -->
         <div class="text-center mb-6 pb-4 border-b border-gray-200">
-            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-blue-700 uppercase">
+            <h1 class="text-2xl sm:text-3xl font-black tracking-wider text-gray-900 uppercase mb-0.5">
+                PALLADIUM MALL
+            </h1>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                Management Office
+            </p>
+            <h2 class="text-xl sm:text-2xl font-black tracking-tight text-blue-700 uppercase">
                 Tenant Receiving Voucher
             </h2>
         </div>

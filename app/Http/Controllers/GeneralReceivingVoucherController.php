@@ -73,11 +73,14 @@ class GeneralReceivingVoucherController extends Controller
         $landlords = Landlord::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
+        $nextVoucherNo = GeneralReceivingVoucher::getNextVoucherNo();
+
         return view('general_receiving_vouchers.create', [
             'title'           => 'New General Receiving Voucher',
             'parties'         => $parties,
             'landlords'       => $landlords,
             'paymentAccounts' => $paymentAccounts,
+            'nextVoucherNo'   => $nextVoucherNo,
         ]);
     }
 
