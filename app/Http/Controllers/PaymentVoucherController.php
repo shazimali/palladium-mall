@@ -78,12 +78,15 @@ class PaymentVoucherController extends Controller
             ->orderBy('name')
             ->get();
 
+        $nextVoucherNo = PaymentVoucher::getNextVoucherNo();
+
         return view('payment_vouchers.create', [
-            'title'           => 'Create Payment Voucher',
+            'title'           => 'Create Paid Voucher',
             'parties'         => $parties,
             'tenants'         => $tenants,
             'landlords'       => $landlords,
             'paymentAccounts' => $paymentAccounts,
+            'nextVoucherNo'   => $nextVoucherNo,
         ]);
     }
 

@@ -161,7 +161,7 @@
                         <th class="px-4 py-3 text-right">Amount</th>
                         <th class="px-4 py-3 text-center">Status</th>
                         <th class="px-4 py-3">Account</th>
-                        <th class="px-4 py-3">Ref/Cheque</th>
+                        <th class="px-4 py-3">Remarks</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -219,7 +219,7 @@
                             <td class="px-4 py-3 text-xs text-gray-500">
                                 {{ $voucher->paymentAccount->name ?? '—' }}
                             </td>
-                            <td class="px-4 py-3 font-mono text-xs">{{ $voucher->reference ?? '—' }}</td>
+                            <td class="px-4 py-3 text-xs text-gray-500">{{ $voucher->notes ?? '—' }}</td>
                             <td class="px-4 py-3">
                                 <div class="flex items-center justify-end gap-2">
                                     {{-- Print --}}

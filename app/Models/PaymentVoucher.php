@@ -54,6 +54,12 @@ class PaymentVoucher extends Model
         });
     }
 
+    public static function getNextVoucherNo(): string
+    {
+        $maxId = static::withTrashed()->max('id') ?? 0;
+        return 'PM-PV-' . str_pad($maxId + 1, 5, '0', STR_PAD_LEFT);
+    }
+
     public function owner(): BelongsTo
     {
         return $this->belongsTo(Owner::class)->withTrashed();

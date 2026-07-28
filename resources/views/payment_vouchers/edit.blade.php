@@ -1,679 +1,540 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="mx-auto max-w-7xl px-4 py-6">
-        <div class="mb-6 flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
-            <a href="{{ route('payment-vouchers.index') }}" class="hover:text-brand-500">Paid Vouchers</a>
-            <span>/</span>
-            <span class="text-gray-800 dark:text-white/90">Edit Paid Voucher: {{ $voucher->voucher_no }}</span>
+    <x-common.page-breadcrumb pageTitle="Edit Paid Voucher — {{ $voucher->voucher_no }}" />
+
+    <form action="{{ route('payment-vouchers.update', $voucher) }}" method="POST"
+        @submit.prevent="handleSubmit($event)"
+        x-data="{
+            paidToType: '{{ old('paid_to_type', $voucher->paid_to_type) }}',
+            tenantId: '{{ old('tenant_id', $voucher->tenant_id) }}',
+            unitId: '{{ old('unit_id', $voucher->unit_id) }}',
+            partyId: '{{ old('party_id', $voucher->party_id) }}',
+            landlordId: '{{ old('landlord_id', $voucher->landlord_id) }}',
+            toAccountId: '{{ old('to_payment_account_id', $voucher->to_payment_account_id) }}',
+            paymentAccountId: '{{ old('payment_account_id', $voucher->payment_account_id) }}',
+            voucherAmount: '{{ old('amount', $voucher->amount) }}',
+            displayAmount: '',
+
+            openTenant: false,
+            searchTenant: '',
+            highlightedTenantIndex: -1,
+
+            openParty: false,
+            searchParty: '',
+            highlightedPartyIndex: -1,
+
+            openLandlord: false,
+            searchLandlord: '',
+            highlightedLandlordIndex: -1,
+
+            openToAccount: false,
+            searchToAccount: '',
+            highlightedToAccountIndex: -1,
+
+            tenantOptions: [
+                @foreach($tenants as $tenant)
+                {
+                    id: '{{ $tenant->id }}',
+                    unitId: '{{ $tenant->unit_id ?? "" }}',
+                    name: '{{ addslashes($tenant->name) }}',
+                    unit: '{{ $tenant->unit ? addslashes($tenant->unit->unit_number) : "" }}',
+                    label: '{{ addslashes($tenant->name) }} {{ $tenant->unit ? "(Flat/Shop " . addslashes($tenant->unit->unit_number) . ")" : "" }}'
+                },
+                @endforeach
+            ],
+
+            partyOptions: [
+                @foreach($parties as $party)
+                { id: '{{ $party->id }}', name: '{{ addslashes($party->name) }}' },
+                @endforeach
+            ],
+
+            landlordOptions: [
+                @foreach($landlords as $landlord)
+                { id: '{{ $landlord->id }}', name: '{{ addslashes($landlord->name) }}' },
+                @endforeach
+            ],
+
+            accountOptions: [
+                @foreach($paymentAccounts as $account)
+                { id: '{{ $account->id }}', name: '{{ addslashes($account->name) }} ({{ ucfirst($account->type) }})' },
+                @endforeach
+            ],
+
+            get filteredTenants() {
+                if (!this.searchTenant) return this.tenantOptions;
+                let s = this.searchTenant.toLowerCase();
+                return this.tenantOptions.filter(t => t.label.toLowerCase().includes(s));
+            },
+            get selectedTenantLabel() {
+                let selected = this.tenantOptions.find(t => t.id == this.tenantId);
+                return selected ? selected.label : '';
+            },
+
+            get filteredParties() {
+                if (!this.searchParty) return this.partyOptions;
+                let s = this.searchParty.toLowerCase();
+                return this.partyOptions.filter(p => p.name.toLowerCase().includes(s));
+            },
+            get selectedPartyName() {
+                let selected = this.partyOptions.find(p => p.id == this.partyId);
+                return selected ? selected.name : '';
+            },
+
+            get filteredLandlords() {
+                if (!this.searchLandlord) return this.landlordOptions;
+                let s = this.searchLandlord.toLowerCase();
+                return this.landlordOptions.filter(l => l.name.toLowerCase().includes(s));
+            },
+            get selectedLandlordName() {
+                let selected = this.landlordOptions.find(l => l.id == this.landlordId);
+                return selected ? selected.name : '';
+            },
+
+            get filteredToAccounts() {
+                if (!this.searchToAccount) return this.accountOptions;
+                let s = this.searchToAccount.toLowerCase();
+                return this.accountOptions.filter(a => a.name.toLowerCase().includes(s));
+            },
+            get selectedToAccountName() {
+                let selected = this.accountOptions.find(a => a.id == this.toAccountId);
+                return selected ? selected.name : '';
+            },
+
+            selectTenant(opt) {
+                this.tenantId = opt.id;
+                this.unitId = opt.unitId;
+                this.openTenant = false;
+                this.searchTenant = '';
+                this.highlightedTenantIndex = -1;
+            },
+            selectParty(opt) {
+                this.partyId = opt.id;
+                this.openParty = false;
+                this.searchParty = '';
+                this.highlightedPartyIndex = -1;
+            },
+            selectLandlord(opt) {
+                this.landlordId = opt.id;
+                this.openLandlord = false;
+                this.searchLandlord = '';
+                this.highlightedLandlordIndex = -1;
+            },
+            selectToAccount(opt) {
+                this.toAccountId = opt.id;
+                this.openToAccount = false;
+                this.searchToAccount = '';
+                this.highlightedToAccountIndex = -1;
+            },
+
+            init() {
+                if (this.voucherAmount) {
+                    this.formatAmount(String(this.voucherAmount));
+                }
+            },
+
+            formatAmount(val) {
+                let clean = val.replace(/[^\d.]/g, '');
+                let parts = clean.split('.');
+                if (parts.length > 2) {
+                    parts = [parts[0], parts.slice(1).join('')];
+                }
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                this.displayAmount = parts.join('.');
+                this.voucherAmount = clean ? parseFloat(clean) : '';
+            },
+
+            handleSubmit(event) {
+                if (this.paidToType === 'tenant' && (!this.tenantId || !this.unitId)) {
+                    Swal.fire({
+                        title: 'Tenant Required',
+                        text: 'Please select a Tenant & Unit.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                if (this.paidToType === 'other' && !this.partyId) {
+                    Swal.fire({
+                        title: 'Party Required',
+                        text: 'Please select a Registered Party Head.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                if (this.paidToType === 'landlord' && !this.landlordId) {
+                    Swal.fire({
+                        title: 'Landlord Required',
+                        text: 'Please select a Landlord / Owner.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                if (this.paidToType === 'account' && !this.toAccountId) {
+                    Swal.fire({
+                        title: 'Destination Account Required',
+                        text: 'Please select a Destination Account.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                let amt = parseFloat(this.voucherAmount || 0);
+                if (isNaN(amt) || amt <= 0) {
+                    Swal.fire({
+                        title: 'Invalid Amount',
+                        text: 'Please enter a valid voucher amount greater than zero.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                if (!this.paymentAccountId) {
+                    Swal.fire({
+                        title: 'Withdrawal Account Required',
+                        text: 'Please select a Paid From Account.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                event.target.submit();
+            }
+        }">
+
+        @csrf
+        @method('PUT')
+
+        {{-- FORM CONTAINER WITH NO OUTER BG COLOR, CENTERED TITLE, ADAPTED TO THEME --}}
+        <div class="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans relative">
+
+            {{-- CENTERED TITLE --}}
+            <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+                    Paid Voucher
+                </h2>
+            </div>
+
+            {{-- FORM GRID CONTAINER --}}
+            <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-visible mb-6 border border-gray-200 dark:border-gray-700">
+                
+                {{-- ROW 1: Voucher Date & Paid To Type --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-40 rounded-t-2xl">
+                    {{-- Field 1: Voucher Date --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide rounded-tl-2xl">Voucher Date</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
+                            <input type="text" id="voucher_date" name="date" value="{{ old('date', $voucher->date->format('Y-m-d')) }}" required autocomplete="off"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-extrabold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
+                        </div>
+                    </div>
+
+                    {{-- Field 2: Paid To Type --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid To <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-tr-2xl">
+                            <select name="paid_to_type" x-model="paidToType" required
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">
+                                <option value="tenant">Tenant / Unit</option>
+                                <option value="other">Registered Party Head</option>
+                                <option value="landlord">Landlord / Owner</option>
+                                <option value="account">Account Transfer</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ROW 2: Voucher Number & Searchable Dynamic Entity Selection --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-50">
+                    {{-- Field 1: Voucher Number --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher No.</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400 px-4 py-3 flex items-center font-black text-base sm:text-lg font-mono">
+                            {{ $voucher->voucher_no }}
+                        </div>
+                    </div>
+
+                    {{-- Field 2: Searchable Dynamic Entity Selection Modal --}}
+                    <div class="grid grid-cols-3 min-h-[52px] relative z-50">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
+                            <span x-text="paidToType === 'tenant' ? 'Select Tenant' : (paidToType === 'other' ? 'Select Party' : (paidToType === 'landlord' ? 'Select Landlord' : 'To Account'))"></span>
+                            <span class="text-rose-300 ml-1">*</span>
+                        </div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
+                            
+                            {{-- Case 1: Searchable Tenant Dropdown --}}
+                            <div x-show="paidToType === 'tenant'" class="w-full relative" @click.away="openTenant = false; highlightedTenantIndex = -1">
+                                <input type="hidden" name="tenant_id" x-model="tenantId" :required="paidToType === 'tenant'">
+                                <input type="hidden" name="unit_id" x-model="unitId" :required="paidToType === 'tenant'">
+                                <button type="button" @click="openTenant = !openTenant; if(openTenant) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    <span x-text="selectedTenantLabel ? selectedTenantLabel : 'Select Tenant / Unit...'" class="truncate"></span>
+                                    <span class="ml-2 text-xs opacity-60">▼</span>
+                                </button>
+
+                                <div x-show="openTenant" x-transition x-cloak
+                                    class="absolute left-0 right-0 top-full z-[999999] mt-2 min-w-[300px] sm:min-w-[400px] rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden text-gray-900 dark:text-white">
+                                    <div class="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                                        <input type="text" x-ref="tenantSearchInput" x-model="searchTenant" placeholder="Type tenant or unit to search..."
+                                            @keydown.arrow-down.prevent="highlightedTenantIndex = (highlightedTenantIndex + 1) % filteredTenants.length"
+                                            @keydown.arrow-up.prevent="highlightedTenantIndex = (highlightedTenantIndex - 1 + filteredTenants.length) % filteredTenants.length"
+                                            @keydown.enter.prevent="if(highlightedTenantIndex >= 0 && filteredTenants[highlightedTenantIndex]) selectTenant(filteredTenants[highlightedTenantIndex])"
+                                            @keydown.escape="openTenant = false; highlightedTenantIndex = -1"
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                    </div>
+                                    <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
+                                        <template x-for="(opt, index) in filteredTenants" :key="opt.id">
+                                            <button type="button" @click="selectTenant(opt)"
+                                                @mouseenter="highlightedTenantIndex = index"
+                                                class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
+                                                :class="tenantId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedTenantIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
+                                                <span x-text="opt.label" class="font-black text-sm truncate"></span>
+                                                <span x-show="tenantId == opt.id" class="font-black text-base">✓</span>
+                                            </button>
+                                        </template>
+                                        <div x-show="filteredTenants.length === 0" class="px-4 py-3 text-center text-xs font-semibold text-gray-400">
+                                            No matching Tenant found
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Case 2: Searchable Party Dropdown --}}
+                            <div x-show="paidToType === 'other'" class="w-full relative" @click.away="openParty = false; highlightedPartyIndex = -1">
+                                <input type="hidden" name="party_id" x-model="partyId" :required="paidToType === 'other'">
+                                <button type="button" @click="openParty = !openParty; if(openParty) { $nextTick(() => $refs.partySearchInput.focus()) }"
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    <span x-text="selectedPartyName ? selectedPartyName : 'Select Registered Party Head...'" class="truncate"></span>
+                                    <span class="ml-2 text-xs opacity-60">▼</span>
+                                </button>
+
+                                <div x-show="openParty" x-transition x-cloak
+                                    class="absolute left-0 right-0 top-full z-[999999] mt-2 min-w-[300px] sm:min-w-[400px] rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden text-gray-900 dark:text-white">
+                                    <div class="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                                        <input type="text" x-ref="partySearchInput" x-model="searchParty" placeholder="Type party name to search..."
+                                            @keydown.arrow-down.prevent="highlightedPartyIndex = (highlightedPartyIndex + 1) % filteredParties.length"
+                                            @keydown.arrow-up.prevent="highlightedPartyIndex = (highlightedPartyIndex - 1 + filteredParties.length) % filteredParties.length"
+                                            @keydown.enter.prevent="if(highlightedPartyIndex >= 0 && filteredParties[highlightedPartyIndex]) selectParty(filteredParties[highlightedPartyIndex])"
+                                            @keydown.escape="openParty = false; highlightedPartyIndex = -1"
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                    </div>
+                                    <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
+                                        <template x-for="(opt, index) in filteredParties" :key="opt.id">
+                                            <button type="button" @click="selectParty(opt)"
+                                                @mouseenter="highlightedPartyIndex = index"
+                                                class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
+                                                :class="partyId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedPartyIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
+                                                <span x-text="opt.name" class="font-black text-sm truncate"></span>
+                                                <span x-show="partyId == opt.id" class="font-black text-base">✓</span>
+                                            </button>
+                                        </template>
+                                        <div x-show="filteredParties.length === 0" class="px-4 py-3 text-center text-xs font-semibold text-gray-400">
+                                            No matching Party found
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Case 3: Searchable Landlord Dropdown --}}
+                            <div x-show="paidToType === 'landlord'" class="w-full relative" @click.away="openLandlord = false; highlightedLandlordIndex = -1">
+                                <input type="hidden" name="landlord_id" x-model="landlordId" :required="paidToType === 'landlord'">
+                                <button type="button" @click="openLandlord = !openLandlord; if(openLandlord) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    <span x-text="selectedLandlordName ? selectedLandlordName : 'Select Landlord / Owner...'" class="truncate"></span>
+                                    <span class="ml-2 text-xs opacity-60">▼</span>
+                                </button>
+
+                                <div x-show="openLandlord" x-transition x-cloak
+                                    class="absolute left-0 right-0 top-full z-[999999] mt-2 min-w-[300px] sm:min-w-[400px] rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden text-gray-900 dark:text-white">
+                                    <div class="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                                        <input type="text" x-ref="landlordSearchInput" x-model="searchLandlord" placeholder="Type landlord name to search..."
+                                            @keydown.arrow-down.prevent="highlightedLandlordIndex = (highlightedLandlordIndex + 1) % filteredLandlords.length"
+                                            @keydown.arrow-up.prevent="highlightedLandlordIndex = (highlightedLandlordIndex - 1 + filteredLandlords.length) % filteredLandlords.length"
+                                            @keydown.enter.prevent="if(highlightedLandlordIndex >= 0 && filteredLandlords[highlightedLandlordIndex]) selectLandlord(filteredLandlords[highlightedLandlordIndex])"
+                                            @keydown.escape="openLandlord = false; highlightedLandlordIndex = -1"
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                    </div>
+                                    <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
+                                        <template x-for="(opt, index) in filteredLandlords" :key="opt.id">
+                                            <button type="button" @click="selectLandlord(opt)"
+                                                @mouseenter="highlightedLandlordIndex = index"
+                                                class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
+                                                :class="landlordId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedLandlordIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
+                                                <span x-text="opt.name" class="font-black text-sm truncate"></span>
+                                                <span x-show="landlordId == opt.id" class="font-black text-base">✓</span>
+                                            </button>
+                                        </template>
+                                        <div x-show="filteredLandlords.length === 0" class="px-4 py-3 text-center text-xs font-semibold text-gray-400">
+                                            No matching Landlord found
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- Case 4: Searchable Destination Account Dropdown --}}
+                            <div x-show="paidToType === 'account'" class="w-full relative" @click.away="openToAccount = false; highlightedToAccountIndex = -1">
+                                <input type="hidden" name="to_payment_account_id" x-model="toAccountId" :required="paidToType === 'account'">
+                                <button type="button" @click="openToAccount = !openToAccount; if(openToAccount) { $nextTick(() => $refs.toAccountSearchInput.focus()) }"
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    <span x-text="selectedToAccountName ? selectedToAccountName : 'Select Destination Account...'" class="truncate"></span>
+                                    <span class="ml-2 text-xs opacity-60">▼</span>
+                                </button>
+
+                                <div x-show="openToAccount" x-transition x-cloak
+                                    class="absolute left-0 right-0 top-full z-[999999] mt-2 min-w-[300px] sm:min-w-[400px] rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden text-gray-900 dark:text-white">
+                                    <div class="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                                        <input type="text" x-ref="toAccountSearchInput" x-model="searchToAccount" placeholder="Type account name to search..."
+                                            @keydown.arrow-down.prevent="highlightedToAccountIndex = (highlightedToAccountIndex + 1) % filteredToAccounts.length"
+                                            @keydown.arrow-up.prevent="highlightedToAccountIndex = (highlightedToAccountIndex - 1 + filteredToAccounts.length) % filteredToAccounts.length"
+                                            @keydown.enter.prevent="if(highlightedToAccountIndex >= 0 && filteredToAccounts[highlightedToAccountIndex]) selectToAccount(filteredToAccounts[highlightedToAccountIndex])"
+                                            @keydown.escape="openToAccount = false; highlightedToAccountIndex = -1"
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                    </div>
+                                    <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
+                                        <template x-for="(opt, index) in filteredToAccounts" :key="opt.id">
+                                            <button type="button" @click="selectToAccount(opt)"
+                                                @mouseenter="highlightedToAccountIndex = index"
+                                                class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
+                                                :class="toAccountId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedToAccountIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
+                                                <span x-text="opt.name" class="font-black text-sm truncate"></span>
+                                                <span x-show="toAccountId == opt.id" class="font-black text-base">✓</span>
+                                            </button>
+                                        </template>
+                                        <div x-show="filteredToAccounts.length === 0" class="px-4 py-3 text-center text-xs font-semibold text-gray-400">
+                                            No matching Account found
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ROW 3: Payment Amount & Paid From Payment Account --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-10 rounded-b-2xl">
+                    {{-- Field 1: Payment Amount --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide rounded-bl-2xl md:rounded-bl-none">Payment Amount <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
+                            <input type="text" x-model="displayAmount" @input="formatAmount($event.target.value)" required placeholder="0.00"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            <input type="hidden" name="amount" x-model="voucherAmount">
+                        </div>
+                    </div>
+
+                    {{-- Field 2: Paid From Account --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid From <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-br-2xl">
+                            <select name="payment_account_id" x-model="paymentAccountId" required
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                <option value="">Select Account...</option>
+                                @foreach($paymentAccounts as $account)
+                                    <option value="{{ $account->id }}" {{ old('payment_account_id', $voucher->payment_account_id) == $account->id ? 'selected' : '' }}>
+                                        {{ $account->name }} ({{ ucfirst($account->type) }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            {{-- ROW 4 / BOTTOM SECTION: Approved by & Description --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
+                {{-- Left Box: Approved by Box --}}
+                <div class="bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl p-4 flex flex-col justify-center border border-gray-200 dark:border-gray-700 shadow-xs">
+                    <p class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
+                        Approved by: <span class="text-brand-600 dark:text-brand-400 font-extrabold ml-1">{{ $voucher->user->name ?? auth()->user()->name }}</span>
+                    </p>
+                </div>
+
+                {{-- Right Box: Description of Goods/Services / Remarks --}}
+                <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-xs">
+                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                        Description of Goods/Services / Remarks:
+                    </label>
+                    <textarea name="notes" rows="2" placeholder="Payment voucher remarks or notes..."
+                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">{{ old('notes', $voucher->notes) }}</textarea>
+                </div>
+            </div>
+
+            {{-- ACTION BUTTONS --}}
+            <div class="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <a href="{{ route('payment-vouchers.index') }}" class="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold transition-all text-xs sm:text-sm">
+                    Cancel
+                </a>
+                <button type="submit" class="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer">
+                    Update Voucher
+                </button>
+            </div>
+
         </div>
 
-        <x-common.component-card :title="'Edit Paid Voucher: ' . $voucher->voucher_no"
-            desc="Modify payout details. Restricted to Super Administrators only.">
-            <form action="{{ route('payment-vouchers.update', $voucher) }}" method="POST" class="space-y-6"
-                @submit.prevent="handleSubmit($event)" x-data="{ 
-                                paidToType: '{{ old('paid_to_type', $voucher->paid_to_type) }}',
-                                selectedBalance: null,
-                                selectedAccountName: '',
-                                amount: '{{ old('amount', $voucher->amount) }}',
-                                displayAmount: '',
-                                originalAccountId: '{{ $voucher->payment_account_id }}',
-                                originalAmount: '{{ $voucher->amount }}',
-                                selectedTenantId: '{{ old('tenant_id', $voucher->tenant_id) }}',
-                                tenantDeposits: [],
-                                selectedUnitId: '{{ old('unit_id', $voucher->unit_id) }}',
-                                selectedUnitDeposit: null,
-                                selectedLandlordId: '{{ old('landlord_id', $voucher->landlord_id) }}',
-                                landlordBalanceInfo: null,
-                                handleSubmit(event) {
-                                    if (this.selectedBalance !== null && this.selectedBalance !== '' && this.amount !== '') {
-                                        let amt = parseFloat(this.amount);
-                                        let bal = this.adjustedBalance;
-                                        if (amt > bal) {
-                                            Swal.fire({
-                                                title: 'Insufficient Balance',
-                                                text: 'The selected Payment Account does not have sufficient balance. Available balance: Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                                                icon: 'error',
-                                                confirmButtonText: 'OK',
-                                                customClass: {
-                                                    confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-                                                },
-                                                buttonsStyling: false
-                                            });
-                                            return;
-                                        }
-                                    }
-
-                                    if (this.paidToType === 'tenant' && this.selectedUnitDeposit !== null && this.amount !== '') {
-                                        let amt = parseFloat(this.amount);
-                                        let bal = parseFloat(this.selectedUnitDeposit.pending_refund);
-                                        if (amt > bal) {
-                                            Swal.fire({
-                                                title: 'Limit Exceeded',
-                                                text: 'Payment amount exceeds security deposit refund limit of Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.',
-                                                icon: 'error',
-                                                confirmButtonText: 'OK',
-                                                customClass: {
-                                                    confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-                                                },
-                                                buttonsStyling: false
-                                            });
-                                            return;
-                                        }
-                                    }
-
-                                    if (this.paidToType === 'landlord' && this.landlordBalanceInfo !== null && this.amount !== '') {
-                                        let amt = parseFloat(this.amount);
-                                        let bal = parseFloat(this.landlordBalanceInfo.payable_amount);
-                                        // Adjust for original amount if updating same landlord
-                                        if (this.selectedLandlordId == '{{ $voucher->landlord_id }}') {
-                                            bal += parseFloat(this.originalAmount);
-                                        }
-                                        if (amt > bal) {
-                                            Swal.fire({
-                                                title: 'Limit Exceeded',
-                                                text: 'Payment amount exceeds the landlord\'s available negative balance of Rs. ' + bal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '.',
-                                                icon: 'error',
-                                                confirmButtonText: 'OK',
-                                                customClass: {
-                                                    confirmButton: 'inline-flex items-center justify-center rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors mx-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2'
-                                                },
-                                                buttonsStyling: false
-                                            });
-                                            return;
-                                        }
-                                    }
-
-                                    event.target.submit();
-                                },
-                                get adjustedBalance() {
-                                    if (this.selectedBalance === null || this.selectedBalance === '') return 0;
-                                    let balance = parseFloat(this.selectedBalance);
-                                    let opt = document.querySelector('select[name=payment_account_id]').selectedOptions[0];
-                                    if (opt && opt.value === this.originalAccountId) {
-                                        balance += parseFloat(this.originalAmount);
-                                    }
-                                    return balance;
-                                },
-                                fetchTenantDeposits(tenantId) {
-                                    this.selectedTenantId = tenantId;
-                                    this.tenantDeposits = [];
-                                    this.selectedUnitDeposit = null;
-                                    if (!tenantId) return;
-                                    fetch('{{ route('ajax.tenant-security-deposits') }}?tenant_id=' + tenantId + '&voucher_id={{ $voucher->id }}')
-                                        .then(r => r.json())
-                                        .then(d => { 
-                                            this.tenantDeposits = d.security_deposits || []; 
-                                            if (this.selectedUnitId) {
-                                                this.selectedUnitDeposit = this.tenantDeposits.find(x => x.unit_id == this.selectedUnitId) || null;
-                                            }
-                                        });
-                                },
-                                fetchLandlordBalance(landlordId) {
-                                    this.selectedLandlordId = landlordId;
-                                    this.landlordBalanceInfo = null;
-                                    if (!landlordId) return;
-                                    fetch('{{ route('ajax.landlord-pending-balance') }}?landlord_id=' + landlordId)
-                                        .then(r => r.json())
-                                        .then(d => {
-                                            this.landlordBalanceInfo = d;
-                                            // If same landlord and no old/input change, add back original amount to payable_amount
-                                            if (landlordId == '{{ $voucher->landlord_id }}') {
-                                                this.landlordBalanceInfo.payable_amount = parseFloat(d.payable_amount) + parseFloat(this.originalAmount);
-                                            }
-                                        });
-                                },
-                                selectUnit(unitId) {
-                                    this.selectedUnitId = unitId;
-                                    this.selectedUnitDeposit = this.tenantDeposits.find(x => x.unit_id == unitId) || null;
-                                    if (this.selectedUnitDeposit) {
-                                        this.formatAmount(String(this.selectedUnitDeposit.pending_refund));
-                                    }
-                                },
-                                formatAmount(val) {
-                                    let clean = val.replace(/[^\d.]/g, '');
-                                    let parts = clean.split('.');
-                                    if (parts.length > 2) {
-                                        parts = [parts[0], parts.slice(1).join('')];
-                                    }
-                                    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-                                    this.displayAmount = parts.join('.');
-                                    this.amount = clean;
-                                },
-                                init() {
-                                    if (this.amount) {
-                                        this.formatAmount(String(this.amount));
-                                    }
-                                    if (this.selectedTenantId) {
-                                        this.fetchTenantDeposits(this.selectedTenantId);
-                                    }
-                                    if (this.selectedLandlordId) {
-                                        this.fetchLandlordBalance(this.selectedLandlordId);
-                                    }
-                                }
-                            }">
-                @csrf
-                @method('PUT')
-
-                @php
-                    $input = 'w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base sm:text-lg font-semibold text-gray-900 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-600';
-                    $label = 'mb-1.5 block text-xs sm:text-sm font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300';
-                @endphp
-
-                {{-- STICKY BIG HEADING BANNER --}}
-                <div class="sticky mb-6 rounded-2xl border-2 border-red-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
-                    style="position: sticky; top: 72px; z-index: 990;">
-                    <div class="flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex items-center gap-4 min-w-0">
-                            <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-md text-3xl font-black">
-                                💸
-                            </div>
-                            <div class="min-w-0">
-                                <p class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400">
-                                    Edit Payment Voucher: {{ $voucher->voucher_no }}
-                                </p>
-                                <div class="flex flex-wrap items-baseline gap-2 mt-0.5">
-                                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white"
-                                        x-text="paidToType === 'tenant' ? (selectedLabel ? 'Tenant: ' + selectedLabel : 'Select Tenant...') : (paidToType === 'landlord' ? 'Landlord Payout' : (paidToType === 'account' ? 'Account Transfer' : 'Party / Supplier'))"></h2>
-                                </div>
-                                <div class="flex items-center gap-2 mt-1 text-xs font-bold text-gray-600 dark:text-gray-300">
-                                    <span>Paid From Account:</span>
-                                    <span class="text-brand-600 dark:text-brand-400 font-extrabold" x-text="selectedAccountName || 'Not Selected'"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="text-right">
-                            <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Voucher Amount</span>
-                            <span class="text-2xl sm:text-3xl font-black font-mono text-red-600 dark:text-red-400"
-                                  x-text="displayAmount ? 'Rs. ' + displayAmount : 'Rs. 0.00'"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                    {{-- Paid To Type --}}
-                    <div>
-                        <label class="{{ $label }}">Paid To Type <span class="text-red-500">*</span></label>
-                        <select name="paid_to_type" x-model="paidToType"
-                            class="{{ $input }} {{ $errors->has('paid_to_type') ? 'border-red-400' : '' }}" required>
-                            <option value="tenant" {{ old('paid_to_type', $voucher->paid_to_type) === 'tenant' ? 'selected' : '' }}>Tenant (Refund Security Deposit)</option>
-                            <option value="landlord" {{ old('paid_to_type', $voucher->paid_to_type) === 'landlord' ? 'selected' : '' }}>Landlord (Pay Negative Balance)</option>
-                            <option value="other" {{ old('paid_to_type', $voucher->paid_to_type) === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
-                            <option value="account" {{ old('paid_to_type', $voucher->paid_to_type) === 'account' ? 'selected' : '' }}>Payment Account (Inter-Account Transfer)</option>
-                        </select>
-                        @error('paid_to_type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Destination Payment Account Selection (when paidToType === 'account') --}}
-                    <div x-show="paidToType === 'account'" x-transition x-cloak>
-                        <label class="{{ $label }}">Destination Account (Transfer To) <span
-                                class="text-red-500">*</span></label>
-                        <select name="to_payment_account_id"
-                            class="{{ $input }} {{ $errors->has('to_payment_account_id') ? 'border-red-400' : '' }}"
-                            :required="paidToType === 'account'">
-                            <option value="">Select Destination Account...</option>
-                            @foreach($paymentAccounts as $account)
-                                <option value="{{ $account->id }}" {{ old('to_payment_account_id', $voucher->to_payment_account_id) == $account->id ? 'selected' : '' }}>
-                                    {{ $account->name }} (Balance: Rs. {{ number_format($account->current_balance, 2) }})
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('to_payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Tenant Selection --}}
-                    <div x-show="paidToType === 'tenant'" x-transition x-cloak x-data="{
-                                        open: false,
-                                        search: '',
-                                        selectedId: '{{ old('tenant_id', $voucher->tenant_id) }}',
-                                        selectedLabel: '{{ old('tenant_name', $voucher->tenant ? $voucher->tenant->name . ($voucher->tenant->unit ? ' (' . $voucher->tenant->unit->unit_number . ')' : '') : '') }}',
-                                        highlightedIndex: -1,
-                                        tenants: [
-                                            @foreach($tenants as $tenant)
-                                                { id: {{ $tenant->id }}, name: '{{ addslashes($tenant->name) }}', phone: '{{ addslashes($tenant->phone ?? '—') }}', unit_number: '{{ $tenant->unit ? addslashes($tenant->unit->unit_number) : '—' }}' },
-                                            @endforeach
-                                        ],
-                                        get filteredTenants() {
-                                            if (!this.search) return this.tenants;
-                                            let q = this.search.toLowerCase();
-                                            return this.tenants.filter(t => t.name.toLowerCase().includes(q) || t.phone.toLowerCase().includes(q) || t.unit_number.toLowerCase().includes(q));
-                                        },
-                                        selectTenant(t) {
-                                            this.selectedId = t.id;
-                                            this.selectedLabel = t.name + (t.unit_number && t.unit_number !== '—' ? ' (' + t.unit_number + ')' : '');
-                                            this.open = false;
-                                            this.search = '';
-                                            this.highlightedIndex = -1;
-                                            fetchTenantDeposits(t.id);
-                                        },
-                                        moveHighlight(direction) {
-                                            let list = this.filteredTenants;
-                                            if (list.length === 0) return;
-                                            this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
-                                        },
-                                        selectHighlighted() {
-                                            let list = this.filteredTenants;
-                                            if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
-                                                this.selectTenant(list[this.highlightedIndex]);
-                                            }
-                                        }
-                                     }">
-                        <label class="{{ $label }}">Select Tenant <span class="text-red-500">*</span></label>
-                        <input type="hidden" name="tenant_id" :value="selectedId" :required="paidToType === 'tenant'">
-                        <input type="hidden" name="tenant_name" :value="selectedLabel">
-
-                        <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
-                            <div tabindex="0"
-                                @click="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
-                                @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
-                                @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
-                                @click.outside="open = false"
-                                class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('tenant_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
-                                <span x-text="selectedLabel || 'Select Tenant'"
-                                    :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
-                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200"
-                                    :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-
-                            <div x-show="open"
-                                class="absolute left-0 z-[99999] mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
-                                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
-                                    <input x-ref="tenantSearchInput" x-model="search"
-                                        @keydown.arrow-down.prevent="moveHighlight(1)"
-                                        @keydown.arrow-up.prevent="moveHighlight(-1)"
-                                        @keydown.enter.prevent="selectHighlighted()"
-                                        @keydown.escape.prevent="open = false; highlightedIndex = -1" type="text"
-                                        placeholder="Type to search tenant..."
-                                        class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                </div>
-                                <ul class="max-h-60 overflow-y-auto mt-1">
-                                    <template x-if="filteredTenants.length === 0">
-                                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching tenants
-                                            found.</li>
-                                    </template>
-                                    <template x-for="(t, index) in filteredTenants" :key="t.id">
-                                        <li @click="selectTenant(t)" @mouseenter="highlightedIndex = index" :class="{
-                                                            'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
-                                                            'text-gray-800 dark:text-gray-200': highlightedIndex !== index
-                                                        }"
-                                            class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
-                                            <span
-                                                x-text="t.name + (t.unit_number && t.unit_number !== '—' ? ' (' + t.unit_number + ')' : '')"
-                                                class="font-medium"></span>
-                                            <span x-text="t.phone" class="text-[10px] text-gray-400"></span>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-                        </div>
-                        @error('tenant_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Tenant Unit Selection --}}
-                    <div x-show="paidToType === 'tenant' && tenantDeposits.length > 0" x-transition x-cloak>
-                        <label class="{{ $label }}">Select Flat/Shop (Security Deposit Refund) <span
-                                class="text-red-500">*</span></label>
-                        <select name="unit_id" class="{{ $input }} {{ $errors->has('unit_id') ? 'border-red-400' : '' }}"
-                            :required="paidToType === 'tenant'" @change="selectUnit($event.target.value)">
-                            <option value="">Select Flat/Shop</option>
-                            <template x-for="d in tenantDeposits" :key="d.unit_id">
-                                <option :value="d.unit_id" :selected="d.unit_id == selectedUnitId"
-                                    x-text="d.unit_number + ' (Pending: Rs. ' + Number(d.pending_refund).toLocaleString(undefined, {minimumFractionDigits: 2}) + ')'">
-                                </option>
-                            </template>
-                        </select>
-                        @error('unit_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-
-                        {{-- Deposit balance box --}}
-                        <template x-if="selectedUnitDeposit !== null">
-                            <div
-                                class="mt-2 rounded-lg border border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-900/10 p-2.5 text-xs font-semibold flex flex-col gap-1">
-                                <div class="flex justify-between items-center text-teal-700 dark:text-teal-400">
-                                    <span>Total Deposit Paid by Tenant:</span>
-                                    <span class="font-bold text-sm text-teal-800 dark:text-teal-300"
-                                        x-text="'Rs. ' + Number(selectedUnitDeposit.total_collected).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
-                                </div>
-                                <div class="flex justify-between items-center text-gray-500 dark:text-gray-400">
-                                    <span>Previously Refunded:</span>
-                                    <span class="font-semibold text-gray-700 dark:text-gray-300"
-                                        x-text="'Rs. ' + Number(selectedUnitDeposit.total_refunded).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
-                                </div>
-                                <div
-                                    class="flex justify-between items-center text-brand-600 dark:text-brand-400 pt-1 border-t border-teal-100 dark:border-teal-900/30">
-                                    <span>Maximum Refund Allowed:</span>
-                                    <span class="font-bold text-sm text-brand-700 dark:text-brand-300"
-                                        x-text="'Rs. ' + Number(selectedUnitDeposit.pending_refund).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-
-                    {{-- Warning if no deposit records found --}}
-                    <div x-show="paidToType === 'tenant' && tenantDeposits.length === 0 && selectedTenantId" x-cloak
-                        class="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10 p-4 text-xs text-amber-700 dark:text-amber-400 sm:col-span-2">
-                        No active security deposit records found for this tenant. They must have a paid security deposit
-                        payment record first.
-                    </div>
-
-
-                    {{-- Landlord Selection --}}
-                    <div x-show="paidToType === 'landlord'" x-transition x-cloak x-data="{
-                                        open: false,
-                                        search: '',
-                                        selectedId: '{{ old('landlord_id', $voucher->landlord_id) }}',
-                                        selectedLabel: '{{ old('landlord_name', $voucher->landlord ? $voucher->landlord->name : '') }}',
-                                        highlightedIndex: -1,
-                                        landlords: [
-                                            @foreach($landlords as $landlord)
-                                                { id: {{ $landlord->id }}, name: '{{ addslashes($landlord->name) }}', phone: '{{ addslashes($landlord->phone ?? '—') }}' },
-                                            @endforeach
-                                        ],
-                                        get filteredLandlords() {
-                                            if (!this.search) return this.landlords;
-                                            let q = this.search.toLowerCase();
-                                            return this.landlords.filter(l => l.name.toLowerCase().includes(q) || l.phone.toLowerCase().includes(q));
-                                        },
-                                        selectLandlord(l) {
-                                            this.selectedId = l.id;
-                                            this.selectedLabel = l.name;
-                                            this.open = false;
-                                            this.search = '';
-                                            this.highlightedIndex = -1;
-                                            fetchLandlordBalance(l.id);
-                                        },
-                                        moveHighlight(direction) {
-                                            let list = this.filteredLandlords;
-                                            if (list.length === 0) return;
-                                            this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
-                                        },
-                                        selectHighlighted() {
-                                            let list = this.filteredLandlords;
-                                            if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
-                                                this.selectLandlord(list[this.highlightedIndex]);
-                                            }
-                                        }
-                                     }">
-                        <label class="{{ $label }}">Select Landlord <span class="text-red-500">*</span></label>
-                        <input type="hidden" name="landlord_id" :value="selectedId" :required="paidToType === 'landlord'">
-                        <input type="hidden" name="landlord_name" :value="selectedLabel">
-
-                        <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
-                            <div tabindex="0"
-                                @click="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
-                                @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
-                                @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
-                                @click.outside="open = false"
-                                class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('landlord_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
-                                <span x-text="selectedLabel || 'Select Landlord'"
-                                    :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
-                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200"
-                                    :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-
-                            <div x-show="open"
-                                class="absolute left-0 z-[99999] mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2">
-                                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
-                                    <input x-ref="landlordSearchInput" x-model="search"
-                                        @keydown.arrow-down.prevent="moveHighlight(1)"
-                                        @keydown.arrow-up.prevent="moveHighlight(-1)"
-                                        @keydown.enter.prevent="selectHighlighted()"
-                                        @keydown.escape.prevent="open = false; highlightedIndex = -1" type="text"
-                                        placeholder="Type to search landlord..."
-                                        class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                </div>
-                                <ul class="max-h-60 overflow-y-auto mt-1">
-                                    <template x-if="filteredLandlords.length === 0">
-                                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching landlords
-                                            found.</li>
-                                    </template>
-                                    <template x-for="(l, index) in filteredLandlords" :key="l.id">
-                                        <li @click="selectLandlord(l)" @mouseenter="highlightedIndex = index" :class="{
-                                                            'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
-                                                            'text-gray-800 dark:text-gray-200': highlightedIndex !== index
-                                                        }"
-                                            class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
-                                            <span x-text="l.name" class="font-medium"></span>
-                                            <span x-text="l.phone" class="text-[10px] text-gray-400"></span>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-                        </div>
-                        @error('landlord_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-
-                        {{-- Landlord Balance Information --}}
-                        <template x-if="landlordBalanceInfo !== null">
-                            <div
-                                class="mt-2 rounded-lg border border-teal-200 bg-teal-50 dark:border-teal-800 dark:bg-teal-900/10 p-2.5 text-xs font-semibold flex flex-col gap-1">
-                                <div class="flex justify-between items-center text-teal-700 dark:text-teal-400">
-                                    <span>Net Ledger Balance:</span>
-                                    <span class="font-bold text-sm text-teal-800 dark:text-teal-300"
-                                        x-text="'Rs. ' + Number(landlordBalanceInfo.current_balance).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
-                                </div>
-                                <div
-                                    class="flex justify-between items-center text-brand-600 dark:text-brand-400 pt-1 border-t border-teal-100 dark:border-teal-900/30">
-                                    <span>Payable Amount (Mall owes Landlord):</span>
-                                    <span class="font-bold text-sm text-brand-700 dark:text-brand-300"
-                                        x-text="'Rs. ' + Number(landlordBalanceInfo.payable_amount).toLocaleString(undefined, {minimumFractionDigits: 2})"></span>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-
-                    {{-- Other Payee Name (Searchable Party Head Dropdown) --}}
-                    <div x-show="paidToType === 'other'" x-transition x-cloak x-data="{
-                                        open: false,
-                                        search: '',
-                                        selectedId: '{{ old('party_id', $voucher->party_id) }}',
-                                        selectedLabel: '{{ old('party_name', $voucher->other_name) }}',
-                                        highlightedIndex: -1,
-                                        parties: [
-                                            @foreach($parties as $party)
-                                                { id: {{ $party->id }}, name: '{{ addslashes($party->name) }}', phone: '{{ addslashes($party->phone ?? '—') }}' },
-                                            @endforeach
-                                        ],
-                                        get filteredParties() {
-                                            if (!this.search) return this.parties;
-                                            let q = this.search.toLowerCase();
-                                            return this.parties.filter(p => p.name.toLowerCase().includes(q) || p.phone.toLowerCase().includes(q));
-                                        },
-                                        selectParty(p) {
-                                            this.selectedId = p.id;
-                                            this.selectedLabel = p.name;
-                                            this.open = false;
-                                            this.search = '';
-                                            this.highlightedIndex = -1;
-                                        },
-                                        moveHighlight(direction) {
-                                            let list = this.filteredParties;
-                                            if (list.length === 0) return;
-                                                this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
-                                        },
-                                        selectHighlighted() {
-                                            let list = this.filteredParties;
-                                            if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
-                                                this.selectParty(list[this.highlightedIndex]);
-                                            }
-                                        }
-                                     }">
-                        <label class="{{ $label }}">Party Head <span class="text-red-500">*</span></label>
-
-                        {{-- Hidden form field --}}
-                        <input type="hidden" name="party_id" :value="selectedId" :required="paidToType === 'other'">
-                        <input type="hidden" name="party_name" :value="selectedLabel">
-
-                        <div class="relative" :class="open ? 'relative z-[99999]' : 'relative'">
-                            {{-- Trigger --}}
-                            <div tabindex="0"
-                                @click="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
-                                @keydown.space.prevent="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
-                                @keydown.enter.prevent="open = !open; if(open) { $nextTick(() => $refs.partySearchInput.focus()) }"
-                                @click.outside="open = false"
-                                class="w-full rounded-lg border bg-white px-4 py-2.5 text-sm text-gray-800 dark:bg-gray-900 dark:text-white/90 cursor-pointer flex justify-between items-center {{ $errors->has('party_id') ? 'border-red-400 focus-within:ring-red-400' : 'border-gray-300 focus-within:border-brand-500 focus-within:ring-brand-500 dark:border-gray-700' }}">
-                                <span x-text="selectedLabel || 'Select Registered Party Head'"
-                                    :class="selectedLabel ? '' : 'text-gray-400 dark:text-gray-600'"></span>
-                                <svg class="h-4 w-4 text-gray-500 transition-transform duration-200"
-                                    :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
-                            </div>
-
-                            {{-- Dropdown --}}
-                            <div x-show="open" x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 transform scale-95"
-                                x-transition:enter-end="opacity-100 transform scale-100"
-                                x-transition:leave="transition ease-in duration-75"
-                                x-transition:leave-start="opacity-100 transform scale-100"
-                                x-transition:leave-end="opacity-0 transform scale-95"
-                                class="absolute left-0 z-[99999] mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800 py-2"
-                                style="display: none;">
-
-                                <!-- Search Input -->
-                                <div class="px-3 pb-2 pt-1 border-b border-gray-100 dark:border-gray-700">
-                                    <input x-ref="partySearchInput" x-model="search"
-                                        @keydown.arrow-down.prevent="moveHighlight(1)"
-                                        @keydown.arrow-up.prevent="moveHighlight(-1)"
-                                        @keydown.enter.prevent="selectHighlighted()"
-                                        @keydown.escape.prevent="open = false; highlightedIndex = -1" type="text"
-                                        placeholder="Type to search party head..."
-                                        class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
-                                </div>
-
-                                <!-- Options List -->
-                                <ul class="max-h-60 overflow-y-auto mt-1">
-                                    <template x-if="filteredParties.length === 0">
-                                        <li class="px-4 py-2 text-xs text-gray-500 dark:text-gray-400">No matching party
-                                            heads found.</li>
-                                    </template>
-                                    <template x-for="(p, index) in filteredParties" :key="p.id">
-                                        <li @click="selectParty(p)" @mouseenter="highlightedIndex = index" :class="{
-                                                            'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
-                                                            'text-gray-800 dark:text-gray-200': highlightedIndex !== index
-                                                        }"
-                                            class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
-                                            <span x-text="p.name" class="font-medium"></span>
-                                            <span x-text="p.phone" class="text-[10px] text-gray-400"></span>
-                                        </li>
-                                    </template>
-                                </ul>
-                            </div>
-                        </div>
-                        @error('party_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Date --}}
-                    <div>
-                        <label class="{{ $label }}">Voucher Date <span class="text-red-500">*</span></label>
-                        <x-form.date-picker id="date" name="date" placeholder="Select Date"
-                            defaultDate="{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}" />
-                        @error('date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Amount --}}
-                    <div>
-                        <label class="{{ $label }}">Amount (Rs.) <span class="text-red-500">*</span></label>
-                        <input type="text" x-model="displayAmount" @input="formatAmount($event.target.value)"
-                            placeholder="0.00" class="{{ $input }} {{ $errors->has('amount') ? 'border-red-400' : '' }}"
-                            required>
-                        <input type="hidden" name="amount" x-model="amount">
-                        @error('amount') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Paid From (Payment Account) --}}
-                    <div>
-                        <label class="{{ $label }}">Paid From (Payment Account) <span class="text-red-500">*</span></label>
-                        <select name="payment_account_id"
-                            class="{{ $input }} {{ $errors->has('payment_account_id') ? 'border-red-400' : '' }}" required
-                            x-init="
-                                            $nextTick(() => {
-                                                let opt = $el.selectedOptions[0];
-                                                if (opt) {
-                                                    selectedBalance = opt.getAttribute('data-balance');
-                                                    selectedAccountName = opt.getAttribute('data-name');
-                                                }
-                                            })
-                                        " @change="
-                                            let opt = $event.target.selectedOptions[0];
-                                            selectedBalance = opt.getAttribute('data-balance');
-                                            selectedAccountName = opt.getAttribute('data-name');
-                                        ">
-                            <option value="" data-balance="" data-name="">Select Account</option>
-                            @foreach($paymentAccounts as $account)
-                                <option value="{{ $account->id }}" data-balance="{{ $account->current_balance }}"
-                                    data-name="{{ $account->name }}" {{ old('payment_account_id', $voucher->payment_account_id) == $account->id ? 'selected' : '' }}>
-                                    {{ $account->name }} ({{ $account->bank_name ?? 'Cash' }}) — Type:
-                                    {{ ucfirst($account->type) }}
-                                </option>
-                            @endforeach
-                        </select>
-                        @error('payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-
-                        <template x-if="selectedBalance !== null && selectedBalance !== ''">
-                            <div
-                                class="mt-2 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-850/30 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700/60 flex justify-between items-center">
-                                <span>Available Balance:</span>
-                                <span
-                                    :class="adjustedBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'"
-                                    class="font-bold text-sm"
-                                    x-text="'Rs. ' + adjustedBalance.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
-                            </div>
-                        </template>
-
-                    </div>
-
-                    {{-- Reference/Cheque Number --}}
-                    <div>
-                        <label class="{{ $label }}">Reference / Cheque Number</label>
-                        <input type="text" name="reference" value="{{ old('reference', $voucher->reference) }}"
-                            placeholder="e.g. Online Ref #, Cheque #01848"
-                            class="{{ $input }} {{ $errors->has('reference') ? 'border-red-400' : '' }}">
-                        @error('reference') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-
-                    {{-- Is Advance Payment Checkbox --}}
-                    <div
-                        class="sm:col-span-2 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
-                        <div class="flex h-5 items-center">
-                            <input id="is_advance" name="is_advance" type="checkbox" value="1" {{ old('is_advance', $voucher->is_advance) ? 'checked' : '' }}
-                                class="h-4 w-4 rounded-sm border-gray-300 text-brand-600 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-800">
-                        </div>
-                        <div class="text-sm">
-                            <label for="is_advance" class="font-semibold text-gray-800 dark:text-white/90">Is Advance
-                                Payment?</label>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Check this option if this is an
-                                advance payout to the owner or contractor rather than a final distribution/settlement.</p>
-                        </div>
-                    </div>
-
-                    {{-- Notes/Description --}}
-                    <div class="sm:col-span-2">
-                        <label class="{{ $label }}">Description / Notes</label>
-                        <textarea name="notes" placeholder="Enter voucher details, breakdown, or reasons here..." rows="3"
-                            class="{{ $input }} {{ $errors->has('notes') ? 'border-red-400' : '' }}">{{ old('notes', $voucher->notes) }}</textarea>
-                        @error('notes') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-
-                {{-- Action Buttons --}}
-                <div class="flex items-center justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-800">
-                    <a href="{{ route('payment-vouchers.index') }}"
-                        class="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
-                        Cancel
-                    </a>
-                    <button type="submit"
-                        class="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors">
-                        Save Changes
-                    </button>
-                </div>
-            </form>
-        </x-common.component-card>
-    </div>
+    </form>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr('#voucher_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true,
+                    defaultDate: '{{ old('date', $voucher->date->format('Y-m-d')) }}'
+                });
+            }
+
+            @if ($errors->any())
+                Swal.fire({
+                    title: 'Form Validation Error',
+                    text: "{{ $errors->first() }}",
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                    },
+                    buttonsStyling: false
+                });
+            @endif
+        });
+    </script>
+@endpush

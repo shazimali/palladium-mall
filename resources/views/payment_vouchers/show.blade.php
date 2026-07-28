@@ -1,125 +1,150 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Voucher Details — {{ $voucher->voucher_no }}" />
+    <x-common.page-breadcrumb pageTitle="Paid Voucher Details — {{ $voucher->voucher_no }}" />
 
-    {{-- STICKY PAYMENT VOUCHER HEADER --}}
-    <div class="sticky mb-6 rounded-2xl border-2 border-red-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
-        style="position: sticky; top: 72px; z-index: 990;">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-4 min-w-0">
-                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-md text-3xl font-black">
-                    💸
-                </div>
-                <div class="min-w-0">
-                    <p class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400">
-                        Paid Voucher: {{ $voucher->voucher_no }}
-                    </p>
-                    <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
-                        {{ $voucher->paid_to_type === 'tenant' ? ($voucher->tenant ? $voucher->tenant->name : 'Tenant Payout') : ($voucher->paid_to_type === 'landlord' ? ($voucher->landlord ? $voucher->landlord->name : 'Landlord Payout') : ($voucher->other_name ?: 'Payment Voucher')) }}
-                    </h2>
-                </div>
-            </div>
+    @php
+        $recipientName = '—';
+        $paidToTypeLabel = 'Recipient';
+        if ($voucher->paid_to_type === 'tenant') {
+            $recipientName = ($voucher->tenant->name ?? 'N/A') . ($voucher->unit ? ' (' . $voucher->unit->unit_number . ')' : '');
+            $paidToTypeLabel = 'Tenant/ Flat/Shop';
+        } elseif ($voucher->paid_to_type === 'other') {
+            $recipientName = $voucher->party->name ?? $voucher->other_name ?? 'N/A';
+            $paidToTypeLabel = 'Registered Party';
+        } elseif ($voucher->paid_to_type === 'landlord') {
+            $recipientName = $voucher->landlord->name ?? 'N/A';
+            $paidToTypeLabel = 'Landlord / Owner';
+        } elseif ($voucher->paid_to_type === 'account') {
+            $recipientName = $voucher->toPaymentAccount ? $voucher->toPaymentAccount->name . ' (' . ucfirst($voucher->toPaymentAccount->type) . ')' : 'N/A';
+            $paidToTypeLabel = 'Destination Account';
+        }
+    @endphp
 
-            <div class="text-right">
-                <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Total Amount Paid</span>
-                <span class="text-2xl sm:text-3xl font-black font-mono text-red-600 dark:text-red-400">
-                    Rs. {{ number_format($voucher->amount) }}
-                </span>
-            </div>
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex items-center gap-2">
+            <a href="{{ route('payment-vouchers.index') }}"
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-all">
+                ← Back to List
+            </a>
+        </div>
+        <div class="flex items-center gap-2">
+            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('payment_vouchers.edit'))
+                <a href="{{ route('payment-vouchers.edit', $voucher) }}"
+                    class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700 transition-all shadow-md">
+                    ✏️ Edit Voucher
+                </a>
+            @endif
+            <a href="{{ route('payment-vouchers.print', $voucher) }}" target="_blank"
+                class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-gray-800 transition-all shadow-md">
+                🖨️ Print Voucher
+            </a>
         </div>
     </div>
 
-    <x-common.component-card title="Paid Voucher Details" desc="Voucher Reference #{{ $voucher->voucher_no }}">
+    {{-- REFINED VOUCHER CARD --}}
+    <div
+        class="mx-auto max-w-4xl bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans">
 
-        <div class="mb-6 flex justify-end gap-3 no-print">
-            @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('payment_vouchers.edit'))
-                <a href="{{ route('payment-vouchers.edit', $voucher) }}"
-                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors shadow-sm">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit Voucher
-                </a>
-            @endif
-
-            <a href="{{ route('payment-vouchers.print', $voucher) }}" target="_blank"
-                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
-                </svg>
-                Print Voucher
-            </a>
-
-            @if(auth()->user()->hasPermission('payment_vouchers.delete') || auth()->user()->isSuperAdmin())
-                <form action="{{ route('payment-vouchers.destroy', $voucher) }}" method="POST" x-data
-                    @submit.prevent="confirmAction($el, 'Are you sure you want to cancel and delete this Payment Voucher of Rs. {{ number_format($voucher->amount) }}? This action is irreversible.', 'Cancel Voucher?', 'Yes, Cancel')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors shadow-sm">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Cancel Voucher
-                    </button>
-                </form>
-            @endif
-
-            <a href="{{ route('payment-vouchers.index') }}"
-                class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
-                Back to List
-            </a>
+        {{-- CENTERED TITLE --}}
+        <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+                Paid Voucher
+            </h2>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-            @php
-                if ($voucher->paid_to_type === 'owner') {
-                    $payeeName = $voucher->owner->name ?? 'Partner';
-                    $payeeType = 'Managing Owner / Partner';
-                } elseif ($voucher->paid_to_type === 'tenant') {
-                    $payeeName = ($voucher->tenant ? $voucher->tenant->name : $voucher->other_name) . ($voucher->unit ? ' (Unit ' . $voucher->unit->unit_number . ')' : '');
-                    $payeeType = 'Tenant (Refund Security Deposit)';
-                } elseif ($voucher->paid_to_type === 'landlord') {
-                    $payeeName = $voucher->landlord ? $voucher->landlord->name : $voucher->other_name;
-                    $payeeType = 'Landlord (Payout)';
-                } elseif ($voucher->paid_to_type === 'account') {
-                    $payeeName = $voucher->toPaymentAccount ? $voucher->toPaymentAccount->name : $voucher->other_name;
-                    $payeeType = 'Payment Account (Inter-Account Transfer)';
-                } else {
-                    $payeeName = $voucher->party ? $voucher->party->name : $voucher->other_name;
-                    $payeeType = 'Party (Suppliers/Contractors)';
-                }
-            @endphp
+        {{-- TOP 2x2 GRID --}}
+        <div
+            class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
 
-            @foreach([
-                    ['Voucher Number', $voucher->voucher_no],
-                    ['Voucher Date', $voucher->date->format('d M Y')],
-                    ['Paid To (Payee)', $payeeName],
-                    ['Payee Type', $payeeType],
-                    ['Voucher Amount', 'Rs. ' . number_format($voucher->amount, 2)],
-                    ['Advance Payout?', $voucher->is_advance ? 'Yes (Advance)' : 'No (Standard Payout)'],
-                    ['Payment Account', $voucher->paymentAccount ? $voucher->paymentAccount->name : '—'],
-                    ['Payment Method', $voucher->payment_method ? ucfirst(str_replace('_', ' ', $voucher->payment_method)) : '—'],
-                    ['Reference / Cheque', $voucher->reference ?? '—'],
-                    ['Recorded By', $voucher->user->name ?? '—'],
-                ] as [$label, $value])
-                <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03]">
-                        <p class="text-xs text-gray-400 dark:text-gray-500">{{ $label }}</p>
-                            <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-white/90">{{ $value }}</p>
-                    </div>
-            @endforeach
+            {{-- Row 1, Col 1: Date --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div
+                    class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
+                    Voucher Date</div>
+                <div
+                    class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                    {{ $voucher->date->format('M. d, Y') }}
+                </div>
             </div>
 
-            @if($voucher->notes)
-                <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03] mb-6">
-                    <p class="text-xs text-gray-400">Notes / Remarks</p>
-                    <p class="mt-0.5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{{ $voucher->notes }}</p>
+            {{-- Row 1, Col 2: Paid To --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div
+                    class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
+                    {{ $paidToTypeLabel }}
                 </div>
-            @endif
+                <div
+                    class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                    {{ $recipientName }}
+                </div>
+            </div>
 
-        </x-common.component-card>
+            {{-- Row 2, Col 1: Voucher No --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div
+                    class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
+                    Voucher No.</div>
+                <div
+                    class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base font-mono">
+                    {{ $voucher->voucher_no }}
+                </div>
+            </div>
+
+            {{-- Row 2, Col 2: Paid From Account --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div
+                    class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
+                    Paid From</div>
+                <div
+                    class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                    {{ $voucher->paymentAccount ? $voucher->paymentAccount->name . ' (' . ucfirst($voucher->paymentAccount->type) . ')' : '—' }}
+                </div>
+            </div>
+
+        </div>
+
+        {{-- MIDDLE STACKED GRID --}}
+        <div
+            class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
+
+            {{-- Row 1: Payment Amount --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 min-h-[48px]">
+                <div
+                    class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide md:col-span-1">
+                    Payment Amount</div>
+                <div
+                    class="md:col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-lg sm:text-xl font-mono text-emerald-600 dark:text-emerald-400">
+                    Rs. {{ number_format($voucher->amount, 2) }}
+                </div>
+            </div>
+
+        </div>
+
+        {{-- BOTTOM GRID SECTION --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
+
+            {{-- Left Box: Approved by Box --}}
+            <div
+                class="bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl p-4 flex flex-col justify-center border border-gray-200 dark:border-gray-700 shadow-xs">
+                <p class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
+                    Approved by: <span
+                        class="text-brand-600 dark:text-brand-400 font-extrabold ml-1">{{ $voucher->user->name ?? 'Management' }}</span>
+                </p>
+            </div>
+
+            {{-- Right Box: Description of Goods/Services / Remarks --}}
+            <div
+                class="md:col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-xs">
+                <p class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                    Description of Goods/Services / Remarks:
+                </p>
+                <p class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 leading-relaxed">
+                    {{ $voucher->notes ?? 'No specific remarks entered.' }}
+                </p>
+            </div>
+
+        </div>
+
+    </div>
 @endsection
