@@ -1,87 +1,110 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Voucher Details — {{ $expense->voucher_no }}" />
+    <x-common.page-breadcrumb pageTitle="Expense Voucher Details — {{ $expense->voucher_no }}" />
 
-    <x-common.component-card title="Expense Voucher Details" desc="Voucher Reference #{{ $expense->voucher_no }}">
-        
-        <div class="mb-6 flex justify-end gap-3 no-print">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex items-center gap-2">
+            <a href="{{ route('expenses.index') }}"
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-all">
+                ← Back to List
+            </a>
+        </div>
+        <div class="flex items-center gap-2">
             @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('expenses.edit'))
                 <a href="{{ route('expenses.edit', $expense) }}"
-                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors shadow-sm">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Edit Voucher
+                    class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700 transition-all shadow-md">
+                    ✏️ Edit Voucher
                 </a>
             @endif
-
             <a href="{{ route('expenses.print', $expense) }}" target="_blank"
-                class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
-                </svg>
-                Print Voucher
-            </a>
-
-            @if(auth()->user()->hasPermission('expenses.delete') || auth()->user()->isSuperAdmin())
-                <form action="{{ route('expenses.destroy', $expense) }}" method="POST" x-data
-                    @submit.prevent="confirmAction($el, 'Are you sure you want to cancel and delete this Expense Voucher of Rs. {{ number_format($expense->amount) }}? This action is irreversible.', 'Cancel Voucher?', 'Yes, Cancel')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition-colors shadow-sm">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        Cancel Voucher
-                    </button>
-                </form>
-            @endif
-
-            <a href="{{ route('expenses.index') }}"
-                class="inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
-                Back to List
+                class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-bold text-white hover:bg-gray-800 transition-all shadow-md">
+                🖨️ Print Voucher
             </a>
         </div>
+    </div>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-            @foreach([
-                ['Voucher Number',      $expense->voucher_no],
-                ['Voucher Date',        $expense->date->format('d M Y')],
-                ['Category (Head)',     $expense->expenseHead->name ?? '—'],
-                ['Voucher Amount',      'Rs. ' . number_format($expense->amount, 2)],
-                ['Payment Account',     $expense->paymentAccount ? $expense->paymentAccount->name : '—'],
-                ['Payment Method',      $expense->payment_method ? ucfirst($expense->payment_method) : '—'],
-                ['Reference / Cheque',  $expense->reference ?? '—'],
-                ['Recorded By',         $expense->user->name ?? '—'],
-            ] as [$label, $value])
-                <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03]">
-                    <p class="text-xs text-gray-400 dark:text-gray-500">{{ $label }}</p>
-                    <p class="mt-0.5 text-sm font-semibold text-gray-800 dark:text-white/90">{{ $value }}</p>
+    {{-- REFINED VOUCHER CARD --}}
+    <div class="mx-auto max-w-4xl bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans">
+
+        {{-- CENTERED TITLE --}}
+        <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+                Expense Voucher
+            </h2>
+        </div>
+
+        {{-- TOP 2x2 GRID --}}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
+            
+            {{-- Row 1, Col 1: Date --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
+                <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                    {{ $expense->date->format('M. d, Y') }}
                 </div>
-            @endforeach
+            </div>
+
+            {{-- Row 1, Col 2: Expense Head --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Expense Head</div>
+                <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                    {{ $expense->expenseHead->name ?? 'N/A' }}
+                </div>
+            </div>
+
+            {{-- Row 2, Col 1: Voucher No --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher No.</div>
+                <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base font-mono">
+                    {{ $expense->voucher_no }}
+                </div>
+            </div>
+
+            {{-- Row 2, Col 2: Paid From Account --}}
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid From</div>
+                <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                    {{ $expense->paymentAccount ? $expense->paymentAccount->name . ' (' . ucfirst($expense->paymentAccount->type) . ')' : '—' }}
+                </div>
+            </div>
+
         </div>
 
-        @if($expense->notes)
-            <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03] mb-6">
-                <p class="text-xs text-gray-400">Notes / Remarks</p>
-                <p class="mt-0.5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{{ $expense->notes }}</p>
+        {{-- MIDDLE STACKED GRID --}}
+        <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
+            
+            {{-- Row 1: Payment Amount --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 min-h-[48px]">
+                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide md:col-span-1">Payment Amount</div>
+                <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-lg sm:text-xl font-mono text-emerald-600 dark:text-emerald-400">
+                    Rs. {{ number_format($expense->amount, 2) }}
+                </div>
             </div>
-        @endif
 
-        @if($expense->receipt)
-            <div class="rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/[0.03] mb-6">
-                <p class="text-xs text-gray-400 mb-2">Receipt Attachment</p>
-                <a href="{{ $expense->receipt_url }}" target="_blank"
-                   class="inline-flex items-center gap-2 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 dark:bg-brand-950/20 dark:hover:bg-brand-950/40 px-4 py-2 text-sm font-medium transition-colors">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                    </svg>
-                    View Attached Receipt File
-                </a>
+        </div>
+
+        {{-- BOTTOM GRID SECTION --}}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
+            
+            {{-- Left Box: Approved by Box --}}
+            <div class="bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl p-4 flex flex-col justify-center border border-gray-200 dark:border-gray-700 shadow-xs">
+                <p class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
+                    Approved by: <span class="text-brand-600 dark:text-brand-400 font-extrabold ml-1">{{ $expense->user->name ?? 'Management' }}</span>
+                </p>
             </div>
-        @endif
 
-    </x-common.component-card>
+            {{-- Right Box: Description of Goods/Services / Remarks --}}
+            <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-xs">
+                <p class="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                    Description of Goods/Services / Remarks:
+                </p>
+                <p class="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 leading-relaxed">
+                    {{ $expense->notes ?? 'No specific remarks entered.' }}
+                </p>
+            </div>
+
+        </div>
+
+    </div>
 @endsection

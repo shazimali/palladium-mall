@@ -81,10 +81,13 @@ class ExpenseController extends Controller
         $expenseHeads = ExpenseHead::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
+        $nextVoucherNo = Expense::getNextVoucherNo();
+
         return view('expenses.create', [
-            'title'           => 'Record Expense',
+            'title'           => 'Record Expense Voucher',
             'expenseHeads'    => $expenseHeads,
             'paymentAccounts' => $paymentAccounts,
+            'nextVoucherNo'   => $nextVoucherNo,
         ]);
     }
 

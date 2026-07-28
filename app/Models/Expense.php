@@ -47,6 +47,12 @@ class Expense extends Model
         });
     }
 
+    public static function getNextVoucherNo(): string
+    {
+        $maxId = static::withTrashed()->max('id') ?? 0;
+        return 'PM-EV-' . str_pad($maxId + 1, 5, '0', STR_PAD_LEFT);
+    }
+
     /**
      * Get the expense head/category associated with this expense.
      */

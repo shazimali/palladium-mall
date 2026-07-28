@@ -158,7 +158,7 @@
                         <th class="px-4 py-3">Category (Head)</th>
                         <th class="px-4 py-3 text-right">Amount</th>
                         <th class="px-4 py-3">Paid From (Account)</th>
-                        <th class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem]">Description</th>
+                        <th class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem]">Remarks</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
