@@ -17,7 +17,7 @@
     {{-- Summary Widget Cards --}}
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         <!-- Total Paid Card -->
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+        <!-- <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Payouts (Filtered)</p>
@@ -31,10 +31,10 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </div> -->
 
         <!-- Count Card -->
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+        <!-- <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Vouchers</p>
@@ -48,106 +48,110 @@
                     </svg>
                 </div>
             </div>
-        </div>
+        </div> -->
     </div>
 
-    <x-common.component-card title="" desc="">
+    <div
+        x-data="{ showTable: {{ (request()->anyFilled(['search', 'paid_to_type', 'payment_account_id', 'is_advance', 'payment_method', 'start_date', 'end_date']) || request()->has('show_search')) ? 'true' : 'false' }} }">
+        <x-common.component-card title="" desc="">
 
-        {{-- Top bar --}}
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-            <div class="flex flex-wrap gap-2">
-                <span class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    Showing Page: {{ $vouchers->currentPage() }} of {{ $vouchers->lastPage() }}
-                </span>
-            </div>
-
-            <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'paid_to_type', 'payment_account_id', 'is_advance', 'payment_method', 'start_date', 'end_date']))
-                    <a href="{{ route('payment-vouchers.index') }}"
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
-                        Clear Filters
-                    </a>
-                @endif
-                @if(auth()->user()->hasPermission('payment_vouchers.create') || auth()->user()->isSuperAdmin())
-                    <a href="{{ route('payment-vouchers.create') }}"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Create Paid Voucher
-                    </a>
-                @endif
-            </div>
-        </div>
-
-        <!-- Filters & Search Form -->
-        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <form action="{{ route('payment-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-7 items-end">
-                @php
-                    $filterInput = 'dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
-                    $filterLabel = 'mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400';
-                @endphp
-
-                <!-- Search Input -->
-                <div class="sm:col-span-2 lg:col-span-2 relative">
-                    <label class="{{ $filterLabel }}">Search Voucher / Details</label>
-                    <div class="relative">
-                        <span class="absolute -translate-y-1/2 pointer-events-none left-3.5 top-1/2">
-                            <svg class="fill-gray-500 dark:fill-gray-400" width="16" height="16" viewBox="0 0 20 20" fill="none">
-                                <path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
+            {{-- Top bar --}}
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+                <div class="flex flex-wrap items-center gap-3">
+                    {{-- 1. New Payment Voucher Button --}}
+                    @if(auth()->user()->hasPermission('payment_vouchers.create') || auth()->user()->isSuperAdmin())
+                        <a href="{{ route('payment-vouchers.create') }}"
+                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-4xl font-bold text-white hover:bg-brand-600 transition-all shadow-md">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                             </svg>
-                        </span>
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Voucher #, name, notes..."
-                            class="{{ $filterInput }} pl-10" />
+                            New Payment Voucher
+                        </a>
+                    @endif
+
+                    {{-- 2. Search Button --}}
+                    @if(auth()->user()->hasPermission('payment_vouchers.search') || auth()->user()->hasPermission('payment_vouchers.view') || auth()->user()->isSuperAdmin())
+                        <button type="button" @click="showTable = !showTable"
+                            :class="showTable ? 'bg-brand-500 text-white' : 'bg-brand-500 text-white hover:bg-brand-600'"
+                            class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-4xl font-bold transition-all shadow-md cursor-pointer">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <span x-text="showTable ? 'Hide Search' : 'Search'"></span>
+                        </button>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Filter & Table Panel (Hidden by Default) --}}
+            <div x-show="showTable" x-cloak class="mt-6">
+                <form action="{{ route('payment-vouchers.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-7 items-end mb-6">
+                    <input type="hidden" name="show_search" value="1">
+                    @php
+                        $filterInput = 'dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
+                        $filterLabel = 'mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400';
+                    @endphp
+
+                    <!-- Search Input -->
+                    <div class="sm:col-span-2 lg:col-span-2 relative">
+                        <label class="{{ $filterLabel }}">Search Voucher / Details</label>
+                        <div class="relative">
+                            <span class="absolute -translate-y-1/2 pointer-events-none left-3.5 top-1/2">
+                                <svg class="fill-gray-500 dark:fill-gray-400" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z" />
+                                </svg>
+                            </span>
+                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Voucher #, name, notes..."
+                                class="{{ $filterInput }} pl-10" />
+                        </div>
                     </div>
-                </div>
 
-                <!-- Payee Type -->
-                <div>
-                    <label class="{{ $filterLabel }}">Payee Type</label>
-                    <select name="paid_to_type" class="{{ $filterInput }}">
-                        <option value="">All Types</option>
-                        <option value="owner" {{ request('paid_to_type') === 'owner' ? 'selected' : '' }}>Managing Owner</option>
-                        <option value="tenant" {{ request('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund)</option>
-                        <option value="landlord" {{ request('paid_to_type') === 'landlord' ? 'selected' : '' }}>Landlord (Payout)</option>
-                        <option value="account" {{ request('paid_to_type') === 'account' ? 'selected' : '' }}>Payment Account (Transfer)</option>
-                        <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
-                    </select>
-                </div>
+                    <!-- Payee Type -->
+                    <div>
+                        <label class="{{ $filterLabel }}">Payee Type</label>
+                        <select name="paid_to_type" class="{{ $filterInput }}">
+                            <option value="">All Types</option>
+                            <option value="owner" {{ request('paid_to_type') === 'owner' ? 'selected' : '' }}>Managing Owner</option>
+                            <option value="tenant" {{ request('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund)</option>
+                            <option value="landlord" {{ request('paid_to_type') === 'landlord' ? 'selected' : '' }}>Landlord (Payout)</option>
+                            <option value="account" {{ request('paid_to_type') === 'account' ? 'selected' : '' }}>Payment Account (Transfer)</option>
+                            <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
+                        </select>
+                    </div>
 
-                <!-- Payment Account Filter -->
-                <div>
-                    <label class="{{ $filterLabel }}">Payment Account</label>
-                    <select name="payment_account_id" class="{{ $filterInput }}">
-                        <option value="">All Accounts</option>
-                        @foreach($paymentAccounts as $account)
-                            <option value="{{ $account->id }}" {{ request('payment_account_id') == $account->id ? 'selected' : '' }}>
-                                {{ $account->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                    <!-- Payment Account Filter -->
+                    <div>
+                        <label class="{{ $filterLabel }}">Payment Account</label>
+                        <select name="payment_account_id" class="{{ $filterInput }}">
+                            <option value="">All Accounts</option>
+                            @foreach($paymentAccounts as $account)
+                                <option value="{{ $account->id }}" {{ request('payment_account_id') == $account->id ? 'selected' : '' }}>
+                                    {{ $account->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <!-- Start Date -->
-                <div>
-                    <label class="{{ $filterLabel }}">From Date</label>
-                    <input type="date" name="start_date" value="{{ request('start_date') }}" class="{{ $filterInput }}" />
-                </div>
+                    <!-- Start Date -->
+                    <div>
+                        <label class="{{ $filterLabel }}">From Date</label>
+                        <input type="date" name="start_date" value="{{ request('start_date') }}" class="{{ $filterInput }}" />
+                    </div>
 
-                <!-- End Date -->
-                <div>
-                    <label class="{{ $filterLabel }}">To Date</label>
-                    <input type="date" name="end_date" value="{{ request('end_date') }}" class="{{ $filterInput }}" />
-                </div>
+                    <!-- End Date -->
+                    <div>
+                        <label class="{{ $filterLabel }}">To Date</label>
+                        <input type="date" name="end_date" value="{{ request('end_date') }}" class="{{ $filterInput }}" />
+                    </div>
 
-                <!-- Filter Action Button -->
-                <div>
-                    <button type="submit" class="w-full sm:w-auto px-6 flex justify-center items-center h-10 rounded-lg bg-brand-500 hover:bg-brand-600  text-sm font-semibold text-white dark:text-white transition-colors">
-                        Apply Filters
-                    </button>
-                </div>
-            </form>
-        </div>
+                    <!-- Filter Action Button -->
+                    <div>
+                        <button type="submit" class="w-full sm:w-auto px-6 flex justify-center items-center h-10 rounded-lg bg-brand-500 hover:bg-brand-600 text-sm font-semibold text-white dark:text-white transition-colors cursor-pointer">
+                            Apply Filters
+                        </button>
+                    </div>
+                </form>
 
         {{-- DataTable --}}
         <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
@@ -289,6 +293,8 @@
                 {{ $vouchers->links() }}
             </div>
         @endif
+            </div> {{-- End showTable --}}
 
     </x-common.component-card>
+    </div>
 @endsection

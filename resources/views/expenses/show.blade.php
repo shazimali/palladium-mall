@@ -27,11 +27,16 @@
     {{-- REFINED VOUCHER CARD --}}
     <div class="mx-auto max-w-4xl bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans">
 
-        {{-- CENTERED TITLE --}}
-        <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+        {{-- FORM HEADER WITH CENTERED TITLE & RIGHT CORNER VOUCHER NUMBER --}}
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+            <div class="hidden sm:block w-36"></div>
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase text-center">
                 Expense Voucher
             </h2>
+            <div class="inline-flex items-center gap-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 shadow-2xs">
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Voucher No:</span>
+                <span class="text-base sm:text-lg font-black font-mono text-brand-600 dark:text-brand-400">{{ $expense->voucher_no }}</span>
+            </div>
         </div>
 
         {{-- TOP 2x2 GRID --}}

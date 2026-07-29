@@ -32,14 +32,22 @@
             searchToAccount: '',
             highlightedToAccountIndex: -1,
 
+            isNotesManuallyEdited: {{ (old('notes', $voucher->notes ?? '') && !str_starts_with(old('notes', $voucher->notes ?? ''), 'Payment paid')) ? 'true' : 'false' }},
+            notes: '{{ old('notes', addslashes($voucher->notes ?? '')) }}',
+
             tenantOptions: [
                 @foreach($tenants as $tenant)
+                @php
+                    $uNum = $tenant->unit ? $tenant->unit->unit_number : '';
+                    $hasKeyword = preg_match('/(flat|shop)/i', $uNum);
+                    $uLabel = $uNum ? ($hasKeyword ? "($uNum)" : "(Flat/Shop $uNum)") : '';
+                @endphp
                 {
                     id: '{{ $tenant->id }}',
                     unitId: '{{ $tenant->unit_id ?? "" }}',
                     name: '{{ addslashes($tenant->name) }}',
-                    unit: '{{ $tenant->unit ? addslashes($tenant->unit->unit_number) : "" }}',
-                    label: '{{ addslashes($tenant->name) }} {{ $tenant->unit ? "(Flat/Shop " . addslashes($tenant->unit->unit_number) . ")" : "" }}'
+                    unit: '{{ addslashes($uNum) }}',
+                    label: '{{ addslashes($tenant->name) }} {{ addslashes($uLabel) }}'
                 },
                 @endforeach
             ],
@@ -61,6 +69,29 @@
                 { id: '{{ $account->id }}', name: '{{ addslashes($account->name) }} ({{ ucfirst($account->type) }})' },
                 @endforeach
             ],
+
+            updateAutoRemarks() {
+                if (this.isNotesManuallyEdited) return;
+
+                let recipientName = '';
+                if (this.paidToType === 'tenant') recipientName = this.selectedTenantLabel;
+                else if (this.paidToType === 'other') recipientName = this.selectedPartyName;
+                else if (this.paidToType === 'landlord') recipientName = this.selectedLandlordName;
+                else if (this.paidToType === 'account') recipientName = this.selectedToAccountName;
+
+                let amtNum = parseFloat(this.voucherAmount || 0);
+                let amtStr = amtNum > 0 ? 'Rs. ' + Math.round(amtNum).toLocaleString() : '';
+
+                if (!amtStr && !recipientName) {
+                    this.notes = '';
+                    return;
+                }
+
+                let remarks = 'Payment paid';
+                if (amtStr) remarks += ' of ' + amtStr;
+                if (recipientName) remarks += ' to ' + recipientName;
+                this.notes = remarks;
+            },
 
             get filteredTenants() {
                 if (!this.searchTenant) return this.tenantOptions;
@@ -108,29 +139,38 @@
                 this.openTenant = false;
                 this.searchTenant = '';
                 this.highlightedTenantIndex = -1;
+                this.updateAutoRemarks();
             },
             selectParty(opt) {
                 this.partyId = opt.id;
                 this.openParty = false;
                 this.searchParty = '';
                 this.highlightedPartyIndex = -1;
+                this.updateAutoRemarks();
             },
             selectLandlord(opt) {
                 this.landlordId = opt.id;
                 this.openLandlord = false;
                 this.searchLandlord = '';
                 this.highlightedLandlordIndex = -1;
+                this.updateAutoRemarks();
             },
             selectToAccount(opt) {
                 this.toAccountId = opt.id;
                 this.openToAccount = false;
                 this.searchToAccount = '';
                 this.highlightedToAccountIndex = -1;
+                this.updateAutoRemarks();
             },
 
             init() {
                 if (this.voucherAmount) {
                     this.formatAmount(String(this.voucherAmount));
+                }
+                this.$watch('voucherAmount', () => this.updateAutoRemarks());
+                this.$watch('paidToType', () => this.updateAutoRemarks());
+                if (!this.notes) {
+                    this.updateAutoRemarks();
                 }
             },
 
@@ -231,7 +271,23 @@
                     return;
                 }
 
-                event.target.submit();
+                Swal.fire({
+                    title: 'Confirm Update Payment Voucher',
+                    text: 'Are you sure you want to update and print this payment voucher for Rs. ' + amt.toLocaleString('en-US', {minimumFractionDigits: 2}) + '?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Update & Print',
+                    cancelButtonText: 'Cancel',
+                    customClass: {
+                        confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer mr-2',
+                        cancelButton: 'inline-flex items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700 px-6 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 shadow-md hover:bg-gray-300 transition-colors cursor-pointer'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        event.target.submit();
+                    }
+                });
             }
         }">
 
@@ -241,11 +297,16 @@
         {{-- FORM CONTAINER WITH NO OUTER BG COLOR, CENTERED TITLE, ADAPTED TO THEME --}}
         <div class="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans relative">
 
-            {{-- CENTERED TITLE --}}
-            <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+            {{-- FORM HEADER WITH CENTERED TITLE & RIGHT CORNER VOUCHER NUMBER --}}
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+                <div class="hidden sm:block w-36"></div>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase text-center">
                     Paid Voucher
                 </h2>
+                <div class="inline-flex items-center gap-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 shadow-2xs">
+                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Voucher No:</span>
+                    <span class="text-base sm:text-lg font-black font-mono text-brand-600 dark:text-brand-400">{{ $voucher->voucher_no }}</span>
+                </div>
             </div>
 
             {{-- FORM GRID CONTAINER --}}
@@ -255,19 +316,19 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-40 rounded-t-2xl">
                     {{-- Field 1: Voucher Date --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide rounded-tl-2xl">Voucher Date</div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide rounded-tl-2xl">Voucher Date</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
                             <input type="text" id="voucher_date" name="date" value="{{ old('date', $voucher->date->format('Y-m-d')) }}" required autocomplete="off"
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-extrabold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
                         </div>
                     </div>
 
                     {{-- Field 2: Paid To Type --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid To <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">Paid To <span class="text-rose-300 ml-1">*</span></div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-tr-2xl">
                             <select name="paid_to_type" x-model="paidToType" required
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">
                                 <option value="tenant">Tenant / Unit</option>
                                 <option value="other">Registered Party Head</option>
                                 <option value="landlord">Landlord / Owner</option>
@@ -277,30 +338,21 @@
                     </div>
                 </div>
 
-                {{-- ROW 2: Voucher Number & Searchable Dynamic Entity Selection --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-50">
-                    {{-- Field 1: Voucher Number --}}
-                    <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher No.</div>
-                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400 px-4 py-3 flex items-center font-black text-base sm:text-lg font-mono">
-                            {{ $voucher->voucher_no }}
-                        </div>
-                    </div>
-
-                    {{-- Field 2: Searchable Dynamic Entity Selection Modal --}}
-                    <div class="grid grid-cols-3 min-h-[52px] relative z-50">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
+                {{-- ROW 2: Searchable Dynamic Entity Selection (Full Row Width) --}}
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-50">
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-6 min-h-[52px] relative z-50">
+                        <div class="md:col-span-2 bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">
                             <span x-text="paidToType === 'tenant' ? 'Select Tenant' : (paidToType === 'other' ? 'Select Party' : (paidToType === 'landlord' ? 'Select Landlord' : 'To Account'))"></span>
                             <span class="text-rose-300 ml-1">*</span>
                         </div>
-                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
+                        <div class="md:col-span-4 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
                             
                             {{-- Case 1: Searchable Tenant Dropdown --}}
                             <div x-show="paidToType === 'tenant'" class="w-full relative" @click.away="openTenant = false; highlightedTenantIndex = -1">
                                 <input type="hidden" name="tenant_id" x-model="tenantId" :required="paidToType === 'tenant'">
                                 <input type="hidden" name="unit_id" x-model="unitId" :required="paidToType === 'tenant'">
                                 <button type="button" @click="openTenant = !openTenant; if(openTenant) { $nextTick(() => $refs.tenantSearchInput.focus()) }"
-                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
                                     <span x-text="selectedTenantLabel ? selectedTenantLabel : 'Select Tenant / Unit...'" class="truncate"></span>
                                     <span class="ml-2 text-xs opacity-60">▼</span>
                                 </button>
@@ -313,7 +365,7 @@
                                             @keydown.arrow-up.prevent="highlightedTenantIndex = (highlightedTenantIndex - 1 + filteredTenants.length) % filteredTenants.length"
                                             @keydown.enter.prevent="if(highlightedTenantIndex >= 0 && filteredTenants[highlightedTenantIndex]) selectTenant(filteredTenants[highlightedTenantIndex])"
                                             @keydown.escape="openTenant = false; highlightedTenantIndex = -1"
-                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-base font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
                                     </div>
                                     <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
                                         <template x-for="(opt, index) in filteredTenants" :key="opt.id">
@@ -321,7 +373,7 @@
                                                 @mouseenter="highlightedTenantIndex = index"
                                                 class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
                                                 :class="tenantId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedTenantIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
-                                                <span x-text="opt.label" class="font-black text-sm truncate"></span>
+                                                <span x-text="opt.label" class="font-black text-base sm:text-lg truncate"></span>
                                                 <span x-show="tenantId == opt.id" class="font-black text-base">✓</span>
                                             </button>
                                         </template>
@@ -336,7 +388,7 @@
                             <div x-show="paidToType === 'other'" class="w-full relative" @click.away="openParty = false; highlightedPartyIndex = -1">
                                 <input type="hidden" name="party_id" x-model="partyId" :required="paidToType === 'other'">
                                 <button type="button" @click="openParty = !openParty; if(openParty) { $nextTick(() => $refs.partySearchInput.focus()) }"
-                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
                                     <span x-text="selectedPartyName ? selectedPartyName : 'Select Registered Party Head...'" class="truncate"></span>
                                     <span class="ml-2 text-xs opacity-60">▼</span>
                                 </button>
@@ -349,7 +401,7 @@
                                             @keydown.arrow-up.prevent="highlightedPartyIndex = (highlightedPartyIndex - 1 + filteredParties.length) % filteredParties.length"
                                             @keydown.enter.prevent="if(highlightedPartyIndex >= 0 && filteredParties[highlightedPartyIndex]) selectParty(filteredParties[highlightedPartyIndex])"
                                             @keydown.escape="openParty = false; highlightedPartyIndex = -1"
-                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-base font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
                                     </div>
                                     <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
                                         <template x-for="(opt, index) in filteredParties" :key="opt.id">
@@ -357,7 +409,7 @@
                                                 @mouseenter="highlightedPartyIndex = index"
                                                 class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
                                                 :class="partyId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedPartyIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
-                                                <span x-text="opt.name" class="font-black text-sm truncate"></span>
+                                                <span x-text="opt.name" class="font-black text-base sm:text-lg truncate"></span>
                                                 <span x-show="partyId == opt.id" class="font-black text-base">✓</span>
                                             </button>
                                         </template>
@@ -372,7 +424,7 @@
                             <div x-show="paidToType === 'landlord'" class="w-full relative" @click.away="openLandlord = false; highlightedLandlordIndex = -1">
                                 <input type="hidden" name="landlord_id" x-model="landlordId" :required="paidToType === 'landlord'">
                                 <button type="button" @click="openLandlord = !openLandlord; if(openLandlord) { $nextTick(() => $refs.landlordSearchInput.focus()) }"
-                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
                                     <span x-text="selectedLandlordName ? selectedLandlordName : 'Select Landlord / Owner...'" class="truncate"></span>
                                     <span class="ml-2 text-xs opacity-60">▼</span>
                                 </button>
@@ -385,7 +437,7 @@
                                             @keydown.arrow-up.prevent="highlightedLandlordIndex = (highlightedLandlordIndex - 1 + filteredLandlords.length) % filteredLandlords.length"
                                             @keydown.enter.prevent="if(highlightedLandlordIndex >= 0 && filteredLandlords[highlightedLandlordIndex]) selectLandlord(filteredLandlords[highlightedLandlordIndex])"
                                             @keydown.escape="openLandlord = false; highlightedLandlordIndex = -1"
-                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-base font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
                                     </div>
                                     <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
                                         <template x-for="(opt, index) in filteredLandlords" :key="opt.id">
@@ -393,7 +445,7 @@
                                                 @mouseenter="highlightedLandlordIndex = index"
                                                 class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
                                                 :class="landlordId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedLandlordIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
-                                                <span x-text="opt.name" class="font-black text-sm truncate"></span>
+                                                <span x-text="opt.name" class="font-black text-base sm:text-lg truncate"></span>
                                                 <span x-show="landlordId == opt.id" class="font-black text-base">✓</span>
                                             </button>
                                         </template>
@@ -408,7 +460,7 @@
                             <div x-show="paidToType === 'account'" class="w-full relative" @click.away="openToAccount = false; highlightedToAccountIndex = -1">
                                 <input type="hidden" name="to_payment_account_id" x-model="toAccountId" :required="paidToType === 'account'">
                                 <button type="button" @click="openToAccount = !openToAccount; if(openToAccount) { $nextTick(() => $refs.toAccountSearchInput.focus()) }"
-                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
                                     <span x-text="selectedToAccountName ? selectedToAccountName : 'Select Destination Account...'" class="truncate"></span>
                                     <span class="ml-2 text-xs opacity-60">▼</span>
                                 </button>
@@ -421,7 +473,7 @@
                                             @keydown.arrow-up.prevent="highlightedToAccountIndex = (highlightedToAccountIndex - 1 + filteredToAccounts.length) % filteredToAccounts.length"
                                             @keydown.enter.prevent="if(highlightedToAccountIndex >= 0 && filteredToAccounts[highlightedToAccountIndex]) selectToAccount(filteredToAccounts[highlightedToAccountIndex])"
                                             @keydown.escape="openToAccount = false; highlightedToAccountIndex = -1"
-                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-base font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
                                     </div>
                                     <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
                                         <template x-for="(opt, index) in filteredToAccounts" :key="opt.id">
@@ -429,7 +481,7 @@
                                                 @mouseenter="highlightedToAccountIndex = index"
                                                 class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
                                                 :class="toAccountId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedToAccountIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
-                                                <span x-text="opt.name" class="font-black text-sm truncate"></span>
+                                                <span x-text="opt.name" class="font-black text-base sm:text-lg truncate"></span>
                                                 <span x-show="toAccountId == opt.id" class="font-black text-base">✓</span>
                                             </button>
                                         </template>
@@ -448,20 +500,20 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-10 rounded-b-2xl">
                     {{-- Field 1: Payment Amount --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide rounded-bl-2xl md:rounded-bl-none">Payment Amount <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide rounded-bl-2xl md:rounded-bl-none">Payment Amount <span class="text-rose-300 ml-1">*</span></div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
                             <input type="text" x-model="displayAmount" @input="formatAmount($event.target.value)" required placeholder="0.00"
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-lg sm:text-xl font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
                             <input type="hidden" name="amount" x-model="voucherAmount">
                         </div>
                     </div>
 
                     {{-- Field 2: Paid From Account --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid From <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">Paid From <span class="text-rose-300 ml-1">*</span></div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-br-2xl">
                             <select name="payment_account_id" x-model="paymentAccountId" required
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
                                 <option value="">Select Account...</option>
                                 @foreach($paymentAccounts as $account)
                                     <option value="{{ $account->id }}" {{ old('payment_account_id', $voucher->payment_account_id) == $account->id ? 'selected' : '' }}>
@@ -484,13 +536,14 @@
                     </p>
                 </div>
 
-                {{-- Right Box: Description of Goods/Services / Remarks --}}
+                {{-- Right Box: Remarks --}}
                 <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-xs">
                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
-                        Description of Goods/Services / Remarks:
+                        Remarks:
                     </label>
                     <textarea name="notes" rows="2" placeholder="Payment voucher remarks or notes..."
-                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">{{ old('notes', $voucher->notes) }}</textarea>
+                        x-model="notes" @input="isNotesManuallyEdited = true"
+                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3.5 text-base sm:text-lg font-black text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all"></textarea>
                 </div>
             </div>
 

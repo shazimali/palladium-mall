@@ -27,11 +27,16 @@ class PaymentVoucherController extends Controller
         $query = PaymentVoucher::with(['owner', 'party', 'tenant', 'landlord', 'paymentAccount', 'toPaymentAccount', 'user'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
-                $q->where('voucher_no', 'like', "%{$term}%")
-                    ->orWhere('reference', 'like', "%{$term}%")
-                    ->orWhere('other_name', 'like', "%{$term}%")
-                    ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"))
-                    ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"));
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('reference', 'like', "%{$term}%")
+                        ->orWhere('other_name', 'like', "%{$term}%")
+                        ->orWhere('notes', 'like', "%{$term}%")
+                        ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('tenant', fn($t) => $t->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('landlord', fn($l) => $l->where('name', 'like', "%{$term}%"));
+                });
             })
             ->when($request->paid_to_type, fn($q) => $q->where('paid_to_type', $request->paid_to_type))
             ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
@@ -40,7 +45,7 @@ class PaymentVoucherController extends Controller
             ->when($request->is_advance !== null && $request->is_advance !== '', fn($q) => $q->where('is_advance', (bool) $request->is_advance));
 
         // Calculate totals based on filters
-        $totalAmount = (float) $query->sum('amount');
+        $totalAmount = (float) (clone $query)->sum('amount');
 
         $vouchers = $query->latest('date')
             ->latest('id')
@@ -213,9 +218,9 @@ class PaymentVoucherController extends Controller
         }
         // ─────────────────────────────────────────────────────────────────────
 
-        PaymentVoucher::create($data);
+        $voucher = PaymentVoucher::create($data);
 
-        return redirect()->route('payment-vouchers.index')
+        return redirect()->route('payment-vouchers.print', $voucher->id)
             ->with('success', 'Payment voucher recorded successfully.');
     }
 
@@ -435,7 +440,7 @@ class PaymentVoucherController extends Controller
 
         $paymentVoucher->update($data);
 
-        return redirect()->route('payment-vouchers.index')
+        return redirect()->route('payment-vouchers.print', $paymentVoucher->id)
             ->with('success', 'Payment voucher updated successfully.');
     }
 

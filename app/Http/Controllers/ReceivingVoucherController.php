@@ -21,7 +21,7 @@ class ReceivingVoucherController extends Controller
      */
     public function index(Request $request): View
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('receiving_vouchers.view')) {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('receiving_vouchers.view') && !auth()->user()->hasPermission('receiving_vouchers.search')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -29,14 +29,17 @@ class ReceivingVoucherController extends Controller
             ->with(['tenant.unit', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
-                $q->where('voucher_no', 'like', "%{$term}%")
-                    ->orWhere('reference', 'like', "%{$term}%")
-                    ->orWhere('other_name', 'like', "%{$term}%")
-                    ->orWhereHas('tenant', function ($t) use ($term) {
-                        $t->where('name', 'like', "%{$term}%")
-                            ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
-                    })
-                    ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('reference', 'like', "%{$term}%")
+                        ->orWhere('other_name', 'like', "%{$term}%")
+                        ->orWhere('notes', 'like', "%{$term}%")
+                        ->orWhereHas('tenant', function ($t) use ($term) {
+                            $t->where('name', 'like', "%{$term}%")
+                                ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
+                        })
+                        ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
+                });
             })
             ->when($request->received_from_type, fn($q) => $q->where('received_from_type', $request->received_from_type))
             ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
@@ -199,7 +202,7 @@ class ReceivingVoucherController extends Controller
 
             DB::commit();
 
-            return redirect()->route('receiving-vouchers.index')
+            return redirect()->route('receiving-vouchers.print', $voucher->id)
                 ->with('success', 'Receiving voucher recorded and auto-allocated successfully.');
 
         } catch (\Exception $e) {
@@ -455,7 +458,7 @@ class ReceivingVoucherController extends Controller
 
             DB::commit();
 
-            return redirect()->route('receiving-vouchers.index')
+            return redirect()->route('receiving-vouchers.print', $receivingVoucher->id)
                 ->with('success', 'Receiving voucher updated and auto-allocated successfully.');
 
         } catch (\Exception $e) {
@@ -508,5 +511,55 @@ class ReceivingVoucherController extends Controller
         });
 
         return response()->json(['payments' => $formatted]);
+    }
+
+    /**
+     * Print filtered list of receiving vouchers.
+     */
+    public function printList(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('receiving_vouchers.print_list') && !auth()->user()->hasPermission('receiving_vouchers.print') && !auth()->user()->hasPermission('receiving_vouchers.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $query = ReceivingVoucher::query()
+            ->with(['tenant.unit', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant'])
+            ->when($request->search, function ($q) use ($request) {
+                $term = $request->search;
+                $q->where('voucher_no', 'like', "%{$term}%")
+                    ->orWhere('reference', 'like', "%{$term}%")
+                    ->orWhere('other_name', 'like', "%{$term}%")
+                    ->orWhereHas('tenant', function ($t) use ($term) {
+                        $t->where('name', 'like', "%{$term}%")
+                            ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
+                    })
+                    ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
+            })
+            ->when($request->received_from_type, fn($q) => $q->where('received_from_type', $request->received_from_type))
+            ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
+            ->when($request->unit_id, function ($q) use ($request) {
+                $q->whereHas('payments', function ($qp) use ($request) {
+                    $qp->where('unit_id', $request->unit_id);
+                });
+            })
+            ->when($request->date_from, fn($q) => $q->where('date', '>=', $request->date_from))
+            ->when($request->date_to, fn($q) => $q->where('date', '<=', $request->date_to))
+            ->latest('date')
+            ->latest('id');
+
+        $totalAmount = (float) $query->sum('amount');
+        $vouchers = $query->get();
+
+        $selectedUnit = $request->unit_id ? Unit::find($request->unit_id)?->unit_number : null;
+        $selectedAccount = $request->payment_account_id ? PaymentAccount::find($request->payment_account_id)?->name : null;
+
+        return view('receiving_vouchers.print_list', [
+            'title'           => 'Tenant Receiving Vouchers Report',
+            'vouchers'        => $vouchers,
+            'totalAmount'     => $totalAmount,
+            'selectedUnit'    => $selectedUnit,
+            'selectedAccount' => $selectedAccount,
+            'filters'         => $request->all(),
+        ]);
     }
 }

@@ -20,7 +20,9 @@ class OwnerAndVoucherPermissionSeeder extends Seeder
             // Receiving Vouchers
             ['name' => 'receiving_vouchers.view', 'display_name' => 'View Receiving Vouchers', 'group' => 'Receiving Vouchers'],
             ['name' => 'receiving_vouchers.create', 'display_name' => 'Create Receiving Vouchers', 'group' => 'Receiving Vouchers'],
+            ['name' => 'receiving_vouchers.search', 'display_name' => 'Search Receiving Vouchers', 'group' => 'Receiving Vouchers'],
             ['name' => 'receiving_vouchers.print', 'display_name' => 'Print Receiving Vouchers', 'group' => 'Receiving Vouchers'],
+            ['name' => 'receiving_vouchers.print_list', 'display_name' => 'Print Receiving Vouchers List', 'group' => 'Receiving Vouchers'],
             ['name' => 'receiving_vouchers.delete', 'display_name' => 'Delete Receiving Vouchers', 'group' => 'Receiving Vouchers'],
         ];
 

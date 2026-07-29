@@ -127,9 +127,9 @@ class ExpenseController extends Controller
 
         $data['user_id'] = auth()->id();
 
-        Expense::create($data);
+        $expense = Expense::create($data);
 
-        return redirect()->route('expenses.index')
+        return redirect()->route('expenses.print', $expense->id)
             ->with('success', 'Expense recorded successfully.');
     }
 
@@ -212,7 +212,7 @@ class ExpenseController extends Controller
 
         $expense->update($data);
 
-        return redirect()->route('expenses.index')
+        return redirect()->route('expenses.print', $expense->id)
             ->with('success', 'Expense updated successfully.');
     }
 

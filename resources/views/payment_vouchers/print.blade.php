@@ -49,15 +49,23 @@
     @endphp
 
     <!-- ACTION BUTTONS (HIDDEN DURING PRINT) -->
-    <div class="max-w-4xl w-full mx-auto mb-4 flex justify-end gap-3 no-print">
-        <button onclick="window.print()"
-            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 transition-all cursor-pointer">
-            🖨️ Print Voucher
-        </button>
-        <button onclick="window.close()"
-            class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-2xs cursor-pointer">
-            Close Window
-        </button>
+    <div class="max-w-4xl w-full mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex items-center gap-2">
+            <a href="{{ route('payment-vouchers.index') }}"
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all shadow-2xs cursor-pointer">
+                ← Back to List
+            </a>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="window.print()"
+                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 transition-all cursor-pointer">
+                🖨️ Print Voucher
+            </button>
+            <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.close(); }"
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-2xs cursor-pointer">
+                Close
+            </button>
+        </div>
     </div>
 
     <!-- REFINED PRINTABLE VOUCHER CONTAINER -->
@@ -77,7 +85,7 @@
             </h2>
         </div>
 
-        <!-- TOP 2x2 METADATA GRID -->
+        <!-- TOP METADATA GRID -->
         <div class="grid grid-cols-2 gap-[2px] bg-gray-300 rounded-2xl overflow-hidden mb-5 border border-gray-300">
 
             <!-- Row 1, Col 1: Date -->
@@ -91,30 +99,7 @@
                 </div>
             </div>
 
-            <!-- Row 1, Col 2: Paid To -->
-            <div class="grid grid-cols-3 min-h-[48px]">
-                <div
-                    class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
-                    {{ $paidToTypeLabel }}
-                </div>
-                <div
-                    class="col-span-2 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-extrabold text-xs sm:text-sm">
-                    {{ $recipientName }}
-                </div>
-            </div>
-
-            <!-- Row 2, Col 1: Voucher No -->
-            <div class="grid grid-cols-3 min-h-[48px]">
-                <div
-                    class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
-                    Voucher No.</div>
-                <div
-                    class="col-span-2 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-extrabold text-xs sm:text-sm font-mono">
-                    {{ $voucher->voucher_no }}
-                </div>
-            </div>
-
-            <!-- Row 2, Col 2: Paid From Account -->
+            <!-- Row 1, Col 2: Paid From Account -->
             <div class="grid grid-cols-3 min-h-[48px]">
                 <div
                     class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
@@ -122,6 +107,18 @@
                 <div
                     class="col-span-2 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-extrabold text-xs sm:text-sm">
                     {{ $voucher->paymentAccount ? $voucher->paymentAccount->name . ' (' . ucfirst($voucher->paymentAccount->type) . ')' : '—' }}
+                </div>
+            </div>
+
+            <!-- Row 2: Paid To Recipient (Full Width) -->
+            <div class="col-span-2 grid grid-cols-6 min-h-[48px]">
+                <div
+                    class="col-span-2 bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
+                    {{ $paidToTypeLabel }}
+                </div>
+                <div
+                    class="col-span-4 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-extrabold text-xs sm:text-sm">
+                    {{ $recipientName }}
                 </div>
             </div>
 

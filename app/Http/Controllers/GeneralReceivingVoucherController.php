@@ -28,10 +28,13 @@ class GeneralReceivingVoucherController extends Controller
         $query = GeneralReceivingVoucher::with(['party', 'landlord', 'paymentAccount', 'fromPaymentAccount', 'user'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
-                $q->where('voucher_no', 'like', "%{$term}%")
-                    ->orWhere('reference', 'like', "%{$term}%")
-                    ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"))
-                    ->orWhereHas('landlord', fn($l) => $l->where('name', 'like', "%{$term}%"));
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('reference', 'like', "%{$term}%")
+                        ->orWhere('notes', 'like', "%{$term}%")
+                        ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('landlord', fn($l) => $l->where('name', 'like', "%{$term}%"));
+                });
             })
             ->when($request->party_id, fn($q) => $q->where('party_id', $request->party_id))
             ->when($request->landlord_id, fn($q) => $q->where('landlord_id', $request->landlord_id))
@@ -39,7 +42,7 @@ class GeneralReceivingVoucherController extends Controller
             ->when($request->start_date, fn($q) => $q->whereDate('date', '>=', $request->start_date))
             ->when($request->end_date, fn($q) => $q->whereDate('date', '<=', $request->end_date));
 
-        $totalAmount = (float) $query->sum('amount');
+        $totalAmount = (float) (clone $query)->sum('amount');
 
         $vouchers = $query->latest('date')
             ->latest('id')
@@ -140,9 +143,9 @@ class GeneralReceivingVoucherController extends Controller
         // Force amount to be rounded to nearest integer (Pakistani Rupee constraint)
         $data['amount'] = round((float) $data['amount']);
 
-        GeneralReceivingVoucher::create($data);
+        $voucher = GeneralReceivingVoucher::create($data);
 
-        return redirect()->route('general-receiving-vouchers.index')
+        return redirect()->route('general-receiving-vouchers.print', $voucher->id)
             ->with('success', 'General receiving voucher recorded successfully.');
     }
 
@@ -275,7 +278,7 @@ class GeneralReceivingVoucherController extends Controller
 
         $generalReceivingVoucher->update($data);
 
-        return redirect()->route('general-receiving-vouchers.index')
+        return redirect()->route('general-receiving-vouchers.print', $generalReceivingVoucher->id)
             ->with('success', 'General receiving voucher updated successfully.');
     }
 

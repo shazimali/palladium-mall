@@ -51,38 +51,43 @@
         </div>
     </div>
 
-    <x-common.component-card title="Expense Vouchers Ledger Book" desc="View and filter all historical operating expense payments and business expenditures">
+    <div
+        x-data="{ showTable: {{ (request()->anyFilled(['search', 'expense_head_id', 'payment_method', 'start_date', 'end_date']) || request()->has('show_search')) ? 'true' : 'false' }} }">
+        <x-common.component-card title="" desc="">
 
-        {{-- Top bar --}}
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-            <div class="flex flex-wrap gap-2">
-                <span class="inline-flex items-center rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                    Showing Page: {{ $expenses->currentPage() }} of {{ $expenses->lastPage() }}
-                </span>
+            {{-- Top bar --}}
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
+                <div class="flex flex-wrap items-center gap-3">
+                    {{-- 1. New Expense Voucher Button --}}
+                    @if(auth()->user()->hasPermission('expenses.create') || auth()->user()->isSuperAdmin())
+                        <a href="{{ route('expenses.create') }}"
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm sm:text-base font-bold text-white hover:bg-brand-600 transition-all shadow-md">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            New Expense Voucher
+                        </a>
+                    @endif
+
+                    {{-- 2. Search Button --}}
+                    @if(auth()->user()->hasPermission('expenses.search') || auth()->user()->hasPermission('expenses.view') || auth()->user()->isSuperAdmin())
+                        <button type="button" @click="showTable = !showTable"
+                            :class="showTable ? 'bg-brand-500 text-white' : 'bg-brand-500 text-white hover:bg-brand-600'"
+                            class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm sm:text-base font-bold transition-all shadow-md cursor-pointer">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <span x-text="showTable ? 'Hide Search' : 'Search'"></span>
+                        </button>
+                    @endif
+                </div>
             </div>
 
-            <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'expense_head_id', 'payment_method', 'start_date', 'end_date']))
-                    <a href="{{ route('expenses.index') }}"
-                        class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
-                        Clear Filters
-                    </a>
-                @endif
-                @if(auth()->user()->hasPermission('expenses.create') || auth()->user()->isSuperAdmin())
-                    <a href="{{ route('expenses.create') }}"
-                        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        Create Expense Voucher
-                    </a>
-                @endif
-            </div>
-        </div>
-
-        <!-- Filters & Search Form -->
-        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-            <form action="{{ route('expenses.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-5 items-end">
+            {{-- Filter & Table Panel (Hidden by Default) --}}
+            <div x-show="showTable" x-cloak class="mt-6">
+            <form action="{{ route('expenses.index') }}" method="GET" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-5 items-end mb-6">
+                <input type="hidden" name="show_search" value="1">
                 @php
                     $filterInput = 'dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90';
                     $filterLabel = 'mb-1 block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400';
@@ -252,6 +257,8 @@
                 {{ $expenses->links() }}
             </div>
         @endif
+            </div> {{-- End showTable --}}
 
     </x-common.component-card>
+    </div>
 @endsection

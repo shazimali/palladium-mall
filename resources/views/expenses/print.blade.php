@@ -27,15 +27,23 @@
 <body class="bg-gray-100 text-gray-800 antialiased min-h-screen flex flex-col justify-between py-8 px-4 sm:px-6">
 
     <!-- ACTION BUTTONS (HIDDEN DURING PRINT) -->
-    <div class="max-w-4xl w-full mx-auto mb-4 flex justify-end gap-3 no-print">
-        <button onclick="window.print()"
-            class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 transition-all cursor-pointer">
-            🖨️ Print Voucher
-        </button>
-        <button onclick="window.close()"
-            class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-2xs cursor-pointer">
-            Close Window
-        </button>
+    <div class="max-w-4xl w-full mx-auto mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
+        <div class="flex items-center gap-2">
+            <a href="{{ route('expenses.index') }}"
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all shadow-2xs cursor-pointer">
+                ← Back to List
+            </a>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="window.print()"
+                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 transition-all cursor-pointer">
+                🖨️ Print Voucher
+            </button>
+            <button onclick="if(window.history.length > 1) { window.history.back(); } else { window.close(); }"
+                class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all shadow-2xs cursor-pointer">
+                Close
+            </button>
+        </div>
     </div>
 
     <!-- REFINED PRINTABLE VOUCHER CONTAINER -->

@@ -243,6 +243,8 @@ Route::middleware('auth')->group(function () {
 
     // Receiving Vouchers
     Route::middleware('permission:receiving_vouchers.view')->group(function () {
+        Route::get('receiving-vouchers-print-list', [ReceivingVoucherController::class, 'printList'])
+            ->name('receiving-vouchers.print-list');
         Route::resource('receiving-vouchers', ReceivingVoucherController::class);
         Route::get('receiving-vouchers/{receiving_voucher}/print', [ReceivingVoucherController::class, 'print'])
             ->name('receiving-vouchers.print');

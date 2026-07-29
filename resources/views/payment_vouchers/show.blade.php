@@ -46,14 +46,19 @@
     <div
         class="mx-auto max-w-4xl bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans">
 
-        {{-- CENTERED TITLE --}}
-        <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+        {{-- FORM HEADER WITH CENTERED TITLE & RIGHT CORNER VOUCHER NUMBER --}}
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+            <div class="hidden sm:block w-36"></div>
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase text-center">
                 Paid Voucher
             </h2>
+            <div class="inline-flex items-center gap-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 shadow-2xs">
+                <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Voucher No:</span>
+                <span class="text-base sm:text-lg font-black font-mono text-brand-600 dark:text-brand-400">{{ $voucher->voucher_no }}</span>
+            </div>
         </div>
 
-        {{-- TOP 2x2 GRID --}}
+        {{-- TOP GRID --}}
         <div
             class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
 
@@ -68,30 +73,7 @@
                 </div>
             </div>
 
-            {{-- Row 1, Col 2: Paid To --}}
-            <div class="grid grid-cols-3 min-h-[48px]">
-                <div
-                    class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
-                    {{ $paidToTypeLabel }}
-                </div>
-                <div
-                    class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
-                    {{ $recipientName }}
-                </div>
-            </div>
-
-            {{-- Row 2, Col 1: Voucher No --}}
-            <div class="grid grid-cols-3 min-h-[48px]">
-                <div
-                    class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
-                    Voucher No.</div>
-                <div
-                    class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base font-mono">
-                    {{ $voucher->voucher_no }}
-                </div>
-            </div>
-
-            {{-- Row 2, Col 2: Paid From Account --}}
+            {{-- Row 1, Col 2: Paid From Account --}}
             <div class="grid grid-cols-3 min-h-[48px]">
                 <div
                     class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
@@ -99,6 +81,18 @@
                 <div
                     class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
                     {{ $voucher->paymentAccount ? $voucher->paymentAccount->name . ' (' . ucfirst($voucher->paymentAccount->type) . ')' : '—' }}
+                </div>
+            </div>
+
+            {{-- Row 2: Paid To Recipient (Full Width) --}}
+            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-6 min-h-[48px]">
+                <div
+                    class="md:col-span-2 bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
+                    {{ $paidToTypeLabel }}
+                </div>
+                <div
+                    class="md:col-span-4 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                    {{ $recipientName }}
                 </div>
             </div>
 

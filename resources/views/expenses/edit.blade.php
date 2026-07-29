@@ -106,7 +106,23 @@
                     return;
                 }
 
-                event.target.submit();
+                Swal.fire({
+                    title: 'Confirm Update Expense Voucher',
+                    text: 'Are you sure you want to update and print this expense voucher for Rs. ' + amt.toLocaleString('en-US', {minimumFractionDigits: 2}) + '?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Update & Print',
+                    cancelButtonText: 'Cancel',
+                    customClass: {
+                        confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer mr-2',
+                        cancelButton: 'inline-flex items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700 px-6 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 shadow-md hover:bg-gray-300 transition-colors cursor-pointer'
+                    },
+                    buttonsStyling: false
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        event.target.submit();
+                    }
+                });
             }
         }">
 
@@ -116,11 +132,16 @@
         {{-- FORM CONTAINER WITH NO OUTER BG COLOR, CENTERED TITLE, ADAPTED TO THEME --}}
         <div class="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 sm:p-8 shadow-sm text-gray-900 dark:text-white font-sans relative">
 
-            {{-- CENTERED TITLE --}}
-            <div class="text-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
-                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase">
+            {{-- FORM HEADER WITH CENTERED TITLE & RIGHT CORNER VOUCHER NUMBER --}}
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200 dark:border-gray-800">
+                <div class="hidden sm:block w-36"></div>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-brand-600 dark:text-brand-400 uppercase text-center">
                     Expense Voucher
                 </h2>
+                <div class="inline-flex items-center gap-2 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-4 py-2 shadow-2xs">
+                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Voucher No:</span>
+                    <span class="text-base sm:text-lg font-black font-mono text-brand-600 dark:text-brand-400">{{ $expense->voucher_no }}</span>
+                </div>
             </div>
 
             {{-- FORM GRID CONTAINER --}}
@@ -245,13 +266,13 @@
                     </p>
                 </div>
 
-                {{-- Right Box: Description of Goods/Services / Remarks --}}
+                {{-- Right Box: Remarks --}}
                 <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-xs">
                     <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
-                        Description of Goods/Services / Remarks:
+                        Remarks:
                     </label>
                     <textarea name="notes" rows="2" placeholder="Expense voucher remarks or notes..."
-                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3 text-xs sm:text-sm font-bold text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">{{ old('notes', $expense->notes) }}</textarea>
+                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3.5 text-base sm:text-lg font-black text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">{{ old('notes', $expense->notes) }}</textarea>
                 </div>
             </div>
 
