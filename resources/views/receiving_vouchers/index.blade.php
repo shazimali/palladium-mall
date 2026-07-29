@@ -106,44 +106,45 @@
 
                         <!-- Flat/Shop Filter (Searchable Dropdown) -->
                         <div x-data="{
-                                                    open: false,
-                                                    search: '',
-                                                    selectedId: '{{ request('unit_id') }}',
-                                                    selectedLabel: '{{ request('unit_id') ? ($units->firstWhere('id', request('unit_id'))?->unit_number ?? 'All Flats/Shops') : 'All Flats/Shops' }}',
-                                                    highlightedIndex: -1,
-                                                    units: [
-                                                        { id: '', label: 'All Flats/Shops' },
-                                                        @foreach($units as $unit)
-                                                            { id: '{{ $unit->id }}', label: '{{ addslashes($unit->unit_number) }}' },
-                                                        @endforeach
-                                                    ],
-                                                    get filteredUnits() {
-                                                        if (!this.search) return this.units;
-                                                        let q = this.search.toLowerCase();
-                                                        return this.units.filter(u => u.label.toLowerCase().includes(q));
-                                                    },
-                                                    selectUnit(u) {
-                                                        this.selectedId = u.id;
-                                                        this.selectedLabel = u.label;
-                                                        this.open = false;
-                                                        this.search = '';
-                                                        this.highlightedIndex = -1;
-                                                        this.$nextTick(() => {
-                                                            $refs.filterForm.submit();
-                                                        });
-                                                    },
-                                                    moveHighlight(direction) {
-                                                        let list = this.filteredUnits;
-                                                        if (list.length === 0) return;
-                                                        this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
-                                                    },
-                                                    selectHighlighted() {
-                                                        let list = this.filteredUnits;
-                                                        if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
-                                                            this.selectUnit(list[this.highlightedIndex]);
+                                                        open: false,
+                                                        search: '',
+                                                        selectedId: '{{ request('unit_id') }}',
+                                                        selectedLabel: '{{ request('unit_id') ? ($units->firstWhere('id', request('unit_id'))?->unit_number ?? 'All Flats/Shops') : 'All Flats/Shops' }}',
+                                                        highlightedIndex: -1,
+                                                        units: [
+                                                            { id: '', label: 'All Flats/Shops' },
+                                                            @foreach($units as $unit)
+                                                                { id: '{{ $unit->id }}', label: '{{ addslashes($unit->unit_number) }}' },
+                                                            @endforeach
+                                                        ],
+                                                        get filteredUnits() {
+                                                            if (!this.search) return this.units;
+                                                            let q = this.search.toLowerCase();
+                                                            return this.units.filter(u => u.label.toLowerCase().includes(q));
+                                                        },
+                                                        selectUnit(u) {
+                                                            this.selectedId = u.id;
+                                                            this.selectedLabel = u.label;
+                                                            this.open = false;
+                                                            this.search = '';
+                                                            this.highlightedIndex = -1;
+                                                            this.$nextTick(() => {
+                                                                $refs.filterForm.submit();
+                                                            });
+                                                        },
+                                                        moveHighlight(direction) {
+                                                            let list = this.filteredUnits;
+                                                            if (list.length === 0) return;
+                                                            this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                                                        },
+                                                        selectHighlighted() {
+                                                            let list = this.filteredUnits;
+                                                            if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                                                                this.selectUnit(list[this.highlightedIndex]);
+                                                            }
                                                         }
-                                                    }
-                                                }" class="relative" @click.outside="open = false; highlightedIndex = -1">
+                                                    }" class="relative"
+                            @click.outside="open = false; highlightedIndex = -1">
                             <input type="hidden" name="unit_id" :value="selectedId">
                             <div tabindex="0"
                                 @click="open = !open; if(open) { $nextTick(() => $refs.unitSearchInput.focus()) }"
@@ -176,9 +177,9 @@
                                     </template>
                                     <template x-for="(u, index) in filteredUnits" :key="u.id">
                                         <li @click="selectUnit(u)" @mouseenter="highlightedIndex = index" :class="{
-                                                                        'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
-                                                                        'text-gray-800 dark:text-gray-200': highlightedIndex !== index
-                                                                    }"
+                                                                            'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                                            'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                                                        }"
                                             class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
                                             <span x-text="u.label" class="font-medium"></span>
                                         </li>
@@ -189,44 +190,45 @@
 
                         <!-- Account Filter (Searchable Dropdown) -->
                         <div x-data="{
-                                                    open: false,
-                                                    search: '',
-                                                    selectedId: '{{ request('payment_account_id') }}',
-                                                    selectedLabel: '{{ request('payment_account_id') ? ($paymentAccounts . firstWhere('id', request('payment_account_id'))?->name ?? 'All Accounts') : 'All Accounts' }}',
-                                                    highlightedIndex: -1,
-                                                    accounts: [
-                                                        { id: '', label: 'All Accounts' },
-                                                        @foreach($paymentAccounts as $account)
-                                                            { id: '{{ $account->id }}', label: '{{ addslashes($account->name) }}' },
-                                                        @endforeach
-                                                    ],
-                                                    get filteredAccounts() {
-                                                        if (!this.search) return this.accounts;
-                                                        let q = this.search.toLowerCase();
-                                                        return this.accounts.filter(a => a.label.toLowerCase().includes(q));
-                                                    },
-                                                    selectAccount(a) {
-                                                        this.selectedId = a.id;
-                                                        this.selectedLabel = a.label;
-                                                        this.open = false;
-                                                        this.search = '';
-                                                        this.highlightedIndex = -1;
-                                                        this.$nextTick(() => {
-                                                            $refs.filterForm.submit();
-                                                        });
-                                                    },
-                                                    moveHighlight(direction) {
-                                                        let list = this.filteredAccounts;
-                                                        if (list.length === 0) return;
-                                                        this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
-                                                    },
-                                                    selectHighlighted() {
-                                                        let list = this.filteredAccounts;
-                                                        if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
-                                                            this.selectAccount(list[this.highlightedIndex]);
+                                                        open: false,
+                                                        search: '',
+                                                        selectedId: '{{ request('payment_account_id') }}',
+                                                        selectedLabel: '{{ request('payment_account_id') ? ($paymentAccounts . firstWhere('id', request('payment_account_id'))?->name ?? 'All Accounts') : 'All Accounts' }}',
+                                                        highlightedIndex: -1,
+                                                        accounts: [
+                                                            { id: '', label: 'All Accounts' },
+                                                            @foreach($paymentAccounts as $account)
+                                                                { id: '{{ $account->id }}', label: '{{ addslashes($account->name) }}' },
+                                                            @endforeach
+                                                        ],
+                                                        get filteredAccounts() {
+                                                            if (!this.search) return this.accounts;
+                                                            let q = this.search.toLowerCase();
+                                                            return this.accounts.filter(a => a.label.toLowerCase().includes(q));
+                                                        },
+                                                        selectAccount(a) {
+                                                            this.selectedId = a.id;
+                                                            this.selectedLabel = a.label;
+                                                            this.open = false;
+                                                            this.search = '';
+                                                            this.highlightedIndex = -1;
+                                                            this.$nextTick(() => {
+                                                                $refs.filterForm.submit();
+                                                            });
+                                                        },
+                                                        moveHighlight(direction) {
+                                                            let list = this.filteredAccounts;
+                                                            if (list.length === 0) return;
+                                                            this.highlightedIndex = (this.highlightedIndex + direction + list.length) % list.length;
+                                                        },
+                                                        selectHighlighted() {
+                                                            let list = this.filteredAccounts;
+                                                            if (this.highlightedIndex >= 0 && this.highlightedIndex < list.length) {
+                                                                this.selectAccount(list[this.highlightedIndex]);
+                                                            }
                                                         }
-                                                    }
-                                                }" class="relative" @click.outside="open = false; highlightedIndex = -1">
+                                                    }" class="relative"
+                            @click.outside="open = false; highlightedIndex = -1">
                             <input type="hidden" name="payment_account_id" :value="selectedId">
                             <div tabindex="0"
                                 @click="open = !open; if(open) { $nextTick(() => $refs.accountSearchInput.focus()) }"
@@ -259,9 +261,9 @@
                                     </template>
                                     <template x-for="(a, index) in filteredAccounts" :key="a.id">
                                         <li @click="selectAccount(a)" @mouseenter="highlightedIndex = index" :class="{
-                                                                        'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
-                                                                        'text-gray-800 dark:text-gray-200': highlightedIndex !== index
-                                                                    }"
+                                                                            'bg-brand-50 text-brand-900 dark:bg-brand-950/20 dark:text-brand-400': highlightedIndex === index,
+                                                                            'text-gray-800 dark:text-gray-200': highlightedIndex !== index
+                                                                        }"
                                             class="px-4 py-2 text-xs cursor-pointer hover:bg-brand-50 dark:hover:bg-brand-950/20 transition-colors flex justify-between items-center">
                                             <span x-text="a.label" class="font-medium"></span>
                                         </li>

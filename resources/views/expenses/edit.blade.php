@@ -16,6 +16,9 @@
             searchExpenseHead: '',
             highlightedExpenseHeadIndex: -1,
 
+            isNotesManuallyEdited: {{ (old('notes', $expense->notes ?? '') && !str_starts_with(old('notes', $expense->notes ?? ''), 'Expense payment')) ? 'true' : 'false' }},
+            notes: '{{ old('notes', addslashes($expense->notes ?? '')) }}',
+
             expenseHeadOptions: [
                 @foreach($expenseHeads as $h)
                 { id: '{{ $h->id }}', name: '{{ addslashes($h->name) }}' },
@@ -27,6 +30,24 @@
                 { id: '{{ $account->id }}', name: '{{ addslashes($account->name) }} ({{ ucfirst($account->type) }})' },
                 @endforeach
             ],
+
+            updateAutoRemarks() {
+                if (this.isNotesManuallyEdited) return;
+
+                let catName = this.selectedExpenseHeadName;
+                let amtNum = parseFloat(this.voucherAmount || 0);
+                let amtStr = amtNum > 0 ? 'Rs. ' + Math.round(amtNum).toLocaleString() : '';
+
+                if (!amtStr && !catName) {
+                    this.notes = '';
+                    return;
+                }
+
+                let remarks = 'Expense payment';
+                if (amtStr) remarks += ' of ' + amtStr;
+                if (catName) remarks += ' for ' + catName;
+                this.notes = remarks;
+            },
 
             get filteredExpenseHeads() {
                 if (!this.searchExpenseHead) return this.expenseHeadOptions;
@@ -43,11 +64,16 @@
                 this.openExpenseHead = false;
                 this.searchExpenseHead = '';
                 this.highlightedExpenseHeadIndex = -1;
+                this.updateAutoRemarks();
             },
 
             init() {
                 if (this.voucherAmount) {
                     this.formatAmount(String(this.voucherAmount));
+                }
+                this.$watch('voucherAmount', () => this.updateAutoRemarks());
+                if (!this.notes) {
+                    this.updateAutoRemarks();
                 }
             },
 
@@ -151,21 +177,21 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-50 rounded-t-2xl">
                     {{-- Field 1: Voucher Date --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide rounded-tl-2xl">Voucher Date</div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide rounded-tl-2xl">Voucher Date</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
                             <input type="text" id="voucher_date" name="date" value="{{ old('date', $expense->date->format('Y-m-d')) }}" required autocomplete="off"
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-extrabold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
                         </div>
                     </div>
 
                     {{-- Field 2: Searchable Expense Category Dropdown --}}
                     <div class="grid grid-cols-3 min-h-[52px] relative z-50">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide md:rounded-tr-2xl">Expense Head <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide md:rounded-tr-2xl">Expense Head <span class="text-rose-300 ml-1">*</span></div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-tr-2xl">
                             <div class="w-full relative" @click.away="openExpenseHead = false; highlightedExpenseHeadIndex = -1">
                                 <input type="hidden" name="expense_head_id" x-model="expenseHeadId" required>
                                 <button type="button" @click="openExpenseHead = !openExpenseHead; if(openExpenseHead) { $nextTick(() => $refs.expenseHeadSearchInput.focus()) }"
-                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-sm font-extrabold text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
                                     <span x-text="selectedExpenseHeadName ? selectedExpenseHeadName : 'Select Expense Category...'" class="truncate"></span>
                                     <span class="ml-2 text-xs opacity-60">▼</span>
                                 </button>
@@ -178,7 +204,7 @@
                                             @keydown.arrow-up.prevent="highlightedExpenseHeadIndex = (highlightedExpenseHeadIndex - 1 + filteredExpenseHeads.length) % filteredExpenseHeads.length"
                                             @keydown.enter.prevent="if(highlightedExpenseHeadIndex >= 0 && filteredExpenseHeads[highlightedExpenseHeadIndex]) selectExpenseHead(filteredExpenseHeads[highlightedExpenseHeadIndex])"
                                             @keydown.escape="openExpenseHead = false; highlightedExpenseHeadIndex = -1"
-                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white font-bold focus:border-brand-500 focus:outline-none">
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
                                     </div>
                                     <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
                                         <template x-for="(opt, index) in filteredExpenseHeads" :key="opt.id">
@@ -186,7 +212,7 @@
                                                 @mouseenter="highlightedExpenseHeadIndex = index"
                                                 class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
                                                 :class="expenseHeadId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedExpenseHeadIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
-                                                <span x-text="opt.name" class="font-black text-sm truncate"></span>
+                                                <span x-text="opt.name" class="font-black text-base sm:text-lg truncate"></span>
                                                 <span x-show="expenseHeadId == opt.id" class="font-black text-base">✓</span>
                                             </button>
                                         </template>
@@ -200,22 +226,14 @@
                     </div>
                 </div>
 
-                {{-- ROW 2: Voucher Number & Paid From Account --}}
+                {{-- ROW 2: Paid From Account & Payment Method --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-20">
-                    {{-- Field 1: Voucher Number --}}
+                    {{-- Field 1: Paid From Account --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher No.</div>
-                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-brand-600 dark:text-brand-400 px-4 py-3 flex items-center font-black text-base sm:text-lg font-mono">
-                            {{ $expense->voucher_no }}
-                        </div>
-                    </div>
-
-                    {{-- Field 2: Paid From Account --}}
-                    <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid From <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">Paid From <span class="text-rose-300 ml-1">*</span></div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
                             <select name="payment_account_id" x-model="paymentAccountId" required
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
                                 <option value="">Select Account...</option>
                                 @foreach($paymentAccounts as $account)
                                     <option value="{{ $account->id }}" {{ old('payment_account_id', $expense->payment_account_id) == $account->id ? 'selected' : '' }}>
@@ -225,32 +243,31 @@
                             </select>
                         </div>
                     </div>
-                </div>
-
-                {{-- ROW 3: Payment Amount & Payment Method Type --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-10 rounded-b-2xl">
-                    {{-- Field 1: Payment Amount --}}
-                    <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide rounded-bl-2xl md:rounded-bl-none">Payment Amount <span class="text-rose-300 ml-1">*</span></div>
-                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
-                            <input type="text" x-model="displayAmount" @input="formatAmount($event.target.value)" required placeholder="0.00"
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
-                            <input type="hidden" name="amount" x-model="voucherAmount">
-                        </div>
-                    </div>
 
                     {{-- Field 2: Payment Method Type --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Method</div>
-                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-br-2xl">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">Payment Method</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
                             <select name="payment_method" x-model="paymentMethod" required
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
                                 <option value="Cash">Cash</option>
                                 <option value="Bank Transfer">Bank Transfer</option>
                                 <option value="Online">Online</option>
                                 <option value="Cheque">Cheque</option>
                                 <option value="Card">Card</option>
                             </select>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ROW 3: Payment Amount (Full Row Width) --}}
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-10 rounded-b-2xl">
+                    <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-6 min-h-[52px] relative z-10">
+                        <div class="md:col-span-2 bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide rounded-bl-2xl">Payment Amount <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="md:col-span-4 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-br-2xl">
+                            <input type="text" x-model="displayAmount" @input="formatAmount($event.target.value)" required placeholder="0.00"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-lg sm:text-xl font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                            <input type="hidden" name="amount" x-model="voucherAmount">
                         </div>
                     </div>
                 </div>
@@ -272,7 +289,8 @@
                         Remarks:
                     </label>
                     <textarea name="notes" rows="2" placeholder="Expense voucher remarks or notes..."
-                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3.5 text-base sm:text-lg font-black text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">{{ old('notes', $expense->notes) }}</textarea>
+                        x-model="notes" @input="isNotesManuallyEdited = true"
+                        class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl p-3.5 text-base sm:text-lg font-black text-gray-900 dark:text-white placeholder-gray-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all"></textarea>
                 </div>
             </div>
 
@@ -281,8 +299,8 @@
                 <a href="{{ route('expenses.index') }}" class="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold transition-all text-xs sm:text-sm">
                     Cancel
                 </a>
-                <button type="submit" class="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black text-xs sm:text-sm shadow-md transition-all cursor-pointer">
-                    Update Voucher
+                <button type="submit" class="px-6 py-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black text-sm sm:text-base shadow-md transition-all cursor-pointer">
+                    Save Voucher
                 </button>
             </div>
 

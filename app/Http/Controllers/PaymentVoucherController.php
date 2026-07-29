@@ -259,6 +259,49 @@ class PaymentVoucherController extends Controller
     }
 
     /**
+     * Print filtered listing of payment vouchers.
+     */
+    public function printList(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('payment_vouchers.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $query = PaymentVoucher::with(['owner', 'party', 'tenant', 'landlord', 'paymentAccount', 'toPaymentAccount', 'user'])
+            ->when($request->search, function ($q) use ($request) {
+                $term = $request->search;
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('reference', 'like', "%{$term}%")
+                        ->orWhere('other_name', 'like', "%{$term}%")
+                        ->orWhere('notes', 'like', "%{$term}%")
+                        ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('tenant', fn($t) => $t->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('landlord', fn($l) => $l->where('name', 'like', "%{$term}%"));
+                });
+            })
+            ->when($request->paid_to_type, fn($q) => $q->where('paid_to_type', $request->paid_to_type))
+            ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
+            ->when($request->start_date, fn($q) => $q->whereDate('date', '>=', $request->start_date))
+            ->when($request->end_date, fn($q) => $q->whereDate('date', '<=', $request->end_date))
+            ->when($request->is_advance !== null && $request->is_advance !== '', fn($q) => $q->where('is_advance', (bool) $request->is_advance));
+
+        $totalAmount = (float) (clone $query)->sum('amount');
+        $vouchers = $query->latest('date')->latest('id')->get();
+
+        $selectedAccount = $request->payment_account_id ? PaymentAccount::find($request->payment_account_id)?->name : null;
+
+        return view('payment_vouchers.print_list', [
+            'title'           => 'Payment Vouchers Report',
+            'vouchers'        => $vouchers,
+            'totalAmount'     => $totalAmount,
+            'selectedAccount' => $selectedAccount,
+            'filters'         => $request->all(),
+        ]);
+    }
+
+    /**
      * Remove the specified payment voucher from storage.
      */
     public function destroy(PaymentVoucher $paymentVoucher): RedirectResponse

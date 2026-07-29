@@ -81,6 +81,19 @@
                             <span x-text="showTable ? 'Hide Search' : 'Search'"></span>
                         </button>
                     @endif
+
+                    {{-- 3. Print Button (Shows only when search list is open) --}}
+                    <!-- @if(auth()->user()->hasPermission('payment_vouchers.view') || auth()->user()->isSuperAdmin())
+                        <a href="{{ route('payment-vouchers.print-list', request()->query()) }}" target="_blank"
+                            x-show="showTable" x-cloak
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white hover:bg-brand-600 px-5 py-2.5 text-4xl font-bold transition-all shadow-md cursor-pointer">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            <span>Print</span>
+                        </a>
+                    @endif -->
                 </div>
             </div>
 
@@ -112,17 +125,18 @@
                         <label class="{{ $filterLabel }}">Payee Type</label>
                         <select name="paid_to_type" class="{{ $filterInput }}">
                             <option value="">All Types</option>
-                            <option value="owner" {{ request('paid_to_type') === 'owner' ? 'selected' : '' }}>Managing Owner</option>
-                            <option value="tenant" {{ request('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant (Refund)</option>
-                            <option value="landlord" {{ request('paid_to_type') === 'landlord' ? 'selected' : '' }}>Landlord (Payout)</option>
-                            <option value="account" {{ request('paid_to_type') === 'account' ? 'selected' : '' }}>Payment Account (Transfer)</option>
-                            <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Party (Suppliers/Contractors)</option>
+                            <option value="owner" {{ request('paid_to_type') === 'owner' ? 'selected' : '' }}>Owner</option>
+                            <option value="tenant" {{ request('paid_to_type') === 'tenant' ? 'selected' : '' }}>Tenant</option>
+                            <option value="landlord" {{ request('paid_to_type') === 'landlord' ? 'selected' : '' }}>Landlord</option>
+                            <option value="party" {{ request('paid_to_type') === 'party' ? 'selected' : '' }}>Party / Vendor</option>
+                            <option value="account" {{ request('paid_to_type') === 'account' ? 'selected' : '' }}>Account Transfer</option>
+                            <option value="other" {{ request('paid_to_type') === 'other' ? 'selected' : '' }}>Other</option>
                         </select>
                     </div>
 
-                    <!-- Payment Account Filter -->
+                    <!-- Payment Account -->
                     <div>
-                        <label class="{{ $filterLabel }}">Payment Account</label>
+                        <label class="{{ $filterLabel }}">Paid From Account</label>
                         <select name="payment_account_id" class="{{ $filterInput }}">
                             <option value="">All Accounts</option>
                             @foreach($paymentAccounts as $account)
@@ -130,6 +144,16 @@
                                     {{ $account->name }}
                                 </option>
                             @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Is Advance Filter -->
+                    <div>
+                        <label class="{{ $filterLabel }}">Advance Status</label>
+                        <select name="is_advance" class="{{ $filterInput }}">
+                            <option value="">All Payments</option>
+                            <option value="1" {{ request('is_advance') === '1' ? 'selected' : '' }}>Advance Only</option>
+                            <option value="0" {{ request('is_advance') === '0' ? 'selected' : '' }}>Standard Only</option>
                         </select>
                     </div>
 
@@ -145,9 +169,19 @@
                         <input type="date" name="end_date" value="{{ request('end_date') }}" class="{{ $filterInput }}" />
                     </div>
 
-                    <!-- Filter Action Button -->
-                    <div>
-                        <button type="submit" class="w-full sm:w-auto px-6 flex justify-center items-center h-10 rounded-lg bg-brand-500 hover:bg-brand-600 text-sm font-semibold text-white dark:text-white transition-colors cursor-pointer">
+                    <!-- Filter Action Buttons -->
+                    <div class="col-span-1 sm:col-span-2 lg:col-span-7 flex flex-wrap items-center justify-end gap-3 pt-2">
+                        <a href="{{ route('payment-vouchers.print-list', request()->query()) }}" target="_blank"
+                            class="px-5 flex items-center gap-2 h-10 rounded-lg bg-brand-500 hover:bg-brand-600 text-sm font-bold text-white transition-colors shadow-sm cursor-pointer">
+                            🖨️ Print List Report
+                        </a>
+                        @if(request()->anyFilled(['search', 'paid_to_type', 'payment_account_id', 'is_advance', 'start_date', 'end_date']))
+                            <a href="{{ route('payment-vouchers.index', ['show_search' => 1]) }}"
+                                class="px-4 flex items-center h-10 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                Clear Filters
+                            </a>
+                        @endif
+                        <button type="submit" class="px-6 flex justify-center items-center h-10 rounded-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-sm font-semibold text-gray-800 dark:text-gray-200 transition-colors cursor-pointer">
                             Apply Filters
                         </button>
                     </div>

@@ -46,6 +46,19 @@
                             <span x-text="showTable ? 'Hide Search' : 'Search'"></span>
                         </button>
                     @endif
+
+                    {{-- 3. Print Button (Shows only when search list is open) --}}
+                    @if(auth()->user()->hasPermission('general_receiving_vouchers.view') || auth()->user()->isSuperAdmin())
+                        <a href="{{ route('general-receiving-vouchers.print-list', request()->query()) }}" target="_blank"
+                            x-show="showTable" x-cloak
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white hover:bg-brand-600 px-5 py-2.5 text-4xl font-bold transition-all shadow-md cursor-pointer">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            <span>Print</span>
+                        </a>
+                    @endif
                 </div>
             </div>
 
@@ -54,6 +67,23 @@
                 <!-- Filters & Search -->
                 <div
                     class="my-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-100 dark:border-gray-800">
+                        <h3 class="text-sm font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                            <span>🔍 Search & Filter Vouchers</span>
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <a href="{{ route('general-receiving-vouchers.print-list', request()->query()) }}" target="_blank"
+                                class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-600 transition-all shadow-xs cursor-pointer">
+                                🖨️ Print List Report
+                            </a>
+                            @if(request()->anyFilled(['search', 'party_id', 'landlord_id', 'payment_account_id', 'start_date', 'end_date']))
+                                <a href="{{ route('general-receiving-vouchers.index', ['show_search' => 1]) }}"
+                                    class="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-all">
+                                    Clear Filters
+                                </a>
+                            @endif
+                        </div>
+                    </div>
                     <form action="{{ route('general-receiving-vouchers.index') }}" method="GET"
                         class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
                         <input type="hidden" name="show_search" value="1">

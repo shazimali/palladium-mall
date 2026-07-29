@@ -247,4 +247,59 @@ class ExpenseController extends Controller
             'expense' => $expense,
         ]);
     }
+
+    /**
+     * Print filtered listing of expense vouchers.
+     */
+    public function printList(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('expenses.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $query = Expense::with(['expenseHead', 'paymentAccount', 'user']);
+
+        if ($request->filled('search')) {
+            $term = $request->search;
+            $query->where(function ($q) use ($term) {
+                $q->where('voucher_no', 'like', "%{$term}%")
+                    ->orWhere('reference', 'like', "%{$term}%")
+                    ->orWhere('notes', 'like', "%{$term}%")
+                    ->orWhereHas('expenseHead', function ($h) use ($term) {
+                        $h->where('name', 'like', "%{$term}%");
+                    });
+            });
+        }
+
+        if ($request->filled('expense_head_id')) {
+            $query->where('expense_head_id', $request->expense_head_id);
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('date', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('date', '<=', $request->end_date);
+        }
+
+        $totalExpenses = (float) $query->sum('amount');
+        $expenses = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
+
+        $selectedHead = $request->expense_head_id ? ExpenseHead::find($request->expense_head_id)?->name : null;
+        $selectedAccount = $request->payment_account_id ? PaymentAccount::find($request->payment_account_id)?->name : null;
+
+        return view('expenses.print_list', [
+            'title'           => 'Expense Vouchers Report',
+            'expenses'        => $expenses,
+            'totalExpenses'   => $totalExpenses,
+            'selectedHead'    => $selectedHead,
+            'selectedAccount' => $selectedAccount,
+            'filters'         => $request->all(),
+        ]);
+    }
 }

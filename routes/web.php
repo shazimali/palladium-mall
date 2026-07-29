@@ -133,6 +133,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:general_receiving_vouchers.view')->group(function () {
+        Route::get('general-receiving-vouchers-print-list', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'printList'])
+            ->name('general-receiving-vouchers.print-list');
         Route::resource('general-receiving-vouchers', \App\Http\Controllers\GeneralReceivingVoucherController::class);
         Route::get('general-receiving-vouchers/{general_receiving_voucher}/print', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'print'])->name('general-receiving-vouchers.print');
     });
@@ -252,6 +254,8 @@ Route::middleware('auth')->group(function () {
 
     // Payment Vouchers
     Route::middleware('permission:payment_vouchers.view')->group(function () {
+        Route::get('payment-vouchers-print-list', [PaymentVoucherController::class, 'printList'])
+            ->name('payment-vouchers.print-list');
         Route::resource('payment-vouchers', PaymentVoucherController::class);
         Route::get('payment-vouchers/{payment_voucher}/print', [PaymentVoucherController::class, 'print'])
             ->name('payment-vouchers.print');
@@ -328,6 +332,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:expenses.view')->group(function () {
+        Route::get('expense-vouchers-print-list', [\App\Http\Controllers\ExpenseController::class, 'printList'])
+            ->name('expenses.print-list');
         Route::resource('expense-vouchers', \App\Http\Controllers\ExpenseController::class)->names([
             'index'   => 'expenses.index',
             'create'  => 'expenses.create',

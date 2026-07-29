@@ -343,4 +343,48 @@ class GeneralReceivingVoucherController extends Controller
             'units'            => $units,
         ]);
     }
+
+    /**
+     * Print filtered listing of general receiving vouchers.
+     */
+    public function printList(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('general_receiving_vouchers.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $query = GeneralReceivingVoucher::with(['party', 'landlord', 'paymentAccount', 'fromPaymentAccount', 'user'])
+            ->when($request->search, function ($q) use ($request) {
+                $term = $request->search;
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('reference', 'like', "%{$term}%")
+                        ->orWhere('notes', 'like', "%{$term}%")
+                        ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('landlord', fn($l) => $l->where('name', 'like', "%{$term}%"));
+                });
+            })
+            ->when($request->party_id, fn($q) => $q->where('party_id', $request->party_id))
+            ->when($request->landlord_id, fn($q) => $q->where('landlord_id', $request->landlord_id))
+            ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
+            ->when($request->start_date, fn($q) => $q->whereDate('date', '>=', $request->start_date))
+            ->when($request->end_date, fn($q) => $q->whereDate('date', '<=', $request->end_date));
+
+        $totalAmount = (float) (clone $query)->sum('amount');
+        $vouchers = $query->latest('date')->latest('id')->get();
+
+        $selectedParty = $request->party_id ? Party::find($request->party_id)?->name : null;
+        $selectedLandlord = $request->landlord_id ? Landlord::find($request->landlord_id)?->name : null;
+        $selectedAccount = $request->payment_account_id ? PaymentAccount::find($request->payment_account_id)?->name : null;
+
+        return view('general_receiving_vouchers.print_list', [
+            'title'            => 'General Receiving Vouchers Report',
+            'vouchers'         => $vouchers,
+            'totalAmount'      => $totalAmount,
+            'selectedParty'    => $selectedParty,
+            'selectedLandlord' => $selectedLandlord,
+            'selectedAccount'  => $selectedAccount,
+            'filters'          => $request->all(),
+        ]);
+    }
 }
