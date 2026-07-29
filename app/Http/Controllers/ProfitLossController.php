@@ -107,6 +107,8 @@ class ProfitLossController extends Controller
      */
     private function calculateProfitLossData(string $from, string $to): array
     {
+        $otherTenantUnitIds = DB::table('other_tenants')->pluck('unit_id')->toArray();
+
         // 1. Revenue / Income
         // A. Allocations from receiving vouchers dated in the range
         $allocations = DB::table('receiving_voucher_payments')
@@ -117,13 +119,17 @@ class ProfitLossController extends Controller
             ->whereNull('payments.deleted_at')
             ->whereBetween('receiving_vouchers.date', [$from, $to])
             ->where('payments.type', '!=', 'security_deposit')
-            ->select('units.is_self', 'payments.type', DB::raw('SUM(receiving_voucher_payments.amount_allocated) as total'))
-            ->groupBy('units.is_self', 'payments.type')
+            ->select('payments.unit_id', 'units.is_self', 'payments.type', DB::raw('SUM(receiving_voucher_payments.amount_allocated) as total'))
+            ->groupBy('payments.unit_id', 'units.is_self', 'payments.type')
             ->get();
 
         $allocRentPmMall      = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
-        $allocMaintPmMall     = (float) $allocations->where('is_self', false)->where('type', 'maintenance')->sum('total');
-        $allocMaintOtherOwned = (float) $allocations->where('is_self', true)->where('type', 'maintenance')->sum('total');
+        $allocMaintPmMall     = (float) $allocations->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && (!$row->is_self || in_array($row->unit_id, $otherTenantUnitIds));
+        })->sum('total');
+        $allocMaintOtherOwned = (float) $allocations->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && $row->is_self && !in_array($row->unit_id, $otherTenantUnitIds);
+        })->sum('total');
         $allocExtraPmMall     = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
 
         // B. Payments collected & billed for months in the date range
@@ -133,22 +139,31 @@ class ProfitLossController extends Controller
             ->whereBetween('payments.month', [$from, $to])
             ->where('payments.type', '!=', 'security_deposit')
             ->select(
+                'payments.unit_id',
                 'units.is_self', 
                 'payments.type', 
                 DB::raw('SUM(payments.amount) as total_due'),
                 DB::raw('SUM(payments.amount_paid) as total_paid')
             )
-            ->groupBy('units.is_self', 'payments.type')
+            ->groupBy('payments.unit_id', 'units.is_self', 'payments.type')
             ->get();
 
         $billedRentPmMall      = (float) $monthPayments->where('is_self', false)->where('type', 'rent')->sum('total_due');
-        $billedMaintPmMall     = (float) $monthPayments->where('is_self', false)->where('type', 'maintenance')->sum('total_due');
-        $billedMaintOtherOwned = (float) $monthPayments->where('is_self', true)->where('type', 'maintenance')->sum('total_due');
+        $billedMaintPmMall     = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && (!$row->is_self || in_array($row->unit_id, $otherTenantUnitIds));
+        })->sum('total_due');
+        $billedMaintOtherOwned = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && $row->is_self && !in_array($row->unit_id, $otherTenantUnitIds);
+        })->sum('total_due');
         $billedExtraPmMall     = (float) $monthPayments->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total_due');
 
         $payRentPmMall      = (float) $monthPayments->where('is_self', false)->where('type', 'rent')->sum('total_paid');
-        $payMaintPmMall     = (float) $monthPayments->where('is_self', false)->where('type', 'maintenance')->sum('total_paid');
-        $payMaintOtherOwned = (float) $monthPayments->where('is_self', true)->where('type', 'maintenance')->sum('total_paid');
+        $payMaintPmMall     = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && (!$row->is_self || in_array($row->unit_id, $otherTenantUnitIds));
+        })->sum('total_paid');
+        $payMaintOtherOwned = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && $row->is_self && !in_array($row->unit_id, $otherTenantUnitIds);
+        })->sum('total_paid');
         $payExtraPmMall     = (float) $monthPayments->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total_paid');
 
         // Max of voucher allocations or payments collected for period
@@ -193,13 +208,13 @@ class ProfitLossController extends Controller
                 'unpaid' => max(0.0, $billedRentPmMall - $rentPmMall),
             ],
             'maint_pm_mall' => [
-                'label' => '🛠️ Maintenance Charges (PM Mall Units)',
+                'label' => '🛠️ Maintenance Charges (PM Mall & Rented Other-Owned Units)',
                 'billed' => $billedMaintPmMall,
                 'collected' => $maintPmMall,
                 'unpaid' => max(0.0, $billedMaintPmMall - $maintPmMall),
             ],
             'maint_other_owned' => [
-                'label' => '🛠️ Maintenance Charges (Landlord / Other-Owned Units)',
+                'label' => '🛠️ Maintenance Charges (Other-Owned Units without Attached Tenant)',
                 'billed' => $billedMaintOtherOwned,
                 'collected' => $maintOtherOwned,
                 'unpaid' => max(0.0, $billedMaintOtherOwned - $maintOtherOwned),
