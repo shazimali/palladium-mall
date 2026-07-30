@@ -6,43 +6,43 @@
     <title>{{ $pageTitle }} — Palladium Mall</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { font-size: 15px; }
-        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; padding: 24px 32px; line-height: 1.5; font-weight: 700; }
-        .pm-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #111827; padding-bottom: 12px; margin-bottom: 16px; }
-        .pm-header-left { display: flex; align-items: center; gap: 12px; }
-        .pm-logo-icon { width: 36px; height: 36px; background: #111827; border-radius: 8px; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 6px 6px 5px; }
-        .pm-logo-icon span { display: block; background: #fff; border-radius: 2px; width: 5px; }
+        html { font-size: 24px; }
+        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; padding: 20px 28px; line-height: 1.4; font-weight: 800; }
+        .pm-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px solid #111827; padding-bottom: 14px; margin-bottom: 20px; }
+        .pm-header-left { display: flex; align-items: center; gap: 14px; }
+        .pm-logo-icon { width: 50px; height: 50px; background: #111827; border-radius: 10px; display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding: 8px 8px 6px; }
+        .pm-logo-icon span { display: block; background: #fff; border-radius: 2px; width: 7px; }
         .pm-logo-icon span:nth-child(1) { height: 100%; }
         .pm-logo-icon span:nth-child(2) { height: 70%; opacity: .9; }
         .pm-logo-icon span:nth-child(3) { height: 82%; opacity: .7; }
-        .pm-name { font-size: 1.4rem; font-weight: 900; color: #000; letter-spacing: -.3px; }
+        .pm-name { font-size: 2.5rem; font-weight: 900; color: #000; letter-spacing: -.5px; }
         .pm-header-right { text-align: right; }
-        .pm-header-right .doc-title { font-size: 1.15rem; font-weight: 900; color: #000; }
-        .pm-header-right .doc-date { font-size: .85rem; font-weight: 700; color: #374151; margin-top: 2px; }
-        .filters-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-        .filter-chip { display: inline-flex; align-items: center; gap: 4px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 999px; padding: 4px 12px; font-size: .85rem; font-weight: 800; color: #000; }
+        .pm-header-right .doc-title { font-size: 2.2rem; font-weight: 900; color: #000; }
+        .pm-header-right .doc-date { font-size: 1.4rem; font-weight: 800; color: #111827; margin-top: 4px; }
+        .filters-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+        .filter-chip { display: inline-flex; align-items: center; gap: 6px; background: #f3f4f6; border: 2px solid #9ca3af; border-radius: 999px; padding: 6px 16px; font-size: 1.3rem; font-weight: 900; color: #000; }
         .filter-chip strong { color: #000; font-weight: 900; }
-        table { width: 100%; border-collapse: collapse; font-size: .92rem; font-weight: 700; }
-        thead tr { background: #e5e7eb; }
-        thead th { padding: 10px 12px; text-align: left; font-weight: 900; font-size: .82rem; text-transform: uppercase; letter-spacing: .05em; color: #000; border-bottom: 2px solid #000; white-space: nowrap; }
+        table { width: 100%; border-collapse: collapse; font-size: 1.5rem; font-weight: 800; }
+        thead tr { background: #d1d5db; }
+        thead th { padding: 14px 16px; text-align: left; font-weight: 900; font-size: 1.4rem; text-transform: uppercase; letter-spacing: .05em; color: #000; border-bottom: 3px solid #000; white-space: nowrap; }
         thead th.text-right, tbody td.text-right { text-align: right; }
-        tbody tr { border-bottom: 1px solid #e5e7eb; }
-        tbody td { padding: 9px 12px; color: #000; font-weight: 700; vertical-align: middle; }
-        .mono { font-family: 'Courier New', monospace; font-size: .9rem; font-weight: 800; }
+        tbody tr { border-bottom: 2px solid #e5e7eb; }
+        tbody td { padding: 12px 16px; color: #000; font-weight: 800; vertical-align: middle; font-size: 1.5rem; }
+        .mono { font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: 900; }
         .debit { color: #dc2626; font-weight: 900; }
         .credit { color: #16a34a; font-weight: 900; }
-        .balance { color: #000; font-weight: 900; font-family: 'Courier New', monospace; }
-        .empty-row td { text-align: center; color: #6b7280; padding: 32px; font-weight: 700; }
-        .badge { display: inline-flex; align-items: center; border-radius: 4px; padding: 2px 6px; font-size: .75rem; font-weight: 800; }
+        .balance { color: #000; font-weight: 900; font-family: 'Courier New', monospace; font-size: 1.6rem; }
+        .empty-row td { text-align: center; color: #4b5563; padding: 40px; font-weight: 900; font-size: 1.5rem; }
+        .badge { display: inline-flex; align-items: center; border-radius: 6px; padding: 4px 10px; font-size: 1.2rem; font-weight: 900; }
         .badge-receipt { background: #d1fae5; color: #065f46; }
         .badge-payout  { background: #dbeafe; color: #1e40af; }
         .badge-expense { background: #fef3c7; color: #92400e; }
-        .pm-footer { margin-top: 28px; border-top: 2px solid #000; padding-top: 10px; display: flex; justify-content: space-between; font-size: .8rem; font-weight: 800; color: #374151; }
-        .no-print { text-align: center; margin-bottom: 24px; }
-        .print-btn { display: inline-flex; align-items: center; gap: 8px; background: #111827; color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-size: .95rem; font-weight: 800; cursor: pointer; font-family: inherit; }
+        .pm-footer { margin-top: 36px; border-top: 3px solid #000; padding-top: 14px; display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 900; color: #111827; }
+        .no-print { text-align: center; margin-bottom: 28px; }
+        .print-btn { display: inline-flex; align-items: center; gap: 10px; background: #111827; color: #fff; border: none; border-radius: 12px; padding: 14px 32px; font-size: 1.3rem; font-weight: 900; cursor: pointer; font-family: inherit; }
         .print-btn:hover { background: #000; }
         @media print { body { padding: 0; } .no-print { display: none !important; } }
-        @page { size: A4; margin: 15mm; }
+        @page { size: A4; margin: 10mm; }
     </style>
 </head>
 <body>
@@ -118,17 +118,17 @@
                             $sum = in_array($type, ['debit', 'credit', 'amount']) ? collect($rows)->sum(fn($r) => (float)($r[$key] ?? 0)) : 0;
                             $lastVal = collect($rows)->last()[$key] ?? 0;
                         @endphp
-                        <td class="{{ $col['class'] ?? '' }} {{ $col['td_class'] ?? '' }}" style="padding: 10px; font-weight: 900; font-size: 1.05rem; color: #000;">
+                        <td class="{{ $col['class'] ?? '' }} {{ $col['td_class'] ?? '' }}" style="padding: 14px 16px; font-weight: 900; font-size: 1.8rem; color: #000;">
                             @if($index === 0)
-                                <strong style="font-size: 1.05rem; font-weight: 900;">TOTAL SUMMARY</strong>
+                                <strong style="font-size: 1.8rem; font-weight: 900;">TOTAL SUMMARY</strong>
                             @elseif($type === 'debit')
-                                <span class="debit" style="font-size: 1.05rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
+                                <span class="debit" style="font-size: 1.8rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
                             @elseif($type === 'credit')
-                                <span class="credit" style="font-size: 1.05rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
+                                <span class="credit" style="font-size: 1.8rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
                             @elseif($type === 'balance')
-                                <span class="balance" style="font-size: 1.05rem; font-weight: 900;">Rs. {{ number_format((float)$lastVal, 2) }}</span>
+                                <span class="balance" style="font-size: 1.9rem; font-weight: 900;">Rs. {{ number_format((float)$lastVal, 2) }}</span>
                             @elseif($type === 'amount')
-                                <span class="debit" style="font-size: 1.05rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
+                                <span class="debit" style="font-size: 1.8rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
                             @else
                                 —
                             @endif
