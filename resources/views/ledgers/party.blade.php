@@ -210,14 +210,14 @@
                                 <td class="px-5 py-4 text-base sm:text-lg font-bold">
                                     {{ $entry['description'] }}
                                 </td>
-                                <td class="px-5 py-4 text-right font-black text-rose-600 dark:text-rose-400 text-base sm:text-lg font-mono">
+                                <td class="px-5 py-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-base sm:text-lg font-mono">
                                     {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 0) : '—' }}
                                 </td>
-                                <td class="px-5 py-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-base sm:text-lg font-mono">
+                                <td class="px-5 py-4 text-right font-black text-rose-600 dark:text-rose-400 text-base sm:text-lg font-mono">
                                     {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 0) : '—' }}
                                 </td>
                                 <td
-                                    class="px-5 py-4 text-right font-black font-mono text-lg sm:text-xl {{ ($entry['balance'] ?? 0) > 0 ? 'text-rose-600 dark:text-rose-400' : (($entry['balance'] ?? 0) < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white') }}">
+                                    class="px-5 py-4 text-right font-black font-mono text-lg sm:text-xl {{ ($entry['balance'] ?? 0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : (($entry['balance'] ?? 0) < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white') }}">
                                     @php $bal = $entry['balance'] ?? 0; @endphp
                                     Rs. {{ number_format(abs($bal), 0) }}
                                     <span class="text-xs font-black ml-0.5">{{ $bal > 0 ? 'Dr' : ($bal < 0 ? 'Cr' : '') }}</span>
@@ -243,15 +243,15 @@
                                     class="px-5 py-4 text-lg sm:text-xl uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                 </td>
-                                <td class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl text-rose-600 dark:text-rose-400">
+                                <td class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl text-emerald-600 dark:text-emerald-400">
                                     Rs. {{ number_format($sumDebit, 0) }}
                                 </td>
-                                <td class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl text-emerald-600 dark:text-emerald-400">
+                                <td class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl text-rose-600 dark:text-rose-400">
                                     Rs. {{ number_format($sumCredit, 0) }}
                                 </td>
                                 @php $netBalance = $sumDebit - $sumCredit; @endphp
                                 <td
-                                    class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl {{ $netBalance > 0 ? 'text-rose-600 dark:text-rose-400' : ($netBalance < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white') }}">
+                                    class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl {{ $netBalance > 0 ? 'text-emerald-600 dark:text-emerald-400' : ($netBalance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white') }}">
                                     Rs. {{ number_format(abs($netBalance), 0) }}
                                     <span class="text-sm font-black ml-0.5">{{ $netBalance > 0 ? 'Dr' : ($netBalance < 0 ? 'Cr' : '') }}</span>
                                 </td>

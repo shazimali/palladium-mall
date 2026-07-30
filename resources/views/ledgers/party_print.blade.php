@@ -28,8 +28,8 @@
         tbody td { padding: 9px 10px; color: #000; font-weight: 700; }
         
         .mono { font-family: monospace; font-size: 0.9rem; font-weight: 800; }
-        .debit { color: #dc2626; font-weight: 900; }
-        .credit { color: #16a34a; font-weight: 900; }
+        .debit { color: #16a34a; font-weight: 900; }
+        .credit { color: #dc2626; font-weight: 900; }
         
         .footer { margin-top: 30px; border-top: 2px solid #0f172a; padding-top: 10px; display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 800; color: #475569; }
         .no-print { text-align: center; margin-bottom: 24px; }

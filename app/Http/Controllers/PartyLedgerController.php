@@ -94,7 +94,7 @@ class PartyLedgerController extends Controller
                 ]);
             }
 
-            // Receipts
+            // Receipts (Inflow from Party -> Credit)
             foreach ($receipts as $receipt) {
                 $ledgerEntries->push([
                     'id' => $receipt->id,
@@ -104,12 +104,12 @@ class PartyLedgerController extends Controller
                     'ref' => $receipt->voucher_no,
                     'type' => 'Receipt (General)',
                     'description' => $receipt->notes ?? 'Received Inflow',
-                    'debit' => (float)$receipt->amount,
-                    'credit' => 0.0,
+                    'debit' => 0.0,
+                    'credit' => (float)$receipt->amount,
                 ]);
             }
 
-            // Payments
+            // Payments (Payout to Party -> Debit)
             foreach ($payments as $payment) {
                 $ledgerEntries->push([
                     'id' => $payment->id,
@@ -119,8 +119,8 @@ class PartyLedgerController extends Controller
                     'ref' => $payment->voucher_no,
                     'type' => $payment->is_advance ? 'Payment (Advance)' : 'Payment',
                     'description' => $payment->notes ?? 'Paid Outflow',
-                    'debit' => 0.0,
-                    'credit' => (float)$payment->amount,
+                    'debit' => (float)$payment->amount,
+                    'credit' => 0.0,
                 ]);
             }
 
@@ -249,6 +249,7 @@ class PartyLedgerController extends Controller
             ]);
         }
 
+        // Receipts (Inflow from Party -> Credit)
         foreach ($receipts as $receipt) {
             $ledgerEntries->push([
                 'date' => $receipt->date instanceof Carbon ? $receipt->date : Carbon::parse($receipt->date),
@@ -256,11 +257,12 @@ class PartyLedgerController extends Controller
                 'ref' => $receipt->voucher_no,
                 'type' => 'Receipt (General)',
                 'description' => $receipt->notes ?? 'Received Inflow',
-                'debit' => (float)$receipt->amount,
-                'credit' => 0.0,
+                'debit' => 0.0,
+                'credit' => (float)$receipt->amount,
             ]);
         }
 
+        // Payments (Payout to Party -> Debit)
         foreach ($payments as $payment) {
             $ledgerEntries->push([
                 'date' => $payment->date instanceof Carbon ? $payment->date : Carbon::parse($payment->date),
@@ -268,8 +270,8 @@ class PartyLedgerController extends Controller
                 'ref' => $payment->voucher_no,
                 'type' => $payment->is_advance ? 'Payment (Advance)' : 'Payment',
                 'description' => $payment->notes ?? 'Paid Outflow',
-                'debit' => 0.0,
-                'credit' => (float)$payment->amount,
+                'debit' => (float)$payment->amount,
+                'credit' => 0.0,
             ]);
         }
 
