@@ -227,7 +227,7 @@
                             </td>
                             <td class="px-4 py-3">
                                 @if($voucher->paid_to_type === 'owner')
-                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400">Partner</span>
+                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400">Owner Withdrawal</span>
                                 @elseif($voucher->paid_to_type === 'tenant')
                                     <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold bg-teal-50 text-teal-700 dark:bg-teal-950/20 dark:text-teal-400">Tenant (Refund)</span>
                                 @elseif($voucher->paid_to_type === 'landlord')

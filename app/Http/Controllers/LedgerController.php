@@ -19,6 +19,7 @@ use App\Exports\OwnerLedgerExport;
 use App\Exports\AccountLedgerExport;
 use App\Exports\ExpenseLedgerExport;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class LedgerController extends Controller
@@ -105,8 +106,8 @@ class LedgerController extends Controller
         $owners = Owner::orderBy('name')->get();
         
         $ownerId = $request->query('owner_id');
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
+        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
 
         $ledgerData = null;
         if ($ownerId) {
@@ -114,7 +115,7 @@ class LedgerController extends Controller
         }
 
         return view('ledgers.owner', [
-            'title'      => 'Owner Ledger',
+            'title'      => 'Managing Owner Ledger',
             'owners'     => $owners,
             'ownerId'    => $ownerId,
             'dateFrom'   => $dateFrom,
@@ -128,8 +129,8 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $ownerId = $request->query('owner_id');
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
+        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
 
         if (!$ownerId) {
             return back()->with('error', 'Select an owner to export.');
@@ -152,8 +153,8 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $ownerId = $request->query('owner_id');
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
+        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
 
         if (!$ownerId) {
             return back()->with('error', 'Select an owner to export.');
@@ -488,54 +489,214 @@ class LedgerController extends Controller
         ];
     }
 
+    private function calculateMallNetProfit(string $from, string $to): float
+    {
+        if (Carbon::parse($from)->gt(Carbon::parse($to))) {
+            return 0.00;
+        }
+
+        $otherTenantUnitIds = DB::table('other_tenants')->pluck('unit_id')->toArray();
+
+        // 1. Allocations
+        $allocations = DB::table('receiving_voucher_payments')
+            ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
+            ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
+            ->whereNull('receiving_vouchers.deleted_at')
+            ->whereNull('payments.deleted_at')
+            ->whereBetween('payments.month', [$from, $to])
+            ->where('payments.type', '!=', 'security_deposit')
+            ->select('payments.unit_id', 'units.is_self', 'payments.type', DB::raw('SUM(receiving_voucher_payments.amount_allocated) as total'))
+            ->groupBy('payments.unit_id', 'units.is_self', 'payments.type')
+            ->get();
+
+        $allocRentPmMall      = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
+        $allocMaintPmMall     = (float) $allocations->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && (!$row->is_self || in_array($row->unit_id, $otherTenantUnitIds));
+        })->sum('total');
+        $allocMaintOtherOwned = (float) $allocations->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && $row->is_self && !in_array($row->unit_id, $otherTenantUnitIds);
+        })->sum('total');
+        $allocExtraPmMall     = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
+
+        // 2. Month Payments (Paid)
+        $monthPayments = DB::table('payments')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
+            ->whereNull('payments.deleted_at')
+            ->whereBetween('payments.month', [$from, $to])
+            ->where('payments.type', '!=', 'security_deposit')
+            ->select('payments.unit_id', 'units.is_self', 'payments.type', DB::raw('SUM(payments.amount_paid) as total_paid'))
+            ->groupBy('payments.unit_id', 'units.is_self', 'payments.type')
+            ->get();
+
+        $payRentPmMall      = (float) $monthPayments->where('is_self', false)->where('type', 'rent')->sum('total_paid');
+        $payMaintPmMall     = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && (!$row->is_self || in_array($row->unit_id, $otherTenantUnitIds));
+        })->sum('total_paid');
+        $payMaintOtherOwned = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
+            return $row->type === 'maintenance' && $row->is_self && !in_array($row->unit_id, $otherTenantUnitIds);
+        })->sum('total_paid');
+        $payExtraPmMall     = (float) $monthPayments->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total_paid');
+
+        $rentPmMall      = max($allocRentPmMall, $payRentPmMall);
+        $maintPmMall     = max($allocMaintPmMall, $payMaintPmMall);
+        $maintOtherOwned = max($allocMaintOtherOwned, $payMaintOtherOwned);
+        $extraPmMall     = max($allocExtraPmMall, $payExtraPmMall);
+
+        $tenantIncomeAll = (float) ReceivingVoucher::where('received_from_type', 'tenant')
+            ->whereBetween('date', [$from, $to])
+            ->sum('amount');
+
+        $totalAllocatedTenantVouchers = (float) DB::table('receiving_voucher_payments')
+            ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
+            ->whereNull('receiving_vouchers.deleted_at')
+            ->where('receiving_vouchers.received_from_type', 'tenant')
+            ->whereBetween('receiving_vouchers.date', [$from, $to])
+            ->sum('receiving_voucher_payments.amount_allocated');
+
+        $unallocatedTenantIncome = max(0.00, $tenantIncomeAll - $totalAllocatedTenantVouchers);
+
+        $totalIncome = $rentPmMall + $maintPmMall + $maintOtherOwned + $extraPmMall + $unallocatedTenantIncome;
+
+        $totalExpenses = (float) Expense::whereBetween('date', [$from, $to])->sum('amount');
+
+        return $totalIncome - $totalExpenses;
+    }
+
     private function getOwnerLedgerData($ownerId, $dateFrom, $dateTo)
     {
         $owner = Owner::findOrFail($ownerId);
         $entries = collect();
 
-        // 1. Outflows: Withdrawals as DEBITS
+        // Standardize dates
+        $dateFromStr = $dateFrom ?: Carbon::now()->startOfMonth()->toDateString();
+        $dateToStr   = $dateTo ?: Carbon::now()->endOfMonth()->toDateString();
+
+        // 1. Calculate Previous Month / Prior Accumulated Profit (Opening Balance)
+        $priorToDate = Carbon::parse($dateFromStr)->subDay()->toDateString();
+        $priorProfit = $this->calculateMallNetProfit('1970-01-01', $priorToDate);
+        $priorShare = round($priorProfit * ((float) $owner->partnership_percentage / 100), 2);
+
+        $priorDeposits = (float) ReceivingVoucher::where('received_from_type', 'owner')
+            ->where('owner_id', $ownerId)
+            ->where('date', '<', $dateFromStr)
+            ->sum('amount');
+
+        $priorPvPayouts = (float) PaymentVoucher::where('paid_to_type', 'owner')
+            ->where('owner_id', $ownerId)
+            ->where('date', '<', $dateFromStr)
+            ->sum('amount');
+
+        $priorWithdrawals = (float) Withdrawal::where('owner_id', $ownerId)
+            ->where('date', '<', $dateFromStr)
+            ->sum('amount');
+
+        $previousBalance = ($priorShare + $priorDeposits) - ($priorPvPayouts + $priorWithdrawals);
+
+        // Prepend Previous Profit / Opening Balance row
+        $entries->push([
+            'date'            => Carbon::parse($dateFromStr)->startOfDay(),
+            'voucher_no'      => 'OP-BAL',
+            'account'         => 'Opening / Previous Profit',
+            'reference'       => 'Previous Balance',
+            'notes'           => 'Accumulated Net Profit / Balance prior to ' . Carbon::parse($dateFromStr)->format('d M Y'),
+            'debit'           => $previousBalance < 0 ? abs($previousBalance) : 0.00,
+            'credit'          => $previousBalance > 0 ? $previousBalance : 0.00,
+            'type'            => 'opening_balance',
+            'id'              => null,
+            'is_opening'      => true,
+        ]);
+
+        // 2. Selected Date Range Profit Share (Credit)
+        $periodProfit = $this->calculateMallNetProfit($dateFromStr, $dateToStr);
+        $periodShare = round($periodProfit * ((float) $owner->partnership_percentage / 100), 2);
+
+        if ($periodShare != 0) {
+            $entries->push([
+                'date'            => Carbon::parse($dateToStr)->endOfDay(),
+                'voucher_no'      => 'P&L-PROFIT',
+                'account'         => 'Mall Profit Share',
+                'reference'       => 'Share (' . number_format($owner->partnership_percentage, 1) . '%)',
+                'notes'           => 'Profit Share for period ' . Carbon::parse($dateFromStr)->format('d M Y') . ' to ' . Carbon::parse($dateToStr)->format('d M Y'),
+                'debit'           => $periodShare < 0 ? abs($periodShare) : 0.00,
+                'credit'          => $periodShare > 0 ? $periodShare : 0.00,
+                'type'            => 'profit_share',
+                'id'              => null,
+                'is_opening'      => false,
+            ]);
+        }
+
+        // 3. Outflows: Payment Vouchers as DEBITS
+        $pvPayouts = PaymentVoucher::with('paymentAccount')
+            ->where('paid_to_type', 'owner')
+            ->where('owner_id', $ownerId)
+            ->where('date', '>=', $dateFromStr)
+            ->where('date', '<=', $dateToStr)
+            ->get();
+
+        foreach ($pvPayouts as $pv) {
+            $entries->push([
+                'date'       => $pv->date,
+                'voucher_no' => $pv->voucher_no,
+                'account'    => $pv->paymentAccount->name ?? '—',
+                'reference'  => $pv->reference ?? '—',
+                'notes'      => $pv->notes ?? 'Owner Withdrawal (Payment Voucher)',
+                'debit'      => (float)$pv->amount,
+                'credit'     => 0.00,
+                'type'       => 'payment_voucher',
+                'id'         => $pv->id,
+                'is_opening' => false,
+            ]);
+        }
+
+        // 4. Outflows: Withdrawals as DEBITS
         $payouts = Withdrawal::where('owner_id', $ownerId)
-            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->where('date', '>=', $dateFromStr)
+            ->where('date', '<=', $dateToStr)
             ->get();
 
         foreach ($payouts as $payout) {
             $entries->push([
-                'date' => $payout->date,
+                'date'       => $payout->date,
                 'voucher_no' => $payout->voucher_no,
-                'account' => $payout->paymentAccount->name ?? '—',
-                'reference' => $payout->reference ?? '—',
-                'notes' => $payout->notes ?? 'Owner Withdrawal',
-                'debit' => (float)$payout->amount,
-                'credit' => 0.00,
-                'type' => 'withdrawal',
-                'id' => $payout->id,
+                'account'    => $payout->paymentAccount->name ?? '—',
+                'reference'  => $payout->reference ?? '—',
+                'notes'      => $payout->notes ?? 'Owner Withdrawal',
+                'debit'      => (float)$payout->amount,
+                'credit'     => 0.00,
+                'type'       => 'withdrawal',
+                'id'         => $payout->id,
+                'is_opening' => false,
             ]);
         }
 
-        // 2. Inflows: ReceivingVouchers (type = 'owner') as CREDITS
+        // 5. Inflows: ReceivingVouchers (type = 'owner') as CREDITS
         $deposits = ReceivingVoucher::where('received_from_type', 'owner')
             ->where('owner_id', $ownerId)
-            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->where('date', '>=', $dateFromStr)
+            ->where('date', '<=', $dateToStr)
             ->get();
 
         foreach ($deposits as $deposit) {
             $entries->push([
-                'date' => $deposit->date,
+                'date'       => $deposit->date,
                 'voucher_no' => $deposit->voucher_no,
-                'account' => $deposit->paymentAccount->name ?? '—',
-                'reference' => $deposit->reference ?? '—',
-                'notes' => $deposit->notes ?? 'Capital Deposit',
-                'debit' => 0.00,
-                'credit' => (float)$deposit->amount,
-                'type' => 'receiving_voucher',
-                'id' => $deposit->id,
+                'account'    => $deposit->paymentAccount->name ?? '—',
+                'reference'  => $deposit->reference ?? '—',
+                'notes'      => $deposit->notes ?? 'Capital Deposit',
+                'debit'      => 0.00,
+                'credit'     => (float)$deposit->amount,
+                'type'       => 'receiving_voucher',
+                'id'         => $deposit->id,
+                'is_opening' => false,
             ]);
         }
 
-        // Sort chronologically
-        $entries = $entries->sortBy(fn($e) => $e['date']->format('Y-m-d'))->values();
+        // Sort chronologically with opening balance always at top
+        $opening = $entries->where('is_opening', true);
+        $others  = $entries->where('is_opening', false)->sortBy(fn($e) => $e['date']->format('Y-m-d H:i:s'))->values();
+
+        $entries = $opening->concat($others)->values();
 
         $runningBalance = 0.00;
         $totalDebit = 0.00;
@@ -550,12 +711,12 @@ class LedgerController extends Controller
         });
 
         return [
-            'owner' => $owner,
+            'owner'   => $owner,
             'entries' => $entries,
             'summary' => [
-                'total_debit' => $totalDebit,
+                'total_debit'  => $totalDebit,
                 'total_credit' => $totalCredit,
-                'net_balance' => $runningBalance,
+                'net_balance'  => $runningBalance,
             ]
         ];
     }
@@ -917,8 +1078,8 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $ownerId  = $request->query('owner_id');
-        $dateFrom = $request->query('date_from');
-        $dateTo   = $request->query('date_to');
+        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
+        $dateTo   = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
 
         if (!$ownerId) {
             abort(400, 'No owner selected.');

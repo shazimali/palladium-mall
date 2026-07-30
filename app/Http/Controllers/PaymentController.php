@@ -270,11 +270,15 @@ class PaymentController extends Controller
 
     public function store(StorePaymentRequest $request): RedirectResponse
     {
-        // ── Extra Payment (any unit, no tenant/agreement) ─────────────────
+        // ── Extra Payment ──────────────────────────────────────────────────
         if ($request->input('payment_mode') === 'extra') {
-            $unit  = Unit::with(['otherTenant', 'landlord'])->findOrFail($request->unit_id);
+            $unit  = Unit::with(['otherTenant', 'landlord', 'agreements.tenant'])->findOrFail($request->unit_id);
             $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
             $totalAmount = (float) $request->amount;
+
+            $activeAgreement = $unit->agreements->where('status', 'active')->first();
+            $tenantId = $activeAgreement?->tenant_id;
+            $agreementId = $activeAgreement?->id;
 
             // Step 1: Determine the landlord rent share amount
             // If the unit has an Other Tenant with a monthly_rent set, use that.
@@ -314,10 +318,10 @@ class PaymentController extends Controller
 
                 // 1. Create Landlord Share Payment
                 Payment::create([
-                    'tenant_id'       => null,
+                    'tenant_id'       => $tenantId,
                     'other_tenant_id' => $otherTenant?->id,
                     'unit_id'         => $unit->id,
-                    'agreement_id'    => null,
+                    'agreement_id'    => $agreementId,
                     'type'            => 'extra_payment',
                     'month'           => $month,
                     'amount'          => $landlordShare,
@@ -331,10 +335,10 @@ class PaymentController extends Controller
                 // 2. Create PM Mall Share Payment (if any)
                 if ($pmMallShare > 0) {
                     Payment::create([
-                        'tenant_id'       => null,
+                        'tenant_id'       => $tenantId,
                         'other_tenant_id' => $otherTenant?->id,
                         'unit_id'         => $unit->id,
-                        'agreement_id'    => null,
+                        'agreement_id'    => $agreementId,
                         'type'            => 'extra_payment',
                         'month'           => $month,
                         'amount'          => $pmMallShare,
@@ -353,10 +357,10 @@ class PaymentController extends Controller
             } else {
                 // No split — single PM Mall payment (no landlord linked)
                 Payment::create([
-                    'tenant_id'       => null,
+                    'tenant_id'       => $tenantId,
                     'other_tenant_id' => $otherTenant?->id,
                     'unit_id'         => $unit->id,
-                    'agreement_id'    => null,
+                    'agreement_id'    => $agreementId,
                     'type'            => 'extra_payment',
                     'month'           => $month,
                     'amount'          => $totalAmount,

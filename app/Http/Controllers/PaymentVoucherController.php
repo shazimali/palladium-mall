@@ -74,6 +74,7 @@ class PaymentVoucherController extends Controller
         $parties = \App\Models\Party::orderBy('name')->get();
         $tenants = Tenant::with('unit')->orderBy('name')->get();
         $landlords = Landlord::orderBy('name')->get();
+        $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
@@ -90,6 +91,7 @@ class PaymentVoucherController extends Controller
             'parties'         => $parties,
             'tenants'         => $tenants,
             'landlords'       => $landlords,
+            'owners'          => $owners,
             'paymentAccounts' => $paymentAccounts,
             'nextVoucherNo'   => $nextVoucherNo,
         ]);
@@ -107,7 +109,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord,account'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord,account,owner'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -119,6 +121,8 @@ class PaymentVoucherController extends Controller
             $rules['unit_id']   = ['required', 'exists:units,id'];
         } elseif ($request->input('paid_to_type') === 'landlord') {
             $rules['landlord_id'] = ['required', 'exists:landlords,id'];
+        } elseif ($request->input('paid_to_type') === 'owner') {
+            $rules['owner_id'] = ['required', 'exists:owners,id'];
         } elseif ($request->input('paid_to_type') === 'account') {
             $rules['to_payment_account_id'] = ['required', 'exists:payment_accounts,id', 'different:payment_account_id'];
         } else {
@@ -174,6 +178,14 @@ class PaymentVoucherController extends Controller
             $data['to_payment_account_id'] = null;
             $landlord = Landlord::findOrFail($data['landlord_id']);
             $data['other_name'] = $landlord->name;
+        } elseif ($request->input('paid_to_type') === 'owner') {
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
+            $data['party_id'] = null;
+            $data['landlord_id'] = null;
+            $data['to_payment_account_id'] = null;
+            $owner = Owner::findOrFail($data['owner_id']);
+            $data['other_name'] = $owner->name;
         } elseif ($request->input('paid_to_type') === 'account') {
             $data['owner_id'] = null;
             $data['tenant_id'] = null;
@@ -328,6 +340,7 @@ class PaymentVoucherController extends Controller
         $parties = \App\Models\Party::orderBy('name')->get();
         $tenants = Tenant::with('unit')->orderBy('name')->get();
         $landlords = Landlord::orderBy('name')->get();
+        $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
@@ -343,6 +356,7 @@ class PaymentVoucherController extends Controller
             'parties'         => $parties,
             'tenants'         => $tenants,
             'landlords'       => $landlords,
+            'owners'          => $owners,
             'paymentAccounts' => $paymentAccounts,
         ]);
     }
@@ -359,7 +373,7 @@ class PaymentVoucherController extends Controller
         $rules = [
             'date'               => ['required', 'date'],
             'amount'             => ['required', 'numeric', 'min:0.01'],
-            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord,account'],
+            'paid_to_type'       => ['required', 'string', 'in:tenant,other,landlord,account,owner'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
             'reference'          => ['nullable', 'string', 'max:255'],
             'notes'              => ['nullable', 'string', 'max:1000'],
@@ -371,6 +385,8 @@ class PaymentVoucherController extends Controller
             $rules['unit_id']   = ['required', 'exists:units,id'];
         } elseif ($request->input('paid_to_type') === 'landlord') {
             $rules['landlord_id'] = ['required', 'exists:landlords,id'];
+        } elseif ($request->input('paid_to_type') === 'owner') {
+            $rules['owner_id'] = ['required', 'exists:owners,id'];
         } elseif ($request->input('paid_to_type') === 'account') {
             $rules['to_payment_account_id'] = ['required', 'exists:payment_accounts,id', 'different:payment_account_id'];
         } else {
@@ -436,6 +452,14 @@ class PaymentVoucherController extends Controller
             $data['to_payment_account_id'] = null;
             $landlord = Landlord::findOrFail($data['landlord_id']);
             $data['other_name'] = $landlord->name;
+        } elseif ($request->input('paid_to_type') === 'owner') {
+            $data['tenant_id'] = null;
+            $data['unit_id'] = null;
+            $data['party_id'] = null;
+            $data['landlord_id'] = null;
+            $data['to_payment_account_id'] = null;
+            $owner = Owner::findOrFail($data['owner_id']);
+            $data['other_name'] = $owner->name;
         } elseif ($request->input('paid_to_type') === 'account') {
             $data['owner_id'] = null;
             $data['tenant_id'] = null;

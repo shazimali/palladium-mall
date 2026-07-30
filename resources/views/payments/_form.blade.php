@@ -193,25 +193,40 @@
     <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 
         {{-- Type --}}
-        <div>
-            <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                Type <span class="text-red-500">*</span>
-            </label>
-            <select id="type" name="type"
-                class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white {{ $errors->has('type') ? 'border-red-400' : '' }}">
-                <option value="">Select type</option>
-                <option value="rent" {{ old('type', $payment->type ?? '') === 'rent' ? 'selected' : '' }}>Rent</option>
-                <option value="maintenance" {{ old('type', $payment->type ?? '') === 'maintenance' ? 'selected' : '' }}>
-                    Maintenance</option>
-                <option value="security_deposit" {{ old('type', $payment->type ?? '') === 'security_deposit' ? 'selected' : '' }}>
-                    Security Deposit</option>
-                <option value="fine" {{ old('type', $payment->type ?? '') === 'fine' ? 'selected' : '' }}>Fine</option>
-                <option value="other" {{ old('type', $payment->type ?? '') === 'other' ? 'selected' : '' }}>Other</option>
-            </select>
-            @error('type')
-                <p class="mt-1.5 text-sm font-semibold text-red-500">{{ $message }}</p>
-            @enderror
-        </div>
+        @if(isset($payment) && $payment->type === 'extra_payment')
+            <div>
+                <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    Type
+                </label>
+                <div class="flex items-center gap-2 rounded-2xl border-2 border-gray-200 bg-gray-100 px-5 py-3.5 text-lg font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    Extra Payment
+                </div>
+                <input type="hidden" name="type" id="type" value="extra_payment">
+            </div>
+        @else
+            <div>
+                <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    Type <span class="text-red-500">*</span>
+                </label>
+                <select id="type" name="type"
+                    class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white {{ $errors->has('type') ? 'border-red-400' : '' }}">
+                    <option value="">Select type</option>
+                    <option value="rent" {{ old('type', $payment->type ?? '') === 'rent' ? 'selected' : '' }}>Rent</option>
+                    <option value="maintenance" {{ old('type', $payment->type ?? '') === 'maintenance' ? 'selected' : '' }}>
+                        Maintenance</option>
+                    <option value="security_deposit" {{ old('type', $payment->type ?? '') === 'security_deposit' ? 'selected' : '' }}>
+                        Security Deposit</option>
+                    <option value="fine" {{ old('type', $payment->type ?? '') === 'fine' ? 'selected' : '' }}>Fine</option>
+                    <option value="other" {{ old('type', $payment->type ?? '') === 'other' ? 'selected' : '' }}>Other</option>
+                </select>
+                @error('type')
+                    <p class="mt-1.5 text-sm font-semibold text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+        @endif
 
         {{-- Month --}}
         <div>

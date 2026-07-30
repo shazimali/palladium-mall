@@ -3,9 +3,10 @@
 @section('content')
     <x-common.page-breadcrumb pageTitle="Tenant / Unit Ledger" />
 
-    <x-common.component-card title="Flat / Shop Statement of Account" desc="Generate chronological statement of charges and payments for any flat or shop.">
+    <x-common.component-card title="" desc="">
         
         <form action="{{ route('ledgers.tenant') }}" method="GET" id="ledger-filter-form"
+            class="sticky top-[72px] z-[990] bg-white/95 dark:bg-gray-900/95 p-4 rounded-2xl border-2 border-brand-500 shadow-xl backdrop-blur-md mb-6"
             x-data="{
                 unitId: '{{ $unitId ?? '' }}',
                 search: '',
@@ -67,18 +68,18 @@
                 }
             }">
 
-            <!-- Filters -->
-            <div class="grid grid-cols-1 gap-6 md:grid-cols-4 items-end mb-6">
+            <!-- Sticky Inline Filter Controls -->
+            <div class="flex flex-wrap items-end gap-3.5">
                 
                 <!-- Unit Selector Dropdown -->
-                <div class="md:col-span-2 relative" :class="open ? 'relative z-[99999]' : 'relative'" @click.away="open = false; highlightedIndex = -1">
-                    <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                <div class="flex-1 min-w-[260px] relative" :class="open ? 'relative z-[99999]' : 'relative'" @click.away="open = false; highlightedIndex = -1">
+                    <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Select Flat / Shop <span class="text-red-500">*</span>
                     </label>
                     
                     {{-- Trigger Button --}}
                     <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.searchInput.focus()) }"
-                        class="w-full flex items-center justify-between rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 text-left focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                        class="w-full flex items-center justify-between rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 text-left focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                         <template x-if="unitId">
                             <span class="flex items-center gap-2 truncate">
                                 <span x-text="selectedUnit" class="font-extrabold text-brand-600 dark:text-brand-400"></span>
@@ -146,173 +147,112 @@
                 </div>
 
                 <!-- Date From -->
-                <div>
-                    <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                <div class="w-full sm:w-44">
+                    <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Date From
                     </label>
                     <input type="text" id="date_from" name="date_from" value="{{ $dateFrom }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                        class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                        class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                 </div>
 
                 <!-- Date To -->
-                <div>
-                    <label class="mb-2 block text-xs sm:text-sm font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                <div class="w-full sm:w-44">
+                    <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Date To
                     </label>
                     <input type="text" id="date_to" name="date_to" value="{{ $dateTo }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                        class="w-full rounded-2xl border-2 border-gray-300 bg-white px-5 py-3.5 text-lg font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                        class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                 </div>
 
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-6 mb-6">
-                <div class="flex items-center gap-3">
+                <!-- Action Buttons: Filter, Clear, Print -->
+                <div class="flex items-center gap-2">
                     <button type="submit"
-                        class="inline-flex items-center gap-3 rounded-2xl bg-brand-600 px-6 py-3.5 text-base font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
-                        Filter Ledger
+                        class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-base font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
+                        Filter
                     </button>
                     @if($unitId || $dateFrom || $dateTo)
                         <a href="{{ route('ledgers.tenant') }}"
-                            class="rounded-2xl border-2 border-gray-300 px-6 py-3.5 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
+                            class="rounded-xl border-2 border-gray-300 px-4 py-2.5 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                             Clear
+                        </a>
+                    @endif
+                    @if($ledgerData)
+                        <a href="{{ route('ledgers.tenant.print', request()->all()) }}"
+                            onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
+                            class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-base font-extrabold text-white shadow-md hover:bg-gray-800 transition-colors cursor-pointer">
+                            🖨️ Print
                         </a>
                     @endif
                 </div>
 
-                @if($ledgerData)
-                    <div class="flex items-center gap-3">
-                        <!-- Excel Export -->
-                        <a href="{{ route('ledgers.tenant.excel', request()->all()) }}"
-                            class="inline-flex items-center gap-2 rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-5 py-3.5 text-base font-extrabold text-emerald-700 hover:bg-emerald-100 transition-colors dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-400">
-                            🟢 Excel
-                        </a>
-                        <!-- PDF Export -->
-                        <a href="{{ route('ledgers.tenant.pdf', request()->all()) }}"
-                            class="inline-flex items-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-5 py-3.5 text-base font-extrabold text-red-700 hover:bg-red-100 transition-colors dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-400">
-                            🔴 PDF
-                        </a>
-                        <!-- Print Statement -->
-                        <a href="{{ route('ledgers.tenant.print', request()->all()) }}"
-                            onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
-                            class="inline-flex items-center gap-2 rounded-2xl border-2 border-gray-300 px-5 py-3.5 text-base font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
-                            🖨️ Print
-                        </a>
-                    </div>
-                @endif
             </div>
 
         </form>
 
         @if($ledgerData)
-            {{-- STICKY BIG HEADING & SUMMARY BANNER --}}
-            <div class="sticky mb-6 rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 p-6 shadow-xl backdrop-blur-md"
-                style="position: sticky; top: 72px; z-index: 990;">
-                
-                <div class="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4">
-                    <div class="flex items-center gap-4">
-                        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-white shadow-md text-3xl font-black">
-                            🏢
-                        </div>
-                        <div>
-                            <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                                Flat / Shop Statement
-                            </p>
-                            <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white"
-                                x-text="selectedUnit ? selectedUnit + ' ' + selectedTenant : 'Statement'"></h2>
-                        </div>
-                    </div>
-                    @if($ledgerData['unit']->tenant || $ledgerData['unit']->otherTenant)
-                        <div class="text-right">
-                            <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400 block">Occupant Contact</span>
-                            <span class="text-lg font-bold text-gray-800 dark:text-white font-mono">
-                                {{ $ledgerData['unit']->tenant->phone ?? ($ledgerData['unit']->otherTenant->phone ?? '—') }}
-                            </span>
-                        </div>
-                    @endif
-                </div>
-
-                {{-- Summary Cards --}}
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <div class="bg-blue-50/70 dark:bg-blue-950/20 p-5 rounded-2xl border-2 border-blue-200 dark:border-blue-900/40">
-                        <span class="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-blue-400">Total Billed / Charges</span>
-                        <span class="block mt-2 text-2xl sm:text-3xl font-black font-mono text-gray-900 dark:text-white">Rs. {{ number_format($ledgerData['summary']['total_invoiced'], 2) }}</span>
-                    </div>
-                    <div class="bg-green-50/70 dark:bg-green-950/20 p-5 rounded-2xl border-2 border-green-200 dark:border-green-900/40">
-                        <span class="text-xs font-black uppercase tracking-wider text-green-600 dark:text-green-400">Total Paid / Credits</span>
-                        <span class="block mt-2 text-2xl sm:text-3xl font-black font-mono text-green-600 dark:text-green-400">Rs. {{ number_format($ledgerData['summary']['total_paid'], 2) }}</span>
-                    </div>
-                    <div class="p-5 rounded-2xl border-2 {{ $ledgerData['summary']['balance_due'] > 0 ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-900/40 text-amber-700' : 'bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-800' }}">
-                        <span class="text-xs font-black uppercase tracking-wider {{ $ledgerData['summary']['balance_due'] > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500' }}">Balance Outstanding</span>
-                        <span class="block mt-2 text-2xl sm:text-3xl font-black font-mono {{ $ledgerData['summary']['balance_due'] > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-900 dark:text-white' }}">
-                            Rs. {{ number_format($ledgerData['summary']['balance_due'], 2) }}
-                        </span>
-                    </div>
-                </div>
-            </div>
 
             {{-- Table --}}
             <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
-                <table class="w-full text-base sm:text-lg text-left text-gray-800 dark:text-gray-200">
-                    <thead class="text-xs font-black uppercase tracking-wider bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-700">
+                <table class="w-full text-base sm:text-lg text-left text-gray-900 dark:text-gray-100">
+                    <thead class="text-sm sm:text-base font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="px-5 py-4">Date</th>
-                            <th class="px-5 py-4">Flat/Shop</th>
-                            <th class="px-5 py-4">Description</th>
-                            <th class="px-5 py-4">Ref / Voucher #</th>
-                            <th class="px-5 py-4 text-right">Debit (Charged)</th>
-                            <th class="px-5 py-4 text-right">Credit (Paid)</th>
-                            <th class="px-5 py-4 text-right">Running Balance</th>
+                            <th class="px-5 py-4 text-white">Date</th>
+                            <th class="px-5 py-4 text-white">Flat/Shop</th>
+                            <th class="px-5 py-4 text-white">Description</th>
+                            <th class="px-5 py-4 text-white">Ref / Voucher #</th>
+                            <th class="px-5 py-4 text-right text-white">Debit (Charged)</th>
+                            <th class="px-5 py-4 text-right text-white">Credit (Paid)</th>
+                            <th class="px-5 py-4 text-right text-white">Running Balance</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-bold">
                         @forelse($ledgerData['entries'] as $entry)
                             <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                <td class="px-5 py-3.5 text-xs font-mono whitespace-nowrap">
+                                <td class="px-5 py-4 text-base sm:text-lg font-mono font-bold whitespace-nowrap">
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
-                                <td class="px-5 py-3.5 text-xs font-semibold whitespace-nowrap">
+                                <td class="px-5 py-4 text-base sm:text-lg font-bold whitespace-nowrap">
                                     @if(!empty($entry['unit_number']))
-                                        <span class="unit-badge-lg px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
+                                        <span class="unit-badge-lg px-3 py-1 text-sm font-black rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
                                             Unit {{ $entry['unit_number'] }}
                                         </span>
                                     @else
                                         —
                                     @endif
                                 </td>
-                                <td class="px-5 py-3.5">
-                                    <div class="font-medium">{{ $entry['description'] }}</div>
+                                <td class="px-5 py-4 text-base sm:text-lg font-bold">
+                                    <div>{{ $entry['description'] }}</div>
                                 </td>
-                                <td class="px-5 py-3.5 text-xs">
+                                <td class="px-5 py-4 text-base sm:text-lg font-mono font-black">
                                     @if($entry['type'] === 'voucher' && !empty($entry['id']))
-                                        <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                        <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
                                             {{ $entry['reference'] }}
                                         </a>
                                     @elseif($entry['type'] === 'bill' && !empty($entry['id']))
-                                        <a href="{{ route('payments.show', $entry['id']) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                        <a href="{{ route('payments.show', $entry['id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
                                             {{ $entry['reference'] }}
                                         </a>
                                     @elseif($entry['type'] === 'voucher_payout' && !empty($entry['id']))
-                                        <a href="{{ route('payment-vouchers.show', $entry['id']) }}" class="text-brand-500 hover:underline font-mono font-semibold">
+                                        <a href="{{ route('payment-vouchers.show', $entry['id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
                                             {{ $entry['reference'] }}
                                         </a>
                                     @else
-                                        <span class="font-mono text-gray-400 dark:text-gray-500">{{ $entry['reference'] }}</span>
+                                        <span class="font-mono text-gray-500 font-bold dark:text-gray-400">{{ $entry['reference'] }}</span>
                                     @endif
                                 </td>
-                                <td class="px-5 py-3.5 text-right font-semibold text-rose-600">
+                                <td class="px-5 py-4 text-right font-black text-rose-600 dark:text-rose-400 text-base sm:text-lg font-mono">
                                     {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
                                 </td>
-                                <td class="px-5 py-3.5 text-right font-semibold text-emerald-600">
+                                <td class="px-5 py-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-base sm:text-lg font-mono">
                                     {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 2) : '—' }}
                                 </td>
-                                <td class="px-5 py-3.5 text-right font-bold text-gray-900 dark:text-white font-mono">
+                                <td class="px-5 py-4 text-right font-black text-gray-900 dark:text-white font-mono text-lg sm:text-xl">
                                     Rs. {{ number_format($entry['running_balance'], 2) }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-5 py-12 text-center text-gray-400 dark:text-gray-600">
+                                <td colspan="7" class="px-5 py-12 text-center text-gray-400 dark:text-gray-600 text-lg font-bold">
                                     No transaction entries found for the selected period.
                                 </td>
                             </tr>
@@ -324,18 +264,18 @@
                             $sumCredit = $ledgerData['entries']->sum('credit');
                             $finalBalance = $ledgerData['entries']->last()['running_balance'] ?? 0;
                         @endphp
-                        <tfoot class="bg-gray-100/80 dark:bg-gray-800/80 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-bold">
+                        <tfoot class="bg-gray-200/90 dark:bg-gray-800 border-t-4 border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white font-black">
                             <tr>
-                                <td colspan="4" class="px-5 py-4 text-xs uppercase tracking-wider font-extrabold text-gray-700 dark:text-gray-300">
+                                <td colspan="4" class="px-5 py-4 text-lg sm:text-xl uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                 </td>
-                                <td class="px-5 py-4 text-right text-rose-600 font-mono font-bold text-sm">
+                                <td class="px-5 py-4 text-right text-rose-600 dark:text-rose-400 font-mono font-black text-xl sm:text-2xl">
                                     Rs. {{ number_format($sumDebit, 2) }}
                                 </td>
-                                <td class="px-5 py-4 text-right text-emerald-600 font-mono font-bold text-sm">
+                                <td class="px-5 py-4 text-right text-emerald-600 dark:text-emerald-400 font-mono font-black text-xl sm:text-2xl">
                                     Rs. {{ number_format($sumCredit, 2) }}
                                 </td>
-                                <td class="px-5 py-4 text-right font-mono font-extrabold text-sm text-gray-900 dark:text-white">
+                                <td class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl text-gray-900 dark:text-white">
                                     Rs. {{ number_format($finalBalance, 2) }}
                                 </td>
                             </tr>
@@ -344,7 +284,7 @@
                 </table>
             </div>
         @else
-            <div class="p-8 text-center text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-white/[0.01] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
+            <div class="p-8 text-center text-gray-400 dark:text-gray-600 bg-gray-50 dark:bg-white/[0.01] border border-dashed border-gray-200 dark:border-gray-800 rounded-xl text-lg font-bold">
                 Please select a Flat / Shop to generate the ledger statement.
             </div>
         @endif

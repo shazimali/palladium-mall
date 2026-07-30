@@ -6,11 +6,12 @@
     <form action="{{ route('payment-vouchers.store') }}" method="POST"
         @submit.prevent="handleSubmit($event)"
         x-data="{
-            paidToType: '{{ old('paid_to_type', 'tenant') }}',
+            paidToType: '{{ old('paid_to_type', request('paid_to_type', 'tenant')) }}',
             tenantId: '{{ old('tenant_id', '') }}',
             unitId: '{{ old('unit_id', '') }}',
             partyId: '{{ old('party_id', '') }}',
             landlordId: '{{ old('landlord_id', '') }}',
+            ownerId: '{{ old('owner_id', request('owner_id', '')) }}',
             toAccountId: '{{ old('to_payment_account_id', '') }}',
             paymentAccountId: '{{ old('payment_account_id', '') }}',
             voucherAmount: '{{ old('amount', '') }}',
@@ -27,6 +28,10 @@
             openLandlord: false,
             searchLandlord: '',
             highlightedLandlordIndex: -1,
+
+            openOwner: false,
+            searchOwner: '',
+            highlightedOwnerIndex: -1,
 
             openToAccount: false,
             searchToAccount: '',
@@ -64,6 +69,12 @@
                 @endforeach
             ],
 
+            ownerOptions: [
+                @foreach($owners as $owner)
+                { id: '{{ $owner->id }}', name: '{{ addslashes($owner->name) }}' },
+                @endforeach
+            ],
+
             accountOptions: [
                 @foreach($paymentAccounts as $account)
                 { id: '{{ $account->id }}', name: '{{ addslashes($account->name) }} ({{ ucfirst($account->type) }})' },
@@ -77,6 +88,7 @@
                 if (this.paidToType === 'tenant') recipientName = this.selectedTenantLabel;
                 else if (this.paidToType === 'other') recipientName = this.selectedPartyName;
                 else if (this.paidToType === 'landlord') recipientName = this.selectedLandlordName;
+                else if (this.paidToType === 'owner') recipientName = this.selectedOwnerName;
                 else if (this.paidToType === 'account') recipientName = this.selectedToAccountName;
 
                 let amtNum = parseFloat(this.voucherAmount || 0);
@@ -123,6 +135,16 @@
                 return selected ? selected.name : '';
             },
 
+            get filteredOwners() {
+                if (!this.searchOwner) return this.ownerOptions;
+                let s = this.searchOwner.toLowerCase();
+                return this.ownerOptions.filter(o => o.name.toLowerCase().includes(s));
+            },
+            get selectedOwnerName() {
+                let selected = this.ownerOptions.find(o => o.id == this.ownerId);
+                return selected ? selected.name : '';
+            },
+
             get filteredToAccounts() {
                 if (!this.searchToAccount) return this.accountOptions;
                 let s = this.searchToAccount.toLowerCase();
@@ -153,6 +175,13 @@
                 this.openLandlord = false;
                 this.searchLandlord = '';
                 this.highlightedLandlordIndex = -1;
+                this.updateAutoRemarks();
+            },
+            selectOwner(opt) {
+                this.ownerId = opt.id;
+                this.openOwner = false;
+                this.searchOwner = '';
+                this.highlightedOwnerIndex = -1;
                 this.updateAutoRemarks();
             },
             selectToAccount(opt) {
@@ -217,7 +246,21 @@
                 if (this.paidToType === 'landlord' && !this.landlordId) {
                     Swal.fire({
                         title: 'Landlord Required',
-                        text: 'Please select a Landlord / Owner.',
+                        text: 'Please select a Landlord.',
+                        icon: 'warning',
+                        confirmButtonText: 'OK',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    });
+                    return;
+                }
+
+                if (this.paidToType === 'owner' && !this.ownerId) {
+                    Swal.fire({
+                        title: 'Managing Owner Required',
+                        text: 'Please select a Managing Owner.',
                         icon: 'warning',
                         confirmButtonText: 'OK',
                         customClass: {
@@ -330,7 +373,8 @@
                                 class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">
                                 <option value="tenant">Tenant / Unit</option>
                                 <option value="other">Registered Party Head</option>
-                                <option value="landlord">Landlord / Owner</option>
+                                <option value="landlord">Landlord</option>
+                                <option value="owner">Managing Owner Withdrawal</option>
                                 <option value="account">Account Transfer</option>
                             </select>
                         </div>
@@ -341,10 +385,46 @@
                 <div class="grid grid-cols-1 md:grid-cols-6 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-50">
                     <div class="md:col-span-6 grid grid-cols-1 md:grid-cols-6 min-h-[52px] relative z-50">
                         <div class="md:col-span-2 bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">
-                            <span x-text="paidToType === 'tenant' ? 'Select Tenant' : (paidToType === 'other' ? 'Select Party' : (paidToType === 'landlord' ? 'Select Landlord' : 'To Account'))"></span>
+                            <span x-text="paidToType === 'tenant' ? 'Select Tenant' : (paidToType === 'other' ? 'Select Party' : (paidToType === 'landlord' ? 'Select Landlord' : (paidToType === 'owner' ? 'Select Managing Owner' : 'To Account')))"></span>
                             <span class="text-rose-300 ml-1">*</span>
                         </div>
                         <div class="md:col-span-4 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
+
+                            {{-- Case 5: Searchable Managing Owner Dropdown --}}
+                            <div x-show="paidToType === 'owner'" class="w-full relative" @click.away="openOwner = false; highlightedOwnerIndex = -1">
+                                <input type="hidden" name="owner_id" x-model="ownerId" :required="paidToType === 'owner'">
+                                <button type="button" @click="openOwner = !openOwner; if(openOwner) { $nextTick(() => $refs.ownerSearchInput.focus()) }"
+                                    class="w-full text-left bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white flex items-center justify-between shadow-2xs transition-all hover:border-brand-400">
+                                    <span x-text="selectedOwnerName ? selectedOwnerName : 'Select Managing Owner...'" class="truncate"></span>
+                                    <span class="ml-2 text-xs opacity-60">▼</span>
+                                </button>
+
+                                <div x-show="openOwner" x-transition x-cloak
+                                    class="absolute left-0 right-0 top-full z-[999999] mt-2 min-w-[300px] sm:min-w-[400px] rounded-2xl border-2 border-brand-500 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden text-gray-900 dark:text-white">
+                                    <div class="p-3 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+                                        <input type="text" x-ref="ownerSearchInput" x-model="searchOwner" placeholder="Type managing owner name to search..."
+                                            @keydown.arrow-down.prevent="highlightedOwnerIndex = (highlightedOwnerIndex + 1) % filteredOwners.length"
+                                            @keydown.arrow-up.prevent="highlightedOwnerIndex = (highlightedOwnerIndex - 1 + filteredOwners.length) % filteredOwners.length"
+                                            @keydown.enter.prevent="if(highlightedOwnerIndex >= 0 && filteredOwners[highlightedOwnerIndex]) selectOwner(filteredOwners[highlightedOwnerIndex])"
+                                            @keydown.escape="openOwner = false; highlightedOwnerIndex = -1"
+                                            class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3.5 py-2 text-base font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
+                                    </div>
+                                    <div class="max-h-[300px] overflow-y-auto p-1.5 space-y-1 text-sm">
+                                        <template x-for="(opt, index) in filteredOwners" :key="opt.id">
+                                            <button type="button" @click="selectOwner(opt)"
+                                                @mouseenter="highlightedOwnerIndex = index"
+                                                class="w-full text-left px-3.5 py-2.5 rounded-xl transition-colors flex items-center justify-between"
+                                                :class="ownerId == opt.id ? 'bg-brand-600 text-white font-black' : (highlightedOwnerIndex === index ? 'bg-brand-50 text-brand-950 dark:bg-brand-950/50 dark:text-brand-200 font-bold' : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/5 font-semibold')">
+                                                <span x-text="opt.name" class="font-black text-base sm:text-lg truncate"></span>
+                                                <span x-show="ownerId == opt.id" class="font-black text-base">✓</span>
+                                            </button>
+                                        </template>
+                                        <div x-show="filteredOwners.length === 0" class="px-4 py-3 text-center text-xs font-semibold text-gray-400">
+                                            No matching Managing Owner found
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             
                             {{-- Case 1: Searchable Tenant Dropdown --}}
                             <div x-show="paidToType === 'tenant'" class="w-full relative" @click.away="openTenant = false; highlightedTenantIndex = -1">

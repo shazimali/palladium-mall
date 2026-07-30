@@ -1619,4 +1619,116 @@ class TenantController extends Controller
         return redirect()->route('tenants.index')
             ->with('success', 'Tenant removed successfully.');
     }
+
+    // -----------------------------------------------------------------------
+    // Print Views — Guards & Staff
+    // -----------------------------------------------------------------------
+
+    /**
+     * Get unified active occupants list (Standard Tenants + Other-Owned Tenants).
+     */
+    private function getUnifiedActiveOccupantsData(Request $request): \Illuminate\Support\Collection
+    {
+        // 1. Fetch Active Standard Tenants
+        $tenantsQuery = Tenant::with(['unit.landlord', 'activeAgreement', 'emergencyContacts'])
+            ->where('status', 'active')
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($request->landlord_id, function ($q) use ($request) {
+                $q->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+            })
+            ->when($request->date_from, function ($q) use ($request) {
+                $q->whereHas('agreements', fn($qa) => $qa->where('start_date', '>=', $request->date_from));
+            })
+            ->when($request->date_to, function ($q) use ($request) {
+                $q->whereHas('agreements', fn($qa) => $qa->where('end_date', '<=', $request->date_to));
+            });
+
+        $standardOccupants = $tenantsQuery->get()->map(function ($t) {
+            $emContact = $t->emergencyContacts->first();
+            $emContactStr = $emContact
+                ? $emContact->name . ($emContact->phone ? ' (' . $emContact->phone . ')' : '')
+                : '—';
+
+            return [
+                'unit_number'      => $t->unit->unit_number ?? '—',
+                'tenant_name'      => $t->name,
+                'phone'            => $t->phone ?? '—',
+                'emergency_contact'=> $emContactStr,
+                'landlord_name'    => $t->unit->landlord->name ?? '—',
+                'start_date'       => $t->activeAgreement?->start_date ? $t->activeAgreement->start_date->format('d M Y') : '—',
+                'photo_url'        => $t->passport_photo_url,
+                'monthly_rent'     => (float)($t->activeAgreement->monthly_rent ?? 0),
+                'security_deposit' => (float)($t->activeAgreement->security_deposit ?? 0),
+                'is_other_owned'   => false,
+            ];
+        });
+
+        // 2. Fetch Active Other-Owned Tenants
+        $otherTenantsQuery = \App\Models\OtherTenant::with(['unit.landlord', 'unitHistory'])
+            ->where('status', 'active')
+            ->whereNotNull('unit_id')
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->when($request->landlord_id, function ($q) use ($request) {
+                $q->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+            });
+
+        $otherOccupants = $otherTenantsQuery->get()->map(function ($ot) {
+            $emContactStr = $ot->whatsapp_number ? 'WhatsApp: ' . $ot->whatsapp_number : '—';
+            $startDate = $ot->unitHistory->first()?->attached_at
+                ? $ot->unitHistory->first()->attached_at->format('d M Y')
+                : ($ot->created_at ? $ot->created_at->format('d M Y') : '—');
+
+            return [
+                'unit_number'      => $ot->unit->unit_number ?? '—',
+                'tenant_name'      => $ot->name,
+                'phone'            => $ot->phone ?? '—',
+                'emergency_contact'=> $emContactStr,
+                'landlord_name'    => $ot->unit->landlord->name ?? '—',
+                'start_date'       => $startDate,
+                'photo_url'        => $ot->photo_url,
+                'monthly_rent'     => (float)($ot->monthly_rent ?? $ot->unit->rent_amount ?? 0),
+                'security_deposit' => 0.0,
+                'is_other_owned'   => true,
+            ];
+        });
+
+        // Merge and sort naturally by unit_number
+        return $standardOccupants->concat($otherOccupants)->sortBy(function ($item) {
+            return sprintf('%08s', preg_replace('/\D/', '', $item['unit_number']) ?: $item['unit_number']);
+        })->values();
+    }
+
+    /**
+     * Print View — For Guards
+     */
+    public function printGuards(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('tenants.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $occupants = $this->getUnifiedActiveOccupantsData($request);
+
+        return view('tenants.print_guards', [
+            'pageTitle' => 'Active Tenants Directory (For Guards)',
+            'occupants' => $occupants,
+        ]);
+    }
+
+    /**
+     * Print View — For Staff
+     */
+    public function printStaff(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('tenants.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $occupants = $this->getUnifiedActiveOccupantsData($request);
+
+        return view('tenants.print_staff', [
+            'pageTitle' => 'Active Tenants Directory (For Staff)',
+            'occupants' => $occupants,
+        ]);
+    }
 }

@@ -2,11 +2,14 @@
 
 @section('content')
     @php
-        $isSelf = is_null($payment->tenant_id);
-        $pageTitle = $isSelf ? 'Edit Other-Owned Flat/Shop Billing' : 'Edit Tenant Billing';
-        $descText = $isSelf 
-            ? 'Update maintenance billing details for an other-owned flat/shop' 
-            : 'Update billing record details linked to a tenant\'s agreement';
+        $isExtra = $payment->type === 'extra_payment';
+        $isSelf = is_null($payment->tenant_id) && !$isExtra;
+        $pageTitle = $isExtra ? 'Edit Extra Payment' : ($isSelf ? 'Edit Other-Owned Flat/Shop Billing' : 'Edit Tenant Billing');
+        $descText = $isExtra
+            ? 'Update extra payment billing record details'
+            : ($isSelf 
+                ? 'Update maintenance billing details for an other-owned flat/shop' 
+                : 'Update billing record details linked to a tenant\'s agreement');
     @endphp
 
     <x-common.page-breadcrumb pageTitle="{{ $pageTitle }}" />

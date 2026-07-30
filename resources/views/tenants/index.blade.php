@@ -58,6 +58,16 @@
                     class="rounded-xl border-2 border-gray-300 px-5 py-2.5 text-sm font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors cursor-pointer {{ $hasActiveFilters ? '' : 'hidden' }}">
                     Clear
                 </button>
+                <a href="{{ route('tenants.printGuards', request()->all()) }}"
+                    onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
+                    class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
+                    🛡️ For Guards
+                </a>
+                <a href="{{ route('tenants.printStaff', request()->all()) }}"
+                    onclick="window.open(this.href,'_blank','width=1200,height=800,scrollbars=yes'); return false;"
+                    class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
+                    💼 For Staff
+                </a>
                 @if(auth()->user()->hasPermission('tenants.create') || auth()->user()->isSuperAdmin())
                     <a href="{{ route('tenants.create') }}"
                         class="inline-flex items-center gap-2.5 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors">

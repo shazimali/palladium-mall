@@ -94,7 +94,7 @@ class PartyLedgerController extends Controller
                 ]);
             }
 
-            // Receipts
+            // Receipts (Inflow from Party -> Credit)
             foreach ($receipts as $receipt) {
                 $ledgerEntries->push([
                     'id' => $receipt->id,
@@ -109,7 +109,7 @@ class PartyLedgerController extends Controller
                 ]);
             }
 
-            // Payments
+            // Payments (Payout to Party -> Debit)
             foreach ($payments as $payment) {
                 $ledgerEntries->push([
                     'id' => $payment->id,
@@ -249,6 +249,7 @@ class PartyLedgerController extends Controller
             ]);
         }
 
+        // Receipts (Inflow from Party -> Credit)
         foreach ($receipts as $receipt) {
             $ledgerEntries->push([
                 'date' => $receipt->date instanceof Carbon ? $receipt->date : Carbon::parse($receipt->date),
@@ -261,6 +262,7 @@ class PartyLedgerController extends Controller
             ]);
         }
 
+        // Payments (Payout to Party -> Debit)
         foreach ($payments as $payment) {
             $ledgerEntries->push([
                 'date' => $payment->date instanceof Carbon ? $payment->date : Carbon::parse($payment->date),

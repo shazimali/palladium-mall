@@ -6,53 +6,43 @@
     <title>{{ $pageTitle }} — Palladium Mall</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { font-size: 13px; }
-        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #111827; background: #fff; padding: 32px 40px 48px; line-height: 1.5; }
-        .pm-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #465FFF; padding-bottom: 14px; margin-bottom: 18px; }
-        .pm-header-left { display: flex; align-items: center; gap: 12px; }
-        .pm-logo-icon { width: 36px; height: 36px; background: #465FFF; border-radius: 8px; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 6px 6px 5px; }
-        .pm-logo-icon span { display: block; background: #fff; border-radius: 2px; width: 5px; }
+        html { font-size: 24px; }
+        body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; padding: 20px 28px; line-height: 1.4; font-weight: 800; }
+        .pm-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px solid #111827; padding-bottom: 14px; margin-bottom: 20px; }
+        .pm-header-left { display: flex; align-items: center; gap: 14px; }
+        .pm-logo-icon { width: 50px; height: 50px; background: #111827; border-radius: 10px; display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding: 8px 8px 6px; }
+        .pm-logo-icon span { display: block; background: #fff; border-radius: 2px; width: 7px; }
         .pm-logo-icon span:nth-child(1) { height: 100%; }
         .pm-logo-icon span:nth-child(2) { height: 70%; opacity: .9; }
         .pm-logo-icon span:nth-child(3) { height: 82%; opacity: .7; }
-        .pm-name { font-size: 1.25rem; font-weight: 800; color: #111827; letter-spacing: -.3px; }
+        .pm-name { font-size: 2.5rem; font-weight: 900; color: #000; letter-spacing: -.5px; }
         .pm-header-right { text-align: right; }
-        .pm-header-right .doc-title { font-size: 1rem; font-weight: 700; color: #111827; }
-        .pm-header-right .doc-date { font-size: .78rem; color: #6b7280; margin-top: 2px; }
-        .filters-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-        .filter-chip { display: inline-flex; align-items: center; gap: 4px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 999px; padding: 3px 10px; font-size: .72rem; color: #374151; }
-        .filter-chip strong { color: #111827; }
-        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
-        .summary-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; }
-        .summary-card .s-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; }
-        .summary-card .s-value { font-size: 1.25rem; font-weight: 800; margin-top: 4px; font-variant-numeric: tabular-nums; }
-        .s-blue { border-color: #bfdbfe; background: #eff6ff; } .s-blue .s-label { color: #2563eb; } .s-blue .s-value { color: #1d4ed8; }
-        .s-green { border-color: #bbf7d0; background: #f0fdf4; } .s-green .s-label { color: #16a34a; } .s-green .s-value { color: #15803d; }
-        .s-orange { border-color: #fed7aa; background: #fff7ed; } .s-orange .s-label { color: #ea580c; } .s-orange .s-value { color: #c2410c; }
-        .s-neutral { border-color: #e5e7eb; background: #f9fafb; } .s-neutral .s-label { color: #6b7280; } .s-neutral .s-value { color: #111827; }
-        .s-amber { border-color: #fde68a; background: #fffbeb; } .s-amber .s-label { color: #d97706; } .s-amber .s-value { color: #b45309; }
-        table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-        thead tr { background: #f3f4f6; }
-        thead th { padding: 8px 10px; text-align: left; font-weight: 700; font-size: .68rem; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+        .pm-header-right .doc-title { font-size: 2.2rem; font-weight: 900; color: #000; }
+        .pm-header-right .doc-date { font-size: 1.4rem; font-weight: 800; color: #111827; margin-top: 4px; }
+        .filters-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+        .filter-chip { display: inline-flex; align-items: center; gap: 6px; background: #f3f4f6; border: 2px solid #9ca3af; border-radius: 999px; padding: 6px 16px; font-size: 1.3rem; font-weight: 900; color: #000; }
+        .filter-chip strong { color: #000; font-weight: 900; }
+        table { width: 100%; border-collapse: collapse; font-size: 1.5rem; font-weight: 800; }
+        thead tr { background: #d1d5db; }
+        thead th { padding: 14px 16px; text-align: left; font-weight: 900; font-size: 1.4rem; text-transform: uppercase; letter-spacing: .05em; color: #000; border-bottom: 3px solid #000; white-space: nowrap; }
         thead th.text-right, tbody td.text-right { text-align: right; }
-        tbody tr { border-bottom: 1px solid #f3f4f6; }
-        tbody tr:last-child { border-bottom: none; }
-        tbody td { padding: 7px 10px; color: #374151; vertical-align: middle; }
-        .mono { font-family: 'Courier New', monospace; font-size: .75rem; }
-        .debit { color: #dc2626; font-weight: 600; }
-        .credit { color: #16a34a; font-weight: 600; }
-        .balance { color: #111827; font-weight: 700; font-family: 'Courier New', monospace; }
-        .empty-row td { text-align: center; color: #9ca3af; padding: 32px; }
-        .badge { display: inline-flex; align-items: center; border-radius: 4px; padding: 2px 6px; font-size: .68rem; font-weight: 600; }
-        .badge-receipt { background: #ecfdf5; color: #059669; }
-        .badge-payout  { background: #eff6ff; color: #2563eb; }
-        .badge-expense { background: #fffbeb; color: #d97706; }
-        .pm-footer { margin-top: 28px; border-top: 1px solid #e5e7eb; padding-top: 10px; display: flex; justify-content: space-between; font-size: .68rem; color: #9ca3af; }
-        .no-print { text-align: center; margin-bottom: 24px; }
-        .print-btn { display: inline-flex; align-items: center; gap: 8px; background: #465FFF; color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-size: .875rem; font-weight: 600; cursor: pointer; font-family: inherit; }
-        .print-btn:hover { background: #3b50e0; }
+        tbody tr { border-bottom: 2px solid #e5e7eb; }
+        tbody td { padding: 12px 16px; color: #000; font-weight: 800; vertical-align: middle; font-size: 1.5rem; }
+        .mono { font-family: 'Courier New', monospace; font-size: 1.5rem; font-weight: 900; }
+        .debit { color: #dc2626; font-weight: 900; }
+        .credit { color: #16a34a; font-weight: 900; }
+        .balance { color: #000; font-weight: 900; font-family: 'Courier New', monospace; font-size: 1.6rem; }
+        .empty-row td { text-align: center; color: #4b5563; padding: 40px; font-weight: 900; font-size: 1.5rem; }
+        .badge { display: inline-flex; align-items: center; border-radius: 6px; padding: 4px 10px; font-size: 1.2rem; font-weight: 900; }
+        .badge-receipt { background: #d1fae5; color: #065f46; }
+        .badge-payout  { background: #dbeafe; color: #1e40af; }
+        .badge-expense { background: #fef3c7; color: #92400e; }
+        .pm-footer { margin-top: 36px; border-top: 3px solid #000; padding-top: 14px; display: flex; justify-content: space-between; font-size: 1.3rem; font-weight: 900; color: #111827; }
+        .no-print { text-align: center; margin-bottom: 28px; }
+        .print-btn { display: inline-flex; align-items: center; gap: 10px; background: #111827; color: #fff; border: none; border-radius: 12px; padding: 14px 32px; font-size: 1.3rem; font-weight: 900; cursor: pointer; font-family: inherit; }
+        .print-btn:hover { background: #000; }
         @media print { body { padding: 0; } .no-print { display: none !important; } }
-        @page { size: A4; margin: 18mm 16mm; }
+        @page { size: A4; margin: 10mm; }
     </style>
 </head>
 <body>
@@ -78,17 +68,6 @@
             @endforeach
         </div>
     @endif
-    @if(!empty($summaryCards))
-        <div class="summary-grid">
-            @foreach($summaryCards as $card)
-                <div class="summary-card {{ $card['color'] ?? 's-neutral' }}">
-                    <div class="s-label">{{ $card['label'] }}</div>
-                    <div class="s-value">{{ $card['value'] }}</div>
-                </div>
-            @endforeach
-        </div>
-    @endif
-
 
     <table>
         <thead>
@@ -129,6 +108,35 @@
                 </tr>
             @endforelse
         </tbody>
+        @if(count($rows) > 0)
+            <tfoot>
+                <tr style="background: #e5e7eb; border-top: 3px solid #000; border-bottom: 3px solid #000; font-weight: 900;">
+                    @foreach($columns as $index => $col)
+                        @php
+                            $key = $col['key'];
+                            $type = $col['type'] ?? '';
+                            $sum = in_array($type, ['debit', 'credit', 'amount']) ? collect($rows)->sum(fn($r) => (float)($r[$key] ?? 0)) : 0;
+                            $lastVal = collect($rows)->last()[$key] ?? 0;
+                        @endphp
+                        <td class="{{ $col['class'] ?? '' }} {{ $col['td_class'] ?? '' }}" style="padding: 14px 16px; font-weight: 900; font-size: 1.8rem; color: #000;">
+                            @if($index === 0)
+                                <strong style="font-size: 1.8rem; font-weight: 900;">TOTAL SUMMARY</strong>
+                            @elseif($type === 'debit')
+                                <span class="debit" style="font-size: 1.8rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
+                            @elseif($type === 'credit')
+                                <span class="credit" style="font-size: 1.8rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
+                            @elseif($type === 'balance')
+                                <span class="balance" style="font-size: 1.9rem; font-weight: 900;">Rs. {{ number_format((float)$lastVal, 2) }}</span>
+                            @elseif($type === 'amount')
+                                <span class="debit" style="font-size: 1.8rem; font-weight: 900;">Rs. {{ number_format($sum, 2) }}</span>
+                            @else
+                                —
+                            @endif
+                        </td>
+                    @endforeach
+                </tr>
+            </tfoot>
+        @endif
     </table>
 
     <div class="pm-footer">
