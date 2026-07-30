@@ -141,6 +141,19 @@ class UnitController extends Controller
         ]);
     }
 
+    public function printMeters(Request $request): View
+    {
+        $units = $this->getFilteredUnitsQuery($request)
+            ->with(['landlord', 'tenant', 'otherTenant', 'electricityMeter'])
+            ->orderBy('unit_number')
+            ->get();
+
+        return view('units.print_meters', [
+            'pageTitle' => 'Electricity Meters & Breaker Status Directory',
+            'units'     => $units,
+        ]);
+    }
+
     public function exportExcel(Request $request)
     {
         $units = $this->getFilteredUnitsQuery($request)
