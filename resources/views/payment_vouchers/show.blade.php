@@ -14,7 +14,10 @@
             $paidToTypeLabel = 'Registered Party';
         } elseif ($voucher->paid_to_type === 'landlord') {
             $recipientName = $voucher->landlord->name ?? 'N/A';
-            $paidToTypeLabel = 'Landlord / Owner';
+            $paidToTypeLabel = 'Landlord';
+        } elseif ($voucher->paid_to_type === 'owner') {
+            $recipientName = $voucher->owner->name ?? 'N/A';
+            $paidToTypeLabel = 'Managing Owner';
         } elseif ($voucher->paid_to_type === 'account') {
             $recipientName = $voucher->toPaymentAccount ? $voucher->toPaymentAccount->name . ' (' . ucfirst($voucher->toPaymentAccount->type) . ')' : 'N/A';
             $paidToTypeLabel = 'Destination Account';

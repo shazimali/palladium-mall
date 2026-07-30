@@ -114,7 +114,7 @@ class LedgerController extends Controller
         }
 
         return view('ledgers.owner', [
-            'title'      => 'Owner Ledger',
+            'title'      => 'Managing Owner Ledger',
             'owners'     => $owners,
             'ownerId'    => $ownerId,
             'dateFrom'   => $dateFrom,
@@ -493,7 +493,28 @@ class LedgerController extends Controller
         $owner = Owner::findOrFail($ownerId);
         $entries = collect();
 
-        // 1. Outflows: Withdrawals as DEBITS
+        // 1. Outflows: Withdrawals & Payment Vouchers as DEBITS
+        $pvPayouts = PaymentVoucher::with('paymentAccount')
+            ->where('paid_to_type', 'owner')
+            ->where('owner_id', $ownerId)
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
+
+        foreach ($pvPayouts as $pv) {
+            $entries->push([
+                'date' => $pv->date,
+                'voucher_no' => $pv->voucher_no,
+                'account' => $pv->paymentAccount->name ?? '—',
+                'reference' => $pv->reference ?? '—',
+                'notes' => $pv->notes ?? 'Owner Withdrawal (Payment Voucher)',
+                'debit' => (float)$pv->amount,
+                'credit' => 0.00,
+                'type' => 'payment_voucher',
+                'id' => $pv->id,
+            ]);
+        }
+
         $payouts = Withdrawal::where('owner_id', $ownerId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))

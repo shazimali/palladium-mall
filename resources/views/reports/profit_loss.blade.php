@@ -1,14 +1,63 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Profit & Loss Statement" />
+<style>
+    @media print {
+        .no-print,
+        nav,
+        aside,
+        header,
+        .sticky,
+        .page-breadcrumb {
+            display: none !important;
+        }
+        body {
+            background-color: white !important;
+            color: black !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+        }
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 13px !important;
+        }
+        th, td {
+            border: 1px solid #9ca3af !important;
+            padding: 8px 10px !important;
+            color: black !important;
+        }
+        tfoot tr {
+            font-weight: 900 !important;
+            font-size: 15px !important;
+            background-color: #e5e7eb !important;
+        }
+    }
+</style>
+
+<div class="hidden print:block mb-6 text-center border-b-2 border-black pb-4">
+    <h1 class="text-2xl font-black uppercase tracking-wider text-black">PALLADIUM MALL</h1>
+    <p class="text-xs font-bold text-gray-700 uppercase">Management Office — Islamabad</p>
+    <h2 class="text-lg font-black uppercase text-black mt-2">Profit & Loss Financial Statement</h2>
+    <p class="text-sm font-bold text-black mt-1">
+        Statement Period: {{ !empty($filters['date_from']) ? date('d M Y', strtotime($filters['date_from'])) : 'Start' }} —
+        {{ !empty($filters['date_to']) ? date('d M Y', strtotime($filters['date_to'])) : 'End' }}
+    </p>
+</div>
+
+    <div class="no-print">
+        <x-common.page-breadcrumb pageTitle="Profit & Loss Statement" />
+    </div>
 
     {{-- STICKY PROFIT & LOSS HEADER --}}
-    <div class="sticky mb-6 rounded-2xl border-2 border-emerald-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md"
+    <div class="sticky mb-6 rounded-2xl border-2 border-emerald-500 bg-white dark:bg-gray-900 p-5 shadow-xl backdrop-blur-md no-print"
         style="position: sticky; top: 72px; z-index: 990;">
         <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-4 min-w-0">
-                <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md text-3xl font-black">
+                <div
+                    class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md text-3xl font-black">
                     📈
                 </div>
                 <div class="min-w-0">
@@ -16,33 +65,42 @@
                         Profit & Loss Financial Summary
                     </p>
                     <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
-                        {{ !empty($filters['date_from']) ? date('d M Y', strtotime($filters['date_from'])) : 'Start' }} — {{ !empty($filters['date_to']) ? date('d M Y', strtotime($filters['date_to'])) : 'End' }}
+                        {{ !empty($filters['date_from']) ? date('d M Y', strtotime($filters['date_from'])) : 'Start' }} —
+                        {{ !empty($filters['date_to']) ? date('d M Y', strtotime($filters['date_to'])) : 'End' }}
                     </h2>
                 </div>
             </div>
 
             <div class="flex flex-wrap items-center gap-6">
                 <div class="text-right">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Collected Revenue</span>
+                    <span
+                        class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Collected
+                        Revenue</span>
                     <span class="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                         Rs. {{ number_format($totalIncome) }}
                     </span>
                 </div>
                 <div class="text-right">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Unpaid Revenue</span>
+                    <span
+                        class="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Unpaid
+                        Revenue</span>
                     <span class="text-xl sm:text-2xl font-black font-mono text-amber-600 dark:text-amber-400">
                         Rs. {{ number_format($totalUnpaidIncome ?? 0) }}
                     </span>
                 </div>
                 <div class="text-right">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400 block">Total Expenses</span>
+                    <span class="text-xs font-extrabold uppercase tracking-wider text-red-600 dark:text-red-400 block">Total
+                        Expenses</span>
                     <span class="text-xl sm:text-2xl font-black font-mono text-red-600 dark:text-red-400">
                         Rs. {{ number_format($totalExpenses) }}
                     </span>
                 </div>
                 <div class="text-right">
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 block">Net Profit</span>
-                    <span class="text-2xl sm:text-3xl font-black font-mono {{ ($netProfitLoss ?? $netProfit ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                    <span
+                        class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400 block">Net
+                        Profit</span>
+                    <span
+                        class="text-2xl sm:text-3xl font-black font-mono {{ ($netProfitLoss ?? $netProfit ?? 0) >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
                         Rs. {{ number_format($netProfitLoss ?? $netProfit ?? 0) }}
                     </span>
                 </div>
@@ -69,122 +127,168 @@
     @endphp
 
     {{-- Filter Panel --}}
-    <x-common.component-card title="Statement Filters" desc="Select date range to analyze profit & loss distribution">
-        <form method="GET" action="{{ route('reports.profit-loss') }}">
-            <div class="flex flex-col gap-5 sm:flex-row sm:items-end justify-between">
-                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 flex-1">
+    <div class="no-print mb-6">
+        <x-common.component-card title="" desc="">
+            <form method="GET" action="{{ route('reports.profit-loss') }}">
+                <div class="flex flex-wrap items-end gap-3">
                     {{-- Date From --}}
-                    <div>
-                        <label for="date_from" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <div class="min-w-[150px]">
+                        <label for="date_from" class="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                             Date From
                         </label>
                         <input type="text" id="date_from" name="date_from" value="{{ $filters['date_from'] }}"
                             placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                            class="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     </div>
 
                     {{-- Date To --}}
-                    <div>
-                        <label for="date_to" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <div class="min-w-[150px]">
+                        <label for="date_to" class="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                             Date To
                         </label>
                         <input type="text" id="date_to" name="date_to" value="{{ $filters['date_to'] }}"
                             placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                            class="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     </div>
 
-                    {{-- Actions --}}
-                    <div class="flex items-end gap-3">
+                    {{-- Filter & Reset Buttons --}}
+                    <div class="flex items-center gap-2">
                         <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-600 transition-colors w-full sm:w-auto cursor-pointer">
+                            class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm font-bold text-white shadow-xs hover:bg-brand-600 transition-colors cursor-pointer">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
                             </svg>
-                            Filter Statement
+                            Filter
                         </button>
                         <a href="{{ route('reports.profit-loss') }}"
-                            class="inline-flex items-center justify-center rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors w-full sm:w-auto">
+                            class="inline-flex items-center justify-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors">
                             Reset
                         </a>
                     </div>
-                </div>
 
-                {{-- Quick Presets --}}
-                <div class="flex gap-2 items-end">
-                    <a href="{{ route('reports.profit-loss', ['date_from' => $thisMonthFrom, 'date_to' => $thisMonthTo]) }}"
-                        class="rounded-lg px-3 py-2.5 text-xs font-semibold transition-all shadow-2xs {{ $isThisMonth ? 'bg-brand-500 text-white border border-brand-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                        This Month
-                    </a>
-                    <a href="{{ route('reports.profit-loss', ['date_from' => $lastMonthFrom, 'date_to' => $lastMonthTo]) }}"
-                        class="rounded-lg px-3 py-2.5 text-xs font-semibold transition-all shadow-2xs {{ $isLastMonth ? 'bg-brand-500 text-white border border-brand-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                        Last Month
-                    </a>
-                    <a href="{{ route('reports.profit-loss', ['date_from' => $thisYearFrom, 'date_to' => $thisYearTo]) }}"
-                        class="rounded-lg px-3 py-2.5 text-xs font-semibold transition-all shadow-2xs {{ $isThisYear ? 'bg-brand-500 text-white border border-brand-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}">
-                        This Year
-                    </a>
-                </div>
-            </div>
-        </form>
-    </x-common.component-card>
+                    {{-- Quick Presets --}}
+                    <div class="flex items-center gap-1.5">
+                        <a href="{{ route('reports.profit-loss', ['date_from' => $thisMonthFrom, 'date_to' => $thisMonthTo]) }}"
+                            class="rounded-xl px-3 py-2 text-xs font-bold transition-all shadow-2xs {{ $isThisMonth ? 'bg-brand-500 text-white border border-brand-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                            This Month
+                        </a>
+                        <a href="{{ route('reports.profit-loss', ['date_from' => $lastMonthFrom, 'date_to' => $lastMonthTo]) }}"
+                            class="rounded-xl px-3 py-2 text-xs font-bold transition-all shadow-2xs {{ $isLastMonth ? 'bg-brand-500 text-white border border-brand-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                            Last Month
+                        </a>
+                        <a href="{{ route('reports.profit-loss', ['date_from' => $thisYearFrom, 'date_to' => $thisYearTo]) }}"
+                            class="rounded-xl px-3 py-2 text-xs font-bold transition-all shadow-2xs {{ $isThisYear ? 'bg-brand-500 text-white border border-brand-500' : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700' }}">
+                            This Year
+                        </a>
+                    </div>
 
-    {{-- Statement Metadata & Actions --}}
-    <div
-        class="my-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between bg-white dark:bg-white/[0.02] border border-gray-250 dark:border-gray-800 p-4 rounded-xl">
-        <div>
-            <h3 class="text-sm font-semibold text-gray-800 dark:text-white">Palladium Mall Statement Period</h3>
-            <p class="text-xs text-gray-500 mt-0.5">Showing accounts breakdown from <strong
-                    class="text-gray-700 dark:text-gray-350">{{ Carbon\Carbon::parse($filters['date_from'])->format('d M Y') }}</strong>
-                to <strong
-                    class="text-gray-700 dark:text-gray-350">{{ Carbon\Carbon::parse($filters['date_to'])->format('d M Y') }}</strong>
-            </p>
-        </div>
-        <div class="flex gap-2">
-            <a href="{{ route('reports.profit-loss.excel', $filters) }}"
-                class="inline-flex items-center gap-2 rounded-lg border border-green-500 px-4 py-2.5 text-sm font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Export Excel
-            </a>
-            <a href="{{ route('reports.profit-loss.pdf', $filters) }}"
-                class="inline-flex items-center gap-2 rounded-lg border border-red-400 px-4 py-2.5 text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Export PDF
-            </a>
-        </div>
+                    {{-- Print Statement Button --}}
+                    <div class="sm:ml-auto">
+                        <button type="button" onclick="window.print()"
+                            class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-bold text-white shadow-md hover:bg-gray-800 transition-all cursor-pointer">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4" />
+                            </svg>
+                            Print Statement
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </x-common.component-card>
     </div>
 
-    {{-- Summary Cards --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Collected Revenue</p>
-            <p class="mt-2 text-2xl font-bold text-green-600">Rs. {{ number_format($totalIncome, 2) }}</p>
-            <p class="text-[10px] text-gray-400 mt-1">Tenant collections + Misc vouchers</p>
+    {{-- Monthly Breakdown (shown only when multiple months are selected) --}}
+    @if(!empty($monthlyBreakdown) && count($monthlyBreakdown) > 1)
+        <div class="mt-6">
+            <x-common.component-card title="📅 Monthly Breakdown"
+                desc="Month-by-month income, expenses and net profit for the selected period">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="text-[11px] uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                            <tr>
+                                <th class="px-3 py-2.5 whitespace-nowrap">Month</th>
+                                <th class="px-3 py-2.5 text-right whitespace-nowrap text-blue-600 dark:text-blue-400">Rent (PM)
+                                </th>
+                                <th class="px-3 py-2.5 text-right whitespace-nowrap text-indigo-600 dark:text-indigo-400">Maint
+                                    (PM+Rented)</th>
+                                <th class="px-3 py-2.5 text-right whitespace-nowrap text-violet-600 dark:text-violet-400">Maint
+                                    (Other-Owned)</th>
+                                <th class="px-3 py-2.5 text-right whitespace-nowrap text-teal-600 dark:text-teal-400">Extra
+                                    Payments</th>
+                                <th
+                                    class="px-3 py-2.5 text-right whitespace-nowrap text-emerald-700 dark:text-emerald-400 font-bold">
+                                    Total Income</th>
+                                <th class="px-3 py-2.5 text-right whitespace-nowrap text-red-600 dark:text-red-400 font-bold">
+                                    Expenses</th>
+                                <th class="px-3 py-2.5 text-right whitespace-nowrap font-bold">Net Profit/Loss</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            @foreach($monthlyBreakdown as $month)
+                                <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
+                                    <td class="px-3 py-2.5 font-semibold text-gray-800 dark:text-white whitespace-nowrap">
+                                        {{ $month['label'] }}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right text-blue-700 dark:text-blue-400 font-mono">
+                                        {{ number_format($month['incomeBreakdown']['rent_pm_mall'] ?? 0) }}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right text-indigo-700 dark:text-indigo-400 font-mono">
+                                        {{ number_format($month['incomeBreakdown']['maint_pm_mall'] ?? 0) }}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right text-violet-700 dark:text-violet-400 font-mono">
+                                        {{ number_format($month['incomeBreakdown']['maint_other_owned'] ?? 0) }}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right text-teal-700 dark:text-teal-400 font-mono">
+                                        {{ number_format($month['incomeBreakdown']['extra_pm_mall'] ?? 0) }}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-400 font-mono">
+                                        {{ number_format($month['totalIncome']) }}
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right font-bold text-red-600 dark:text-red-400 font-mono">
+                                        {{ number_format($month['totalExpenses']) }}
+                                    </td>
+                                    <td
+                                        class="px-3 py-2.5 text-right font-bold font-mono {{ $month['netProfitLoss'] >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                                        {{ number_format($month['netProfitLoss']) }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        <tfoot>
+                            <tr
+                                class="border-t-2 border-gray-400 dark:border-gray-500 bg-gray-100 dark:bg-gray-800/90 font-black text-sm sm:text-base">
+                                <td class="px-3 py-4 text-gray-900 dark:text-white uppercase tracking-wider font-black">Total</td>
+                                <td class="px-3 py-4 text-right text-blue-800 dark:text-blue-300 font-mono font-black">
+                                    {{ number_format(collect($monthlyBreakdown)->sum(fn($m) => $m['incomeBreakdown']['rent_pm_mall'] ?? 0)) }}
+                                </td>
+                                <td class="px-3 py-4 text-right text-indigo-800 dark:text-indigo-300 font-mono font-black">
+                                    {{ number_format(collect($monthlyBreakdown)->sum(fn($m) => $m['incomeBreakdown']['maint_pm_mall'] ?? 0)) }}
+                                </td>
+                                <td class="px-3 py-4 text-right text-violet-800 dark:text-violet-300 font-mono font-black">
+                                    {{ number_format(collect($monthlyBreakdown)->sum(fn($m) => $m['incomeBreakdown']['maint_other_owned'] ?? 0)) }}
+                                </td>
+                                <td class="px-3 py-4 text-right text-teal-800 dark:text-teal-300 font-mono font-black">
+                                    {{ number_format(collect($monthlyBreakdown)->sum(fn($m) => $m['incomeBreakdown']['extra_pm_mall'] ?? 0)) }}
+                                </td>
+                                <td class="px-3 py-4 text-right text-emerald-700 dark:text-emerald-400 font-mono font-black">
+                                    {{ number_format($totalIncome) }}
+                                </td>
+                                <td class="px-3 py-4 text-right text-red-600 dark:text-red-400 font-mono font-black">
+                                    {{ number_format($totalExpenses) }}
+                                </td>
+                                <td
+                                    class="px-3 py-4 text-right font-mono font-black text-base sm:text-lg {{ $netProfitLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400' }}">
+                                    {{ number_format($netProfitLoss) }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </x-common.component-card>
         </div>
-        <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Unpaid / Outstanding Revenue</p>
-            <p class="mt-2 text-2xl font-bold text-amber-600">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</p>
-            <p class="text-[10px] text-gray-400 mt-1">Pending dues for statement period</p>
-        </div>
-        <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Expenses</p>
-            <p class="mt-2 text-2xl font-bold text-red-500">Rs. {{ number_format($totalExpenses, 2) }}</p>
-            <p class="text-[10px] text-gray-400 mt-1">Recorded operating expenses</p>
-        </div>
-        <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
-            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Net Profit / Loss</p>
-            <p class="mt-2 text-2xl font-bold {{ $netProfitLoss >= 0 ? 'text-brand-600' : 'text-red-600' }}">
-                Rs. {{ number_format($netProfitLoss, 2) }}
-            </p>
-            <p class="text-[10px] text-gray-400 mt-1">Distributable net earnings</p>
-        </div>
-    </div>
+    @endif
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
@@ -228,7 +332,8 @@
                                             {{ ucfirst(str_replace('_', ' ', $type)) }}
                                         </td>
                                         <td class="px-3 py-2.5 text-right text-gray-600">—</td>
-                                        <td class="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-400">{{ number_format($amount, 2) }}</td>
+                                        <td class="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-400">
+                                            {{ number_format($amount, 2) }}</td>
                                         <td class="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400">—</td>
                                     </tr>
                                 @endif
@@ -237,10 +342,14 @@
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-gray-300 dark:border-gray-600 bg-emerald-50 dark:bg-emerald-900/20">
-                            <td class="px-3 py-3 text-sm font-black text-gray-900 dark:text-white tracking-wide uppercase">Total Revenue:</td>
-                            <td class="px-3 py-3 text-right text-sm font-extrabold text-gray-700 dark:text-gray-200">Rs. {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
-                            <td class="px-3 py-3 text-right text-base font-black text-emerald-700 dark:text-emerald-400">Rs. {{ number_format($totalIncome, 2) }}</td>
-                            <td class="px-3 py-3 text-right text-sm font-extrabold text-amber-600 dark:text-amber-400">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
+                            <td class="px-3 py-3 text-sm font-black text-gray-900 dark:text-white tracking-wide uppercase">
+                                Total Revenue:</td>
+                            <td class="px-3 py-3 text-right text-sm font-extrabold text-gray-700 dark:text-gray-200">Rs.
+                                {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
+                            <td class="px-3 py-3 text-right text-base font-black text-emerald-700 dark:text-emerald-400">Rs.
+                                {{ number_format($totalIncome, 2) }}</td>
+                            <td class="px-3 py-3 text-right text-sm font-extrabold text-amber-600 dark:text-amber-400">Rs.
+                                {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
                         </tr>
                     </tfoot>
                 </table>

@@ -104,8 +104,8 @@ class PartyLedgerController extends Controller
                     'ref' => $receipt->voucher_no,
                     'type' => 'Receipt (General)',
                     'description' => $receipt->notes ?? 'Received Inflow',
-                    'debit' => 0.0,
-                    'credit' => (float)$receipt->amount,
+                    'debit' => (float)$receipt->amount,
+                    'credit' => 0.0,
                 ]);
             }
 
@@ -119,8 +119,8 @@ class PartyLedgerController extends Controller
                     'ref' => $payment->voucher_no,
                     'type' => $payment->is_advance ? 'Payment (Advance)' : 'Payment',
                     'description' => $payment->notes ?? 'Paid Outflow',
-                    'debit' => (float)$payment->amount,
-                    'credit' => 0.0,
+                    'debit' => 0.0,
+                    'credit' => (float)$payment->amount,
                 ]);
             }
 
@@ -256,8 +256,8 @@ class PartyLedgerController extends Controller
                 'ref' => $receipt->voucher_no,
                 'type' => 'Receipt (General)',
                 'description' => $receipt->notes ?? 'Received Inflow',
-                'debit' => 0.0,
-                'credit' => (float)$receipt->amount,
+                'debit' => (float)$receipt->amount,
+                'credit' => 0.0,
             ]);
         }
 
@@ -268,8 +268,8 @@ class PartyLedgerController extends Controller
                 'ref' => $payment->voucher_no,
                 'type' => $payment->is_advance ? 'Payment (Advance)' : 'Payment',
                 'description' => $payment->notes ?? 'Paid Outflow',
-                'debit' => (float)$payment->amount,
-                'credit' => 0.0,
+                'debit' => 0.0,
+                'credit' => (float)$payment->amount,
             ]);
         }
 

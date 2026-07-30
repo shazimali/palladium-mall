@@ -6,42 +6,35 @@
     <title>Party Ledger Statement — Palladium Mall</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { font-size: 13px; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: #111827; background: #fff; padding: 32px 40px; line-height: 1.5; }
+        html { font-size: 15px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; color: #000; background: #fff; padding: 24px 32px; line-height: 1.5; font-weight: 700; }
         
-        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #0284c7; padding-bottom: 14px; margin-bottom: 20px; }
+        .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px; }
         .logo-section { display: flex; align-items: center; gap: 10px; }
-        .logo-icon { width: 32px; height: 32px; background: #0284c7; border-radius: 6px; }
-        .logo-text { font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+        .logo-text { font-size: 1.4rem; font-weight: 900; color: #0f172a; }
         .doc-title { text-align: right; }
-        .doc-title h2 { font-size: 1.1rem; font-weight: 700; color: #0284c7; }
-        .doc-title p { font-size: 0.8rem; color: #6b7280; margin-top: 2px; }
+        .doc-title h2 { font-size: 1.15rem; font-weight: 900; color: #0f172a; }
+        .doc-title p { font-size: 0.85rem; font-weight: 700; color: #475569; margin-top: 2px; }
 
-        .party-info { margin-bottom: 20px; font-size: 0.95rem; }
+        .party-info { margin-bottom: 16px; font-size: 0.95rem; font-weight: 800; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; background: #f8fafc; }
         .party-info p { margin-bottom: 4px; }
-        .party-info strong { color: #0f172a; }
+        .party-info strong { color: #0f172a; font-weight: 900; }
 
-        .summary-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
-        .summary-box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; background: #f8fafc; }
-        .summary-box h3 { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: #475569; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; }
-        .summary-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
-        .summary-row:last-child { margin-bottom: 0; font-weight: 700; border-top: 1px dashed #cbd5e1; padding-top: 6px; }
-        
-        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 30px; }
-        thead tr { background: #f1f5f9; }
-        thead th { padding: 10px; text-align: left; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; color: #475569; border-bottom: 2px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.92rem; font-weight: 700; margin-bottom: 24px; }
+        thead tr { background: #e2e8f0; }
+        thead th { padding: 10px; text-align: left; font-weight: 900; font-size: 0.82rem; text-transform: uppercase; color: #0f172a; border-bottom: 2px solid #0f172a; }
         thead th.text-right, tbody td.text-right { text-align: right; }
-        tbody tr { border-bottom: 1px solid #f1f5f9; }
-        tbody td { padding: 9px 10px; color: #334155; }
+        tbody tr { border-bottom: 1px solid #e2e8f0; }
+        tbody td { padding: 9px 10px; color: #000; font-weight: 700; }
         
-        .mono { font-family: monospace; font-size: 0.8rem; }
-        .debit { color: #dc2626; font-weight: 600; }
-        .credit { color: #16a34a; font-weight: 600; }
+        .mono { font-family: monospace; font-size: 0.9rem; font-weight: 800; }
+        .debit { color: #dc2626; font-weight: 900; }
+        .credit { color: #16a34a; font-weight: 900; }
         
-        .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; }
+        .footer { margin-top: 30px; border-top: 2px solid #0f172a; padding-top: 10px; display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 800; color: #475569; }
         .no-print { text-align: center; margin-bottom: 24px; }
-        .print-btn { display: inline-flex; align-items: center; gap: 8px; background: #0284c7; color: #fff; border: none; border-radius: 6px; padding: 8px 20px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
-        .print-btn:hover { background: #0369a1; }
+        .print-btn { display: inline-flex; align-items: center; gap: 8px; background: #0f172a; color: #fff; border: none; border-radius: 6px; padding: 10px 24px; font-size: 0.95rem; font-weight: 800; cursor: pointer; }
+        .print-btn:hover { background: #000; }
         
         @media print {
             body { padding: 0; }
@@ -74,43 +67,6 @@
         <p><strong>WhatsApp Number:</strong> {{ $selectedParty->whatsapp_number ?? '—' }}</p>
     </div>
 
-    <!-- Financial Dues Summary boxes -->
-    <div class="summary-boxes">
-        {{-- Receivable Dues Summary --}}
-        <div class="summary-box">
-            <h3>📥 Mall Receivables from Party</h3>
-            <div class="summary-row">
-                <span>Total Due Receivable:</span>
-                <span class="mono">Rs. {{ number_format($summary['total_due_receivable'], 0) }}</span>
-            </div>
-            <div class="summary-row">
-                <span>Total Received (Receipts):</span>
-                <span class="mono credit">Rs. {{ number_format($summary['total_received'], 0) }}</span>
-            </div>
-            <div class="summary-row">
-                <span>Net Receivable Balance:</span>
-                <span class="mono {{ $summary['net_receivable'] > 0 ? 'debit' : '' }}">Rs. {{ number_format($summary['net_receivable'], 0) }}</span>
-            </div>
-        </div>
-
-        {{-- Payable Dues Summary --}}
-        <div class="summary-box">
-            <h3>📤 Mall Payables to Party</h3>
-            <div class="summary-row">
-                <span>Total Due Payable:</span>
-                <span class="mono">Rs. {{ number_format($summary['total_due_payable'], 0) }}</span>
-            </div>
-            <div class="summary-row">
-                <span>Total Paid (Payments):</span>
-                <span class="mono debit">Rs. {{ number_format($summary['total_paid'], 0) }}</span>
-            </div>
-            <div class="summary-row">
-                <span>Net Payable Balance:</span>
-                <span class="mono {{ $summary['net_payable'] > 0 ? 'debit' : '' }}">Rs. {{ number_format($summary['net_payable'], 0) }}</span>
-            </div>
-        </div>
-    </div>
-
     <!-- Statement transactions list -->
     <table>
         <thead>
@@ -139,6 +95,19 @@
                 </tr>
             @endforelse
         </tbody>
+        @if(count($ledgerEntries) > 0)
+            @php
+                $totalDebit = collect($ledgerEntries)->sum('debit');
+                $totalCredit = collect($ledgerEntries)->sum('credit');
+            @endphp
+            <tfoot>
+                <tr style="background: #e2e8f0; border-top: 3px solid #0f172a; border-bottom: 3px solid #0f172a; font-weight: 900;">
+                    <td colspan="4" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #000;">TOTAL SUMMARY</td>
+                    <td class="text-right mono debit" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem;">Rs. {{ number_format($totalDebit, 0) }}</td>
+                    <td class="text-right mono credit" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem;">Rs. {{ number_format($totalCredit, 0) }}</td>
+                </tr>
+            </tfoot>
+        @endif
     </table>
 
     <!-- Printed Footer -->

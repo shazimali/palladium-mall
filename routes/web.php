@@ -238,7 +238,7 @@ Route::middleware('auth')->group(function () {
 
     // Owners
     Route::middleware('permission:owners.view')->group(function () {
-        Route::get('owners/dues', [OwnerDuesController::class, 'index'])->name('owners.dues');
+        Route::get('owners/dues', fn() => redirect()->route('ledgers.owner'))->name('owners.dues');
         Route::resource('owners', OwnerController::class);
         Route::resource('withdrawals', WithdrawalController::class);
     });

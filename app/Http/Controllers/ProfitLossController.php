@@ -27,10 +27,12 @@ class ProfitLossController extends Controller
 
         $filters = $this->getFilters($request);
         $data = $this->calculateProfitLossData($filters['date_from'], $filters['date_to']);
+        $monthlyBreakdown = $this->generateMonthlyBreakdown($filters['date_from'], $filters['date_to']);
 
         return view('reports.profit_loss', array_merge($data, [
             'title' => 'Profit & Loss Statement',
             'filters' => $filters,
+            'monthlyBreakdown' => $monthlyBreakdown,
         ]));
     }
 
@@ -100,6 +102,37 @@ class ProfitLossController extends Controller
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
         ];
+    }
+
+    /**
+     * Generate per-month P&L summary for multi-month date ranges.
+     */
+    private function generateMonthlyBreakdown(string $from, string $to): array
+    {
+        $months = [];
+        $current = Carbon::parse($from)->startOfMonth();
+        $end     = Carbon::parse($to)->startOfMonth();
+
+        while ($current->lte($end)) {
+            $monthFrom = max($from, $current->copy()->toDateString());
+            $monthTo   = min($to, $current->copy()->endOfMonth()->toDateString());
+
+            $data = $this->calculateProfitLossData($monthFrom, $monthTo);
+
+            $months[] = [
+                'label'          => $current->format('M Y'),
+                'from'           => $monthFrom,
+                'to'             => $monthTo,
+                'incomeBreakdown'=> $data['incomeBreakdown'],
+                'totalIncome'    => $data['totalIncome'],
+                'totalExpenses'  => $data['totalExpenses'],
+                'netProfitLoss'  => $data['netProfitLoss'],
+            ];
+
+            $current->addMonth();
+        }
+
+        return $months;
     }
 
     /**
