@@ -20,37 +20,37 @@
     <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         <!-- Total Expense Card -->
         <!-- <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Expenses (Filtered)</p>
-                        <h4 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white/90">
-                            Rs. {{ number_format($totalExpenses, 2) }}
-                        </h4>
-                    </div>
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500 dark:bg-red-950/20 dark:text-red-400">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                </div>
-            </div> -->
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Expenses (Filtered)</p>
+                                <h4 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white/90">
+                                    Rs. {{ number_format($totalExpenses, 2) }}
+                                </h4>
+                            </div>
+                            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-500 dark:bg-red-950/20 dark:text-red-400">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div> -->
 
         <!-- Count Card -->
         <!-- <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Vouchers Count</p>
-                        <h4 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white/90">
-                            {{ $expenses->total() }}
-                        </h4>
-                    </div>
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/20 dark:text-blue-400">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                    </div>
-                </div>
-            </div> -->
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Vouchers Count</p>
+                                <h4 class="mt-2 text-2xl font-bold text-gray-900 dark:text-white/90">
+                                    {{ $expenses->total() }}
+                                </h4>
+                            </div>
+                            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-950/20 dark:text-blue-400">
+                                <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div> -->
     </div>
 
     <div
@@ -82,19 +82,6 @@
                             </svg>
                             <span x-text="showTable ? 'Hide Search' : 'Search'"></span>
                         </button>
-                    @endif
-
-                    {{-- 3. Print Button (Shows only when search list is open) --}}
-                    @if(auth()->user()->hasPermission('expenses.view') || auth()->user()->isSuperAdmin())
-                        <a href="{{ route('expenses.print-list', request()->query()) }}" target="_blank"
-                            x-show="showTable" x-cloak
-                            class="inline-flex items-center gap-2 rounded-xl bg-brand-500 text-white hover:bg-brand-600 px-5 py-2.5 text-4xl font-bold transition-all shadow-md cursor-pointer">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H7a2 2 0 00-2 2v4h10z" />
-                            </svg>
-                            <span>Print</span>
-                        </a>
                     @endif
                 </div>
             </div>
