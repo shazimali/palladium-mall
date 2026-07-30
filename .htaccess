@@ -3,7 +3,11 @@
         Options -MultiViews -Indexes
     </IfModule>
 
-    Options +FollowSymLinks
+    # Use SymLinksIfOwnerMatch if FollowSymLinks is restricted by server configuration
+    <IfModule mod_security.c>
+        Options +SymLinksIfOwnerMatch
+    </IfModule>
+
     RewriteEngine On
 
     # Tell Apache to use public/index.php as default index
