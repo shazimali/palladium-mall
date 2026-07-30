@@ -1,11 +1,13 @@
 <IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    Options +FollowSymLinks
     RewriteEngine On
 
-    # Prevent access to hidden/sensitive files and directories (.env, .git, etc.)
-    RewriteRule "(^|/)\." - [F]
-
-    # Prevent access to composer / package files and documentation
-    RewriteRule ^(composer\.json|composer\.lock|package\.json|package-lock\.json|README\.md|phpunit\.xml|artisan)$ - [F]
+    # Tell Apache to use public/index.php as default index
+    DirectoryIndex public/index.php index.php
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
@@ -15,10 +17,12 @@
     RewriteCond %{HTTP:x-xsrf-token} .
     RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
 
-    # Redirect requests directly to the public folder if not already in public/
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Public Folder...
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
-
-# Disable Directory Browsing
-Options -Indexes
