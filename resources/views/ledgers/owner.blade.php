@@ -90,7 +90,14 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
                         @forelse($ledgerData['entries'] as $entry)
-                            <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                            @php
+                                $rowClass = match($entry['type'] ?? '') {
+                                    'opening_balance' => 'bg-amber-50/80 dark:bg-amber-950/30 border-b-2 border-amber-200 dark:border-amber-800/40 font-bold',
+                                    'profit_share'    => 'bg-emerald-50/70 dark:bg-emerald-950/20 border-b border-emerald-100 dark:border-emerald-800/30 font-bold',
+                                    default           => 'hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors',
+                                };
+                            @endphp
+                            <tr class="{{ $rowClass }}">
                                 <td class="px-5 py-3.5 text-xs font-mono">
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
