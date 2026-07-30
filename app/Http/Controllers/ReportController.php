@@ -284,8 +284,10 @@ class ReportController extends Controller
             $query->where('type', 'maintenance');
         } elseif ($reportType === 'security_deposit') {
             $query->where('type', 'security_deposit');
+        } elseif ($reportType === 'extra_payments') {
+            $query->whereIn('type', ['extra_payment', 'other', 'fine']);
         } else {
-            $query->whereIn('type', ['rent', 'fine', 'maintenance', 'electricity', 'water', 'gas', 'other', 'security_deposit']);
+            $query->whereIn('type', ['rent', 'fine', 'maintenance', 'electricity', 'water', 'gas', 'other', 'extra_payment', 'security_deposit']);
         }
 
         $dbPayments = $query->get();
@@ -325,8 +327,7 @@ class ReportController extends Controller
             && !$request->filled('status');
 
         if ($runProjections && (
-            $reportType === 'all' || 
-            $reportType === 'rent' || 
+            $reportType === 'all' ||
             $reportType === 'maintinance' || 
             $reportType === 'maintenance' || 
             $reportType === 'other_owned' ||
@@ -404,8 +405,8 @@ class ReportController extends Controller
                         $dueDay = min($agreement->payment_due_day ?: 1, $month->daysInMonth);
                         $dueDate = $month->copy()->day($dueDay);
 
-                        // Rent projection
-                        if ($reportType === 'all' || $reportType === 'rent') {
+                        // Rent projection (only for 'all'; report_type=rent shows DB billings only)
+                        if ($reportType === 'all') {
                             $rentKey = "{$agreement->unit_id}_{$agreement->tenant_id}_rent_{$monthStr}";
                             if (!isset($existingKeys[$rentKey])) {
                                 $rentMonthStr = $month->format('Y-m');
@@ -631,6 +632,7 @@ class ReportController extends Controller
             ->whereNull('receiving_vouchers.deleted_at')
             ->whereNull('payments.deleted_at')
             ->whereBetween('receiving_vouchers.date', [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()])
+            ->where('payments.month', $monthStr)
             ->when($paymentMethod, fn($q) => $q->where('receiving_vouchers.payment_method', $paymentMethod))
             ->when($paymentAccountId, fn($q) => $q->where('receiving_vouchers.payment_account_id', $paymentAccountId))
             ->select(

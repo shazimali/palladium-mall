@@ -110,14 +110,14 @@ class ProfitLossController extends Controller
         $otherTenantUnitIds = DB::table('other_tenants')->pluck('unit_id')->toArray();
 
         // 1. Revenue / Income
-        // A. Allocations from receiving vouchers dated in the range
+        // A. Allocations from receiving vouchers, counted in the billing month of the payment
         $allocations = DB::table('receiving_voucher_payments')
             ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
             ->join('units', 'payments.unit_id', '=', 'units.id')
             ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
             ->whereNull('receiving_vouchers.deleted_at')
             ->whereNull('payments.deleted_at')
-            ->whereBetween('receiving_vouchers.date', [$from, $to])
+            ->whereBetween('payments.month', [$from, $to])
             ->where('payments.type', '!=', 'security_deposit')
             ->select('payments.unit_id', 'units.is_self', 'payments.type', DB::raw('SUM(receiving_voucher_payments.amount_allocated) as total'))
             ->groupBy('payments.unit_id', 'units.is_self', 'payments.type')

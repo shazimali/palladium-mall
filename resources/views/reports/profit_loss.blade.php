@@ -236,11 +236,11 @@
                         @endif
                     </tbody>
                     <tfoot>
-                        <tr class="font-bold text-xs bg-gray-50 dark:bg-gray-800">
-                            <td class="px-3 py-2.5 text-gray-850 dark:text-white">Total Revenue:</td>
-                            <td class="px-3 py-2.5 text-right text-gray-700 dark:text-gray-300">Rs. {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
-                            <td class="px-3 py-2.5 text-right text-emerald-600">Rs. {{ number_format($totalIncome, 2) }}</td>
-                            <td class="px-3 py-2.5 text-right text-amber-600">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
+                        <tr class="border-t-2 border-gray-300 dark:border-gray-600 bg-emerald-50 dark:bg-emerald-900/20">
+                            <td class="px-3 py-3 text-sm font-black text-gray-900 dark:text-white tracking-wide uppercase">Total Revenue:</td>
+                            <td class="px-3 py-3 text-right text-sm font-extrabold text-gray-700 dark:text-gray-200">Rs. {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
+                            <td class="px-3 py-3 text-right text-base font-black text-emerald-700 dark:text-emerald-400">Rs. {{ number_format($totalIncome, 2) }}</td>
+                            <td class="px-3 py-3 text-right text-sm font-extrabold text-amber-600 dark:text-amber-400">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
                         </tr>
                     </tfoot>
                 </table>

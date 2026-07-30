@@ -121,6 +121,7 @@
                         <option value="maintenance" {{ ($filters['report_type'] ?? '') === 'maintenance' || ($filters['report_type'] ?? '') === 'maintinance' ? 'selected' : '' }}>Maintenance</option>
                         <option value="utilities" {{ ($filters['report_type'] ?? '') === 'utilities' ? 'selected' : '' }}>Utilities Paid</option>
                         <option value="fines" {{ ($filters['report_type'] ?? '') === 'fines' ? 'selected' : '' }}>Fines</option>
+                        <option value="extra_payments" {{ ($filters['report_type'] ?? '') === 'extra_payments' ? 'selected' : '' }}>Extra Payments</option>
                         <option value="other_owned" {{ ($filters['report_type'] ?? '') === 'other_owned' ? 'selected' : '' }}>Other Owned</option>
                         <option value="occupied" {{ ($filters['report_type'] ?? '') === 'occupied' || ($filters['report_type'] ?? '') === 'occupide' ? 'selected' : '' }}>Occupied (Ext)</option>
                         <option value="non_occupied" {{ ($filters['report_type'] ?? '') === 'non_occupied' || ($filters['report_type'] ?? '') === 'non_occupide' ? 'selected' : '' }}>Vacant (Ext)</option>
