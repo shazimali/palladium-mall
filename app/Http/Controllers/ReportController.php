@@ -27,7 +27,7 @@ class ReportController extends Controller
         $this->prepareMatrixDate($request);
 
         $tenants = Tenant::orderBy('name')->get(['id', 'name']);
-        $units   = Unit::orderBy('unit_number')->get(['id', 'unit_number', 'type']);
+        $units = Unit::orderBy('unit_number')->get(['id', 'unit_number', 'type']);
         $landlords = Landlord::orderBy('name')->get(['id', 'name']);
         $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
 
@@ -60,15 +60,15 @@ class ReportController extends Controller
         }
 
         return view('reports.index', [
-            'title'           => 'Reports',
-            'tenants'         => $tenants,
-            'units'           => $units,
-            'landlords'       => $landlords,
+            'title' => 'Reports',
+            'tenants' => $tenants,
+            'units' => $units,
+            'landlords' => $landlords,
             'paymentAccounts' => $paymentAccounts,
-            'entries'         => $entries,
-            'summary'         => $summary,
-            'hasQuery'        => $hasQuery,
-            'filters'         => $request->only([
+            'entries' => $entries,
+            'summary' => $summary,
+            'hasQuery' => $hasQuery,
+            'filters' => $request->only([
                 'report_type',
                 'date_from',
                 'date_to',
@@ -100,10 +100,10 @@ class ReportController extends Controller
             $entries = $this->buildPotentialRevenueEntries($request);
             $summary = $this->buildPotentialRevenueSummary($entries);
         } else {
-            $entries  = $this->buildEntries($request);
-            $summary  = $this->buildSummary($entries);
+            $entries = $this->buildEntries($request);
+            $summary = $this->buildSummary($entries);
         }
-        $label    = $this->reportLabel($request);
+        $label = $this->reportLabel($request);
         $filename = 'report-' . str($label)->slug() . '-' . now()->format('Y-m-d') . '.xlsx';
 
         \App\Models\ActivityLog::log('export_excel', "Exported report to Excel: {$filename}", null, [
@@ -136,10 +136,19 @@ class ReportController extends Controller
             $entries = $this->buildEntries($request);
             $summary = $this->buildSummary($entries);
         }
-        $label   = $this->reportLabel($request);
+        $label = $this->reportLabel($request);
         $filters = $request->only([
-            'date_from', 'date_to', 'unit_id', 'tenant_id', 'status', 'report_type',
-            'landlord_id', 'payment_method', 'payment_account_id', 'unit_status', 'owner_type'
+            'date_from',
+            'date_to',
+            'unit_id',
+            'tenant_id',
+            'status',
+            'report_type',
+            'landlord_id',
+            'payment_method',
+            'payment_account_id',
+            'unit_status',
+            'owner_type'
         ]);
 
         if (in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
@@ -152,11 +161,11 @@ class ReportController extends Controller
         }
 
         $pdf = Pdf::loadView('reports.pdf', [
-            'entries'    => $entries,
-            'summary'    => $summary,
-            'label'      => $label,
-            'period'     => $period,
-            'filters'    => $filters,
+            'entries' => $entries,
+            'summary' => $summary,
+            'label' => $label,
+            'period' => $period,
+            'filters' => $filters,
             'reportType' => $reportType,
             'paymentAccounts' => PaymentAccount::orderBy('name')->get(['id', 'name']),
         ])->setPaper('a4', 'landscape');
@@ -190,10 +199,19 @@ class ReportController extends Controller
             $entries = $this->buildEntries($request);
             $summary = $this->buildSummary($entries);
         }
-        $label   = $this->reportLabel($request);
+        $label = $this->reportLabel($request);
         $filters = $request->only([
-            'date_from', 'date_to', 'unit_id', 'tenant_id', 'status', 'report_type',
-            'landlord_id', 'payment_method', 'payment_account_id', 'unit_status', 'owner_type'
+            'date_from',
+            'date_to',
+            'unit_id',
+            'tenant_id',
+            'status',
+            'report_type',
+            'landlord_id',
+            'payment_method',
+            'payment_account_id',
+            'unit_status',
+            'owner_type'
         ]);
 
         if ($reportType === 'monthly_matrix') {
@@ -206,14 +224,14 @@ class ReportController extends Controller
         }
 
         return view('reports.pdf', [
-            'entries'    => $entries,
-            'summary'    => $summary,
-            'label'      => $label,
-            'period'     => $period,
-            'filters'    => $filters,
+            'entries' => $entries,
+            'summary' => $summary,
+            'label' => $label,
+            'period' => $period,
+            'filters' => $filters,
             'reportType' => $reportType,
             'paymentAccounts' => PaymentAccount::orderBy('name')->get(['id', 'name']),
-            'isPrint'    => true,
+            'isPrint' => true,
         ]);
     }
 
@@ -225,27 +243,27 @@ class ReportController extends Controller
     private function buildEntries(Request $request): Collection
     {
         $reportType = $request->report_type ?? 'all';   // rent | fines | utilities | all
-        $from       = $request->date_from;
-        $to         = $request->date_to;
-        $unitId     = $request->unit_id;
-        $tenantId   = $request->tenant_id;
-        $status     = $request->status;
+        $from = $request->date_from;
+        $to = $request->date_to;
+        $unitId = $request->unit_id;
+        $tenantId = $request->tenant_id;
+        $status = $request->status;
         $landlordId = $request->landlord_id;
         $paymentMethod = $request->payment_method;
         $paymentAccountId = $request->payment_account_id;
         $unitStatus = $request->unit_status;
-        $ownerType  = $request->owner_type;
+        $ownerType = $request->owner_type;
 
         $query = Payment::with(['tenant', 'unit.landlord', 'paymentAccount', 'otherTenant', 'receivingVouchers'])
-            ->when($unitId,           fn($q) => $q->where('unit_id',   $unitId))
-            ->when($tenantId,         fn($q) => $q->where('tenant_id', $tenantId))
-            ->when($from,             fn($q) => $q->where('month', '>=', $from))
-            ->when($to,               fn($q) => $q->where('month', '<=', $to))
-            ->when($status,           fn($q) => $q->where('status', $status))
-            ->when($paymentMethod,    fn($q) => $q->where('payment_method', $paymentMethod))
+            ->when($unitId, fn($q) => $q->where('unit_id', $unitId))
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->when($from, fn($q) => $q->where('month', '>=', $from))
+            ->when($to, fn($q) => $q->where('month', '<=', $to))
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
             ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
-            ->when($landlordId,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
-            ->when($unitStatus,       fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)));
+            ->when($landlordId, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
+            ->when($unitStatus, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)));
 
         // Owner type filters
         if ($ownerType === 'pm_mall') {
@@ -298,26 +316,26 @@ class ReportController extends Controller
             $securityDeposit = ($p->type === 'security_deposit') ? (float) $p->amount : 0.0;
 
             return [
-                'created_date'    => $p->created_at,
-                'voucher_number'  => $p->receivingVouchers->isNotEmpty()
+                'created_date' => $p->created_at,
+                'voucher_number' => $p->receivingVouchers->isNotEmpty()
                     ? implode(', ', $p->receivingVouchers->pluck('voucher_no')->toArray())
                     : ($p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT))),
-                'month'           => $p->month,
-                'date'            => $p->due_date,
-                'unit'            => $p->unit?->unit_number ?? '—',
-                'tenant'          => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
-                'landlord'        => $p->unit?->landlord?->name ?? '—',
-                'payment_method'  => $p->payment_method ? ucfirst(str_replace('_', ' ', $p->payment_method)) : '—',
+                'month' => $p->month,
+                'date' => $p->due_date,
+                'unit' => $p->unit?->unit_number ?? '—',
+                'tenant' => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
+                'landlord' => $p->unit?->landlord?->name ?? '—',
+                'payment_method' => $p->payment_method ? ucfirst(str_replace('_', ' ', $p->payment_method)) : '—',
                 'payment_account' => $p->paymentAccount?->name ?? '—',
-                'category'        => in_array($p->type, ['electricity', 'water', 'gas']) ? 'utility' : 'payment',
-                'type'            => $p->type,
-                'description'     => $p->type_label . ' — ' . $p->month?->format('F Y'),
-                'amount_due'      => (float) $p->amount,
-                'amount_paid'     => (float) $p->amount_paid,
-                'status'          => $p->status,
-                'paid_at'         => $p->paid_at,
-                'is_self'         => (bool) ($p->unit?->is_self),
-                'security_deposit'=> $securityDeposit,
+                'category' => in_array($p->type, ['electricity', 'water', 'gas']) ? 'utility' : 'payment',
+                'type' => $p->type,
+                'description' => $p->type_label . ' — ' . $p->month?->format('F Y'),
+                'amount_due' => (float) $p->amount,
+                'amount_paid' => (float) $p->amount_paid,
+                'status' => $p->status,
+                'paid_at' => $p->paid_at,
+                'is_self' => (bool) ($p->unit?->is_self),
+                'security_deposit' => $securityDeposit,
             ];
         });
 
@@ -326,16 +344,18 @@ class ReportController extends Controller
             && !$request->filled('payment_account_id')
             && !$request->filled('status');
 
-        if ($runProjections && (
-            $reportType === 'all' ||
-            $reportType === 'maintinance' || 
-            $reportType === 'maintenance' || 
-            $reportType === 'other_owned' ||
-            $reportType === 'occupied' ||
-            $reportType === 'occupide' ||
-            $reportType === 'non_occupied' ||
-            $reportType === 'non_occupide'
-        )) {
+        if (
+            $runProjections && (
+                $reportType === 'all' ||
+                $reportType === 'maintinance' ||
+                $reportType === 'maintenance' ||
+                $reportType === 'other_owned' ||
+                $reportType === 'occupied' ||
+                $reportType === 'occupide' ||
+                $reportType === 'non_occupied' ||
+                $reportType === 'non_occupide'
+            )
+        ) {
             $startMonth = $from ? \Carbon\Carbon::parse($from)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
             $endMonth = $to ? \Carbon\Carbon::parse($to)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
 
@@ -363,19 +383,21 @@ class ReportController extends Controller
                     ->toArray();
 
                 $projectSelfUnits = collect();
-                if ($ownerType !== 'pm_mall' && (
-                    $reportType === 'all' || 
-                    $reportType === 'maintinance' || 
-                    $reportType === 'maintenance' || 
-                    $reportType === 'other_owned' ||
-                    $reportType === 'occupied' ||
-                    $reportType === 'occupide' ||
-                    $reportType === 'non_occupied' ||
-                    $reportType === 'non_occupide'
-                )) {
+                if (
+                    $ownerType !== 'pm_mall' && (
+                        $reportType === 'all' ||
+                        $reportType === 'maintinance' ||
+                        $reportType === 'maintenance' ||
+                        $reportType === 'other_owned' ||
+                        $reportType === 'occupied' ||
+                        $reportType === 'occupide' ||
+                        $reportType === 'non_occupied' ||
+                        $reportType === 'non_occupide'
+                    )
+                ) {
                     $projectSelfUnits = \App\Models\Unit::where('is_self', true)
                         ->where('default_maintenance_charge', '>', 0)
-                        ->when($unitId,     fn($q) => $q->where('id', $unitId))
+                        ->when($unitId, fn($q) => $q->where('id', $unitId))
                         ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
                         ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
                         ->when($reportType === 'occupied' || $reportType === 'occupide', fn($q) => $q->whereHas('otherTenant'))
@@ -388,8 +410,8 @@ class ReportController extends Controller
                     $monthStr = $month->format('Y-m-d');
 
                     $activeAgreements = \App\Models\Agreement::where('status', 'active')
-                        ->when($unitId,     fn($q) => $q->where('unit_id', $unitId))
-                        ->when($tenantId,   fn($q) => $q->where('tenant_id', $tenantId))
+                        ->when($unitId, fn($q) => $q->where('unit_id', $unitId))
+                        ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
                         ->when($landlordId, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
                         ->when($unitStatus, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)))
                         ->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
@@ -415,24 +437,24 @@ class ReportController extends Controller
                                 $securityDeposit = ($rentMonthStr === $startMonthStr && !$hasExistingPayment) ? (float) $agreement->security_deposit : 0.0;
 
                                 $entries->push([
-                                    'created_date'    => null,
-                                    'voucher_number'  => 'PM-PAY-PROJ',
-                                    'month'           => $month->copy(),
-                                    'date'            => $dueDate,
-                                    'unit'            => $agreement->unit?->unit_number ?? '—',
-                                    'tenant'          => $agreement->tenant?->name ?? '—',
-                                    'landlord'        => $agreement->unit?->landlord?->name ?? '—',
-                                    'payment_method'  => '—',
+                                    'created_date' => null,
+                                    'voucher_number' => 'PM-PAY-PROJ',
+                                    'month' => $month->copy(),
+                                    'date' => $dueDate,
+                                    'unit' => $agreement->unit?->unit_number ?? '—',
+                                    'tenant' => $agreement->tenant?->name ?? '—',
+                                    'landlord' => $agreement->unit?->landlord?->name ?? '—',
+                                    'payment_method' => '—',
                                     'payment_account' => '—',
-                                    'category'        => 'payment',
-                                    'type'            => 'rent',
-                                    'description'     => 'Rent — ' . $month->format('F Y') . ' (Projected)',
-                                    'amount_due'      => (float) $agreement->monthly_rent,
-                                    'amount_paid'     => 0.0,
-                                    'status'          => 'pending',
-                                    'paid_at'         => null,
-                                    'is_self'         => (bool) ($agreement->unit?->is_self),
-                                    'security_deposit'=> $securityDeposit,
+                                    'category' => 'payment',
+                                    'type' => 'rent',
+                                    'description' => 'Rent — ' . $month->format('F Y') . ' (Projected)',
+                                    'amount_due' => (float) $agreement->monthly_rent,
+                                    'amount_paid' => 0.0,
+                                    'status' => 'pending',
+                                    'paid_at' => null,
+                                    'is_self' => (bool) ($agreement->unit?->is_self),
+                                    'security_deposit' => $securityDeposit,
                                 ]);
                             }
                         }
@@ -442,24 +464,24 @@ class ReportController extends Controller
                             $maintKey = "{$agreement->unit_id}_{$agreement->tenant_id}_maintenance_{$monthStr}";
                             if (!isset($existingKeys[$maintKey])) {
                                 $entries->push([
-                                    'created_date'    => null,
-                                    'voucher_number'  => 'PM-PAY-PROJ',
-                                    'month'           => $month->copy(),
-                                    'date'            => $dueDate,
-                                    'unit'            => $agreement->unit?->unit_number ?? '—',
-                                    'tenant'          => $agreement->tenant?->name ?? '—',
-                                    'landlord'        => $agreement->unit?->landlord?->name ?? '—',
-                                    'payment_method'  => '—',
+                                    'created_date' => null,
+                                    'voucher_number' => 'PM-PAY-PROJ',
+                                    'month' => $month->copy(),
+                                    'date' => $dueDate,
+                                    'unit' => $agreement->unit?->unit_number ?? '—',
+                                    'tenant' => $agreement->tenant?->name ?? '—',
+                                    'landlord' => $agreement->unit?->landlord?->name ?? '—',
+                                    'payment_method' => '—',
                                     'payment_account' => '—',
-                                    'category'        => 'payment',
-                                    'type'            => 'maintenance',
-                                    'description'     => 'Maintenance — ' . $month->format('F Y') . ' (Projected)',
-                                    'amount_due'      => (float) $agreement->maintenance_charge,
-                                    'amount_paid'     => 0.0,
-                                    'status'          => 'pending',
-                                    'paid_at'         => null,
-                                    'is_self'         => (bool) ($agreement->unit?->is_self),
-                                    'security_deposit'=> 0.0,
+                                    'category' => 'payment',
+                                    'type' => 'maintenance',
+                                    'description' => 'Maintenance — ' . $month->format('F Y') . ' (Projected)',
+                                    'amount_due' => (float) $agreement->maintenance_charge,
+                                    'amount_paid' => 0.0,
+                                    'status' => 'pending',
+                                    'paid_at' => null,
+                                    'is_self' => (bool) ($agreement->unit?->is_self),
+                                    'security_deposit' => 0.0,
                                 ]);
                             }
                         }
@@ -471,24 +493,24 @@ class ReportController extends Controller
                         if (!isset($existingKeys[$maintKey])) {
                             $selfDueDate = $month->copy()->day(min(10, $month->daysInMonth));
                             $entries->push([
-                                'created_date'    => null,
-                                'voucher_number'  => 'PM-PAY-PROJ',
-                                'month'           => $month->copy(),
-                                'date'            => $selfDueDate,
-                                'unit'            => $selfUnit->unit_number,
-                                'tenant'          => $selfUnit->otherTenant?->name ?? '—',
-                                'landlord'        => $selfUnit->landlord?->name ?? '—',
-                                'payment_method'  => '—',
+                                'created_date' => null,
+                                'voucher_number' => 'PM-PAY-PROJ',
+                                'month' => $month->copy(),
+                                'date' => $selfDueDate,
+                                'unit' => $selfUnit->unit_number,
+                                'tenant' => $selfUnit->otherTenant?->name ?? '—',
+                                'landlord' => $selfUnit->landlord?->name ?? '—',
+                                'payment_method' => '—',
                                 'payment_account' => '—',
-                                'category'        => 'payment',
-                                'type'            => 'maintenance',
-                                'description'     => 'Maintenance — ' . $month->format('F Y') . ' (Projected)',
-                                'amount_due'      => (float) $selfUnit->default_maintenance_charge,
-                                'amount_paid'     => 0.0,
-                                'status'          => 'pending',
-                                'paid_at'         => null,
-                                'is_self'         => true,
-                                'security_deposit'=> 0.0,
+                                'category' => 'payment',
+                                'type' => 'maintenance',
+                                'description' => 'Maintenance — ' . $month->format('F Y') . ' (Projected)',
+                                'amount_due' => (float) $selfUnit->default_maintenance_charge,
+                                'amount_paid' => 0.0,
+                                'status' => 'pending',
+                                'paid_at' => null,
+                                'is_self' => true,
+                                'security_deposit' => 0.0,
                             ]);
                         }
                     }
@@ -514,10 +536,10 @@ class ReportController extends Controller
 
     private function buildSummary(Collection $entries): array
     {
-        $rentCollected        = $entries->where('type', 'rent')->sum('amount_paid');
+        $rentCollected = $entries->where('type', 'rent')->sum('amount_paid');
         $maintenanceCollected = $entries->where('type', 'maintenance')->sum('amount_paid');
-        $utilitiesPaid        = $entries->where('category', 'utility')->sum('amount_paid');
-        $finesCollected       = $entries->where('type', 'fine')->sum('amount_paid');
+        $utilitiesPaid = $entries->where('category', 'utility')->sum('amount_paid');
+        $finesCollected = $entries->where('type', 'fine')->sum('amount_paid');
 
         // Sum amount_paid grouped by payment_account name (ignoring empty/hyphen entries)
         $accountSummaries = $entries->groupBy('payment_account')
@@ -526,15 +548,15 @@ class ReportController extends Controller
             ->toArray();
 
         return [
-            'total_due'             => $entries->sum('amount_due'),
-            'total_paid'            => $entries->sum('amount_paid'),
-            'outstanding'           => $entries->sum('amount_due') - $entries->sum('amount_paid'),
-            'count'                 => $entries->count(),
-            'rent_collected'        => $rentCollected,
+            'total_due' => $entries->sum('amount_due'),
+            'total_paid' => $entries->sum('amount_paid'),
+            'outstanding' => $entries->sum('amount_due') - $entries->sum('amount_paid'),
+            'count' => $entries->count(),
+            'rent_collected' => $rentCollected,
             'maintenance_collected' => $maintenanceCollected,
-            'utilities_paid'        => $utilitiesPaid,
-            'fines_collected'       => $finesCollected,
-            'accounts_summary'      => $accountSummaries,
+            'utilities_paid' => $utilitiesPaid,
+            'fines_collected' => $finesCollected,
+            'accounts_summary' => $accountSummaries,
         ];
     }
 
@@ -548,7 +570,7 @@ class ReportController extends Controller
         $month = $from ? \Carbon\Carbon::parse($from)->startOfMonth() : \Carbon\Carbon::now()->startOfMonth();
         $monthStr = $month->format('Y-m-d');
         $unitStatus = $request->unit_status;
-        $ownerType  = $request->owner_type;
+        $ownerType = $request->owner_type;
         $unitId = $request->unit_id;
         $tenantId = $request->tenant_id;
         $statusFilter = $request->status;
@@ -557,44 +579,44 @@ class ReportController extends Controller
         $paymentAccountId = $request->payment_account_id;
 
         $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
-        
+
         $units = Unit::with(['landlord', 'otherTenant'])
             ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
-            ->when($unitId,     fn($q) => $q->where('id', $unitId))
+            ->when($unitId, fn($q) => $q->where('id', $unitId))
             ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
             ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
-            ->when($ownerType === 'other',    fn($q) => $q->where('is_self', true)->whereHas('otherTenant'))
+            ->when($ownerType === 'other', fn($q) => $q->where('is_self', true)->whereHas('otherTenant'))
             ->when(!$ownerType, function ($q) {
                 $q->where(function ($sq) {
                     $sq->where('is_self', false)
-                      ->orWhere(function ($ssq) {
-                          $ssq->where('is_self', true)->whereHas('otherTenant');
-                      });
+                        ->orWhere(function ($ssq) {
+                            $ssq->where('is_self', true)->whereHas('otherTenant');
+                        });
                 });
             })
             ->when($tenantId, function ($q) use ($tenantId, $month) {
                 $q->where(function ($sq) use ($tenantId, $month) {
                     $sq->whereHas('agreements', function ($qa) use ($tenantId, $month) {
                         $qa->where('status', 'active')
-                           ->where('tenant_id', $tenantId)
-                           ->where('start_date', '<=', $month->copy()->endOfMonth())
-                           ->where('end_date', '>=', $month->copy()->startOfMonth());
+                            ->where('tenant_id', $tenantId)
+                            ->where('start_date', '<=', $month->copy()->endOfMonth())
+                            ->where('end_date', '>=', $month->copy()->startOfMonth());
                     })->orWhereHas('payments', function ($qp) use ($tenantId, $month) {
                         $qp->where('tenant_id', $tenantId)
-                           ->where('month', $month->format('Y-m-d'));
+                            ->where('month', $month->format('Y-m-d'));
                     });
                 });
             })
             ->when($paymentMethod, function ($q) use ($paymentMethod, $month) {
                 $q->whereHas('payments', function ($qp) use ($paymentMethod, $month) {
                     $qp->where('payment_method', $paymentMethod)
-                       ->where('month', $month->format('Y-m-d'));
+                        ->where('month', $month->format('Y-m-d'));
                 });
             })
             ->when($paymentAccountId, function ($q) use ($paymentAccountId, $month) {
                 $q->whereHas('payments', function ($qp) use ($paymentAccountId, $month) {
                     $qp->where('payment_account_id', $paymentAccountId)
-                       ->where('month', $month->format('Y-m-d'));
+                        ->where('month', $month->format('Y-m-d'));
                 });
             })
             ->select(['id', 'unit_number', 'landlord_id', 'status', 'is_self', 'default_maintenance_charge'])
@@ -632,7 +654,6 @@ class ReportController extends Controller
             ->whereNull('receiving_vouchers.deleted_at')
             ->whereNull('payments.deleted_at')
             ->whereBetween('receiving_vouchers.date', [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()])
-            ->where('payments.month', $monthStr)
             ->when($paymentMethod, fn($q) => $q->where('receiving_vouchers.payment_method', $paymentMethod))
             ->when($paymentAccountId, fn($q) => $q->where('receiving_vouchers.payment_account_id', $paymentAccountId))
             ->select(
@@ -649,7 +670,7 @@ class ReportController extends Controller
         $unitAllocations = $allocations->groupBy('unit_id');
 
         $matrixEntries = collect();
-        $isActualOnly  = $request->report_type === 'monthly_matrix';
+        $isActualOnly = $request->report_type === 'monthly_matrix';
 
         foreach ($units as $index => $unit) {
             $agreement = $agreements->get($unit->id)?->first();
@@ -684,14 +705,14 @@ class ReportController extends Controller
             // Services (Maintenance)
             $maintPayment = $unitPayments->where('type', 'maintenance')->first();
             if ($maintPayment) {
-                $serv_due  = (float) $maintPayment->amount;
+                $serv_due = (float) $maintPayment->amount;
             } elseif (!$isActualOnly && $agreement && $agreement->maintenance_charge > 0) {
-                $serv_due  = (float) $agreement->maintenance_charge;
+                $serv_due = (float) $agreement->maintenance_charge;
             } elseif (!$isActualOnly && $unit->is_self && $unit->default_maintenance_charge > 0) {
                 // Other-Owned unit: no agreement, fall back to unit's current maintenance charge
-                $serv_due  = (float) $unit->default_maintenance_charge;
+                $serv_due = (float) $unit->default_maintenance_charge;
             } else {
-                $serv_due  = 0.0;
+                $serv_due = 0.0;
             }
 
             // Security Deposit
@@ -723,9 +744,9 @@ class ReportController extends Controller
             $unitAllocationsForUnit = $unitAllocations->get($unit->id) ?? collect();
 
             if ($unitAllocationsForUnit->isNotEmpty()) {
-                $rent_paid  = (float) $unitAllocationsForUnit->where('type', 'rent')->sum('amount_allocated');
-                $serv_paid  = (float) $unitAllocationsForUnit->where('type', 'maintenance')->sum('amount_allocated');
-                $sec_paid   = (float) $unitAllocationsForUnit->where('type', 'security_deposit')->sum('amount_allocated');
+                $rent_paid = (float) $unitAllocationsForUnit->where('type', 'rent')->sum('amount_allocated');
+                $serv_paid = (float) $unitAllocationsForUnit->where('type', 'maintenance')->sum('amount_allocated');
+                $sec_paid = (float) $unitAllocationsForUnit->where('type', 'security_deposit')->sum('amount_allocated');
                 $extra_paid = (float) $unitAllocationsForUnit->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('amount_allocated');
                 $total_received = (float) $unitAllocationsForUnit->sum('amount_allocated');
 
@@ -779,27 +800,27 @@ class ReportController extends Controller
             }
 
             $matrixEntries->push([
-                'sr'               => $index + 1,
-                'date'             => $datesString,
-                'rsv'              => $vouchersString,
-                'flat_no'          => $unit->unit_number,
-                'owner'            => $unit->landlord?->name ?? '—',
-                'tenant'           => $tenantName,
-                'status'           => $status,
-                'serv'             => $serv_due,
-                'serv_paid'        => $serv_paid,
-                'extra'            => $extra_due,
-                'extra_paid'       => $extra_paid,
-                'rent'             => $rent_due,
-                'rent_paid'        => $rent_paid,
+                'sr' => $index + 1,
+                'date' => $datesString,
+                'rsv' => $vouchersString,
+                'flat_no' => $unit->unit_number,
+                'owner' => $unit->landlord?->name ?? '—',
+                'tenant' => $tenantName,
+                'status' => $status,
+                'serv' => $serv_due,
+                'serv_paid' => $serv_paid,
+                'extra' => $extra_due,
+                'extra_paid' => $extra_paid,
+                'rent' => $rent_due,
+                'rent_paid' => $rent_paid,
                 'security_deposit' => $sec_due,
-                'sec_paid'         => $sec_paid,
-                'total_amount'     => $total_due,
-                'received'         => $total_received,
+                'sec_paid' => $sec_paid,
+                'total_amount' => $total_due,
+                'received' => $total_received,
                 'payment_accounts' => $accountsBreakdown,
-                'prev_unpaid'      => $prevUnpaid,
-                'pending'          => $pending,
-                'is_self'          => (bool) $unit->is_self,
+                'prev_unpaid' => $prevUnpaid,
+                'pending' => $pending,
+                'is_self' => (bool) $unit->is_self,
             ]);
         }
 
@@ -838,24 +859,24 @@ class ReportController extends Controller
         }
 
         return [
-            'total_serv'             => $matrixEntries->sum('serv'),
-            'total_serv_paid'        => $matrixEntries->sum('serv_paid'),
-            'total_extra'            => $matrixEntries->sum('extra'),
-            'total_extra_paid'       => $matrixEntries->sum('extra_paid'),
-            'total_rent'             => $matrixEntries->sum('rent'),
-            'total_rent_paid'        => $matrixEntries->sum('rent_paid'),
+            'total_serv' => $matrixEntries->sum('serv'),
+            'total_serv_paid' => $matrixEntries->sum('serv_paid'),
+            'total_extra' => $matrixEntries->sum('extra'),
+            'total_extra_paid' => $matrixEntries->sum('extra_paid'),
+            'total_rent' => $matrixEntries->sum('rent'),
+            'total_rent_paid' => $matrixEntries->sum('rent_paid'),
             'total_security_deposit' => $matrixEntries->sum('security_deposit'),
-            'total_sec_paid'         => $matrixEntries->sum('sec_paid'),
-            'total_amount'           => $matrixEntries->sum('total_amount'),
-            'total_received'         => $matrixEntries->sum('received'),
-            'accounts_total'         => $accountsTotal,
-            'total_prev_unpaid'      => $matrixEntries->sum('prev_unpaid'),
-            'total_pending'          => $matrixEntries->sum('pending'),
-            'count'                  => $matrixEntries->count(),
-            'rent_count'             => $matrixEntries->where('rent_paid', '>', 0)->count(),
-            'serv_count'             => $matrixEntries->where('serv_paid', '>', 0)->count(),
-            'sec_count'              => $matrixEntries->where('sec_paid', '>', 0)->count(),
-            'extra_count'            => $matrixEntries->where('extra_paid', '>', 0)->count(),
+            'total_sec_paid' => $matrixEntries->sum('sec_paid'),
+            'total_amount' => $matrixEntries->sum('total_amount'),
+            'total_received' => $matrixEntries->sum('received'),
+            'accounts_total' => $accountsTotal,
+            'total_prev_unpaid' => $matrixEntries->sum('prev_unpaid'),
+            'total_pending' => $matrixEntries->sum('pending'),
+            'count' => $matrixEntries->count(),
+            'rent_count' => $matrixEntries->where('rent_paid', '>', 0)->count(),
+            'serv_count' => $matrixEntries->where('serv_paid', '>', 0)->count(),
+            'sec_count' => $matrixEntries->where('sec_paid', '>', 0)->count(),
+            'extra_count' => $matrixEntries->where('extra_paid', '>', 0)->count(),
         ];
     }
 
@@ -944,17 +965,17 @@ class ReportController extends Controller
     private function reportLabel(Request $request): string
     {
         return match ($request->report_type ?? 'all') {
-            'rent'                       => 'Rent Collected',
-            'fines'                      => 'Fines',
-            'utilities'                  => 'Utilities Paid',
-            'monthly_matrix'             => 'Monthly Matrix (Generated Billings)',
-            'monthly_matrix_expected'    => 'Monthly Matrix (Expected Revenue)',
-            'potential_revenue'          => 'Fully Rented Forecast',
+            'rent' => 'Rent Collected',
+            'fines' => 'Fines',
+            'utilities' => 'Utilities Paid',
+            'monthly_matrix' => 'Monthly Matrix (Generated Billings)',
+            'monthly_matrix_expected' => 'Monthly Matrix (Expected Revenue)',
+            'potential_revenue' => 'Fully Rented Forecast',
             'maintinance', 'maintenance' => 'Maintenance',
-            'other_owned'                => 'Other Owned Payments',
-            'occupied', 'occupide'       => 'Occupied (External Units)',
+            'other_owned' => 'Other Owned Payments',
+            'occupied', 'occupide' => 'Occupied (External Units)',
             'non_occupied', 'non_occupide' => 'Non-Occupied (External Units)',
-            default                      => 'Full Report',
+            default => 'Full Report',
         };
     }
 
@@ -965,7 +986,7 @@ class ReportController extends Controller
         if (empty($filterKeys)) {
             $request->merge([
                 'date_from' => \Carbon\Carbon::now()->startOfMonth()->toDateString(),
-                'date_to'   => \Carbon\Carbon::now()->endOfMonth()->toDateString(),
+                'date_to' => \Carbon\Carbon::now()->endOfMonth()->toDateString(),
             ]);
         }
 
