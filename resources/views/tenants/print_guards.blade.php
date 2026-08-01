@@ -39,8 +39,34 @@
         .pm-footer { margin-top: 24px; border-top: 3px solid #000; padding-top: 10px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 900; color: #111827; }
         .no-print { text-align: center; margin-bottom: 20px; }
         .print-btn { display: inline-flex; align-items: center; gap: 8px; background: #111827; color: #fff; border: none; border-radius: 10px; padding: 12px 28px; font-size: 1.2rem; font-weight: 900; cursor: pointer; }
-        @media print { body { padding: 0; } .no-print { display: none !important; } }
-        @page { size: A4 portrait; margin: 10mm; }
+        @media print {
+            @page {
+                size: A4;
+                margin: 0.5cm;
+            }
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-weight: bold !important;
+                zoom: 0.8;
+            }
+            .max-w-3xl, .max-w-5xl, .max-w-6xl {
+                max-width: 100% !important;
+                padding: 5px !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            .print-border {
+                border-width: 1px !important;
+                border-color: #d1d5db !important;
+            }
+        }
     </style>
 </head>
 <body>

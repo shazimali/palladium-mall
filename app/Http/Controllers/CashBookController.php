@@ -39,7 +39,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->orderBy('date', 'asc')
             ->orderBy('created_at', 'asc')
@@ -50,7 +50,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->get();
 
@@ -59,7 +59,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->get();
 
@@ -68,7 +68,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->get();
 
@@ -99,7 +99,7 @@ class CashBookController extends Controller
                         : '👤 Misc: ' . ($inflow->other_name ?: 'N/A') . ($inflow->notes ? ' • ' . $inflow->notes : '')),
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
-                'credit' => (float)$inflow->amount,
+                'credit' => (float) $inflow->amount,
                 'model_type' => 'receiving_voucher',
                 'model_id' => $inflow->id,
             ]);
@@ -118,7 +118,7 @@ class CashBookController extends Controller
                 'details' => $details,
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
-                'credit' => (float)$inflow->amount,
+                'credit' => (float) $inflow->amount,
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $inflow->id,
             ]);
@@ -143,7 +143,7 @@ class CashBookController extends Controller
                 'type' => 'Outflow',
                 'details' => $details,
                 'method' => $outflow->payment_method . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
-                'debit' => (float)$outflow->amount,
+                'debit' => (float) $outflow->amount,
                 'credit' => 0.0,
                 'model_type' => $isExpense ? 'expense' : 'payment_voucher',
                 'model_id' => $outflow->id,
@@ -171,14 +171,14 @@ class CashBookController extends Controller
         $netFlow = $totalInflows - $totalOutflows;
 
         return view('reports.cash_book', [
-            'title'         => 'Cash Book Report',
+            'title' => 'Cash Book Report',
             'ledgerEntries' => $ledgerEntries,
-            'totalInflows'  => $totalInflows,
+            'totalInflows' => $totalInflows,
             'totalOutflows' => $totalOutflows,
-            'netFlow'       => $netFlow,
-            'startDate'     => $startDate->toDateString(),
-            'endDate'     => $endDate->toDateString(),
-            'isSingleDay'   => $startDate->isSameDay($endDate),
+            'netFlow' => $netFlow,
+            'startDate' => $startDate->toDateString(),
+            'endDate' => $endDate->toDateString(),
+            'isSingleDay' => $startDate->isSameDay($endDate),
         ]);
     }
 
@@ -209,7 +209,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->orderBy('date', 'asc')
             ->orderBy('created_at', 'asc')
@@ -220,7 +220,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->get();
 
@@ -229,7 +229,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->get();
 
@@ -238,7 +238,7 @@ class CashBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where(function ($q) {
                 $q->where('payment_method', 'cash')
-                  ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
             })
             ->get();
 
@@ -269,7 +269,7 @@ class CashBookController extends Controller
                         : '👤 Misc: ' . ($inflow->other_name ?: 'N/A') . ($inflow->notes ? ' • ' . $inflow->notes : '')),
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
-                'credit' => (float)$inflow->amount,
+                'credit' => (float) $inflow->amount,
                 'model_type' => 'receiving_voucher',
                 'model_id' => $inflow->id,
             ]);
@@ -288,7 +288,7 @@ class CashBookController extends Controller
                 'details' => $details,
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
-                'credit' => (float)$inflow->amount,
+                'credit' => (float) $inflow->amount,
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $inflow->id,
             ]);
@@ -297,7 +297,7 @@ class CashBookController extends Controller
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
-            
+
             if ($isExpense) {
                 $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } elseif ($isWithdrawal) {
@@ -319,7 +319,7 @@ class CashBookController extends Controller
                 'type' => 'Outflow',
                 'details' => $details,
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
-                'debit' => (float)$outflow->amount,
+                'debit' => (float) $outflow->amount,
                 'credit' => 0.0,
                 'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
                 'model_id' => $outflow->id,
@@ -347,19 +347,19 @@ class CashBookController extends Controller
         ];
 
         $columns = [
-            ['key' => 'date',            'label' => 'Date',              'type' => 'date'],
-            ['key' => 'voucher_no',      'label' => 'Voucher #',         'td_class' => 'mono'],
-            ['key' => 'details',         'label' => 'Details / Reference'],
-            ['key' => 'debit',           'label' => 'Debit (Outflow)',   'type' => 'debit',   'class' => 'text-right'],
-            ['key' => 'credit',          'label' => 'Credit (Inflow)',   'type' => 'credit',  'class' => 'text-right'],
-            ['key' => 'running_balance', 'label' => 'Running Balance',   'type' => 'balance', 'class' => 'text-right'],
+            ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
+            ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
+            ['key' => 'details', 'label' => 'Details / Reference'],
+            ['key' => 'debit', 'label' => 'Debit (Outflow)', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit (Inflow)', 'type' => 'credit', 'class' => 'text-right'],
+            ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
         return view('ledgers.print_page', [
-            'pageTitle'    => 'Cash Book Ledger Statement',
-            'filterChips'  => $filterChips,
-            'columns'      => $columns,
-            'rows'         => $ledgerEntries->toArray(),
+            'pageTitle' => 'Daily Cash Book Statement',
+            'filterChips' => $filterChips,
+            'columns' => $columns,
+            'rows' => $ledgerEntries->toArray(),
         ]);
     }
 }

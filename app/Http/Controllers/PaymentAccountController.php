@@ -14,13 +14,37 @@ class PaymentAccountController extends Controller
     public function index(Request $request): View
     {
         $paymentAccounts = PaymentAccount::query()
-            ->withSum(['payments as total_received' => function ($q) {
-                $q->whereIn('status', ['paid', 'partial']);
-            }], 'amount_paid')
             ->withSum('receivingVouchers', 'amount')
             ->withSum('generalReceivingVouchers', 'amount')
+            ->withSum('receivedPaymentVouchers', 'amount')
             ->withSum('paymentVouchers', 'amount')
+            ->withSum('transferredOutGeneralReceivingVouchers', 'amount')
             ->withSum('expenses', 'amount')
+            ->withSum('withdrawals', 'amount')
+            ->when($request->search, function ($q) use ($request) {
+                $q->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('bank_name', 'like', "%{$request->search}%")
+                    ->orWhere('account_number', 'like', "%{$request->search}%")
+                    ->orWhere('account_holder', 'like', "%{$request->search}%");
+            })
+            ->orderBy('name')
+            ->get();
+
+        $totalOpeningBalance = $paymentAccounts->sum('opening_balance');
+        $totalCurrentBalance = $paymentAccounts->sum(function($account) {
+            return $account->current_balance;
+        });
+
+        // Use manual pagination if they still want pagination, or just pass the full collection if they want all.
+        // Actually, they had paginate(20) before. To keep pagination and get global totals, we can get total from the DB query without pagination, but since there are usually few payment accounts, removing pagination or keeping it but calculating total of the collection is fine. Let's just paginate it normally.
+        $paginatedAccounts = PaymentAccount::query()
+            ->withSum('receivingVouchers', 'amount')
+            ->withSum('generalReceivingVouchers', 'amount')
+            ->withSum('receivedPaymentVouchers', 'amount')
+            ->withSum('paymentVouchers', 'amount')
+            ->withSum('transferredOutGeneralReceivingVouchers', 'amount')
+            ->withSum('expenses', 'amount')
+            ->withSum('withdrawals', 'amount')
             ->when($request->search, function ($q) use ($request) {
                 $q->where('name', 'like', "%{$request->search}%")
                     ->orWhere('bank_name', 'like', "%{$request->search}%")
@@ -30,10 +54,12 @@ class PaymentAccountController extends Controller
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();
- 
+
         return view('payment_accounts.index', [
             'title' => 'Payment Accounts',
-            'paymentAccounts' => $paymentAccounts,
+            'paymentAccounts' => $paginatedAccounts,
+            'totalOpeningBalance' => $totalOpeningBalance,
+            'totalCurrentBalance' => $totalCurrentBalance,
         ]);
     }
  
@@ -57,13 +83,14 @@ class PaymentAccountController extends Controller
  
     public function show(PaymentAccount $paymentAccount): View
     {
-        $paymentAccount->loadSum(['payments as total_received' => function ($q) {
-            $q->whereIn('status', ['paid', 'partial']);
-        }], 'amount_paid')
-        ->loadSum('receivingVouchers', 'amount')
-        ->loadSum('generalReceivingVouchers', 'amount')
-        ->loadSum('paymentVouchers', 'amount')
-        ->loadSum('expenses', 'amount');
+        $paymentAccount
+            ->loadSum('receivingVouchers', 'amount')
+            ->loadSum('generalReceivingVouchers', 'amount')
+            ->loadSum('receivedPaymentVouchers', 'amount')
+            ->loadSum('paymentVouchers', 'amount')
+            ->loadSum('transferredOutGeneralReceivingVouchers', 'amount')
+            ->loadSum('expenses', 'amount')
+            ->loadSum('withdrawals', 'amount');
  
         $payments = $paymentAccount->payments()
             ->with(['tenant', 'unit'])

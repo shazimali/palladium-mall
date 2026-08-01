@@ -13,8 +13,8 @@
                     💵
                 </div>
                 <div class="min-w-0">
-                    <p class="text-xs font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-                        Cash Book Ledger
+                    <p class="text-xl font-extrabold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+                        Daily Cash Book
                     </p>
                     <h2 class="text-2xl sm:text-3xl font-black tracking-tight text-gray-900 dark:text-white mt-0.5">
                         {{ date('d M Y', strtotime($startDate)) }} — {{ date('d M Y', strtotime($endDate)) }}
@@ -117,8 +117,8 @@
         </div>
 
         <div class="overflow-x-auto border border-gray-100 rounded-lg dark:border-gray-800">
-            <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+            <table class="w-full text-base text-left text-gray-600 dark:text-gray-400">
+                <thead class="text-sm uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                     <tr>
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Voucher #</th>
@@ -131,10 +131,10 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
                     @forelse($ledgerEntries as $entry)
                         <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                            <td class="px-4 py-3 text-xs font-mono">
+                            <td class="px-4 py-4 text-base font-mono">
                                 {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
                             </td>
-                            <td class="px-4 py-3 text-xs font-mono font-semibold">
+                            <td class="px-4 py-4 text-base font-mono font-semibold">
                                 @if(!empty($entry['model_type']) && !empty($entry['model_id']))
                                     @if($entry['model_type'] === 'receiving_voucher')
                                         <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}"
@@ -161,16 +161,16 @@
                                     {{ $entry['voucher_no'] }}
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-xs font-medium">
+                            <td class="px-4 py-4 text-base font-medium">
                                 {!! $entry['details'] !!}
                             </td>
-                            <td class="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400">
+                            <td class="px-4 py-4 text-right text-lg font-bold text-red-600 dark:text-red-400">
                                 {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
                             </td>
-                            <td class="px-4 py-3 text-right font-semibold text-green-600 dark:text-green-400">
+                            <td class="px-4 py-4 text-right text-lg font-bold text-green-600 dark:text-green-400">
                                 {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 2) : '—' }}
                             </td>
-                            <td class="px-4 py-3 text-right font-bold text-gray-900 dark:text-white font-mono">
+                            <td class="px-4 py-4 text-right text-xl font-bold text-gray-900 dark:text-white font-mono">
                                 Rs. {{ number_format($entry['running_balance'], 2) }}
                             </td>
                         </tr>
@@ -185,14 +185,14 @@
                 @if($ledgerEntries->isNotEmpty())
                     <tfoot class="bg-gray-50 dark:bg-gray-800 font-bold">
                         <tr>
-                            <td colspan="3" class="px-4 py-3 text-gray-700 dark:text-gray-300 text-right">Totals:</td>
-                            <td class="px-4 py-3 text-right text-red-600 dark:text-red-400">
+                            <td colspan="3" class="px-4 py-4 text-gray-700 dark:text-gray-300 text-right text-lg">Totals:</td>
+                            <td class="px-4 py-4 text-right text-xl text-red-600 dark:text-red-400">
                                 Rs. {{ number_format($totalOutflows, 2) }}
                             </td>
-                            <td class="px-4 py-3 text-right text-green-600 dark:text-green-400">
+                            <td class="px-4 py-4 text-right text-xl text-green-600 dark:text-green-400">
                                 Rs. {{ number_format($totalInflows, 2) }}
                             </td>
-                            <td class="px-4 py-3 text-right text-blue-600 dark:text-blue-400 font-mono">
+                            <td class="px-4 py-4 text-right text-2xl text-blue-600 dark:text-blue-400 font-mono">
                                 Rs. {{ number_format($netFlow, 2) }}
                             </td>
                         </tr>

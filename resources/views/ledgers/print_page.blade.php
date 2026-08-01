@@ -6,7 +6,7 @@
     <title>{{ $pageTitle }} — Palladium Mall</title>
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { font-size: 24px; }
+        html { font-size: 14px; }
         body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #000; background: #fff; padding: 20px 28px; line-height: 1.4; font-weight: 800; }
         .pm-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px solid #111827; padding-bottom: 14px; margin-bottom: 20px; }
         .pm-header-left { display: flex; align-items: center; gap: 14px; }
@@ -41,8 +41,37 @@
         .no-print { text-align: center; margin-bottom: 28px; }
         .print-btn { display: inline-flex; align-items: center; gap: 10px; background: #111827; color: #fff; border: none; border-radius: 12px; padding: 14px 32px; font-size: 1.3rem; font-weight: 900; cursor: pointer; font-family: inherit; }
         .print-btn:hover { background: #000; }
-        @media print { body { padding: 0; } .no-print { display: none !important; } }
-        @page { size: A4; margin: 10mm; }
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 0.5cm;
+            }
+            .no-print {
+                display: none !important;
+            }
+            tfoot {
+                display: table-row-group;
+            }
+            body {
+                background-color: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-weight: bold !important;
+                zoom: 0.8;
+            }
+            .max-w-3xl, .max-w-5xl, .max-w-6xl {
+                max-width: 100% !important;
+                padding: 5px !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            .print-border {
+                border-width: 1px !important;
+                border-color: #d1d5db !important;
+            }
+        }
     </style>
 </head>
 <body>

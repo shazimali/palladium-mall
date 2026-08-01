@@ -172,6 +172,18 @@
                         </tr>
                     @endforelse
                 </tbody>
+                <tfoot class="bg-gray-50 dark:bg-gray-800 font-bold">
+                    <tr>
+                        <td colspan="5" class="px-4 py-3 text-right text-gray-700 dark:text-gray-300">Totals:</td>
+                        <td class="px-4 py-3 text-right text-gray-900 dark:text-white">
+                            Rs. {{ number_format($totalOpeningBalance, 2) }}
+                        </td>
+                        <td class="px-4 py-3 text-right {{ $totalCurrentBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            Rs. {{ number_format($totalCurrentBalance, 2) }}
+                        </td>
+                        <td colspan="2" class="px-4 py-3 text-center"></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
  

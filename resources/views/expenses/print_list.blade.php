@@ -8,6 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @media print {
+            @page {
+                size: A4;
+                margin: 0.5cm;
+            }
             .no-print {
                 display: none !important;
             }
@@ -16,12 +20,19 @@
                 color: black !important;
                 padding: 0 !important;
                 margin: 0 !important;
+                font-weight: bold !important;
+                zoom: 0.8;
             }
-            .printable-container {
-                box-shadow: none !important;
-                border-radius: 0 !important;
-                padding: 0 !important;
+            .max-w-3xl, .max-w-5xl, .max-w-6xl {
+                max-width: 100% !important;
+                padding: 5px !important;
+                margin: 0 !important;
                 border: none !important;
+                box-shadow: none !important;
+            }
+            .print-border {
+                border-width: 1px !important;
+                border-color: #d1d5db !important;
             }
         }
     </style>
