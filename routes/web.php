@@ -316,6 +316,10 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/export/excel', [ReportController::class, 'exportExcel'])->name('reports.excel');
         Route::get('reports/export/pdf', [ReportController::class, 'exportPdf'])->name('reports.pdf');
         Route::get('reports/print', [ReportController::class, 'print'])->name('reports.print');
+        
+        Route::get('reports/account-summary', [\App\Http\Controllers\AccountSummaryController::class, 'index'])->name('reports.account_summary');
+        Route::get('reports/account-summary/pdf', [\App\Http\Controllers\AccountSummaryController::class, 'exportPdf'])->name('reports.account_summary.pdf');
+        Route::get('reports/account-summary/excel', [\App\Http\Controllers\AccountSummaryController::class, 'exportExcel'])->name('reports.account_summary.excel');
     });
 
 
