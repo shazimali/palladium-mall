@@ -105,101 +105,116 @@
     </div>
 
     {{-- Unified Ledger Table --}}
-    <div
-        class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] mb-6">
-        <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-lg font-bold text-gray-900 dark:text-white/90">
-                Ledger Statement / Cash Transaction History
-            </h3>
-            <span class="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                {{ $ledgerEntries->count() }} Cash Transactions Found
-            </span>
-        </div>
-
-        <div class="overflow-x-auto border border-gray-100 rounded-lg dark:border-gray-800">
-            <table class="w-full text-base text-left text-gray-600 dark:text-gray-400">
-                <thead class="text-sm uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                    <tr>
-                        <th class="px-4 py-3">Date</th>
-                        <th class="px-4 py-3">Voucher #</th>
-                        <th class="px-4 py-3">Details / Reference</th>
-                        <th class="px-4 py-3 text-right text-red-600 dark:text-red-400">Debit (Outflow)</th>
-                        <th class="px-4 py-3 text-right text-green-600 dark:text-green-400">Credit (Inflow)</th>
-                        <th class="px-4 py-3 text-right font-semibold">Running Balance</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
-                    @forelse($ledgerEntries as $entry)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
-                            <td class="px-4 py-4 text-base font-mono">
-                                {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
-                            </td>
-                            <td class="px-4 py-4 text-base font-mono font-semibold">
-                                @if(!empty($entry['model_type']) && !empty($entry['model_id']))
-                                    @if($entry['model_type'] === 'receiving_voucher')
-                                        <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}"
-                                            class="text-brand-500 hover:underline">
-                                            {{ $entry['voucher_no'] }}
-                                        </a>
-                                    @elseif($entry['model_type'] === 'general_receiving_voucher')
-                                        <a href="{{ route('general-receiving-vouchers.show', $entry['model_id']) }}"
-                                            class="text-brand-500 hover:underline">
-                                            {{ $entry['voucher_no'] }}
-                                        </a>
-                                    @elseif($entry['model_type'] === 'payment_voucher')
-                                        <a href="{{ route('payment-vouchers.show', $entry['model_id']) }}"
-                                            class="text-brand-500 hover:underline">
-                                            {{ $entry['voucher_no'] }}
-                                        </a>
-                                    @elseif($entry['model_type'] === 'expense')
-                                        <a href="{{ route('expenses.show', $entry['model_id']) }}"
-                                            class="text-brand-500 hover:underline">
-                                            {{ $entry['voucher_no'] }}
-                                        </a>
-                                    @endif
+    <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md mb-6">
+        <table class="w-full text-base sm:text-lg text-left text-gray-900 dark:text-gray-100">
+            <thead class="text-sm sm:text-base font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
+                <tr>
+                    <th class="px-5 py-4 text-white">Date</th>
+                    <th class="px-5 py-4 text-white">Flat/Shop</th>
+                    <th class="px-5 py-4 text-white">Voucher #</th>
+                    <th class="px-5 py-4 text-white">Type</th>
+                    <th class="px-5 py-4 text-white">Description / Ref</th>
+                    <th class="px-5 py-4 text-right text-white">Debit (Inflow)</th>
+                    <th class="px-5 py-4 text-right text-white">Credit (Outflow)</th>
+                    <th class="px-5 py-4 text-right text-white">Running Balance</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-bold">
+                @forelse($ledgerEntries as $entry)
+                    <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                        <td class="px-5 py-4 text-base sm:text-lg font-mono font-bold whitespace-nowrap">
+                            {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
+                        </td>
+                        <td class="px-5 py-4 text-base sm:text-lg font-bold whitespace-nowrap">
+                            @if(!empty($entry['unit_number']))
+                                <span class="unit-badge-lg px-3 py-1 text-sm font-black rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
+                                    Unit {{ $entry['unit_number'] }}
+                                </span>
+                            @else
+                                —
+                            @endif
+                        </td>
+                        <td class="px-5 py-4 text-base sm:text-lg font-mono font-black">
+                            @if(!empty($entry['model_type']) && !empty($entry['model_id']))
+                                @if($entry['model_type'] === 'receiving_voucher')
+                                    <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
+                                        {{ $entry['voucher_no'] }}
+                                    </a>
+                                @elseif($entry['model_type'] === 'general_receiving_voucher')
+                                    <a href="{{ route('general-receiving-vouchers.show', $entry['model_id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
+                                        {{ $entry['voucher_no'] }}
+                                    </a>
+                                @elseif($entry['model_type'] === 'payment_voucher')
+                                    <a href="{{ route('payment-vouchers.show', $entry['model_id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
+                                        {{ $entry['voucher_no'] }}
+                                    </a>
+                                @elseif($entry['model_type'] === 'expense')
+                                    <a href="{{ route('expenses.show', $entry['model_id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
+                                        {{ $entry['voucher_no'] }}
+                                    </a>
+                                @elseif($entry['model_type'] === 'withdrawal')
+                                    <a href="{{ route('withdrawals.show', $entry['model_id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
+                                        {{ $entry['voucher_no'] }}
+                                    </a>
                                 @else
-                                    {{ $entry['voucher_no'] }}
+                                    <span class="font-mono text-gray-500 font-bold dark:text-gray-400">{{ $entry['voucher_no'] }}</span>
                                 @endif
-                            </td>
-                            <td class="px-4 py-4 text-base font-medium">
-                                {!! $entry['details'] !!}
-                            </td>
-                            <td class="px-4 py-4 text-right text-lg font-bold text-red-600 dark:text-red-400">
-                                {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
-                            </td>
-                            <td class="px-4 py-4 text-right text-lg font-bold text-green-600 dark:text-green-400">
-                                {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 2) : '—' }}
-                            </td>
-                            <td class="px-4 py-4 text-right text-xl font-bold text-gray-900 dark:text-white font-mono">
-                                Rs. {{ number_format($entry['running_balance'], 2) }}
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
-                                No ledger cash transactions logged for this period.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-                @if($ledgerEntries->isNotEmpty())
-                    <tfoot class="bg-gray-50 dark:bg-gray-800 font-bold">
-                        <tr>
-                            <td colspan="3" class="px-4 py-4 text-gray-700 dark:text-gray-300 text-right text-lg">Totals:</td>
-                            <td class="px-4 py-4 text-right text-xl text-red-600 dark:text-red-400">
-                                Rs. {{ number_format($totalOutflows, 2) }}
-                            </td>
-                            <td class="px-4 py-4 text-right text-xl text-green-600 dark:text-green-400">
-                                Rs. {{ number_format($totalInflows, 2) }}
-                            </td>
-                            <td class="px-4 py-4 text-right text-2xl text-blue-600 dark:text-blue-400 font-mono">
-                                Rs. {{ number_format($netFlow, 2) }}
-                            </td>
-                        </tr>
-                    </tfoot>
-                @endif
-            </table>
-        </div>
+                            @else
+                                <span class="font-mono text-gray-500 font-bold dark:text-gray-400">{{ $entry['voucher_no'] }}</span>
+                            @endif
+                        </td>
+                        <td class="px-5 py-4 text-base sm:text-lg">
+                            @php
+                                $typeBadge = match(true) {
+                                    str_contains($entry['type'], 'Receipt') || str_contains($entry['type'], 'Inflow') => 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800',
+                                    str_contains($entry['type'], 'Payout') || str_contains($entry['type'], 'Outflow')  => 'bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-200 dark:border-blue-800',
+                                    default => 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800',
+                                };
+                            @endphp
+                            <span class="inline-flex items-center rounded-lg px-2.5 py-1 text-xs sm:text-sm font-black {{ $typeBadge }}">
+                                {{ $entry['type'] }}
+                            </span>
+                        </td>
+                        <td class="px-5 py-4 text-base sm:text-lg font-bold">
+                            {!! $entry['details'] !!}
+                        </td>
+                        <td class="px-5 py-4 text-right font-black text-emerald-600 dark:text-emerald-400 text-base sm:text-lg font-mono">
+                            {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
+                        </td>
+                        <td class="px-5 py-4 text-right font-black text-rose-600 dark:text-rose-400 text-base sm:text-lg font-mono">
+                            {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 2) : '—' }}
+                        </td>
+                        <td class="px-5 py-4 text-right font-black text-gray-900 dark:text-white font-mono text-lg sm:text-xl">
+                            Rs. {{ number_format($entry['running_balance'], 2) }}
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="8" class="px-5 py-12 text-center text-gray-400 dark:text-gray-600 text-lg font-bold">
+                            No cash transactions logged for this period.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+            @if($ledgerEntries->isNotEmpty())
+                <tfoot class="bg-gray-200/90 dark:bg-gray-800 border-t-4 border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white font-black">
+                    <tr>
+                        <td colspan="5" class="px-5 py-4 text-lg sm:text-xl uppercase tracking-wider font-black text-gray-900 dark:text-white">
+                            Total Summary
+                        </td>
+                        <td class="px-5 py-4 text-right text-emerald-600 dark:text-emerald-400 font-mono font-black text-xl sm:text-2xl">
+                            Rs. {{ number_format($totalInflows, 2) }}
+                        </td>
+                        <td class="px-5 py-4 text-right text-rose-600 dark:text-rose-400 font-mono font-black text-xl sm:text-2xl">
+                            Rs. {{ number_format($totalOutflows, 2) }}
+                        </td>
+                        <td class="px-5 py-4 text-right font-mono font-black text-xl sm:text-2xl text-gray-900 dark:text-white">
+                            Rs. {{ number_format($netFlow, 2) }}
+                        </td>
+                    </tr>
+                </tfoot>
+            @endif
+        </table>
     </div>
 @endsection
 

@@ -87,21 +87,23 @@ class CashBookController extends Controller
         $ledgerEntries = collect();
 
         foreach ($inflows as $inflow) {
+            $unitNo = $inflow->payments->first()?->unit?->unit_number ?? $inflow->tenant?->unit?->unit_number;
             $ledgerEntries->push([
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
                 'voucher_no' => $inflow->voucher_no,
-                'type' => 'Inflow',
+                'type' => 'Receipt',
                 'details' => $inflow->received_from_type === 'tenant'
-                    ? '👤 Tenant: ' . ($inflow->tenant ? $inflow->tenant->name : 'N/A') . ' (' . ($inflow->payments->map(fn($p) => $p->unit?->unit_number)->filter()->unique()->implode(', ') ?: 'N/A') . ')'
+                    ? '👤 Tenant: ' . ($inflow->tenant ? $inflow->tenant->name : 'N/A')
                     : ($inflow->received_from_type === 'owner'
                         ? '👤 Partner: ' . ($inflow->owner ? $inflow->owner->name : 'N/A')
                         : '👤 Misc: ' . ($inflow->other_name ?: 'N/A') . ($inflow->notes ? ' • ' . $inflow->notes : '')),
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
-                'debit' => 0.0,
-                'credit' => (float) $inflow->amount,
+                'debit' => (float) $inflow->amount,
+                'credit' => 0.0,
                 'model_type' => 'receiving_voucher',
                 'model_id' => $inflow->id,
+                'unit_number' => $unitNo,
             ]);
         }
 
@@ -114,23 +116,33 @@ class CashBookController extends Controller
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
                 'voucher_no' => $inflow->voucher_no,
-                'type' => 'Inflow',
+                'type' => 'Receipt',
                 'details' => $details,
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
-                'debit' => 0.0,
-                'credit' => (float) $inflow->amount,
+                'debit' => (float) $inflow->amount,
+                'credit' => 0.0,
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $inflow->id,
+                'unit_number' => null,
             ]);
         }
 
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof Expense;
-            $details = $isExpense
-                ? '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense')
-                : ($outflow->is_advance
+            $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
+
+            if ($isExpense) {
+                $type = 'Payout (Expense)';
+                $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
+            } elseif ($isWithdrawal) {
+                $type = 'Payout (Withdrawal)';
+                $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+            } else {
+                $type = 'Payout';
+                $details = $outflow->is_advance
                     ? '⚠️ Advance Payout to: ' . ($outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A'))
-                    : '📤 Payout to: ' . ($outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A')));
+                    : '📤 Payout to: ' . ($outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A'));
+            }
 
             if ($outflow->notes) {
                 $details .= ' • ' . $outflow->notes;
@@ -140,13 +152,14 @@ class CashBookController extends Controller
                 'date' => $outflow->date,
                 'created_at' => $outflow->created_at,
                 'voucher_no' => $outflow->voucher_no,
-                'type' => 'Outflow',
+                'type' => $type,
                 'details' => $details,
-                'method' => $outflow->payment_method . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
-                'debit' => (float) $outflow->amount,
-                'credit' => 0.0,
-                'model_type' => $isExpense ? 'expense' : 'payment_voucher',
+                'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
+                'debit' => 0.0,
+                'credit' => (float) $outflow->amount,
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
                 'model_id' => $outflow->id,
+                'unit_number' => null,
             ]);
         }
 
@@ -160,7 +173,7 @@ class CashBookController extends Controller
         // Calculate running balance
         $runningBalance = 0.0;
         $ledgerEntries = $ledgerEntries->map(function ($item) use (&$runningBalance) {
-            $runningBalance += ($item['credit'] - $item['debit']);
+            $runningBalance += ($item['debit'] - $item['credit']);
             $item['running_balance'] = $runningBalance;
             return $item;
         });
@@ -257,21 +270,23 @@ class CashBookController extends Controller
         $ledgerEntries = collect();
 
         foreach ($inflows as $inflow) {
+            $unitNo = $inflow->payments->first()?->unit?->unit_number ?? $inflow->tenant?->unit?->unit_number;
             $ledgerEntries->push([
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
                 'voucher_no' => $inflow->voucher_no,
-                'type' => 'Inflow',
+                'type' => 'Receipt',
                 'details' => $inflow->received_from_type === 'tenant'
-                    ? '👤 Tenant: ' . ($inflow->tenant ? $inflow->tenant->name : 'N/A') . ' (' . ($inflow->payments->map(fn($p) => $p->unit?->unit_number)->filter()->unique()->implode(', ') ?: 'N/A') . ')'
+                    ? '👤 Tenant: ' . ($inflow->tenant ? $inflow->tenant->name : 'N/A')
                     : ($inflow->received_from_type === 'owner'
                         ? '👤 Partner: ' . ($inflow->owner ? $inflow->owner->name : 'N/A')
                         : '👤 Misc: ' . ($inflow->other_name ?: 'N/A') . ($inflow->notes ? ' • ' . $inflow->notes : '')),
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
-                'debit' => 0.0,
-                'credit' => (float) $inflow->amount,
+                'debit' => (float) $inflow->amount,
+                'credit' => 0.0,
                 'model_type' => 'receiving_voucher',
                 'model_id' => $inflow->id,
+                'unit_number' => $unitNo,
             ]);
         }
 
@@ -284,13 +299,14 @@ class CashBookController extends Controller
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
                 'voucher_no' => $inflow->voucher_no,
-                'type' => 'Inflow',
+                'type' => 'Receipt',
                 'details' => $details,
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
-                'debit' => 0.0,
-                'credit' => (float) $inflow->amount,
+                'debit' => (float) $inflow->amount,
+                'credit' => 0.0,
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $inflow->id,
+                'unit_number' => null,
             ]);
         }
 
@@ -299,10 +315,13 @@ class CashBookController extends Controller
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
 
             if ($isExpense) {
+                $type = 'Payout (Expense)';
                 $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } elseif ($isWithdrawal) {
+                $type = 'Payout (Withdrawal)';
                 $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
             } else {
+                $type = 'Payout';
                 $details = $outflow->is_advance
                     ? '⚠️ Advance Payout to: ' . ($outflow->other_name ?? 'N/A')
                     : '📤 Payout to: ' . ($outflow->other_name ?? 'N/A');
@@ -316,13 +335,14 @@ class CashBookController extends Controller
                 'date' => $outflow->date,
                 'created_at' => $outflow->created_at,
                 'voucher_no' => $outflow->voucher_no,
-                'type' => 'Outflow',
+                'type' => $type,
                 'details' => $details,
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
-                'debit' => (float) $outflow->amount,
-                'credit' => 0.0,
+                'debit' => 0.0,
+                'credit' => (float) $outflow->amount,
                 'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
                 'model_id' => $outflow->id,
+                'unit_number' => null,
             ]);
         }
 
@@ -336,7 +356,7 @@ class CashBookController extends Controller
         // Calculate running balance
         $runningBalance = 0.0;
         $ledgerEntries = $ledgerEntries->map(function ($item) use (&$runningBalance) {
-            $runningBalance += ($item['credit'] - $item['debit']);
+            $runningBalance += ($item['debit'] - $item['credit']);
             $item['running_balance'] = $runningBalance;
             return $item;
         });
@@ -348,10 +368,12 @@ class CashBookController extends Controller
 
         $columns = [
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
+            ['key' => 'unit_number', 'label' => 'Flat/Shop'],
             ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
-            ['key' => 'details', 'label' => 'Details / Reference'],
-            ['key' => 'debit', 'label' => 'Debit (Outflow)', 'type' => 'debit', 'class' => 'text-right'],
-            ['key' => 'credit', 'label' => 'Credit (Inflow)', 'type' => 'credit', 'class' => 'text-right'],
+            ['key' => 'type', 'label' => 'Type'],
+            ['key' => 'details', 'label' => 'Description / Ref'],
+            ['key' => 'debit', 'label' => 'Debit (Inflow)', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit (Outflow)', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
