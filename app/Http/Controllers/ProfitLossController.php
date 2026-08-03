@@ -272,18 +272,40 @@ class ProfitLossController extends Controller
         $totalBilledIncome = array_sum(array_column($incomeDetailed, 'billed'));
         $totalUnpaidIncome = array_sum(array_column($incomeDetailed, 'unpaid'));
 
-        // 2. Expenses
-        $expensesByHead = Expense::with('expenseHead')
+        // 2. Expenses (Direct Expenses + JV Vouchers)
+        $directExpenses = Expense::with('expenseHead')
             ->whereBetween('date', [$from, $to])
             ->select('expense_head_id', DB::raw('SUM(amount) as total_spent'))
             ->groupBy('expense_head_id')
-            ->get()
-            ->map(fn($e) => [
-                'name' => $e->expenseHead?->name ?? 'Uncategorized',
-                'amount' => (float) $e->total_spent,
-            ])
-            ->toArray();
+            ->get();
 
+        $jvExpenses = \App\Models\JvVoucher::with('expenseHead')
+            ->whereBetween('date', [$from, $to])
+            ->select('expense_head_id', DB::raw('SUM(amount) as total_spent'))
+            ->groupBy('expense_head_id')
+            ->get();
+
+        $headTotals = [];
+        foreach ($directExpenses as $e) {
+            $headId = $e->expense_head_id;
+            $name = $e->expenseHead?->name ?? 'Uncategorized';
+            $headTotals[$headId] = [
+                'name' => $name,
+                'amount' => ($headTotals[$headId]['amount'] ?? 0.0) + (float) $e->total_spent,
+            ];
+        }
+
+        foreach ($jvExpenses as $j) {
+            $headId = $j->expense_head_id;
+            $name = $j->expenseHead?->name ?? 'Uncategorized';
+            $headTotals[$headId] = [
+                'name' => $name,
+                'amount' => ($headTotals[$headId]['amount'] ?? 0.0) + (float) $j->total_spent,
+            ];
+        }
+
+        $expensesByHead = array_values($headTotals);
+        usort($expensesByHead, fn($a, $b) => strcmp($a['name'], $b['name']));
         $totalExpenses = array_sum(array_column($expensesByHead, 'amount'));
 
         // 3. Net Profit / Loss

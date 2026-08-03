@@ -356,6 +356,26 @@ Route::middleware('auth')->group(function () {
             ->name('expenses.print');
     });
 
+    Route::middleware('permission:jv_vouchers.view')->group(function () {
+        Route::get('jv-vouchers-print-list', [\App\Http\Controllers\JvVoucherController::class, 'printList'])
+            ->name('jv-vouchers.print-list');
+        Route::post('jv-vouchers/{jvVoucher}/pay', [\App\Http\Controllers\JvVoucherController::class, 'pay'])
+            ->name('jv-vouchers.pay');
+        Route::resource('jv-vouchers', \App\Http\Controllers\JvVoucherController::class)->names([
+            'index'   => 'jv-vouchers.index',
+            'create'  => 'jv-vouchers.create',
+            'store'   => 'jv-vouchers.store',
+            'show'    => 'jv-vouchers.show',
+            'edit'    => 'jv-vouchers.edit',
+            'update'  => 'jv-vouchers.update',
+            'destroy' => 'jv-vouchers.destroy',
+        ])->parameters([
+            'jv-vouchers' => 'jvVoucher',
+        ]);
+        Route::get('jv-vouchers/{jvVoucher}/print', [\App\Http\Controllers\JvVoucherController::class, 'print'])
+            ->name('jv-vouchers.print');
+    });
+
     // Other Tenants
     Route::middleware('permission:other_tenants.view')->group(function () {
         Route::get('other-tenants/print', [\App\Http\Controllers\OtherTenantController::class, 'print'])->name('other-tenants.print');

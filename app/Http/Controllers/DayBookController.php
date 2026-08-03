@@ -57,8 +57,20 @@ class DayBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->get();
 
+        // Fetch Outflows (Paid JV Vouchers)
+        $jvVouchers = \App\Models\JvVoucher::with(['expenseHead', 'paymentAccount', 'user'])
+            ->where('status', 'paid')
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('paid_date', [$startDate->toDateString(), $endDate->toDateString()])
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->whereNull('paid_date')
+                            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
+                    });
+            })
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -104,11 +116,14 @@ class DayBookController extends Controller
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof \App\Models\Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
-            
+            $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
+
             if ($isExpense) {
                 $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } elseif ($isWithdrawal) {
                 $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+            } elseif ($isJvVoucher) {
+                $details = '📑 JV Voucher: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } else {
                 $details = $outflow->is_advance
                     ? '⚠️ Advance Payout to: ' . ($outflow->other_name ?? 'N/A')
@@ -119,8 +134,10 @@ class DayBookController extends Controller
                 $details .= ' • ' . $outflow->notes;
             }
 
+            $entryDate = $isJvVoucher ? ($outflow->paid_date ?? $outflow->date) : $outflow->date;
+
             $ledgerEntries->push([
-                'date' => $outflow->date,
+                'date' => $entryDate,
                 'created_at' => $outflow->created_at,
                 'voucher_no' => $outflow->voucher_no,
                 'type' => 'Outflow',
@@ -128,7 +145,7 @@ class DayBookController extends Controller
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => (float)$outflow->amount,
                 'credit' => 0.0,
-                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : 'payment_voucher')),
                 'model_id' => $outflow->id,
             ]);
         }
@@ -212,8 +229,20 @@ class DayBookController extends Controller
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->get();
 
+        // Fetch Outflows (Paid JV Vouchers)
+        $jvVouchers = \App\Models\JvVoucher::with(['expenseHead', 'paymentAccount', 'user'])
+            ->where('status', 'paid')
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('paid_date', [$startDate->toDateString(), $endDate->toDateString()])
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->whereNull('paid_date')
+                            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
+                    });
+            })
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -259,11 +288,14 @@ class DayBookController extends Controller
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof \App\Models\Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
-            
+            $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
+
             if ($isExpense) {
                 $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } elseif ($isWithdrawal) {
                 $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+            } elseif ($isJvVoucher) {
+                $details = '📑 JV Voucher: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } else {
                 $details = $outflow->is_advance
                     ? '⚠️ Advance Payout to: ' . ($outflow->other_name ?? 'N/A')
@@ -274,8 +306,10 @@ class DayBookController extends Controller
                 $details .= ' • ' . $outflow->notes;
             }
 
+            $entryDate = $isJvVoucher ? ($outflow->paid_date ?? $outflow->date) : $outflow->date;
+
             $ledgerEntries->push([
-                'date' => $outflow->date,
+                'date' => $entryDate,
                 'created_at' => $outflow->created_at,
                 'voucher_no' => $outflow->voucher_no,
                 'type' => 'Outflow',
@@ -283,7 +317,7 @@ class DayBookController extends Controller
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => (float)$outflow->amount,
                 'credit' => 0.0,
-                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : 'payment_voucher')),
                 'model_id' => $outflow->id,
             ]);
         }

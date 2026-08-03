@@ -58,7 +58,8 @@ class AccountSummaryService
             
             $priorPvOut = $dateFrom ? (float)PaymentVoucher::where('payment_account_id', $account->id)->where('date', '<', $dateFrom)->sum('amount') : 0;
             $priorGrvOut = $dateFrom ? (float)GeneralReceivingVoucher::where('from_payment_account_id', $account->id)->where('date', '<', $dateFrom)->sum('amount') : 0;
-            $priorExpOut = $dateFrom ? (float)Expense::where('payment_account_id', $account->id)->where('date', '<', $dateFrom)->sum('amount') : 0;
+            $priorExpOut = $dateFrom ? (float)Expense::where('payment_account_id', $account->id)->where('date', '<', $dateFrom)->sum('amount')
+                + (float)\App\Models\JvVoucher::where('status', 'paid')->where('payment_account_id', $account->id)->where('paid_date', '<', $dateFrom)->sum('amount') : 0;
             $priorWithOut = $dateFrom ? (float)Withdrawal::where('payment_account_id', $account->id)->where('date', '<', $dateFrom)->sum('amount') : 0;
             
             $openingBalance = $opening + ($priorRvIn + $priorGrvIn + $priorPvIn) - ($priorPvOut + $priorGrvOut + $priorExpOut + $priorWithOut);
@@ -85,7 +86,10 @@ class AccountSummaryService
                 ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
             $expOut = (float)Expense::where('payment_account_id', $account->id)
                 ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount')
+                + (float)\App\Models\JvVoucher::where('status', 'paid')->where('payment_account_id', $account->id)
+                ->when($dateFrom, fn($q) => $q->where('paid_date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('paid_date', '<=', $dateTo))->sum('amount');
             $withOut = (float)Withdrawal::where('payment_account_id', $account->id)
                 ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
@@ -282,9 +286,14 @@ class AccountSummaryService
 
         foreach ($heads as $head) {
             $openingBalance = $dateFrom ? (float)Expense::where('expense_head_id', $head->id)
+                ->where('date', '<', $dateFrom)->sum('amount')
+                + (float)\App\Models\JvVoucher::where('expense_head_id', $head->id)
                 ->where('date', '<', $dateFrom)->sum('amount') : 0;
 
             $totalDebit = (float)Expense::where('expense_head_id', $head->id)
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount')
+                + (float)\App\Models\JvVoucher::where('expense_head_id', $head->id)
                 ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
 
@@ -375,7 +384,8 @@ class AccountSummaryService
         $unallocatedTenantIncome = max(0.00, $tenantIncomeAll - $totalAllocatedTenantVouchers);
 
         $totalIncome = $rentPmMall + $maintPmMall + $maintOtherOwned + $extraPmMall + $unallocatedTenantIncome;
-        $totalExpenses = (float) Expense::whereBetween('date', [$from, $to])->sum('amount');
+        $totalExpenses = (float) Expense::whereBetween('date', [$from, $to])->sum('amount')
+            + (float) \App\Models\JvVoucher::whereBetween('date', [$from, $to])->sum('amount');
 
         return $totalIncome - $totalExpenses;
     }

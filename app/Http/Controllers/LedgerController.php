@@ -758,6 +758,10 @@ class LedgerController extends Controller
 
             $priorOutflowExpenses = (float) Expense::where('payment_account_id', $accountId)
                 ->where('date', '<', $dateFrom)
+                ->sum('amount')
+                + (float) \App\Models\JvVoucher::where('status', 'paid')
+                ->where('payment_account_id', $accountId)
+                ->where('paid_date', '<', $dateFrom)
                 ->sum('amount');
 
             $priorOutflowWithdrawals = (float) Withdrawal::where('payment_account_id', $accountId)
@@ -932,6 +936,27 @@ class LedgerController extends Controller
             ]);
         }
 
+        // 4b. Debits (Outflows) in the selected period: Paid JV Vouchers
+        $paidJvVouchers = \App\Models\JvVoucher::where('status', 'paid')
+            ->where('payment_account_id', $accountId)
+            ->when($dateFrom, fn($q) => $q->where('paid_date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('paid_date', '<=', $dateTo))
+            ->get();
+
+        foreach ($paidJvVouchers as $jv) {
+            $entries->push([
+                'date' => $jv->paid_date,
+                'voucher_no' => $jv->voucher_no,
+                'type' => 'JV Voucher (Paid)',
+                'description' => ($jv->expenseHead->name ?? 'JV Expense') . ($jv->notes ? ' - ' . $jv->notes : ''),
+                'debit' => 0.00,
+                'credit' => (float)$jv->amount,
+                'model_type' => 'jv_voucher',
+                'model_id' => $jv->id,
+                'unit_number' => null,
+            ]);
+        }
+
         // 5. Debits (Outflows) in the selected period: Withdrawals
         $withdrawals = Withdrawal::where('payment_account_id', $accountId)
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
@@ -991,19 +1016,45 @@ class LedgerController extends Controller
             ->with(['paymentAccount'])
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
-            ->orderBy('date', 'asc')
             ->get();
 
-        $entries = $expenses->map(fn($e) => [
-            'date' => $e->date,
-            'voucher_no' => $e->voucher_no,
-            'notes' => $e->notes ?? '—',
-            'payment_account' => $e->paymentAccount->name ?? '—',
-            'reference' => $e->reference ?? '—',
-            'amount' => (float)$e->amount,
-            'id' => $e->id,
-        ]);
+        $jvVouchers = \App\Models\JvVoucher::where('expense_head_id', $expenseHeadId)
+            ->with(['paymentAccount'])
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->get();
 
+        $entries = collect();
+
+        foreach ($expenses as $e) {
+            $entries->push([
+                'date' => $e->date,
+                'voucher_no' => $e->voucher_no,
+                'notes' => $e->notes ?? '—',
+                'payment_account' => $e->paymentAccount->name ?? '—',
+                'reference' => $e->reference ?? '—',
+                'amount' => (float)$e->amount,
+                'id' => $e->id,
+                'type' => 'Expense',
+                'status' => 'Paid',
+            ]);
+        }
+
+        foreach ($jvVouchers as $jv) {
+            $entries->push([
+                'date' => $jv->date,
+                'voucher_no' => $jv->voucher_no,
+                'notes' => $jv->notes ?? '—',
+                'payment_account' => $jv->status === 'paid' ? ($jv->paymentAccount->name ?? '—') : 'Unpaid (Accrued)',
+                'reference' => $jv->reference ?? '—',
+                'amount' => (float)$jv->amount,
+                'id' => $jv->id,
+                'type' => 'JV Voucher',
+                'status' => ucfirst($jv->status),
+            ]);
+        }
+
+        $entries = $entries->sortBy(fn($item) => $item['date']->format('Y-m-d'))->values();
         $totalAmount = $entries->sum('amount');
 
         return [

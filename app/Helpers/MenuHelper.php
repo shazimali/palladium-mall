@@ -174,6 +174,9 @@ class MenuHelper
             if ($user->can('expenses.view')) {
                 $voucherSubItems[] = ['name' => 'Expense Vouchers', 'path' => '/expense-vouchers'];
             }
+            if ($user->can('jv_vouchers.view')) {
+                $voucherSubItems[] = ['name' => 'JV Voucher', 'path' => '/jv-vouchers'];
+            }
         }
 
         if (!empty($voucherSubItems)) {

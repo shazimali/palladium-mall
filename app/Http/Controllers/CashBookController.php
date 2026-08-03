@@ -80,8 +80,25 @@ class CashBookController extends Controller
             })
             ->get();
 
+        // Fetch Outflows (Paid JV Vouchers) filtered by cash
+        $jvVouchers = \App\Models\JvVoucher::with(['expenseHead', 'paymentAccount', 'user'])
+            ->where('status', 'paid')
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('paid_date', [$startDate->toDateString(), $endDate->toDateString()])
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->whereNull('paid_date')
+                            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
+                    });
+            })
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->orWhere('payment_method', 'Cash')
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -130,6 +147,7 @@ class CashBookController extends Controller
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
+            $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
 
             if ($isExpense) {
                 $type = 'Payout (Expense)';
@@ -137,6 +155,9 @@ class CashBookController extends Controller
             } elseif ($isWithdrawal) {
                 $type = 'Payout (Withdrawal)';
                 $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+            } elseif ($isJvVoucher) {
+                $type = 'Payout (JV Voucher)';
+                $details = '📑 JV Voucher: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } else {
                 $type = 'Payout';
                 $details = $outflow->is_advance
@@ -148,8 +169,10 @@ class CashBookController extends Controller
                 $details .= ' • ' . $outflow->notes;
             }
 
+            $entryDate = $isJvVoucher ? ($outflow->paid_date ?? $outflow->date) : $outflow->date;
+
             $ledgerEntries->push([
-                'date' => $outflow->date,
+                'date' => $entryDate,
                 'created_at' => $outflow->created_at,
                 'voucher_no' => $outflow->voucher_no,
                 'type' => $type,
@@ -157,7 +180,7 @@ class CashBookController extends Controller
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float) $outflow->amount,
-                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : 'payment_voucher')),
                 'model_id' => $outflow->id,
                 'unit_number' => null,
             ]);
@@ -263,8 +286,25 @@ class CashBookController extends Controller
             })
             ->get();
 
+        // Fetch Outflows (Paid JV Vouchers) filtered by cash
+        $jvVouchers = \App\Models\JvVoucher::with(['expenseHead', 'paymentAccount', 'user'])
+            ->where('status', 'paid')
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('paid_date', [$startDate->toDateString(), $endDate->toDateString()])
+                    ->orWhere(function ($q2) use ($startDate, $endDate) {
+                        $q2->whereNull('paid_date')
+                            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
+                    });
+            })
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->orWhere('payment_method', 'Cash')
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -313,6 +353,7 @@ class CashBookController extends Controller
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
+            $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
 
             if ($isExpense) {
                 $type = 'Payout (Expense)';
@@ -320,6 +361,9 @@ class CashBookController extends Controller
             } elseif ($isWithdrawal) {
                 $type = 'Payout (Withdrawal)';
                 $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+            } elseif ($isJvVoucher) {
+                $type = 'Payout (JV Voucher)';
+                $details = '📑 JV Voucher: ' . ($outflow->expenseHead?->name ?? 'Expense');
             } else {
                 $type = 'Payout';
                 $details = $outflow->is_advance
@@ -331,8 +375,10 @@ class CashBookController extends Controller
                 $details .= ' • ' . $outflow->notes;
             }
 
+            $entryDate = $isJvVoucher ? ($outflow->paid_date ?? $outflow->date) : $outflow->date;
+
             $ledgerEntries->push([
-                'date' => $outflow->date,
+                'date' => $entryDate,
                 'created_at' => $outflow->created_at,
                 'voucher_no' => $outflow->voucher_no,
                 'type' => $type,
@@ -340,7 +386,7 @@ class CashBookController extends Controller
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float) $outflow->amount,
-                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : 'payment_voucher'),
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : 'payment_voucher')),
                 'model_id' => $outflow->id,
                 'unit_number' => null,
             ]);
