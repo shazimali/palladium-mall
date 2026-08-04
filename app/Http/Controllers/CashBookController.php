@@ -105,16 +105,25 @@ class CashBookController extends Controller
 
         foreach ($inflows as $inflow) {
             $unitNo = $inflow->payments->first()?->unit?->unit_number ?? $inflow->tenant?->unit?->unit_number;
+            $name = $inflow->received_from_type === 'tenant'
+                ? ($inflow->tenant ? $inflow->tenant->name : '')
+                : ($inflow->received_from_type === 'owner'
+                    ? ($inflow->owner ? $inflow->owner->name : '')
+                    : ($inflow->other_name ?: ''));
+
+            $notes = trim($inflow->notes ?? '');
+            if ($notes !== '') {
+                $details = ($name && !str_contains(strtolower($notes), strtolower($name))) ? $name . ' • ' . $notes : $notes;
+            } else {
+                $details = $name ?: '—';
+            }
+
             $ledgerEntries->push([
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
                 'voucher_no' => $inflow->voucher_no,
                 'type' => 'Receipt',
-                'details' => $inflow->received_from_type === 'tenant'
-                    ? '👤 Tenant: ' . ($inflow->tenant ? $inflow->tenant->name : 'N/A')
-                    : ($inflow->received_from_type === 'owner'
-                        ? '👤 Partner: ' . ($inflow->owner ? $inflow->owner->name : 'N/A')
-                        : '👤 Misc: ' . ($inflow->other_name ?: 'N/A') . ($inflow->notes ? ' • ' . $inflow->notes : '')),
+                'details' => $details,
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => (float) $inflow->amount,
                 'credit' => 0.0,
@@ -125,10 +134,14 @@ class CashBookController extends Controller
         }
 
         foreach ($generalInflows as $inflow) {
-            $details = '👤 Party: ' . ($inflow->party ? $inflow->party->name : 'N/A');
-            if ($inflow->notes) {
-                $details .= ' • ' . $inflow->notes;
+            $name = $inflow->party ? $inflow->party->name : '';
+            $notes = trim($inflow->notes ?? '');
+            if ($notes !== '') {
+                $details = ($name && !str_contains(strtolower($notes), strtolower($name))) ? $name . ' • ' . $notes : $notes;
+            } else {
+                $details = $name ?: '—';
             }
+
             $ledgerEntries->push([
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
@@ -148,25 +161,40 @@ class CashBookController extends Controller
             $isExpense = $outflow instanceof Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
             $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
+            $notes = trim($outflow->notes ?? '');
 
             if ($isExpense) {
-                $type = 'Payout (Expense)';
-                $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
+                $type = 'Expense';
+                $head = $outflow->expenseHead?->name;
+                if ($notes !== '') {
+                    $details = ($head && strtolower($head) !== strtolower($notes)) ? $head . ' • ' . $notes : $notes;
+                } else {
+                    $details = $head ?: 'Expense';
+                }
             } elseif ($isWithdrawal) {
-                $type = 'Payout (Withdrawal)';
-                $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+                $type = 'Payout';
+                $name = $outflow->owner?->name;
+                if ($notes !== '') {
+                    $details = ($name && !str_contains(strtolower($notes), strtolower($name))) ? $name . ' • ' . $notes : $notes;
+                } else {
+                    $details = $name ?: 'Withdrawal';
+                }
             } elseif ($isJvVoucher) {
-                $type = 'Payout (JV Voucher)';
-                $details = '📑 JV Voucher: ' . ($outflow->expenseHead?->name ?? 'Expense');
+                $type = 'Payout';
+                $head = $outflow->expenseHead?->name;
+                if ($notes !== '') {
+                    $details = ($head && strtolower($head) !== strtolower($notes)) ? $head . ' • ' . $notes : $notes;
+                } else {
+                    $details = $head ?: 'JV Voucher';
+                }
             } else {
                 $type = 'Payout';
-                $details = $outflow->is_advance
-                    ? '⚠️ Advance Payout to: ' . ($outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A'))
-                    : '📤 Payout to: ' . ($outflow->paid_to_type === 'owner' ? ($outflow->owner?->name ?? 'Partner') : ($outflow->other_name ?? 'N/A'));
-            }
-
-            if ($outflow->notes) {
-                $details .= ' • ' . $outflow->notes;
+                $recipient = $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name) : ($outflow->other_name);
+                if ($notes !== '') {
+                    $details = ($recipient && !str_contains(strtolower($notes), strtolower($recipient))) ? $recipient . ' • ' . $notes : $notes;
+                } else {
+                    $details = $recipient ?: 'Payout';
+                }
             }
 
             $entryDate = $isJvVoucher ? ($outflow->paid_date ?? $outflow->date) : $outflow->date;
@@ -185,6 +213,24 @@ class CashBookController extends Controller
                 'unit_number' => null,
             ]);
         }
+
+        // Calculate & Prepend Opening Balance (Previous Day / Period Closing Balance)
+        $openingBalance = $this->getOpeningBalance($startDate);
+        $prevDate = $startDate->copy()->subDay();
+        $ledgerEntries->push([
+            'date' => $prevDate,
+            'created_at' => Carbon::create(1970, 1, 1),
+            'voucher_no' => 'OP-BAL',
+            'type' => 'OP Balance',
+            'details' => 'OP Balance (Closing Balance as of ' . $prevDate->format('d M Y') . ')',
+            'method' => 'Cash',
+            'debit' => $openingBalance >= 0 ? (float) $openingBalance : 0.0,
+            'credit' => $openingBalance < 0 ? (float) abs($openingBalance) : 0.0,
+            'model_type' => 'opening_balance',
+            'model_id' => null,
+            'unit_number' => null,
+            'is_opening' => true,
+        ]);
 
         // Sort chronologically
         $ledgerEntries = $ledgerEntries->sortBy(function ($item) {
@@ -212,6 +258,7 @@ class CashBookController extends Controller
             'totalInflows' => $totalInflows,
             'totalOutflows' => $totalOutflows,
             'netFlow' => $netFlow,
+            'openingBalance' => $openingBalance,
             'startDate' => $startDate->toDateString(),
             'endDate' => $endDate->toDateString(),
             'isSingleDay' => $startDate->isSameDay($endDate),
@@ -311,16 +358,25 @@ class CashBookController extends Controller
 
         foreach ($inflows as $inflow) {
             $unitNo = $inflow->payments->first()?->unit?->unit_number ?? $inflow->tenant?->unit?->unit_number;
+            $name = $inflow->received_from_type === 'tenant'
+                ? ($inflow->tenant ? $inflow->tenant->name : '')
+                : ($inflow->received_from_type === 'owner'
+                    ? ($inflow->owner ? $inflow->owner->name : '')
+                    : ($inflow->other_name ?: ''));
+
+            $notes = trim($inflow->notes ?? '');
+            if ($notes !== '') {
+                $details = ($name && !str_contains(strtolower($notes), strtolower($name))) ? $name . ' • ' . $notes : $notes;
+            } else {
+                $details = $name ?: '—';
+            }
+
             $ledgerEntries->push([
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
                 'voucher_no' => $inflow->voucher_no,
                 'type' => 'Receipt',
-                'details' => $inflow->received_from_type === 'tenant'
-                    ? '👤 Tenant: ' . ($inflow->tenant ? $inflow->tenant->name : 'N/A')
-                    : ($inflow->received_from_type === 'owner'
-                        ? '👤 Partner: ' . ($inflow->owner ? $inflow->owner->name : 'N/A')
-                        : '👤 Misc: ' . ($inflow->other_name ?: 'N/A') . ($inflow->notes ? ' • ' . $inflow->notes : '')),
+                'details' => $details,
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => (float) $inflow->amount,
                 'credit' => 0.0,
@@ -331,10 +387,14 @@ class CashBookController extends Controller
         }
 
         foreach ($generalInflows as $inflow) {
-            $details = '👤 Party: ' . ($inflow->party ? $inflow->party->name : 'N/A');
-            if ($inflow->notes) {
-                $details .= ' • ' . $inflow->notes;
+            $name = $inflow->party ? $inflow->party->name : '';
+            $notes = trim($inflow->notes ?? '');
+            if ($notes !== '') {
+                $details = ($name && !str_contains(strtolower($notes), strtolower($name))) ? $name . ' • ' . $notes : $notes;
+            } else {
+                $details = $name ?: '—';
             }
+
             $ledgerEntries->push([
                 'date' => $inflow->date ?? $inflow->created_at,
                 'created_at' => $inflow->created_at,
@@ -354,25 +414,40 @@ class CashBookController extends Controller
             $isExpense = $outflow instanceof Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
             $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
+            $notes = trim($outflow->notes ?? '');
 
             if ($isExpense) {
-                $type = 'Payout (Expense)';
-                $details = '💸 Expense: ' . ($outflow->expenseHead?->name ?? 'Expense');
+                $type = 'Expense';
+                $head = $outflow->expenseHead?->name;
+                if ($notes !== '') {
+                    $details = ($head && strtolower($head) !== strtolower($notes)) ? $head . ' • ' . $notes : $notes;
+                } else {
+                    $details = $head ?: 'Expense';
+                }
             } elseif ($isWithdrawal) {
-                $type = 'Payout (Withdrawal)';
-                $details = '🏧 Withdrawal: ' . ($outflow->owner?->name ?? 'Partner');
+                $type = 'Payout';
+                $name = $outflow->owner?->name;
+                if ($notes !== '') {
+                    $details = ($name && !str_contains(strtolower($notes), strtolower($name))) ? $name . ' • ' . $notes : $notes;
+                } else {
+                    $details = $name ?: 'Withdrawal';
+                }
             } elseif ($isJvVoucher) {
-                $type = 'Payout (JV Voucher)';
-                $details = '📑 JV Voucher: ' . ($outflow->expenseHead?->name ?? 'Expense');
+                $type = 'Payout';
+                $head = $outflow->expenseHead?->name;
+                if ($notes !== '') {
+                    $details = ($head && strtolower($head) !== strtolower($notes)) ? $head . ' • ' . $notes : $notes;
+                } else {
+                    $details = $head ?: 'JV Voucher';
+                }
             } else {
                 $type = 'Payout';
-                $details = $outflow->is_advance
-                    ? '⚠️ Advance Payout to: ' . ($outflow->other_name ?? 'N/A')
-                    : '📤 Payout to: ' . ($outflow->other_name ?? 'N/A');
-            }
-
-            if ($outflow->notes) {
-                $details .= ' • ' . $outflow->notes;
+                $recipient = $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name) : ($outflow->other_name);
+                if ($notes !== '') {
+                    $details = ($recipient && !str_contains(strtolower($notes), strtolower($recipient))) ? $recipient . ' • ' . $notes : $notes;
+                } else {
+                    $details = $recipient ?: 'Payout';
+                }
             }
 
             $entryDate = $isJvVoucher ? ($outflow->paid_date ?? $outflow->date) : $outflow->date;
@@ -392,6 +467,24 @@ class CashBookController extends Controller
             ]);
         }
 
+        // Calculate & Prepend Opening Balance (Previous Day / Period Closing Balance)
+        $openingBalance = $this->getOpeningBalance($startDate);
+        $prevDate = $startDate->copy()->subDay();
+        $ledgerEntries->push([
+            'date' => $prevDate,
+            'created_at' => Carbon::create(1970, 1, 1),
+            'voucher_no' => 'OP-BAL',
+            'type' => 'OP Balance',
+            'details' => 'OP Balance (Closing Balance as of ' . $prevDate->format('d M Y') . ')',
+            'method' => 'Cash',
+            'debit' => $openingBalance >= 0 ? (float) $openingBalance : 0.0,
+            'credit' => $openingBalance < 0 ? (float) abs($openingBalance) : 0.0,
+            'model_type' => 'opening_balance',
+            'model_id' => null,
+            'unit_number' => null,
+            'is_opening' => true,
+        ]);
+
         // Sort chronologically
         $ledgerEntries = $ledgerEntries->sortBy(function ($item) {
             $date = $item['date'] instanceof Carbon ? $item['date'] : Carbon::parse($item['date']);
@@ -407,20 +500,28 @@ class CashBookController extends Controller
             return $item;
         });
 
+        // Sums
+        $totalInflows = $inflows->sum('amount') + $generalInflows->sum('amount');
+        $totalOutflows = $outflows->sum('amount');
+        $netFlow = $totalInflows - $totalOutflows;
+
         // Set up filters summary
         $filterChips = [
             ['label' => 'Period', 'value' => $startDate->format('d M Y') . ' to ' . $endDate->format('d M Y')],
+            ['label' => 'Total Debit', 'value' => number_format($totalInflows, 2)],
+            ['label' => 'Total Credit', 'value' => number_format($totalOutflows, 2)],
+            ['label' => 'Net Cash', 'value' => number_format($netFlow, 2)],
         ];
 
         $columns = [
-            ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
-            ['key' => 'unit_number', 'label' => 'Flat/Shop'],
-            ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
-            ['key' => 'type', 'label' => 'Type'],
-            ['key' => 'details', 'label' => 'Description / Ref'],
-            ['key' => 'debit', 'label' => 'Debit (Inflow)', 'type' => 'debit', 'class' => 'text-right'],
-            ['key' => 'credit', 'label' => 'Credit (Outflow)', 'type' => 'credit', 'class' => 'text-right'],
-            ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
+            ['key' => 'date', 'label' => 'Date', 'type' => 'date', 'class' => 'col-compact'],
+            ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono', 'class' => 'col-tight'],
+            ['key' => 'type', 'label' => 'Type', 'type' => 'badge', 'class' => 'col-compact'],
+            ['key' => 'details', 'label' => 'Description / Ref', 'class' => 'col-desc'],
+            ['key' => 'unit_number', 'label' => 'Unit', 'class' => 'col-tight'],
+            ['key' => 'debit', 'label' => 'Debit', 'type' => 'debit', 'class' => 'text-right col-compact'],
+            ['key' => 'credit', 'label' => 'Credit', 'type' => 'credit', 'class' => 'text-right col-compact'],
+            ['key' => 'running_balance', 'label' => 'Balance', 'type' => 'balance', 'class' => 'text-right col-compact'],
         ];
 
         return view('ledgers.print_page', [
@@ -429,5 +530,64 @@ class CashBookController extends Controller
             'columns' => $columns,
             'rows' => $ledgerEntries->toArray(),
         ]);
+    }
+
+    /**
+     * Calculate previous accumulated cash balance before the given start date.
+     */
+    private function getOpeningBalance(Carbon $startDate): float
+    {
+        $startDateStr = $startDate->toDateString();
+
+        $priorReceiving = ReceivingVoucher::where('date', '<', $startDateStr)
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->sum('amount');
+
+        $priorGeneralReceiving = \App\Models\GeneralReceivingVoucher::where('date', '<', $startDateStr)
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->sum('amount');
+
+        $priorExpenses = Expense::where('date', '<', $startDateStr)
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->sum('amount');
+
+        $priorPaymentVouchers = PaymentVoucher::where('date', '<', $startDateStr)
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->sum('amount');
+
+        $priorWithdrawals = \App\Models\Withdrawal::where('date', '<', $startDateStr)
+            ->where(function ($q) {
+                $q->whereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->sum('amount');
+
+        $priorJvVouchers = \App\Models\JvVoucher::where('status', 'paid')
+            ->where(function ($q) use ($startDateStr) {
+                $q->where('paid_date', '<', $startDateStr)
+                    ->orWhere(function ($q2) use ($startDateStr) {
+                        $q2->whereNull('paid_date')
+                            ->where('date', '<', $startDateStr);
+                    });
+            })
+            ->where(function ($q) {
+                $q->where('payment_method', 'cash')
+                    ->orWhere('payment_method', 'Cash')
+                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
+            })
+            ->sum('amount');
+
+        return (float) (($priorReceiving + $priorGeneralReceiving) - ($priorExpenses + $priorPaymentVouchers + $priorWithdrawals + $priorJvVouchers));
     }
 }
