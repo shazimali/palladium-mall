@@ -15,259 +15,186 @@
         }
 
         html {
-            font-size: 13px;
+            font-size: 15px;
         }
 
         body {
-            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             color: #000;
             background: #fff;
-            padding: 16px 20px;
-            line-height: 1.35;
+            padding: 24px 32px;
+            line-height: 1.5;
             font-weight: 700;
         }
 
-        .pm-header {
+        .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 3px solid #111827;
-            padding-bottom: 10px;
-            margin-bottom: 14px;
+            border-bottom: 3px solid #0f172a;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
         }
 
-        .pm-header-left {
+        .logo-section {
             display: flex;
             align-items: center;
             gap: 10px;
         }
 
-        .pm-logo-icon {
-            width: 38px;
-            height: 38px;
-            background: #111827;
-            border-radius: 8px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            gap: 3px;
-            padding: 6px 6px 5px;
-        }
-
-        .pm-logo-icon span {
-            display: block;
-            background: #fff;
-            border-radius: 2px;
-            width: 5px;
-        }
-
-        .pm-logo-icon span:nth-child(1) {
-            height: 100%;
-        }
-
-        .pm-logo-icon span:nth-child(2) {
-            height: 70%;
-            opacity: .9;
-        }
-
-        .pm-logo-icon span:nth-child(3) {
-            height: 82%;
-            opacity: .7;
-        }
-
-        .pm-name {
-            font-size: 1.5rem;
+        .logo-text {
+            font-size: 1.4rem;
             font-weight: 900;
-            color: #000;
-            letter-spacing: -.5px;
+            color: #0f172a;
         }
 
-        .pm-header-right {
+        .doc-title {
             text-align: right;
         }
 
-        .pm-header-right .doc-title {
-            font-size: 1.85rem;
+        .doc-title h2 {
+            font-size: 1.15rem;
             font-weight: 900;
-            color: #000;
-            line-height: 1.2;
+            color: #0f172a;
         }
 
-        .pm-header-right .doc-date {
-            font-size: 1.45rem;
-            font-weight: 900;
-            color: #000;
-            margin-top: 4px;
+        .doc-title p {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #475569;
+            margin-top: 2px;
         }
 
-        .filters-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .filter-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #f9fafb;
-            border: 2px solid #000;
+        .party-info {
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            border: 1px solid #cbd5e1;
             border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 1.4rem;
-            font-weight: 900;
-            color: #000;
+            padding: 10px 14px;
+            background: #f8fafc;
         }
 
-        .filter-chip span {
-            font-size: 1.4rem;
-            font-weight: 900;
-            color: #000;
+        .party-info p {
+            margin-bottom: 4px;
         }
 
-        .filter-chip strong {
-            color: #000;
-            font-size: 1.4rem;
+        .party-info strong {
+            color: #0f172a;
             font-weight: 900;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 19px;
+            font-size: 0.92rem;
             font-weight: 700;
-            border-top: 2px solid #000;
-            border-bottom: 2px solid #000;
+            margin-bottom: 24px;
         }
 
         thead tr {
-            background: #d1d5db;
+            background: #e2e8f0;
         }
 
         thead th {
-            padding: 8px 10px;
+            padding: 10px;
             text-align: left;
             font-weight: 900;
-            font-size: 19px;
+            font-size: 0.82rem;
             text-transform: uppercase;
-            letter-spacing: .05em;
-            color: #000;
-            border-bottom: 2px solid #000;
-            white-space: nowrap;
+            color: #0f172a;
+            border-bottom: 2px solid #0f172a;
         }
 
-        thead th.col-compact, tbody td.col-compact, tfoot td.col-compact { white-space: nowrap; width: 1%; }
-        thead th.col-tight, tbody td.col-tight, tfoot td.col-tight { white-space: nowrap; width: 1%; padding-left: 4px; padding-right: 4px; font-size: 14px; }
-        thead th.col-desc, tbody td.col-desc, tfoot td.col-desc { width: auto; word-break: break-word; }
-
         thead th.text-right,
-        tbody td.text-right {
+        tbody td.text-right,
+        tfoot td.text-right {
             text-align: right;
         }
 
         tbody tr {
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e2e8f0;
         }
 
         tbody td {
-            padding: 6px 10px;
+            padding: 9px 10px;
             color: #000;
             font-weight: 700;
-            vertical-align: middle;
-            font-size: 19px;
-        }
-
-        tfoot td {
-            padding: 8px 10px;
         }
 
         .mono {
-            font-size: 19px;
-            font-weight: 900;
+            font-family: monospace;
+            font-size: 0.9rem;
+            font-weight: 800;
         }
 
         .debit {
-            color: #dc2626;
-            font-weight: 900;
-        }
-
-        .credit {
             color: #16a34a;
             font-weight: 900;
         }
 
-        .balance {
-            color: #000;
+        .credit {
+            color: #dc2626;
             font-weight: 900;
-            font-size: 19px;
         }
 
-        .empty-row td {
-            text-align: center;
-            color: #4b5563;
-            padding: 24px;
-            font-weight: 800;
-            font-size: 19px;
+        .balance {
+            color: #0f172a;
+            font-weight: 900;
         }
 
         .badge {
-            display: inline-flex;
-            align-items: center;
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: 800;
             border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 19px;
-            font-weight: 900;
+            text-transform: uppercase;
         }
 
         .badge-receipt {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .badge-payout {
-            background: #dbeafe;
-            color: #1e40af;
+            background: #dcfce7;
+            color: #15803d;
         }
 
         .badge-expense {
             background: #fee2e2;
-            color: #991b1b;
+            color: #b91c1c;
         }
 
-        .pm-footer {
-            margin-top: 24px;
-            border-top: 2px solid #000;
+        .badge-payout {
+            background: #e0e7ff;
+            color: #3730a3;
+        }
+
+        .footer {
+            margin-top: 30px;
+            border-top: 2px solid #0f172a;
             padding-top: 10px;
             display: flex;
             justify-content: space-between;
-            font-size: 14px;
-            font-weight: 900;
-            color: #111827;
-        }
-
-        .page-number::after {
-            content: "Page " counter(page);
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #475569;
         }
 
         .no-print {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .print-btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #111827;
+            background: #0f172a;
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 10px 24px;
-            font-size: 16px;
-            font-weight: 900;
+            font-size: 0.95rem;
+            font-weight: 800;
             cursor: pointer;
-            font-family: inherit;
         }
 
         .print-btn:hover {
@@ -277,21 +204,18 @@
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 10mm 10mm 15mm 10mm;
+                margin: 0.5cm;
+
                 @bottom-right {
                     content: "Page " counter(page) " of " counter(pages);
-                    font-size: 14px;
-                    font-weight: 900;
-                    color: #000;
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    color: #475569;
                 }
             }
 
             .no-print {
                 display: none !important;
-            }
-
-            tfoot {
-                display: table-row-group;
             }
 
             body {
@@ -300,21 +224,7 @@
                 padding: 0 !important;
                 margin: 0 !important;
                 font-weight: bold !important;
-                zoom: 0.9;
-            }
-
-            table {
-                border-top: 2px solid #000 !important;
-                border-bottom: 2px solid #000 !important;
-                border-left: none !important;
-                border-right: none !important;
-            }
-
-            th,
-            td {
-                border-left: none !important;
-                border-right: none !important;
-                font-size: 19px !important;
+                zoom: 0.8;
             }
 
             .max-w-3xl,
@@ -326,55 +236,47 @@
                 border: none !important;
                 box-shadow: none !important;
             }
-
-            .print-border {
-                border-width: 1px !important;
-                border-color: #000 !important;
-            }
-
-            .filter-chip, .filter-chip span, .filter-chip strong, .doc-date {
-                font-size: 1.4rem !important;
-                font-weight: 900 !important;
-            }
         }
     </style>
 </head>
 
 <body>
+
     <div class="no-print">
-        <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <button class="print-btn" onclick="window.print()">🖨️ Print / Save Statement</button>
     </div>
 
-    <div class="pm-header">
-        <div class="pm-header-left">
-            <div class="pm-logo-icon"><span></span><span></span><span></span></div>
-            <div>
-                <h1 class="pm-company-name">Palladium Mall Executive Services</h1>
-                <p class="pm-company-tagline">Financial Statement Ledger</p>
+    <!-- Statement Header (Party Print Strategy) -->
+    <div class="header">
+        <div class="logo-section">
+            <span class="logo-text">PALLADIUM MALL</span>
+        </div>
+        <div class="doc-title">
+            <h2>{{ $pageTitle }}</h2>
+            <p>Printed: {{ now()->format('d M Y, h:i A') }}</p>
+        </div>
+    </div>
+
+    <!-- Statement Details / Filter Chips -->
+    @if(!empty($filterChips))
+        <div class="party-info">
+            <div style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center;">
+                @foreach($filterChips as $chip)
+                    <p style="margin: 0;"><strong>{{ $chip['label'] }}:</strong> {{ $chip['value'] }}</p>
+                @endforeach
             </div>
-        </div>
-        <div class="pm-header-right">
-            <div class="doc-title">{{ $pageTitle ?? 'Financial Ledger Statement' }}</div>
-            <div class="doc-date">As of {{ now()->format('d M Y') }}</div>
-        </div>
-    </div>
-
-    @if(isset($filterChips) && count($filterChips) > 0)
-        <div class="filters-row">
-            @foreach($filterChips as $chip)
-                <div class="filter-chip">
-                    <span>{{ $chip['label'] }}:</span>
-                    <strong>{{ $chip['value'] }}</strong>
-                </div>
-            @endforeach
         </div>
     @endif
 
+    <!-- Statement Transactions Table -->
     <table>
         <thead>
             <tr>
                 @foreach($columns as $col)
-                    <th class="{{ $col['class'] ?? '' }}">{{ $col['label'] }}</th>
+                    <th
+                        class="{{ $col['class'] ?? '' }} {{ str_contains($col['class'] ?? '', 'text-right') ? 'text-right' : '' }}">
+                        {{ $col['label'] }}
+                    </th>
                 @endforeach
             </tr>
         </thead>
@@ -382,21 +284,23 @@
             @forelse($rows as $row)
                 <tr>
                     @foreach($columns as $col)
-                        @php $val = $row[$col['key']] ?? null; @endphp
-                        <td class="{{ $col['class'] ?? '' }} {{ $col['td_class'] ?? '' }}">
-                            @if(($col['type'] ?? '') === 'debit')
+                        @php
+                            $key = $col['key'];
+                            $val = $row[$key] ?? null;
+                        @endphp
+                        <td
+                            class="{{ $col['class'] ?? '' }} {{ str_contains($col['class'] ?? '', 'text-right') ? 'text-right' : '' }}">
+                            @if(($col['type'] ?? '') === 'date')
                                 <span
-                                    class="{{ $val > 0 ? 'debit' : '' }}">{{ $val > 0 ? number_format($val, 2) : '—' }}</span>
+                                    class="mono">{{ $val ? ($val instanceof \Carbon\Carbon ? $val->format('d M Y') : \Carbon\Carbon::parse($val)->format('d M Y')) : '—' }}</span>
+                            @elseif(($col['type'] ?? '') === 'debit')
+                                <span class="mono debit">{{ (float) $val > 0 ? number_format((float) $val, 2) : '—' }}</span>
                             @elseif(($col['type'] ?? '') === 'credit')
-                                <span
-                                    class="{{ $val > 0 ? 'credit' : '' }}">{{ $val > 0 ? number_format($val, 2) : '—' }}</span>
+                                <span class="mono credit">{{ (float) $val > 0 ? number_format((float) $val, 2) : '—' }}</span>
                             @elseif(($col['type'] ?? '') === 'balance')
-                                <span class="balance">{{ number_format($val, 2) }}</span>
+                                <span class="mono balance">{{ number_format((float) $val, 2) }}</span>
                             @elseif(($col['type'] ?? '') === 'amount')
-                                <span class="debit">{{ number_format($val, 2) }}</span>
-                            @elseif(($col['type'] ?? '') === 'date')
-                                <span
-                                    class="mono">{{ $val instanceof \Carbon\Carbon ? $val->format('d M Y') : ($val ?? '—') }}</span>
+                                <span class="mono debit">{{ (float) $val > 0 ? number_format((float) $val, 2) : '—' }}</span>
                             @elseif(($col['type'] ?? '') === 'badge')
                                 @php $badgeClass = match (true) { str_contains($val, 'Receipt') => 'badge-receipt', str_contains($val, 'Expense') => 'badge-expense', default => 'badge-payout'}; @endphp
                                 <span class="badge {{ $badgeClass }}">{{ $val ?? '—' }}</span>
@@ -407,15 +311,16 @@
                     @endforeach
                 </tr>
             @empty
-                <tr class="empty-row">
-                    <td colspan="{{ count($columns) }}">No entries found for the selected filters.</td>
+                <tr>
+                    <td colspan="{{ count($columns) }}" style="text-align: center; color: #94a3b8; padding: 40px 0;">No
+                        entries found for the selected filters.</td>
                 </tr>
             @endforelse
         </tbody>
         @if(count($rows) > 0)
             <tfoot>
                 <tr
-                    style="background: #e5e7eb; border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: 900;">
+                    style="background: #e2e8f0; border-top: 3px solid #0f172a; border-bottom: 3px solid #0f172a; font-weight: 900;">
                     @foreach($columns as $index => $col)
                         @php
                             $key = $col['key'];
@@ -423,18 +328,19 @@
                             $sum = in_array($type, ['debit', 'credit', 'amount']) ? collect($rows)->sum(fn($r) => (float) ($r[$key] ?? 0)) : 0;
                             $lastVal = collect($rows)->last()[$key] ?? 0;
                         @endphp
-                        <td class="{{ $col['class'] ?? '' }} {{ $col['td_class'] ?? '' }}"
-                            style="padding: 8px 10px; font-weight: 900; font-size: 19px; color: #000;">
+                        <td class="{{ $col['class'] ?? '' }} {{ str_contains($col['class'] ?? '', 'text-right') ? 'text-right' : '' }}"
+                            style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem;">
                             @if($index === 0)
-                                <strong style="font-size: 19px; font-weight: 900;">TOTAL SUMMARY</strong>
+                                <strong style="font-size: 1.05rem; font-weight: 900; color: #0f172a;">TOTAL SUMMARY</strong>
                             @elseif($type === 'debit')
-                                <span class="debit" style="font-size: 19px; font-weight: 900;">{{ number_format($sum, 2) }}</span>
+                                <span class="mono debit" style="font-size: 1.05rem;">{{ number_format($sum, 2) }}</span>
                             @elseif($type === 'credit')
-                                <span class="credit" style="font-size: 19px; font-weight: 900;">{{ number_format($sum, 2) }}</span>
+                                <span class="mono credit" style="font-size: 1.05rem;">{{ number_format($sum, 2) }}</span>
                             @elseif($type === 'balance')
-                                <span class="balance" style="font-size: 19px; font-weight: 900;">{{ number_format((float) $lastVal, 2) }}</span>
+                                <span class="mono balance"
+                                    style="font-size: 1.05rem;">{{ number_format((float) $lastVal, 2) }}</span>
                             @elseif($type === 'amount')
-                                <span class="debit" style="font-size: 19px; font-weight: 900;">{{ number_format($sum, 2) }}</span>
+                                <span class="mono debit" style="font-size: 1.05rem;">{{ number_format($sum, 2) }}</span>
                             @else
                                 —
                             @endif
@@ -445,9 +351,9 @@
         @endif
     </table>
 
-    <div class="pm-footer">
-        <span>Palladium Mall Management System</span>
-        <span class="page-number"></span>
+    <!-- Printed Footer (Party Print Strategy) -->
+    <div class="footer">
+        <span>Palladium Mall Management Office, Islamabad</span>
         <span>Generated on {{ now()->format('d M Y \a\t h:i A') }}</span>
     </div>
 

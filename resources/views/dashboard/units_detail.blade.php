@@ -25,10 +25,20 @@
 
             <form action="{{ route('dashboard.units-detail') }}" method="GET" class="flex flex-wrap items-center gap-3"
                 id="units-detail-filter-form">
-                <input type="hidden" name="type" value="{{ $type }}">
                 @if($status)
                     <input type="hidden" name="status" value="{{ $status }}">
                 @endif
+
+                <div class="flex items-center gap-2">
+                    <label for="detail_type"
+                        class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Category:</label>
+                    <select id="detail_type" name="type" onchange="document.getElementById('units-detail-filter-form').submit()"
+                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="all" {{ $type === 'all' ? 'selected' : '' }}>All Units</option>
+                        <option value="pm_mall" {{ $type === 'pm_mall' ? 'selected' : '' }}>Palladium Mall Managed</option>
+                        <option value="other_owned" {{ $type === 'other_owned' ? 'selected' : '' }}>Other-Owned</option>
+                    </select>
+                </div>
 
                 <div class="flex items-center gap-2">
                     <label for="detail_from_date"

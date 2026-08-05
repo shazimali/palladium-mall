@@ -229,17 +229,17 @@ class CashBookController extends Controller
             return $item;
         });
 
-        // Sums
-        $totalInflows = $inflows->sum('amount') + $generalInflows->sum('amount');
-        $totalOutflows = $outflows->sum('amount');
-        $netFlow = $totalInflows - $totalOutflows;
+        // Sums (including opening balance row in ledgerEntries for total table alignment)
+        $sumDebit = $ledgerEntries->sum('debit');
+        $sumCredit = $ledgerEntries->sum('credit');
+        $finalBalance = $ledgerEntries->last()['running_balance'] ?? 0.0;
 
         return view('reports.cash_book', [
             'title' => 'Cash Book Report',
             'ledgerEntries' => $ledgerEntries,
-            'totalInflows' => $totalInflows,
-            'totalOutflows' => $totalOutflows,
-            'netFlow' => $netFlow,
+            'totalInflows' => $sumDebit,
+            'totalOutflows' => $sumCredit,
+            'netFlow' => $finalBalance,
             'openingBalance' => $openingBalance,
             'startDate' => $startDate->toDateString(),
             'endDate' => $endDate->toDateString(),
@@ -464,17 +464,17 @@ class CashBookController extends Controller
             return $item;
         });
 
-        // Sums
-        $totalInflows = $inflows->sum('amount') + $generalInflows->sum('amount');
-        $totalOutflows = $outflows->sum('amount');
-        $netFlow = $totalInflows - $totalOutflows;
+        // Sums (including opening balance row in ledgerEntries for total table alignment)
+        $sumDebit = $ledgerEntries->sum('debit');
+        $sumCredit = $ledgerEntries->sum('credit');
+        $finalBalance = $ledgerEntries->last()['running_balance'] ?? 0.0;
 
         // Set up filters summary
         $filterChips = [
             ['label' => 'Period', 'value' => $startDate->format('d M Y') . ' to ' . $endDate->format('d M Y')],
-            ['label' => 'Total Debit', 'value' => number_format($totalInflows, 2)],
-            ['label' => 'Total Credit', 'value' => number_format($totalOutflows, 2)],
-            ['label' => 'Net Cash', 'value' => number_format($netFlow, 2)],
+            ['label' => 'Total Debit', 'value' => number_format($sumDebit, 2)],
+            ['label' => 'Total Credit', 'value' => number_format($sumCredit, 2)],
+            ['label' => 'Net Cash', 'value' => number_format($finalBalance, 2)],
         ];
 
         $columns = [

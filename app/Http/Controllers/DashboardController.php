@@ -173,6 +173,28 @@ class DashboardController extends Controller
         }
 
         // 2. For PM Mall managed units (is_self = false)
+        if ($u->agreements && $u->agreements->isNotEmpty()) {
+            $hasAgreement = $u->agreements->contains(function ($a) use ($fromDateStr, $toDateStr) {
+                // Draft or cancelled agreements do NOT represent an active tenancy
+                if (in_array($a->status, ['draft', 'cancelled'])) {
+                    return false;
+                }
+
+                if (!$a->start_date) return false;
+                $startDate = $a->start_date instanceof Carbon ? $a->start_date->format('Y-m-d') : substr((string) $a->start_date, 0, 10);
+                $endDate = $a->end_date ? ($a->end_date instanceof Carbon ? $a->end_date->format('Y-m-d') : substr((string) $a->end_date, 0, 10)) : null;
+
+                $overlapsStart = $startDate <= $toDateStr;
+                $overlapsEnd = is_null($endDate) || $endDate >= $fromDateStr;
+
+                return $overlapsStart && $overlapsEnd;
+            });
+
+            if ($hasAgreement) {
+                return true;
+            }
+        }
+
         if ($u->payments && $u->payments->isNotEmpty()) {
             $hasPayment = $u->payments->contains(function ($p) use ($fromDateStr, $toDateStr) {
                 if (!$p->month) return false;
@@ -185,23 +207,6 @@ class DashboardController extends Controller
             }
         }
 
-        if ($u->agreements && $u->agreements->isNotEmpty()) {
-            $hasAgreement = $u->agreements->contains(function ($a) use ($fromDateStr, $toDateStr) {
-                if (!$a->start_date) return false;
-                $startDate = $a->start_date instanceof Carbon ? $a->start_date->format('Y-m-d') : substr((string) $a->start_date, 0, 10);
-                $endDate = $a->end_date ? ($a->end_date instanceof Carbon ? $a->end_date->format('Y-m-d') : substr((string) $a->end_date, 0, 10)) : null;
-
-                $overlapsStart = $startDate <= $toDateStr;
-                $overlapsEnd = is_null($endDate) || $endDate >= $fromDateStr || $a->status === 'active';
-
-                return $overlapsStart && $overlapsEnd;
-            });
-
-            if ($hasAgreement) {
-                return true;
-            }
-        }
-
         return $u->status === 'rented';
     }
 
@@ -210,9 +215,8 @@ class DashboardController extends Controller
      */
     public function unitsDetail(Request $request): View
     {
-        $type = $request->input('type', 'pm_mall'); // 'pm_mall' or 'other_owned'
+        $type = $request->input('type', 'all'); // 'all', 'pm_mall', or 'other_owned'
         $status = $request->input('status'); // 'rented', 'vacant', or null
-        $isSelf = $type === 'other_owned';
 
         $fromDateInput = $request->input('from_date');
         $toDateInput = $request->input('to_date');
@@ -229,10 +233,21 @@ class DashboardController extends Controller
             $toDateStr = Carbon::now()->endOfMonth()->toDateString();
         }
 
-        // Fetch all units of this ownership type with floor, block, area, and relations preloaded
-        $allUnits = Unit::where('is_self', $isSelf)
-            ->with(['floor', 'block', 'area', 'otherTenant', 'agreements', 'payments', 'otherTenantHistory'])
-            ->get();
+        // Fetch units based on type filter ('all', 'pm_mall', or 'other_owned')
+        $query = Unit::with(['floor', 'block', 'area', 'otherTenant', 'agreements', 'payments', 'otherTenantHistory']);
+
+        if ($type === 'other_owned') {
+            $query->where('is_self', true);
+            $baseLabel = 'Other-Owned';
+        } elseif ($type === 'pm_mall') {
+            $query->where('is_self', false);
+            $baseLabel = 'Palladium Mall Managed';
+        } else {
+            $type = 'all';
+            $baseLabel = 'All Units';
+        }
+
+        $allUnits = $query->get();
 
         $rentedUnits = $allUnits->filter(fn($u) => $this->isUnitRentedInRange($u, $fromDateStr, $toDateStr));
         $vacantUnits = $allUnits->filter(fn($u) => !$this->isUnitRentedInRange($u, $fromDateStr, $toDateStr));
@@ -272,7 +287,6 @@ class DashboardController extends Controller
             $structuredGrouped['Other']['Other'] = $noFloorOrBlock->sortBy('unit_number');
         }
 
-        $baseLabel = $type === 'pm_mall' ? 'Palladium Mall Managed' : 'Other-Owned';
         $typeLabel = $status ? ucfirst($status) . ' — ' . $baseLabel : $baseLabel;
 
         $counts = [
