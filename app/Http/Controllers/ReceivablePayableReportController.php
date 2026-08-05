@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\Landlord;
 use App\Models\LandlordPayable;
 use App\Models\Owner;
+use App\Models\JvVoucher;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -378,7 +379,36 @@ class ReceivablePayableReportController extends Controller
                     ];
                 }
             }
+
+            // ── 4. Unpaid JV Vouchers (Expenses) ──────────────────────────────
+            if (empty($categories) || in_array('Expenses', $categories)) {
+                $unpaidJvVouchers = JvVoucher::query()
+                    ->where('status', 'unpaid')
+                    ->with(['expenseHead'])
+                    ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+                    ->get();
+
+                foreach ($unpaidJvVouchers as $jv) {
+                    $headName = $jv->expenseHead ? $jv->expenseHead->name : 'General Expense';
+                    $displayName = $headName . ' (' . $jv->voucher_no . ')';
+                    $amount = (float) $jv->amount;
+
+                    $payables[] = [
+                        'category' => 'Expenses',
+                        'types' => ['Expenses'],
+                        'name' => $displayName,
+                        'unit' => '',
+                        'details' => $jv->notes ?? '',
+                        'due' => $amount,
+                        'paid' => 0.00,
+                        'net' => $amount,
+                        'is_self' => false,
+                        'is_other_receivable' => false,
+                    ];
+                }
+            }
         }
+
 
         // Apply category filter checkboxes if set
         // NOTE: Tenant dues rows are tagged 'Tenant Dues' but checkboxes are sub-categories

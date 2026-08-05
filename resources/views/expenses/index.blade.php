@@ -63,7 +63,7 @@
                     {{-- 1. New Expense Voucher Button --}}
                     @if(auth()->user()->hasPermission('expenses.create') || auth()->user()->isSuperAdmin())
                         <a href="{{ route('expenses.create') }}"
-                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-4xl font-bold text-white hover:bg-brand-600 transition-all shadow-md">
+                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-bold text-white hover:bg-brand-600 transition-all shadow-md">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                             </svg>
@@ -75,7 +75,7 @@
                     @if(auth()->user()->hasPermission('expenses.search') || auth()->user()->hasPermission('expenses.view') || auth()->user()->isSuperAdmin())
                         <button type="button" @click="showTable = !showTable"
                             :class="showTable ? 'bg-brand-500 text-white' : 'bg-brand-500 text-white hover:bg-brand-600'"
-                            class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-4xl font-bold transition-all shadow-md cursor-pointer">
+                            class="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-all shadow-md cursor-pointer">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -173,54 +173,54 @@
 
                 {{-- DataTable --}}
                 <div class="overflow-hidden border border-gray-200 rounded-xl dark:border-gray-800">
-                    <table class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
-                        <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+                    <table class="w-full text-xs text-left text-gray-600 dark:text-gray-400">
+                        <thead class="text-[11px] uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                             <tr>
-                                <th class="px-4 py-3">Voucher #</th>
-                                <th class="px-4 py-3">Date</th>
-                                <th class="px-4 py-3">Category (Head)</th>
-                                <th class="px-4 py-3 text-right">Amount</th>
-                                <th class="px-4 py-3">Paid From (Account)</th>
-                                <th class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem]">Remarks</th>
-                                <th class="px-4 py-3 text-right">Actions</th>
+                                <th class="px-3 py-2.5">Voucher #</th>
+                                <th class="px-3 py-2.5">Date</th>
+                                <th class="px-3 py-2.5">Category (Head)</th>
+                                <th class="px-3 py-2.5 text-right">Amount</th>
+                                <th class="px-3 py-2.5">Paid From (Account)</th>
+                                <th class="px-3 py-2.5 w-64 min-w-[16rem] max-w-[16rem]">Remarks</th>
+                                <th class="px-3 py-2.5 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-xs">
                             @forelse($expenses as $expense)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                    <td class="px-4 py-3 font-mono font-bold text-gray-900 dark:text-white/90">
+                                    <td class="px-3 py-2 font-mono font-bold text-gray-900 dark:text-white/90 text-xs">
                                         {{ $expense->voucher_no }}
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-3 py-2 text-xs">
                                         {{ $expense->date->format('d M Y') }}
                                     </td>
-                                    <td class="px-4 py-3 font-semibold text-gray-700 dark:text-gray-300">
+                                    <td class="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 text-xs">
                                         {{ $expense->expenseHead->name }}
                                     </td>
-                                    <td class="px-4 py-3 font-bold text-red-600 dark:text-red-400 text-right">
+                                    <td class="px-3 py-2 font-bold text-red-600 dark:text-red-400 text-right text-xs">
                                         Rs. {{ number_format($expense->amount, 2) }}
                                     </td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-3 py-2 text-xs">
                                         {{ $expense->paymentAccount ? $expense->paymentAccount->name : '—' }}
                                     </td>
-                                    <td class="px-4 py-3 w-64 min-w-[16rem] max-w-[16rem] truncate"
+                                    <td class="px-3 py-2 w-64 min-w-[16rem] max-w-[16rem] truncate text-xs"
                                         title="{{ $expense->notes }}">
                                         {{ $expense->notes ?? '—' }}
                                     </td>
-                                    <td class="px-4 py-3 text-right">
-                                        <div class="flex items-center justify-end gap-2">
+                                    <td class="px-3 py-2 text-right">
+                                        <div class="flex items-center justify-end gap-1.5 text-xs">
                                             <a href="{{ route('expenses.show', $expense) }}"
-                                                class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                                                class="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                                                 View
                                             </a>
                                             <a href="{{ route('expenses.print', $expense) }}"
                                                 onclick="window.open(this.href,'_blank','width=800,height=800,scrollbars=yes'); return false;"
-                                                class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                                                class="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
                                                 Print
                                             </a>
                                             @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('expenses.edit'))
                                                 <a href="{{ route('expenses.edit', $expense) }}"
-                                                    class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 dark:border-blue-900/30 dark:bg-blue-950/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors">
+                                                    class="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-100 dark:border-blue-900/30 dark:bg-blue-950/20 dark:text-blue-400 dark:hover:bg-blue-900/30 transition-colors">
                                                     Edit
                                                 </a>
                                             @endif
@@ -231,7 +231,7 @@
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit"
-                                                        class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors">
+                                                        class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors">
                                                         Delete
                                                     </button>
                                                 </form>
@@ -241,7 +241,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="10" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
+                                    <td colspan="10" class="px-3 py-10 text-center text-xs text-gray-400 dark:text-gray-600">
                                         <svg class="mx-auto mb-3 h-10 w-10 opacity-40" fill="none" stroke="currentColor"
                                             stroke-width="1.5" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round"
