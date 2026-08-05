@@ -94,8 +94,8 @@
         }
 
         .pm-header-right .doc-date {
-            font-size: 1.25rem;
-            font-weight: 800;
+            font-size: 1.45rem;
+            font-weight: 900;
             color: #000;
             margin-top: 4px;
         }
@@ -103,32 +103,32 @@
         .filters-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 16px;
+            gap: 12px;
+            margin-bottom: 18px;
         }
 
         .filter-chip {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            background: #f3f4f6;
+            gap: 8px;
+            background: #f9fafb;
             border: 2px solid #000;
             border-radius: 8px;
-            padding: 6px 14px;
-            font-size: 1.2rem;
+            padding: 8px 16px;
+            font-size: 1.4rem;
             font-weight: 900;
             color: #000;
         }
 
         .filter-chip span {
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             font-weight: 900;
             color: #000;
         }
 
         .filter-chip strong {
             color: #000;
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             font-weight: 900;
         }
 
@@ -320,6 +320,11 @@
             .print-border {
                 border-width: 1px !important;
                 border-color: #000 !important;
+            }
+
+            .filter-chip, .filter-chip span, .filter-chip strong, .doc-date {
+                font-size: 1.4rem !important;
+                font-weight: 900 !important;
             }
         }
     </style>

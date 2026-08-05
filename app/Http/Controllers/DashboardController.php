@@ -167,7 +167,12 @@ class DashboardController extends Controller
      */
     private function isUnitRentedInRange($u, string $fromDateStr, string $toDateStr): bool
     {
-        // 1. Payment check: If payments exist for this unit during the date range, it was rented
+        // 1. For Other-Owned units (is_self = true): Strictly based on currently attached Other Tenant
+        if ($u->is_self) {
+            return $u->otherTenant !== null;
+        }
+
+        // 2. For PM Mall managed units (is_self = false)
         if ($u->payments && $u->payments->isNotEmpty()) {
             $hasPayment = $u->payments->contains(function ($p) use ($fromDateStr, $toDateStr) {
                 if (!$p->month) return false;
@@ -180,8 +185,7 @@ class DashboardController extends Controller
             }
         }
 
-        // 2. Agreement check (for PM Mall managed units)
-        if (!$u->is_self && $u->agreements && $u->agreements->isNotEmpty()) {
+        if ($u->agreements && $u->agreements->isNotEmpty()) {
             $hasAgreement = $u->agreements->contains(function ($a) use ($fromDateStr, $toDateStr) {
                 if (!$a->start_date) return false;
                 $startDate = $a->start_date instanceof Carbon ? $a->start_date->format('Y-m-d') : substr((string) $a->start_date, 0, 10);
@@ -198,23 +202,7 @@ class DashboardController extends Controller
             }
         }
 
-        // 3. Other tenant history check (for Other-Owned units)
-        if ($u->is_self && $u->otherTenantHistory && $u->otherTenantHistory->isNotEmpty()) {
-            $hasHistory = $u->otherTenantHistory->contains(function ($h) use ($fromDateStr, $toDateStr) {
-                if (!$h->attached_at) return false;
-                $attached = $h->attached_at instanceof Carbon ? $h->attached_at->format('Y-m-d') : substr((string) $h->attached_at, 0, 10);
-                $detached = $h->detached_at ? ($h->detached_at instanceof Carbon ? $h->detached_at->format('Y-m-d') : substr((string) $h->detached_at, 0, 10)) : null;
-
-                return $attached <= $toDateStr && (is_null($detached) || $detached >= $fromDateStr);
-            });
-
-            if ($hasHistory) {
-                return true;
-            }
-        }
-
-        // 4. Fallback check for active current status
-        return $u->status === 'rented' || ($u->is_self && $u->otherTenant);
+        return $u->status === 'rented';
     }
 
     /**
