@@ -246,6 +246,10 @@
             color: #111827;
         }
 
+        .page-number::after {
+            content: "Page " counter(page);
+        }
+
         .no-print {
             text-align: center;
             margin-bottom: 20px;
@@ -273,7 +277,13 @@
         @media print {
             @page {
                 size: A4 portrait;
-                margin: 0.5cm;
+                margin: 10mm 10mm 15mm 10mm;
+                @bottom-right {
+                    content: "Page " counter(page) " of " counter(pages);
+                    font-size: 14px;
+                    font-weight: 900;
+                    color: #000;
+                }
             }
 
             .no-print {
@@ -437,6 +447,7 @@
 
     <div class="pm-footer">
         <span>Palladium Mall Management System</span>
+        <span class="page-number"></span>
         <span>Generated on {{ now()->format('d M Y \a\t h:i A') }}</span>
     </div>
 
