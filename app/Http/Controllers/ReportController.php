@@ -580,17 +580,58 @@ class ReportController extends Controller
 
         $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
 
+        // Determine whether this is the "Generated" matrix (actual payments only, no projections)
+        $isActualOnly = $request->report_type === 'monthly_matrix';
+        $isMatrixReport = in_array($request->report_type, ['monthly_matrix', 'monthly_matrix_expected']);
+
+        // For both matrix report types: include is_self units that EITHER currently have an otherTenant
+        // OR had payments generated FOR an other-tenant in the selected month (handles the case where
+        // otherTenant was detached AFTER billing was generated — e.g. unit 401 billed in July, detached
+        // on 31 July). We ONLY match payments that have other_tenant_id set to avoid pulling in
+        // is_self units like 209 which have maintenance records but never had an other-tenant.
+        $selfUnitsWithPaymentsThisMonth = $isMatrixReport
+            ? Payment::where('month', $monthStr)
+                ->whereNotNull('other_tenant_id')
+                ->whereHas('unit', fn($q) => $q->where('is_self', true))
+                ->pluck('unit_id')
+                ->toArray()
+            : [];
+
+        // Also include is_self units that have PREVIOUS unpaid/partial other-tenant payments.
+        // Example: unit 401 had an other-tenant in July (billed, unpaid), detached in July,
+        // now viewing August — unit should still appear carrying the prev_unpaid balance.
+        $selfUnitsWithPrevUnpaid = $isMatrixReport
+            ? Payment::where('month', '<', $monthStr)
+                ->whereIn('status', ['unpaid', 'partial'])
+                ->whereNotNull('other_tenant_id')
+                ->whereHas('unit', fn($q) => $q->where('is_self', true))
+                ->pluck('unit_id')
+                ->toArray()
+            : [];
+
+        // Merge both sets (current month billed + previous unpaid)
+        $selfUnitsToInclude = array_unique(array_merge($selfUnitsWithPaymentsThisMonth, $selfUnitsWithPrevUnpaid));
+
         $units = Unit::with(['landlord', 'otherTenant'])
             ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
             ->when($unitId, fn($q) => $q->where('id', $unitId))
             ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
             ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
             ->when($ownerType === 'other', fn($q) => $q->where('is_self', true)->whereHas('otherTenant'))
-            ->when(!$ownerType, function ($q) {
-                $q->where(function ($sq) {
+            ->when(!$ownerType, function ($q) use ($selfUnitsToInclude) {
+                $q->where(function ($sq) use ($selfUnitsToInclude) {
                     $sq->where('is_self', false)
                         ->orWhere(function ($ssq) {
+                            // Include is_self units that currently have an otherTenant attached
                             $ssq->where('is_self', true)->whereHas('otherTenant');
+                        })
+                        ->orWhere(function ($ssq) use ($selfUnitsToInclude) {
+                            // Include is_self units billed this month OR carrying prev unpaid
+                            // other-tenant balances (even if otherTenant is now detached)
+                            if (!empty($selfUnitsToInclude)) {
+                                $ssq->where('is_self', true)
+                                    ->whereIn('id', $selfUnitsToInclude);
+                            }
                         });
                 });
             })
@@ -633,7 +674,7 @@ class ReportController extends Controller
         $payments = Payment::where('month', $monthStr)
             ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
             ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
-            ->with(['paymentAccount', 'receivingVouchers'])
+            ->with(['paymentAccount', 'receivingVouchers', 'otherTenant'])
             ->get()
             ->groupBy('unit_id');
 
@@ -669,19 +710,40 @@ class ReportController extends Controller
 
         $unitAllocations = $allocations->groupBy('unit_id');
 
+        // For is_self units included only due to prev unpaid other-tenant balances,
+        // fetch their most recent other-tenant payment so we can display the tenant name.
+        $prevOtherTenantPayments = !empty($selfUnitsWithPrevUnpaid)
+            ? Payment::whereIn('unit_id', $selfUnitsWithPrevUnpaid)
+                ->whereNotNull('other_tenant_id')
+                ->with(['otherTenant'])
+                ->orderBy('month', 'desc')
+                ->get()
+                ->groupBy('unit_id')
+            : collect();
+
         $matrixEntries = collect();
-        $isActualOnly = $request->report_type === 'monthly_matrix';
 
         foreach ($units as $index => $unit) {
             $agreement = $agreements->get($unit->id)?->first();
             $unitPayments = $payments->get($unit->id) ?? collect();
 
-            if ($unit->is_self && !$unit->otherTenant) {
+            // For is_self units with no current otherTenant: only clear payments if no actual
+            // payment records exist for this month (i.e. otherTenant was never billed this period).
+            if ($unit->is_self && !$unit->otherTenant && $unitPayments->isEmpty()) {
                 $unitPayments = collect();
             }
 
+            // Fetch previous unpaid balance early — needed for status determination below.
+            $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
+
             if ($unit->is_self && $unit->otherTenant) {
                 $status = 'OCCUPIED';
+            } elseif ($unit->is_self && $unitPayments->isNotEmpty()) {
+                // otherTenant was detached but billing was already generated — mark as OCCUPIED
+                $status = 'OCCUPIED';
+            } elseif ($unit->is_self && $prevUnpaid > 0 && !$unit->otherTenant) {
+                // No current otherTenant and no this-month billing — unit shows only for prev unpaid
+                $status = 'PREV UNPAID';
             } elseif ($agreement) {
                 $status = $unit->status === 'sp' ? 'SP' : 'RENTED';
             } else {
@@ -708,8 +770,9 @@ class ReportController extends Controller
                 $serv_due = (float) $maintPayment->amount;
             } elseif (!$isActualOnly && $agreement && $agreement->maintenance_charge > 0) {
                 $serv_due = (float) $agreement->maintenance_charge;
-            } elseif (!$isActualOnly && $unit->is_self && $unit->default_maintenance_charge > 0) {
-                // Other-Owned unit: no agreement, fall back to unit's current maintenance charge
+            } elseif (!$isActualOnly && $unit->is_self && $unit->otherTenant && $unit->default_maintenance_charge > 0) {
+                // Other-Owned unit with active otherTenant: project from unit's maintenance charge.
+                // Skip if otherTenant is detached — unit only appears here for prev_unpaid tracking.
                 $serv_due = (float) $unit->default_maintenance_charge;
             } else {
                 $serv_due = 0.0;
@@ -735,9 +798,6 @@ class ReportController extends Controller
             // Extra
             $extraPayments = $unitPayments->whereNotIn('type', ['rent', 'maintenance', 'security_deposit']);
             $extra_due = (float) $extraPayments->sum('amount');
-
-            // Previous unpaid balance
-            $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
 
             $total_due = $serv_due + $extra_due + $sec_due + $rent_due;
 
@@ -794,7 +854,14 @@ class ReportController extends Controller
 
             $firstPayment = $unitPayments->first();
             if ($unit->is_self) {
-                $tenantName = $unit->otherTenant?->name ?? '—';
+                // Use current otherTenant name if attached; otherwise fall back to the payment's
+                // otherTenant name (covers units where tenant was detached after billing).
+                // Final fallback: look at the most recent prev payment for this unit.
+                $prevPaymentForUnit = $prevOtherTenantPayments->get($unit->id)?->first();
+                $tenantName = $unit->otherTenant?->name
+                    ?? $firstPayment?->otherTenant?->name
+                    ?? $prevPaymentForUnit?->otherTenant?->name
+                    ?? '—';
             } else {
                 $tenantName = $agreement?->tenant?->name ?? ($firstPayment?->tenant?->name ?? '—');
             }
