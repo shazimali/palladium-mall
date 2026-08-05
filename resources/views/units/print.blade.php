@@ -100,6 +100,7 @@
                         <th class="px-4 py-3 border border-gray-300">Block</th>
                         <th class="px-4 py-3 border border-gray-300">Area / Zone</th>
                         <th class="px-4 py-3 border border-gray-300">Status</th>
+                        <th class="px-4 py-3 border border-gray-300 text-center">Breaker Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
@@ -119,14 +120,28 @@
                             <td class="px-4 py-3 border border-gray-300">{{ $unit->block->name ?? '—' }}</td>
                             <td class="px-4 py-3 border border-gray-300">{{ $unit->area->name ?? '—' }}</td>
                             <td class="px-4 py-3 border border-gray-300">
-                                <span class="capitalize">
+                                <span class="capitalize font-bold">
                                     {{ ($unit->is_self && $unit->otherTenant) ? 'Rented' : ucfirst($unit->status) }}
                                 </span>
+                            </td>
+                            <td class="px-4 py-3 border border-gray-300 text-center whitespace-nowrap">
+                                @php
+                                    $bStatus = strtolower($unit->breaker_status ?? 'off');
+                                @endphp
+                                @if($bStatus === 'on')
+                                    <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs font-black text-emerald-800 border border-emerald-300">
+                                        ⚡ ON
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-xs font-black text-rose-800 border border-rose-300">
+                                        ⚡ OFF
+                                    </span>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-8 border border-gray-300 text-center text-gray-400">
+                            <td colspan="9" class="px-4 py-8 border border-gray-300 text-center text-gray-400">
                                 No flats or shops found.
                             </td>
                         </tr>
