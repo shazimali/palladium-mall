@@ -125,6 +125,11 @@ class PaymentAccountController extends Controller
  
     public function destroy(PaymentAccount $paymentAccount): RedirectResponse
     {
+        if ($paymentAccount->id == 2) {
+            return redirect()->route('payment-accounts.index')
+                ->with('error', 'The primary Cash account (ID #2) cannot be deleted.');
+        }
+
         $paymentAccount->delete();
  
         return redirect()->route('payment-accounts.index')

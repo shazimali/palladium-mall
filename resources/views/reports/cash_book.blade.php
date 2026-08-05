@@ -77,9 +77,9 @@
 
     {{-- Unified Ledger Table --}}
     <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md mb-6">
-        <table class="w-full text-[18px] text-left text-gray-900 dark:text-gray-100 border-collapse">
+        <table class="w-full text-[16px] text-left text-gray-900 dark:text-gray-100 border-collapse">
             <thead
-                class="text-[18px] font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
+                class="text-[16px] font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
                 <tr>
                     <th class="px-3.5 py-2.5 text-white">Date</th>
                     <th class="px-3.5 py-2.5 text-white">Voucher #</th>
@@ -94,7 +94,7 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-bold">
                 @forelse($ledgerEntries as $entry)
                     <tr class="{{ !empty($entry['is_opening']) ? 'bg-purple-50/60 dark:bg-purple-950/20' : 'hover:bg-gray-50 dark:hover:bg-white/[0.02]' }} transition-colors">
-                        <td class="px-3.5 py-2.5 text-[18px] font-mono font-bold whitespace-nowrap">
+                        <td class="px-3.5 py-2.5 text-[16px] font-mono font-bold whitespace-nowrap">
                             {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
 </td>       
                         <td class="px-3.5 py-2.5 text-[14px] font-black">
@@ -150,10 +150,10 @@
                                 {{ $entry['type'] }}
                             </span>
                         </td>
-                        <td class="px-3.5 py-2.5 text-[18px] font-bold">
+                        <td class="px-3.5 py-2.5 text-[16px] font-bold">
                             {!! $entry['details'] !!}
                         </td>
-                        <td class="px-2 py-2 text-center font-bold whitespace-nowrap w-1 text-[18px]">
+                        <td class="px-2 py-2 text-center font-bold whitespace-nowrap w-1 text-[16px]">
                             @if(!empty($entry['unit_number']))
                                 <span
                                     class="unit-badge-lg px-2.5 py-0.5 text-[16px] font-black rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
@@ -164,21 +164,21 @@
                             @endif
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 text-[18px]">
+                            class="px-3.5 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 text-[16px]">
                             {{ $entry['debit'] > 0 ? number_format($entry['debit'], 2) : '—' }}
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right font-black text-rose-600 dark:text-rose-400 text-[18px]">
+                            class="px-3.5 py-2.5 text-right font-black text-rose-600 dark:text-rose-400 text-[16px]">
                             {{ $entry['credit'] > 0 ? number_format($entry['credit'], 2) : '—' }}
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right font-black text-gray-900 dark:text-white text-[18px]">
+                            class="px-3.5 py-2.5 text-right font-black text-gray-900 dark:text-white text-[16px]">
                             {{ number_format($entry['running_balance'], 2) }}
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-[18px] font-bold">
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-[16px] font-bold">
                             No cash transactions logged for this period.
                         </td>
                     </tr>
@@ -189,18 +189,18 @@
                     class="bg-gray-200/90 dark:bg-gray-800 border-t-2 border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white font-black">
                     <tr>
                         <td colspan="5"
-                            class="px-3.5 py-2.5 text-[18px] uppercase tracking-wider font-black text-gray-900 dark:text-white">
+                            class="px-3.5 py-2.5 text-[16px] uppercase tracking-wider font-black text-gray-900 dark:text-white">
                             Total Summary
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-black text-[18px]">
+                            class="px-3.5 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-black text-[16px]">
                             {{ number_format($totalInflows, 2) }}
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right text-rose-600 dark:text-rose-400 font-black text-[18px]">
+                            class="px-3.5 py-2.5 text-right text-rose-600 dark:text-rose-400 font-black text-[16px]">
                             {{ number_format($totalOutflows, 2) }}
                         </td>
-                        <td class="px-3.5 py-2.5 text-right font-black text-[18px] text-gray-900 dark:text-white">
+                        <td class="px-3.5 py-2.5 text-right font-black text-[16px] text-gray-900 dark:text-white">
                             {{ number_format($netFlow, 2) }}
                         </td>
                     </tr>

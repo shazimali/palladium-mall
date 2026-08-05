@@ -34,53 +34,39 @@ class CashBookController extends Controller
             $endDate = Carbon::today()->endOfDay();
         }
 
-        // Fetch Inflows (Receiving Vouchers) filtered by cash
+        // Fetch Inflows (Receiving Vouchers) for payment_account_id = 2
         $inflows = ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->orderBy('date', 'asc')
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Fetch General Inflows filtered by cash
+        // Fetch General Inflows for payment_account_id = 2
         $generalInflows = \App\Models\GeneralReceivingVoucher::with(['party', 'paymentAccount'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Expenses) filtered by cash
+        // Fetch Outflows (Expenses) for payment_account_id = 2
         $expenses = Expense::with(['expenseHead', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Payment Vouchers) filtered by cash
+        // Fetch Outflows (Payment Vouchers) for payment_account_id = 2
         $paymentVouchers = PaymentVoucher::with(['paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Withdrawals) filtered by cash
+        // Fetch Outflows (Withdrawals) for payment_account_id = 2
         $withdrawals = \App\Models\Withdrawal::with(['owner', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->whereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Paid JV Vouchers) filtered by cash
+        // Fetch Outflows (Paid JV Vouchers) for payment_account_id = 2
         $jvVouchers = \App\Models\JvVoucher::with(['expenseHead', 'paymentAccount', 'user'])
             ->where('status', 'paid')
             ->where(function ($q) use ($startDate, $endDate) {
@@ -90,11 +76,7 @@ class CashBookController extends Controller
                             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
                     });
             })
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhere('payment_method', 'Cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
         // Combine outflows
@@ -287,53 +269,39 @@ class CashBookController extends Controller
             $endDate = Carbon::today()->endOfDay();
         }
 
-        // Fetch Inflows (Receiving Vouchers) filtered by cash
+        // Fetch Inflows (Receiving Vouchers) for payment_account_id = 2
         $inflows = ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->orderBy('date', 'asc')
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Fetch General Inflows filtered by cash
+        // Fetch General Inflows for payment_account_id = 2
         $generalInflows = \App\Models\GeneralReceivingVoucher::with(['party', 'paymentAccount'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Expenses) filtered by cash
+        // Fetch Outflows (Expenses) for payment_account_id = 2
         $expenses = Expense::with(['expenseHead', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Payment Vouchers) filtered by cash
+        // Fetch Outflows (Payment Vouchers) for payment_account_id = 2
         $paymentVouchers = PaymentVoucher::with(['paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Withdrawals) filtered by cash
+        // Fetch Outflows (Withdrawals) for payment_account_id = 2
         $withdrawals = \App\Models\Withdrawal::with(['owner', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->where(function ($q) {
-                $q->whereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
-        // Fetch Outflows (Paid JV Vouchers) filtered by cash
+        // Fetch Outflows (Paid JV Vouchers) for payment_account_id = 2
         $jvVouchers = \App\Models\JvVoucher::with(['expenseHead', 'paymentAccount', 'user'])
             ->where('status', 'paid')
             ->where(function ($q) use ($startDate, $endDate) {
@@ -343,11 +311,7 @@ class CashBookController extends Controller
                             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()]);
                     });
             })
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhere('payment_method', 'Cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->get();
 
         // Combine outflows
@@ -539,38 +503,26 @@ class CashBookController extends Controller
     {
         $startDateStr = $startDate->toDateString();
 
+        $accountOpeningBalance = (float) (\App\Models\PaymentAccount::where('id', 2)->value('opening_balance') ?? 0.0);
+
         $priorReceiving = ReceivingVoucher::where('date', '<', $startDateStr)
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->sum('amount');
 
         $priorGeneralReceiving = \App\Models\GeneralReceivingVoucher::where('date', '<', $startDateStr)
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->sum('amount');
 
         $priorExpenses = Expense::where('date', '<', $startDateStr)
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->sum('amount');
 
         $priorPaymentVouchers = PaymentVoucher::where('date', '<', $startDateStr)
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->sum('amount');
 
         $priorWithdrawals = \App\Models\Withdrawal::where('date', '<', $startDateStr)
-            ->where(function ($q) {
-                $q->whereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->sum('amount');
 
         $priorJvVouchers = \App\Models\JvVoucher::where('status', 'paid')
@@ -581,13 +533,9 @@ class CashBookController extends Controller
                             ->where('date', '<', $startDateStr);
                     });
             })
-            ->where(function ($q) {
-                $q->where('payment_method', 'cash')
-                    ->orWhere('payment_method', 'Cash')
-                    ->orWhereHas('paymentAccount', fn($acc) => $acc->where('type', 'cash'));
-            })
+            ->where('payment_account_id', 2)
             ->sum('amount');
 
-        return (float) (($priorReceiving + $priorGeneralReceiving) - ($priorExpenses + $priorPaymentVouchers + $priorWithdrawals + $priorJvVouchers));
+        return $accountOpeningBalance + (float) (($priorReceiving + $priorGeneralReceiving) - ($priorExpenses + $priorPaymentVouchers + $priorWithdrawals + $priorJvVouchers));
     }
 }

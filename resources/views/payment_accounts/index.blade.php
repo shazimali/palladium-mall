@@ -140,7 +140,7 @@
                                     @endif
  
                                     {{-- Delete --}}
-                                    @if(auth()->user()->hasPermission('payment_accounts.delete') || auth()->user()->isSuperAdmin())
+                                    @if($account->id != 2 && (auth()->user()->hasPermission('payment_accounts.delete') || auth()->user()->isSuperAdmin()))
                                         <form action="{{ route('payment-accounts.destroy', $account) }}" method="POST" x-data
                                             @submit.prevent="if(confirm('Remove payment account {{ $account->name }}? Any linked payments will have their account set to unassigned.')) $el.submit()">
                                             @csrf
