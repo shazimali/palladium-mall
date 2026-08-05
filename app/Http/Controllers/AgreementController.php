@@ -143,6 +143,43 @@ class AgreementController extends Controller
 
         $agreement->update($data);
 
+        // Sync associated unpaid payments with updated agreement values
+        $unpaidPayments = $agreement->payments()
+            ->where('status', 'unpaid')
+            ->where(function ($q) {
+                $q->whereNull('amount_paid')->orWhere('amount_paid', 0);
+            })
+            ->get();
+
+        $updatedPaymentsCount = 0;
+        foreach ($unpaidPayments as $payment) {
+            $updates = [];
+
+            if ($payment->tenant_id != $agreement->tenant_id) {
+                $updates['tenant_id'] = $agreement->tenant_id;
+            }
+
+            if ($payment->unit_id != $agreement->unit_id) {
+                $updates['unit_id'] = $agreement->unit_id;
+                if ($agreement->unit && $payment->landlord_id != $agreement->unit->landlord_id) {
+                    $updates['landlord_id'] = $agreement->unit->landlord_id;
+                }
+            }
+
+            if ($payment->type === 'rent' && (float) $payment->amount != (float) $agreement->monthly_rent) {
+                $updates['amount'] = $agreement->monthly_rent;
+            } elseif ($payment->type === 'maintenance' && (float) $payment->amount != (float) $agreement->maintenance_charge) {
+                $updates['amount'] = $agreement->maintenance_charge;
+            } elseif ($payment->type === 'security_deposit' && (float) $payment->amount != (float) $agreement->security_deposit) {
+                $updates['amount'] = $agreement->security_deposit;
+            }
+
+            if (!empty($updates)) {
+                $payment->update($updates);
+                $updatedPaymentsCount++;
+            }
+        }
+
         if ($agreement->status === 'active') {
             $agreement->unit?->update(['status' => 'rented']);
             $agreement->tenant?->update(['status' => 'active', 'unit_id' => $agreement->unit_id]);
@@ -159,9 +196,14 @@ class AgreementController extends Controller
             }
         }
 
+        $msg = 'Agreement updated successfully.';
+        if ($updatedPaymentsCount > 0) {
+            $msg .= " ({$updatedPaymentsCount} associated unpaid payment record(s) were updated to match the new agreement values).";
+        }
+
         return redirect()
             ->route('agreements.show', $agreement)
-            ->with('success', 'Agreement updated successfully.');
+            ->with('success', $msg);
     }
 
     public function destroy(Agreement $agreement): RedirectResponse
