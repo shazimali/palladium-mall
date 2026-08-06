@@ -32,7 +32,7 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $units = Unit::with(['tenant', 'otherTenant'])->orderBy('unit_number')->get();
-        
+
         $unitId = $request->query('unit_id');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
@@ -43,11 +43,11 @@ class LedgerController extends Controller
         }
 
         return view('ledgers.tenant', [
-            'title'      => 'Tenant / Unit Ledger',
-            'units'      => $units,
-            'unitId'     => $unitId,
-            'dateFrom'   => $dateFrom,
-            'dateTo'     => $dateTo,
+            'title' => 'Tenant / Unit Ledger',
+            'units' => $units,
+            'unitId' => $unitId,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
             'ledgerData' => $ledgerData,
         ]);
     }
@@ -65,12 +65,12 @@ class LedgerController extends Controller
         }
 
         $ledgerData = $this->getTenantLedgerData($unitId, $dateFrom, $dateTo);
-        
+
         $pdf = Pdf::loadView('ledgers.pdf', array_merge($ledgerData, [
-            'type'      => 'tenant',
-            'dateFrom'  => $dateFrom,
-            'dateTo'    => $dateTo,
-            'title'     => 'Tenant Statement - Unit ' . $ledgerData['unit']->unit_number,
+            'type' => 'tenant',
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'title' => 'Tenant Statement - Unit ' . $ledgerData['unit']->unit_number,
         ]))->setPaper('a4', 'portrait');
 
         return $pdf->download('tenant_ledger_unit_' . $ledgerData['unit']->unit_number . '.pdf');
@@ -104,7 +104,7 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $owners = Owner::orderBy('name')->get();
-        
+
         $ownerId = $request->query('owner_id');
         $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
         $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
@@ -115,11 +115,11 @@ class LedgerController extends Controller
         }
 
         return view('ledgers.owner', [
-            'title'      => 'Managing Owner Ledger',
-            'owners'     => $owners,
-            'ownerId'    => $ownerId,
-            'dateFrom'   => $dateFrom,
-            'dateTo'     => $dateTo,
+            'title' => 'Managing Owner Ledger',
+            'owners' => $owners,
+            'ownerId' => $ownerId,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
             'ledgerData' => $ledgerData,
         ]);
     }
@@ -137,12 +137,12 @@ class LedgerController extends Controller
         }
 
         $ledgerData = $this->getOwnerLedgerData($ownerId, $dateFrom, $dateTo);
-        
+
         $pdf = Pdf::loadView('ledgers.pdf', array_merge($ledgerData, [
-            'type'      => 'owner',
-            'dateFrom'  => $dateFrom,
-            'dateTo'    => $dateTo,
-            'title'     => 'Owner Ledger - ' . $ledgerData['owner']->name,
+            'type' => 'owner',
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'title' => 'Owner Ledger - ' . $ledgerData['owner']->name,
         ]))->setPaper('a4', 'portrait');
 
         return $pdf->download('owner_ledger_' . str_replace(' ', '_', strtolower($ledgerData['owner']->name)) . '.pdf');
@@ -176,7 +176,7 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $accounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
-        
+
         $accountId = $request->query('payment_account_id');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
@@ -187,11 +187,11 @@ class LedgerController extends Controller
         }
 
         return view('ledgers.payment_account', [
-            'title'      => 'Payment Account Ledger',
-            'accounts'   => $accounts,
-            'accountId'  => $accountId,
-            'dateFrom'   => $dateFrom,
-            'dateTo'     => $dateTo,
+            'title' => 'Payment Account Ledger',
+            'accounts' => $accounts,
+            'accountId' => $accountId,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
             'ledgerData' => $ledgerData,
         ]);
     }
@@ -209,12 +209,12 @@ class LedgerController extends Controller
         }
 
         $ledgerData = $this->getAccountLedgerData($accountId, $dateFrom, $dateTo);
-        
+
         $pdf = Pdf::loadView('ledgers.pdf', array_merge($ledgerData, [
-            'type'      => 'account',
-            'dateFrom'  => $dateFrom,
-            'dateTo'    => $dateTo,
-            'title'     => 'Account Ledger - ' . $ledgerData['account']->name,
+            'type' => 'account',
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'title' => 'Account Ledger - ' . $ledgerData['account']->name,
         ]))->setPaper('a4', 'portrait');
 
         return $pdf->download('account_ledger_' . str_replace(' ', '_', strtolower($ledgerData['account']->name)) . '.pdf');
@@ -248,7 +248,7 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $heads = ExpenseHead::orderBy('name')->get();
-        
+
         $expenseHeadId = $request->query('expense_head_id');
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
@@ -259,12 +259,12 @@ class LedgerController extends Controller
         }
 
         return view('ledgers.expense', [
-            'title'         => 'Expense Head Ledger',
-            'heads'         => $heads,
+            'title' => 'Expense Head Ledger',
+            'heads' => $heads,
             'expenseHeadId' => $expenseHeadId,
-            'dateFrom'      => $dateFrom,
-            'dateTo'        => $dateTo,
-            'ledgerData'    => $ledgerData,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'ledgerData' => $ledgerData,
         ]);
     }
 
@@ -281,12 +281,12 @@ class LedgerController extends Controller
         }
 
         $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
-        
+
         $pdf = Pdf::loadView('ledgers.pdf', array_merge($ledgerData, [
-            'type'      => 'expense',
-            'dateFrom'  => $dateFrom,
-            'dateTo'    => $dateTo,
-            'title'     => 'Expense Head Ledger - ' . $ledgerData['head']->name,
+            'type' => 'expense',
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'title' => 'Expense Head Ledger - ' . $ledgerData['head']->name,
         ]))->setPaper('a4', 'portrait');
 
         return $pdf->download('expense_head_ledger_' . str_replace(' ', '_', strtolower($ledgerData['head']->name)) . '.pdf');
@@ -335,7 +335,7 @@ class LedgerController extends Controller
                     'date' => $payment->month,
                     'description' => ucfirst(str_replace('_', ' ', $payment->type)) . ' Billing - ' . $payment->month->format('M Y'),
                     'reference' => 'Bill #' . $payment->id,
-                    'debit' => (float)$payment->amount,
+                    'debit' => (float) $payment->amount,
                     'credit' => 0.00,
                     'type' => 'bill',
                     'id' => $payment->id,
@@ -345,7 +345,7 @@ class LedgerController extends Controller
 
             // Legacy/Direct payments check
             $voucheredPaid = $payment->receivingVouchers->sum(fn($v) => $v->pivot->amount_allocated);
-            $unvoucheredPaid = (float)$payment->amount_paid - (float)$voucheredPaid;
+            $unvoucheredPaid = (float) $payment->amount_paid - (float) $voucheredPaid;
             if ($unvoucheredPaid > 0.01) {
                 $entries->push([
                     'date' => $payment->paid_at ?? $payment->month,
@@ -374,8 +374,8 @@ class LedgerController extends Controller
 
         foreach ($receivingVouchers as $voucher) {
             $unitNo = $unit->unit_number;
-            $allocatedForUnit = $voucher->payments->where('unit_id', $unitId)->sum(fn($p) => (float)$p->pivot->amount_allocated);
-            $creditAmount = $allocatedForUnit > 0 ? $allocatedForUnit : (float)$voucher->amount;
+            $allocatedForUnit = $voucher->payments->where('unit_id', $unitId)->sum(fn($p) => (float) $p->pivot->amount_allocated);
+            $creditAmount = $allocatedForUnit > 0 ? $allocatedForUnit : (float) $voucher->amount;
 
             $typesPaid = $voucher->payments->where('unit_id', $unitId)->map(fn($p) => ucfirst(str_replace('_', ' ', $p->type)))->unique()->implode(', ');
             $desc = 'Payment received' . ($typesPaid ? ' (' . $typesPaid . ')' : '') . ' via ' . ($voucher->paymentAccount->name ?? 'Voucher');
@@ -394,7 +394,7 @@ class LedgerController extends Controller
 
         // 1b. Fetch Payment Vouchers (paid payables / payouts / refunds to tenant - Outflow)
         $payoutVouchers = PaymentVoucher::where('paid_to_type', 'tenant')
-            ->where(function($q) use ($unitId, $unit) {
+            ->where(function ($q) use ($unitId, $unit) {
                 $q->where('unit_id', $unitId);
                 if ($unit->tenant_id) {
                     $q->orWhere('tenant_id', $unit->tenant_id);
@@ -408,7 +408,7 @@ class LedgerController extends Controller
                 'date' => $pv->date,
                 'description' => 'Refund / Payment Outflow via ' . ($pv->paymentAccount->name ?? 'Payment Voucher') . ($pv->notes ? ' - ' . $pv->notes : ''),
                 'reference' => $pv->voucher_no,
-                'debit' => (float)$pv->amount,
+                'debit' => (float) $pv->amount,
                 'credit' => 0.00,
                 'type' => 'voucher_payout',
                 'id' => $pv->id,
@@ -430,7 +430,7 @@ class LedgerController extends Controller
 
         foreach ($allEntries as $e) {
             $eDate = $e['date'] instanceof \Carbon\Carbon ? $e['date'] : \Carbon\Carbon::parse($e['date']);
-            
+
             // If before dateFrom, accumulate into opening balance
             if ($dateFrom && $eDate->lt(\Carbon\Carbon::parse($dateFrom))) {
                 $priorDebit += $e['debit'];
@@ -510,14 +510,14 @@ class LedgerController extends Controller
             ->groupBy('payments.unit_id', 'units.is_self', 'payments.type')
             ->get();
 
-        $allocRentPmMall      = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
-        $allocMaintPmMall     = (float) $allocations->filter(function ($row) use ($otherTenantUnitIds) {
+        $allocRentPmMall = (float) $allocations->where('is_self', false)->where('type', 'rent')->sum('total');
+        $allocMaintPmMall = (float) $allocations->filter(function ($row) use ($otherTenantUnitIds) {
             return $row->type === 'maintenance' && (!$row->is_self || in_array($row->unit_id, $otherTenantUnitIds));
         })->sum('total');
         $allocMaintOtherOwned = (float) $allocations->filter(function ($row) use ($otherTenantUnitIds) {
             return $row->type === 'maintenance' && $row->is_self && !in_array($row->unit_id, $otherTenantUnitIds);
         })->sum('total');
-        $allocExtraPmMall     = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
+        $allocExtraPmMall = (float) $allocations->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total');
 
         // 2. Month Payments (Paid)
         $monthPayments = DB::table('payments')
@@ -529,19 +529,19 @@ class LedgerController extends Controller
             ->groupBy('payments.unit_id', 'units.is_self', 'payments.type')
             ->get();
 
-        $payRentPmMall      = (float) $monthPayments->where('is_self', false)->where('type', 'rent')->sum('total_paid');
-        $payMaintPmMall     = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
+        $payRentPmMall = (float) $monthPayments->where('is_self', false)->where('type', 'rent')->sum('total_paid');
+        $payMaintPmMall = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
             return $row->type === 'maintenance' && (!$row->is_self || in_array($row->unit_id, $otherTenantUnitIds));
         })->sum('total_paid');
         $payMaintOtherOwned = (float) $monthPayments->filter(function ($row) use ($otherTenantUnitIds) {
             return $row->type === 'maintenance' && $row->is_self && !in_array($row->unit_id, $otherTenantUnitIds);
         })->sum('total_paid');
-        $payExtraPmMall     = (float) $monthPayments->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total_paid');
+        $payExtraPmMall = (float) $monthPayments->where('is_self', false)->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('total_paid');
 
-        $rentPmMall      = max($allocRentPmMall, $payRentPmMall);
-        $maintPmMall     = max($allocMaintPmMall, $payMaintPmMall);
+        $rentPmMall = max($allocRentPmMall, $payRentPmMall);
+        $maintPmMall = max($allocMaintPmMall, $payMaintPmMall);
         $maintOtherOwned = max($allocMaintOtherOwned, $payMaintOtherOwned);
-        $extraPmMall     = max($allocExtraPmMall, $payExtraPmMall);
+        $extraPmMall = max($allocExtraPmMall, $payExtraPmMall);
 
         $tenantIncomeAll = (float) ReceivingVoucher::where('received_from_type', 'tenant')
             ->whereBetween('date', [$from, $to])
@@ -558,7 +558,9 @@ class LedgerController extends Controller
 
         $totalIncome = $rentPmMall + $maintPmMall + $maintOtherOwned + $extraPmMall + $unallocatedTenantIncome;
 
-        $totalExpenses = (float) Expense::whereBetween('date', [$from, $to])->sum('amount');
+        $directExpenses = (float) Expense::whereBetween('date', [$from, $to])->sum('amount');
+        $jvExpenses = (float) \App\Models\JvVoucher::whereBetween('date', [$from, $to])->sum('amount');
+        $totalExpenses = $directExpenses + $jvExpenses;
 
         return $totalIncome - $totalExpenses;
     }
@@ -570,7 +572,7 @@ class LedgerController extends Controller
 
         // Standardize dates
         $dateFromStr = $dateFrom ?: Carbon::now()->startOfMonth()->toDateString();
-        $dateToStr   = $dateTo ?: Carbon::now()->endOfMonth()->toDateString();
+        $dateToStr = $dateTo ?: Carbon::now()->endOfMonth()->toDateString();
 
         // 1. Calculate Previous Month / Prior Accumulated Profit (Opening Balance)
         $priorToDate = Carbon::parse($dateFromStr)->subDay()->toDateString();
@@ -595,16 +597,16 @@ class LedgerController extends Controller
 
         // Prepend Previous Profit / Opening Balance row
         $entries->push([
-            'date'            => Carbon::parse($dateFromStr)->startOfDay(),
-            'voucher_no'      => 'OP-BAL',
-            'account'         => 'Opening / Previous Profit',
-            'reference'       => 'Previous Balance',
-            'notes'           => 'Accumulated Net Profit / Balance prior to ' . Carbon::parse($dateFromStr)->format('d M Y'),
-            'debit'           => $previousBalance < 0 ? abs($previousBalance) : 0.00,
-            'credit'          => $previousBalance > 0 ? $previousBalance : 0.00,
-            'type'            => 'opening_balance',
-            'id'              => null,
-            'is_opening'      => true,
+            'date' => Carbon::parse($dateFromStr)->startOfDay(),
+            'voucher_no' => 'OP-BAL',
+            'account' => 'Opening / Previous Profit',
+            'reference' => 'Previous Balance',
+            'notes' => 'Accumulated Net Profit / Balance prior to ' . Carbon::parse($dateFromStr)->format('d M Y'),
+            'debit' => $previousBalance < 0 ? abs($previousBalance) : 0.00,
+            'credit' => $previousBalance > 0 ? $previousBalance : 0.00,
+            'type' => 'opening_balance',
+            'id' => null,
+            'is_opening' => true,
         ]);
 
         // 2. Selected Date Range Profit Share (Credit)
@@ -613,16 +615,16 @@ class LedgerController extends Controller
 
         if ($periodShare != 0) {
             $entries->push([
-                'date'            => Carbon::parse($dateToStr)->endOfDay(),
-                'voucher_no'      => 'P&L-PROFIT',
-                'account'         => 'Mall Profit Share',
-                'reference'       => 'Share (' . number_format($owner->partnership_percentage, 1) . '%)',
-                'notes'           => 'Profit Share for period ' . Carbon::parse($dateFromStr)->format('d M Y') . ' to ' . Carbon::parse($dateToStr)->format('d M Y'),
-                'debit'           => $periodShare < 0 ? abs($periodShare) : 0.00,
-                'credit'          => $periodShare > 0 ? $periodShare : 0.00,
-                'type'            => 'profit_share',
-                'id'              => null,
-                'is_opening'      => false,
+                'date' => Carbon::parse($dateToStr)->endOfDay(),
+                'voucher_no' => 'P&L-PROFIT',
+                'account' => 'Mall Profit Share',
+                'reference' => 'Share (' . number_format($owner->partnership_percentage, 1) . '%)',
+                'notes' => 'Profit Share for period ' . Carbon::parse($dateFromStr)->format('d M Y') . ' to ' . Carbon::parse($dateToStr)->format('d M Y'),
+                'debit' => $periodShare < 0 ? abs($periodShare) : 0.00,
+                'credit' => $periodShare > 0 ? $periodShare : 0.00,
+                'type' => 'profit_share',
+                'id' => null,
+                'is_opening' => false,
             ]);
         }
 
@@ -636,15 +638,15 @@ class LedgerController extends Controller
 
         foreach ($pvPayouts as $pv) {
             $entries->push([
-                'date'       => $pv->date,
+                'date' => $pv->date,
                 'voucher_no' => $pv->voucher_no,
-                'account'    => $pv->paymentAccount->name ?? '—',
-                'reference'  => $pv->reference ?? '—',
-                'notes'      => $pv->notes ?? 'Owner Withdrawal (Payment Voucher)',
-                'debit'      => (float)$pv->amount,
-                'credit'     => 0.00,
-                'type'       => 'payment_voucher',
-                'id'         => $pv->id,
+                'account' => $pv->paymentAccount->name ?? '—',
+                'reference' => $pv->reference ?? '—',
+                'notes' => $pv->notes ?? 'Owner Withdrawal (Payment Voucher)',
+                'debit' => (float) $pv->amount,
+                'credit' => 0.00,
+                'type' => 'payment_voucher',
+                'id' => $pv->id,
                 'is_opening' => false,
             ]);
         }
@@ -657,15 +659,15 @@ class LedgerController extends Controller
 
         foreach ($payouts as $payout) {
             $entries->push([
-                'date'       => $payout->date,
+                'date' => $payout->date,
                 'voucher_no' => $payout->voucher_no,
-                'account'    => $payout->paymentAccount->name ?? '—',
-                'reference'  => $payout->reference ?? '—',
-                'notes'      => $payout->notes ?? 'Owner Withdrawal',
-                'debit'      => (float)$payout->amount,
-                'credit'     => 0.00,
-                'type'       => 'withdrawal',
-                'id'         => $payout->id,
+                'account' => $payout->paymentAccount->name ?? '—',
+                'reference' => $payout->reference ?? '—',
+                'notes' => $payout->notes ?? 'Owner Withdrawal',
+                'debit' => (float) $payout->amount,
+                'credit' => 0.00,
+                'type' => 'withdrawal',
+                'id' => $payout->id,
                 'is_opening' => false,
             ]);
         }
@@ -679,22 +681,22 @@ class LedgerController extends Controller
 
         foreach ($deposits as $deposit) {
             $entries->push([
-                'date'       => $deposit->date,
+                'date' => $deposit->date,
                 'voucher_no' => $deposit->voucher_no,
-                'account'    => $deposit->paymentAccount->name ?? '—',
-                'reference'  => $deposit->reference ?? '—',
-                'notes'      => $deposit->notes ?? 'Capital Deposit',
-                'debit'      => 0.00,
-                'credit'     => (float)$deposit->amount,
-                'type'       => 'receiving_voucher',
-                'id'         => $deposit->id,
+                'account' => $deposit->paymentAccount->name ?? '—',
+                'reference' => $deposit->reference ?? '—',
+                'notes' => $deposit->notes ?? 'Capital Deposit',
+                'debit' => 0.00,
+                'credit' => (float) $deposit->amount,
+                'type' => 'receiving_voucher',
+                'id' => $deposit->id,
                 'is_opening' => false,
             ]);
         }
 
         // Sort chronologically with opening balance always at top
         $opening = $entries->where('is_opening', true);
-        $others  = $entries->where('is_opening', false)->sortBy(fn($e) => $e['date']->format('Y-m-d H:i:s'))->values();
+        $others = $entries->where('is_opening', false)->sortBy(fn($e) => $e['date']->format('Y-m-d H:i:s'))->values();
 
         $entries = $opening->concat($others)->values();
 
@@ -711,12 +713,12 @@ class LedgerController extends Controller
         });
 
         return [
-            'owner'   => $owner,
+            'owner' => $owner,
             'entries' => $entries,
             'summary' => [
-                'total_debit'  => $totalDebit,
+                'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
-                'net_balance'  => $runningBalance,
+                'net_balance' => $runningBalance,
             ]
         ];
     }
@@ -760,9 +762,9 @@ class LedgerController extends Controller
                 ->where('date', '<', $dateFrom)
                 ->sum('amount')
                 + (float) \App\Models\JvVoucher::where('status', 'paid')
-                ->where('payment_account_id', $accountId)
-                ->where('paid_date', '<', $dateFrom)
-                ->sum('amount');
+                    ->where('payment_account_id', $accountId)
+                    ->where('paid_date', '<', $dateFrom)
+                    ->sum('amount');
 
             $priorOutflowWithdrawals = (float) Withdrawal::where('payment_account_id', $accountId)
                 ->where('date', '<', $dateFrom)
@@ -796,7 +798,7 @@ class LedgerController extends Controller
                 'voucher_no' => $receipt->voucher_no,
                 'type' => 'Receipt',
                 'description' => $receipt->notes ?? 'Received Payment',
-                'debit' => (float)$receipt->amount, // Cash/Bank debit is inflow
+                'debit' => (float) $receipt->amount, // Cash/Bank debit is inflow
                 'credit' => 0.00,
                 'model_type' => 'receiving_voucher',
                 'model_id' => $receipt->id,
@@ -827,7 +829,7 @@ class LedgerController extends Controller
                 'voucher_no' => $receipt->voucher_no,
                 'type' => $typeLabel,
                 'description' => $desc,
-                'debit' => (float)$receipt->amount,
+                'debit' => (float) $receipt->amount,
                 'credit' => 0.00,
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $receipt->id,
@@ -852,7 +854,7 @@ class LedgerController extends Controller
                 'voucher_no' => $transfer->voucher_no,
                 'type' => 'Transfer In',
                 'description' => $desc,
-                'debit' => (float)$transfer->amount,
+                'debit' => (float) $transfer->amount,
                 'credit' => 0.00,
                 'model_type' => 'payment_voucher',
                 'model_id' => $transfer->id,
@@ -884,7 +886,7 @@ class LedgerController extends Controller
                 'type' => $typeLabel,
                 'description' => $desc,
                 'debit' => 0.00,
-                'credit' => (float)$payout->amount,
+                'credit' => (float) $payout->amount,
                 'model_type' => 'payment_voucher',
                 'model_id' => $payout->id,
                 'unit_number' => $payout->unit?->unit_number,
@@ -909,7 +911,7 @@ class LedgerController extends Controller
                 'type' => 'Transfer Out',
                 'description' => $desc,
                 'debit' => 0.00,
-                'credit' => (float)$transfer->amount,
+                'credit' => (float) $transfer->amount,
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $transfer->id,
                 'unit_number' => null,
@@ -929,7 +931,7 @@ class LedgerController extends Controller
                 'type' => 'Expense',
                 'description' => ($expense->expenseHead->name ?? 'Expense') . ' - ' . ($expense->notes ?? ''),
                 'debit' => 0.00,
-                'credit' => (float)$expense->amount,
+                'credit' => (float) $expense->amount,
                 'model_type' => 'expense',
                 'model_id' => $expense->id,
                 'unit_number' => null,
@@ -950,7 +952,7 @@ class LedgerController extends Controller
                 'type' => 'JV Voucher (Paid)',
                 'description' => ($jv->expenseHead->name ?? 'JV Expense') . ($jv->notes ? ' - ' . $jv->notes : ''),
                 'debit' => 0.00,
-                'credit' => (float)$jv->amount,
+                'credit' => (float) $jv->amount,
                 'model_type' => 'jv_voucher',
                 'model_id' => $jv->id,
                 'unit_number' => null,
@@ -970,7 +972,7 @@ class LedgerController extends Controller
                 'type' => 'Withdrawal',
                 'description' => 'Owner Withdrawal: ' . ($withdrawal->owner->name ?? 'Partner') . ($withdrawal->notes ? ' - ' . $withdrawal->notes : ''),
                 'debit' => 0.00,
-                'credit' => (float)$withdrawal->amount,
+                'credit' => (float) $withdrawal->amount,
                 'model_type' => 'withdrawal',
                 'model_id' => $withdrawal->id,
             ]);
@@ -1033,7 +1035,7 @@ class LedgerController extends Controller
                 'notes' => $e->notes ?? '—',
                 'payment_account' => $e->paymentAccount->name ?? '—',
                 'reference' => $e->reference ?? '—',
-                'amount' => (float)$e->amount,
+                'amount' => (float) $e->amount,
                 'id' => $e->id,
                 'type' => 'Expense',
                 'status' => 'Paid',
@@ -1047,7 +1049,7 @@ class LedgerController extends Controller
                 'notes' => $jv->notes ?? '—',
                 'payment_account' => $jv->status === 'paid' ? ($jv->paymentAccount->name ?? '—') : 'Unpaid (Accrued)',
                 'reference' => $jv->reference ?? '—',
-                'amount' => (float)$jv->amount,
+                'amount' => (float) $jv->amount,
                 'id' => $jv->id,
                 'type' => 'JV Voucher',
                 'status' => ucfirst($jv->status),
@@ -1081,46 +1083,48 @@ class LedgerController extends Controller
     {
         $this->authorizeLedger();
 
-        $unitId   = $request->query('unit_id');
+        $unitId = $request->query('unit_id');
         $dateFrom = $request->query('date_from');
-        $dateTo   = $request->query('date_to');
+        $dateTo = $request->query('date_to');
 
         if (!$unitId) {
             abort(400, 'No unit selected.');
         }
 
         $ledgerData = $this->getTenantLedgerData($unitId, $dateFrom, $dateTo);
-        $unit       = $ledgerData['unit'];
-        $tenant     = $unit->tenant ?? $unit->otherTenant;
+        $unit = $ledgerData['unit'];
+        $tenant = $unit->tenant ?? $unit->otherTenant;
 
         $filterChips = [
             ['label' => 'Flat / Shop', 'value' => $unit->unit_number . ($tenant ? ' — ' . $tenant->name : '')],
         ];
-        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
-        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+        if ($dateFrom)
+            $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)
+            $filterChips[] = ['label' => 'Date To', 'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
 
         $s = $ledgerData['summary'];
         $summaryCards = [
-            ['label' => 'Total Billed / Charges',  'value' => 'Rs. ' . number_format($s['total_invoiced'], 2), 'color' => 's-blue'],
-            ['label' => 'Total Paid / Credits',     'value' => 'Rs. ' . number_format($s['total_paid'], 2),    'color' => 's-green'],
-            ['label' => 'Balance Outstanding',      'value' => 'Rs. ' . number_format($s['balance_due'], 2),   'color' => $s['balance_due'] > 0 ? 's-orange' : 's-neutral'],
+            ['label' => 'Total Billed / Charges', 'value' => 'Rs. ' . number_format($s['total_invoiced'], 2), 'color' => 's-blue'],
+            ['label' => 'Total Paid / Credits', 'value' => 'Rs. ' . number_format($s['total_paid'], 2), 'color' => 's-green'],
+            ['label' => 'Balance Outstanding', 'value' => 'Rs. ' . number_format($s['balance_due'], 2), 'color' => $s['balance_due'] > 0 ? 's-orange' : 's-neutral'],
         ];
 
         $columns = [
-            ['key' => 'date',            'label' => 'Date',             'type' => 'date'],
-            ['key' => 'description',     'label' => 'Description'],
-            ['key' => 'reference',       'label' => 'Ref / Voucher #',  'td_class' => 'mono'],
-            ['key' => 'debit',           'label' => 'Debit (Charged)',  'type' => 'debit',   'class' => 'text-right'],
-            ['key' => 'credit',          'label' => 'Credit (Paid)',    'type' => 'credit',  'class' => 'text-right'],
-            ['key' => 'running_balance', 'label' => 'Running Balance',  'type' => 'balance', 'class' => 'text-right'],
+            ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
+            ['key' => 'description', 'label' => 'Description'],
+            ['key' => 'reference', 'label' => 'Ref / Voucher #', 'td_class' => 'mono'],
+            ['key' => 'debit', 'label' => 'Debit (Charged)', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit (Paid)', 'type' => 'credit', 'class' => 'text-right'],
+            ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
         return view('ledgers.print_page', [
-            'pageTitle'    => 'Tenant / Unit Ledger — ' . $unit->unit_number,
-            'filterChips'  => $filterChips,
+            'pageTitle' => 'Tenant / Unit Ledger — ' . $unit->unit_number,
+            'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
-            'columns'      => $columns,
-            'rows'         => $ledgerData['entries']->toArray(),
+            'columns' => $columns,
+            'rows' => $ledgerData['entries']->toArray(),
         ]);
     }
 
@@ -1128,47 +1132,49 @@ class LedgerController extends Controller
     {
         $this->authorizeLedger();
 
-        $ownerId  = $request->query('owner_id');
+        $ownerId = $request->query('owner_id');
         $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
-        $dateTo   = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
+        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
 
         if (!$ownerId) {
             abort(400, 'No owner selected.');
         }
 
         $ledgerData = $this->getOwnerLedgerData($ownerId, $dateFrom, $dateTo);
-        $owner      = $ledgerData['owner'];
+        $owner = $ledgerData['owner'];
 
         $filterChips = [
             ['label' => 'Owner', 'value' => $owner->name . ($owner->email ? ' (' . $owner->email . ')' : '')],
         ];
-        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
-        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+        if ($dateFrom)
+            $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)
+            $filterChips[] = ['label' => 'Date To', 'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
 
         $s = $ledgerData['summary'];
         $summaryCards = [
-            ['label' => 'Total Payouts (Debits)',    'value' => 'Rs. ' . number_format($s['total_debit'], 2),  'color' => 's-blue'],
-            ['label' => 'Total Deposits (Credits)',  'value' => 'Rs. ' . number_format($s['total_credit'], 2), 'color' => 's-green'],
-            ['label' => 'Net Business Balance',      'value' => 'Rs. ' . number_format($s['net_balance'], 2),  'color' => 's-neutral'],
+            ['label' => 'Total Payouts (Debits)', 'value' => 'Rs. ' . number_format($s['total_debit'], 2), 'color' => 's-blue'],
+            ['label' => 'Total Deposits (Credits)', 'value' => 'Rs. ' . number_format($s['total_credit'], 2), 'color' => 's-green'],
+            ['label' => 'Net Business Balance', 'value' => 'Rs. ' . number_format($s['net_balance'], 2), 'color' => 's-neutral'],
         ];
 
         $columns = [
-            ['key' => 'date',            'label' => 'Date',            'type' => 'date'],
-            ['key' => 'voucher_no',      'label' => 'Voucher #',       'td_class' => 'mono'],
-            ['key' => 'account',         'label' => 'Account'],
-            ['key' => 'reference',       'label' => 'Reference',       'td_class' => 'mono'],
-            ['key' => 'notes',           'label' => 'Notes'],
-            ['key' => 'debit',           'label' => 'Debit (Payout)',  'type' => 'debit',   'class' => 'text-right'],
-            ['key' => 'credit',          'label' => 'Credit (Deposit)','type' => 'credit',  'class' => 'text-right'],
+            ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
+            ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
+            ['key' => 'account', 'label' => 'Account'],
+            ['key' => 'reference', 'label' => 'Reference', 'td_class' => 'mono'],
+            ['key' => 'notes', 'label' => 'Notes'],
+            ['key' => 'debit', 'label' => 'Debit (Payout)', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit (Deposit)', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
         return view('ledgers.print_page', [
-            'pageTitle'    => 'Owner Capital Statement — ' . $owner->name,
-            'filterChips'  => $filterChips,
+            'pageTitle' => 'Owner Capital Statement — ' . $owner->name,
+            'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
-            'columns'      => $columns,
-            'rows'         => $ledgerData['entries']->toArray(),
+            'columns' => $columns,
+            'rows' => $ledgerData['entries']->toArray(),
         ]);
     }
 
@@ -1177,45 +1183,47 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $accountId = $request->query('payment_account_id');
-        $dateFrom  = $request->query('date_from');
-        $dateTo    = $request->query('date_to');
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
 
         if (!$accountId) {
             abort(400, 'No account selected.');
         }
 
         $ledgerData = $this->getAccountLedgerData($accountId, $dateFrom, $dateTo);
-        $account    = $ledgerData['account'];
+        $account = $ledgerData['account'];
 
         $filterChips = [
             ['label' => 'Account', 'value' => $account->name . ' (' . ucfirst($account->type) . ')'],
         ];
-        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
-        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+        if ($dateFrom)
+            $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)
+            $filterChips[] = ['label' => 'Date To', 'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
 
         $s = $ledgerData['summary'];
         $summaryCards = [
-            ['label' => 'Total Inflows (Debits)',   'value' => 'Rs. ' . number_format($s['total_inflow'], 2),  'color' => 's-green'],
+            ['label' => 'Total Inflows (Debits)', 'value' => 'Rs. ' . number_format($s['total_inflow'], 2), 'color' => 's-green'],
             ['label' => 'Total Outflows (Credits)', 'value' => 'Rs. ' . number_format($s['total_outflow'], 2), 'color' => 's-blue'],
-            ['label' => 'Account Running Balance',  'value' => 'Rs. ' . number_format($s['net_balance'], 2),   'color' => 's-neutral'],
+            ['label' => 'Account Running Balance', 'value' => 'Rs. ' . number_format($s['net_balance'], 2), 'color' => 's-neutral'],
         ];
 
         $columns = [
-            ['key' => 'date',            'label' => 'Date',              'type' => 'date'],
-            ['key' => 'voucher_no',      'label' => 'Voucher #',         'td_class' => 'mono'],
-            ['key' => 'type',            'label' => 'Type',              'type' => 'badge'],
-            ['key' => 'description',     'label' => 'Description / Ref'],
-            ['key' => 'debit',           'label' => 'Debit (Inflow)',    'type' => 'debit',   'class' => 'text-right'],
-            ['key' => 'credit',          'label' => 'Credit (Outflow)',  'type' => 'credit',  'class' => 'text-right'],
-            ['key' => 'running_balance', 'label' => 'Running Balance',   'type' => 'balance', 'class' => 'text-right'],
+            ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
+            ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
+            ['key' => 'type', 'label' => 'Type', 'type' => 'badge'],
+            ['key' => 'description', 'label' => 'Description / Ref'],
+            ['key' => 'debit', 'label' => 'Debit (Inflow)', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit (Outflow)', 'type' => 'credit', 'class' => 'text-right'],
+            ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
         return view('ledgers.print_page', [
-            'pageTitle'    => 'Cash & Bank Ledger — ' . $account->name,
-            'filterChips'  => $filterChips,
+            'pageTitle' => 'Cash & Bank Ledger — ' . $account->name,
+            'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
-            'columns'      => $columns,
-            'rows'         => $ledgerData['entries']->toArray(),
+            'columns' => $columns,
+            'rows' => $ledgerData['entries']->toArray(),
         ]);
     }
 
@@ -1224,21 +1232,23 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $expenseHeadId = $request->query('expense_head_id');
-        $dateFrom      = $request->query('date_from');
-        $dateTo        = $request->query('date_to');
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
 
         if (!$expenseHeadId) {
             abort(400, 'No expense category selected.');
         }
 
         $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
-        $head       = $ledgerData['head'];
+        $head = $ledgerData['head'];
 
         $filterChips = [
             ['label' => 'Expense Category', 'value' => $head->name . ($head->code ? ' (Code: ' . $head->code . ')' : '')],
         ];
-        if ($dateFrom) $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
-        if ($dateTo)   $filterChips[] = ['label' => 'Date To',   'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
+        if ($dateFrom)
+            $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
+        if ($dateTo)
+            $filterChips[] = ['label' => 'Date To', 'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
 
         $s = $ledgerData['summary'];
         $summaryCards = [
@@ -1246,20 +1256,20 @@ class LedgerController extends Controller
         ];
 
         $columns = [
-            ['key' => 'date',            'label' => 'Date',            'type' => 'date'],
-            ['key' => 'voucher_no',      'label' => 'Voucher #',       'td_class' => 'mono'],
-            ['key' => 'notes',           'label' => 'Spent On / Notes'],
+            ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
+            ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
+            ['key' => 'notes', 'label' => 'Spent On / Notes'],
             ['key' => 'payment_account', 'label' => 'Payment Account'],
-            ['key' => 'reference',       'label' => 'Reference',       'td_class' => 'mono'],
-            ['key' => 'amount',          'label' => 'Amount',          'type' => 'amount', 'class' => 'text-right'],
+            ['key' => 'reference', 'label' => 'Reference', 'td_class' => 'mono'],
+            ['key' => 'amount', 'label' => 'Amount', 'type' => 'amount', 'class' => 'text-right'],
         ];
 
         return view('ledgers.print_page', [
-            'pageTitle'    => 'Expense Ledger — ' . $head->name,
-            'filterChips'  => $filterChips,
+            'pageTitle' => 'Expense Ledger — ' . $head->name,
+            'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
-            'columns'      => $columns,
-            'rows'         => $ledgerData['entries']->toArray(),
+            'columns' => $columns,
+            'rows' => $ledgerData['entries']->toArray(),
         ]);
     }
 }
