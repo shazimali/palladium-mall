@@ -270,9 +270,11 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/profit-loss/pdf', [ProfitLossController::class, 'exportPdf'])->name('reports.profit-loss.pdf');
         Route::get('reports/profit-loss/excel', [ProfitLossController::class, 'exportExcel'])->name('reports.profit-loss.excel');
 
-        // Consolidated Receivables & Payables Summary Report
-        Route::get('reports/receivables-payables', [ReceivablePayableReportController::class, 'index'])->name('reports.receivables-payables');
-        Route::get('reports/receivables-payables/pdf', [ReceivablePayableReportController::class, 'exportPdf'])->name('reports.receivables-payables.pdf');
+        // Receivables & Payables Reports
+        Route::get('reports/receivables', [ReceivablePayableReportController::class, 'receivables'])->name('reports.receivables');
+        Route::get('reports/receivables/pdf', [ReceivablePayableReportController::class, 'receivablesPdf'])->name('reports.receivables.pdf');
+        Route::get('reports/payables', [ReceivablePayableReportController::class, 'payables'])->name('reports.payables');
+        Route::get('reports/payables/pdf', [ReceivablePayableReportController::class, 'payablesPdf'])->name('reports.payables.pdf');
     });
 
     // AJAX: owner pending balance (used in Payment Voucher form)

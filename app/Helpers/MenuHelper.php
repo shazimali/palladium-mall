@@ -250,7 +250,8 @@ class MenuHelper
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Generated)', 'path' => '/reports?report_type=monthly_matrix'];
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Expected)', 'path' => '/reports?report_type=monthly_matrix_expected'];
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
-            $reportsSubItems[] = ['name' => 'Receivables & Payables Summary', 'path' => '/reports/receivables-payables'];
+            $reportsSubItems[] = ['name' => 'Receivables Report', 'path' => '/reports/receivables'];
+            $reportsSubItems[] = ['name' => 'Payables Report', 'path' => '/reports/payables'];
         }
         if (auth()->check() && $user->can('reports.daybook')) {
             $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];

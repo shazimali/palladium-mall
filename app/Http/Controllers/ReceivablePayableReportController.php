@@ -19,37 +19,75 @@ use Illuminate\View\View;
 class ReceivablePayableReportController extends Controller
 {
     /**
-     * Display the Consolidated Receivables & Payables Summary Report.
+     * Display the Receivables Report.
      */
-    public function index(Request $request): View
+    public function receivables(Request $request): View
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.view')) {
             abort(403, 'Unauthorized action.');
         }
 
+        $request->merge(['type' => 'receivables']);
         $data = $this->buildReportData($request);
 
-        return view('reports.receivables_payables', array_merge($data, [
-            'title' => 'Receivables & Payables Summary Report',
+        return view('reports.receivables', array_merge($data, [
+            'title' => 'Receivables Report',
         ]));
     }
 
     /**
-     * Export the unified report as PDF.
+     * Export the Receivables Report as PDF.
      */
-    public function exportPdf(Request $request)
+    public function receivablesPdf(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.view')) {
             abort(403, 'Unauthorized action.');
         }
 
+        $request->merge(['type' => 'receivables']);
         $data = $this->buildReportData($request);
 
-        $pdf = Pdf::loadView('reports.receivables_payables_pdf', array_merge($data, [
-            'title' => 'Receivables & Payables Summary Report',
+        $pdf = Pdf::loadView('reports.receivables_pdf', array_merge($data, [
+            'title' => 'Receivables Report',
         ]))->setPaper('a4', 'portrait');
 
-        return $pdf->download('receivables_payables_summary_' . now()->format('Y_m_d') . '.pdf');
+        return $pdf->download('receivables_report_' . now()->format('Y_m_d') . '.pdf');
+    }
+
+    /**
+     * Display the Payables Report.
+     */
+    public function payables(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->merge(['type' => 'payables']);
+        $data = $this->buildReportData($request);
+
+        return view('reports.payables', array_merge($data, [
+            'title' => 'Payables Report',
+        ]));
+    }
+
+    /**
+     * Export the Payables Report as PDF.
+     */
+    public function payablesPdf(Request $request)
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $request->merge(['type' => 'payables']);
+        $data = $this->buildReportData($request);
+
+        $pdf = Pdf::loadView('reports.payables_pdf', array_merge($data, [
+            'title' => 'Payables Report',
+        ]))->setPaper('a4', 'portrait');
+
+        return $pdf->download('payables_report_' . now()->format('Y_m_d') . '.pdf');
     }
 
     /**
