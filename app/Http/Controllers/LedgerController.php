@@ -609,23 +609,36 @@ class LedgerController extends Controller
             'is_opening' => true,
         ]);
 
-        // 2. Selected Date Range Profit Share (Credit)
-        $periodProfit = $this->calculateMallNetProfit($dateFromStr, $dateToStr);
-        $periodShare = round($periodProfit * ((float) $owner->partnership_percentage / 100), 2);
+        // 2. Month-by-Month Profit Share (Locked at the end of each month)
+        $currentMonth = Carbon::parse($dateFromStr)->startOfMonth();
+        $endMonth = Carbon::parse($dateToStr)->endOfMonth();
 
-        if ($periodShare != 0) {
-            $entries->push([
-                'date' => Carbon::parse($dateToStr)->endOfDay(),
-                'voucher_no' => 'P&L-PROFIT',
-                'account' => 'Mall Profit Share',
-                'reference' => 'Share (' . number_format($owner->partnership_percentage, 1) . '%)',
-                'notes' => 'Profit Share for period ' . Carbon::parse($dateFromStr)->format('d M Y') . ' to ' . Carbon::parse($dateToStr)->format('d M Y'),
-                'debit' => $periodShare < 0 ? abs($periodShare) : 0.00,
-                'credit' => $periodShare > 0 ? $periodShare : 0.00,
-                'type' => 'profit_share',
-                'id' => null,
-                'is_opening' => false,
-            ]);
+        while ($currentMonth->lte($endMonth)) {
+            $mStartStr = $currentMonth->copy()->startOfMonth()->toDateString();
+            $mEndStr = $currentMonth->copy()->endOfMonth()->toDateString();
+
+            $mProfit = $this->calculateMallNetProfit($mStartStr, $mEndStr);
+            $mShare = round($mProfit * ((float) $owner->partnership_percentage / 100), 2);
+
+            if ($mShare != 0) {
+                $mClosingDate = $currentMonth->copy()->endOfMonth()->endOfDay();
+                $isCurrentOngoingMonth = $currentMonth->isCurrentMonth();
+
+                $entries->push([
+                    'date' => $mClosingDate,
+                    'voucher_no' => 'P&L-' . strtoupper($currentMonth->format('M-Y')),
+                    'account' => 'Mall Profit Share',
+                    'reference' => 'Share (' . number_format($owner->partnership_percentage, 1) . '%)',
+                    'notes' => ($isCurrentOngoingMonth ? 'Ongoing Profit Share for ' : 'Locked Monthly Profit Share for ') . $currentMonth->format('F Y'),
+                    'debit' => $mShare < 0 ? abs($mShare) : 0.00,
+                    'credit' => $mShare > 0 ? $mShare : 0.00,
+                    'type' => 'profit_share',
+                    'id' => null,
+                    'is_opening' => false,
+                ]);
+            }
+
+            $currentMonth->addMonth();
         }
 
         // 3. Outflows: Payment Vouchers as DEBITS
