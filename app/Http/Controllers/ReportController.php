@@ -736,13 +736,12 @@ class ReportController extends Controller
             // Fetch previous unpaid balance early — needed for status determination below.
             $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
 
-            if ($unit->is_self && $unit->otherTenant) {
+            $hasSelfTenantPayment = $unitPayments->whereNotNull('other_tenant_id')->isNotEmpty();
+
+            if ($unit->is_self && ($unit->otherTenant || $hasSelfTenantPayment)) {
                 $status = 'OCCUPIED';
-            } elseif ($unit->is_self && $unitPayments->isNotEmpty()) {
-                // otherTenant was detached but billing was already generated — mark as OCCUPIED
-                $status = 'OCCUPIED';
-            } elseif ($unit->is_self && $prevUnpaid > 0 && !$unit->otherTenant) {
-                // No current otherTenant and no this-month billing — unit shows only for prev unpaid
+            } elseif ($unit->is_self && $prevUnpaid > 0) {
+                // No attached otherTenant and no this-month otherTenant payment — unit shows only for prev unpaid
                 $status = 'PREV UNPAID';
             } elseif ($agreement) {
                 $status = $unit->status === 'sp' ? 'SP' : 'RENTED';
@@ -767,7 +766,12 @@ class ReportController extends Controller
             // Services (Maintenance)
             $maintPayment = $unitPayments->where('type', 'maintenance')->first();
             if ($maintPayment) {
-                $serv_due = (float) $maintPayment->amount;
+                if ($unit->is_self && !$maintPayment->other_tenant_id) {
+                    // For is_self units, only show maintenance in matrix if an otherTenant was attached when payment was generated
+                    $serv_due = 0.0;
+                } else {
+                    $serv_due = (float) $maintPayment->amount;
+                }
             } elseif (!$isActualOnly && $agreement && $agreement->maintenance_charge > 0) {
                 $serv_due = (float) $agreement->maintenance_charge;
             } elseif (!$isActualOnly && $unit->is_self && $unit->otherTenant && $unit->default_maintenance_charge > 0) {
@@ -819,7 +823,7 @@ class ReportController extends Controller
                 $dates = $unitAllocationsForUnit->map(fn($a) => $a->voucher_date ? \Carbon\Carbon::parse($a->voucher_date)->format('d/m') : null)->unique()->filter()->toArray();
             } else {
                 $rent_paid = $rentPayment ? (float) $rentPayment->amount_paid : 0.0;
-                $serv_paid = $maintPayment ? (float) $maintPayment->amount_paid : 0.0;
+                $serv_paid = ($maintPayment && (!$unit->is_self || $maintPayment->other_tenant_id)) ? (float) $maintPayment->amount_paid : 0.0;
                 $sec_paid = $secPayment ? (float) $secPayment->amount_paid : 0.0;
                 $extra_paid = (float) $extraPayments->sum('amount_paid');
                 $total_received = $serv_paid + $extra_paid + $sec_paid + $rent_paid;
