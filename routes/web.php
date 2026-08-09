@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
         Route::get('units/export-pdf',          [UnitController::class, 'exportPdf'])->name('units.export-pdf');
         Route::get('units/{unit}/print',        [UnitController::class, 'printOne'])->name('units.print-one');
         Route::post('units/{unit}/breaker-inspections', [App\Http\Controllers\UnitBreakerInspectionController::class, 'store'])->name('units.breaker-inspections.store');
+        Route::post('units/{unit}/toggle-breaker', [\App\Http\Controllers\UnitController::class, 'toggleBreaker'])->name('units.toggle-breaker');
         Route::resource('units', UnitController::class)->except(['show']);
         Route::get('units/{unit}',              [UnitController::class, 'show'])->name('units.show');
     });

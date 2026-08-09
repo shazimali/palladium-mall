@@ -197,6 +197,20 @@ class UnitController extends Controller
         ]);
     }
 
+    public function toggleBreaker(Unit $unit): RedirectResponse
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('units.edit')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $newStatus = $unit->breaker_status === 'on' ? 'off' : 'on';
+        $unit->update(['breaker_status' => $newStatus]);
+
+        $statusUpper = strtoupper($newStatus);
+        return redirect()->back()
+            ->with('success', "Unit {$unit->unit_number} electricity breaker switched {$statusUpper} successfully.");
+    }
+
     public function create(Request $request): View
     {
         $floors = Floor::orderBy('name')->get();
