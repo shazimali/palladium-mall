@@ -14,9 +14,11 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
+use App\Services\MatrixService;
+
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, MatrixService $matrixService): View
     {
         $fromDateInput = $request->input('from_date');
         $toDateInput = $request->input('to_date');
@@ -55,28 +57,25 @@ class DashboardController extends Controller
             $dateLabel = $fromDate->format('d M Y') . ' — ' . $toDate->format('d M Y');
         }
 
-        // 1. Calculate Financial Widgets (Filtered by Date Range)
-        $payments = Payment::whereBetween('month', [$fromDateStr, $toDateStr])->get();
+        // 1. Calculate Financial Widgets as per Matrix
+        $matrixReq = new Request([
+            'date_from' => $fromDateStr,
+            'report_type' => 'monthly_matrix',
+        ]);
+        $matrixEntries = $matrixService->buildMatrixEntries($matrixReq);
+        $matrixSummary = $matrixService->buildMatrixSummary($matrixEntries);
 
-        $rentPayments = $payments->where('type', 'rent');
-        $depositPayments = $payments->where('type', 'security_deposit');
-        $servicePayments = $payments->whereNotIn('type', ['rent', 'security_deposit']);
+        $rentDue = (float) $matrixSummary['total_rent'];
+        $rentPaid = (float) $matrixSummary['total_rent_paid'];
 
-        // Rent sums
-        $rentDue = (float) $rentPayments->sum('amount');
-        $rentPaid = (float) $rentPayments->sum('amount_paid');
+        $servicesDue = (float) ($matrixSummary['total_serv'] + $matrixSummary['total_extra']);
+        $servicesPaid = (float) ($matrixSummary['total_serv_paid'] + $matrixSummary['total_extra_paid']);
 
-        // Security Deposit sums
-        $depositDue = (float) $depositPayments->sum('amount');
-        $depositPaid = (float) $depositPayments->sum('amount_paid');
+        $depositDue = (float) $matrixSummary['total_security_deposit'];
+        $depositPaid = (float) $matrixSummary['total_sec_paid'];
 
-        // Services sums
-        $servicesDue = (float) $servicePayments->sum('amount');
-        $servicesPaid = (float) $servicePayments->sum('amount_paid');
-
-        // Grand Total sums
-        $grandDue = (float) $payments->sum('amount');
-        $grandPaid = (float) $payments->sum('amount_paid');
+        $grandDue = (float) $matrixSummary['total_amount'];
+        $grandPaid = (float) $matrixSummary['total_received'];
 
         $financialWidgets = [
             'grand_total' => [

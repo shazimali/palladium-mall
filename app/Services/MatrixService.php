@@ -1,0 +1,387 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Agreement;
+use App\Models\Payment;
+use App\Models\PaymentAccount;
+use App\Models\Unit;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+
+class MatrixService
+{
+    /**
+     * Build matrix entries for a given request / date filter.
+     */
+    public function buildMatrixEntries(Request $request): Collection
+    {
+        $from = $request->date_from ?? $request->from_date;
+        $month = $from ? Carbon::parse($from)->startOfMonth() : Carbon::now()->startOfMonth();
+        $monthStr = $month->format('Y-m-d');
+        $unitStatus = $request->unit_status;
+        $ownerType = $request->owner_type;
+        $unitId = $request->unit_id;
+        $tenantId = $request->tenant_id;
+        $statusFilter = $request->status;
+        $landlordId = $request->landlord_id;
+        $paymentMethod = $request->payment_method;
+        $paymentAccountId = $request->payment_account_id;
+
+        $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
+
+        // Determine whether this is the "Generated" matrix (actual payments only, no projections)
+        $reportType = $request->report_type;
+        $isActualOnly = $reportType === 'monthly_matrix' || empty($reportType);
+        $isMatrixReport = in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected']) || empty($reportType);
+
+        // Include is_self units that EITHER currently have an otherTenant
+        // OR had payments generated FOR an other-tenant in the selected month
+        $selfUnitsWithPaymentsThisMonth = $isMatrixReport
+            ? Payment::where('month', $monthStr)
+                ->whereNotNull('other_tenant_id')
+                ->whereHas('unit', fn($q) => $q->where('is_self', true))
+                ->pluck('unit_id')
+                ->toArray()
+            : [];
+
+        // Also include is_self units that have PREVIOUS unpaid/partial other-tenant payments.
+        $selfUnitsWithPrevUnpaid = $isMatrixReport
+            ? Payment::where('month', '<', $monthStr)
+                ->whereIn('status', ['unpaid', 'partial'])
+                ->whereNotNull('other_tenant_id')
+                ->whereHas('unit', fn($q) => $q->where('is_self', true))
+                ->pluck('unit_id')
+                ->toArray()
+            : [];
+
+        // Merge both sets (current month billed + previous unpaid)
+        $selfUnitsToInclude = array_unique(array_merge($selfUnitsWithPaymentsThisMonth, $selfUnitsWithPrevUnpaid));
+
+        $units = Unit::with(['landlord', 'otherTenant'])
+            ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
+            ->when($unitId, fn($q) => $q->where('id', $unitId))
+            ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
+            ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
+            ->when($ownerType === 'other', fn($q) => $q->where('is_self', true)->whereHas('otherTenant'))
+            ->when(!$ownerType, function ($q) use ($selfUnitsToInclude) {
+                $q->where(function ($sq) use ($selfUnitsToInclude) {
+                    $sq->where('is_self', false)
+                        ->orWhere(function ($ssq) {
+                            $ssq->where('is_self', true)->whereHas('otherTenant');
+                        })
+                        ->orWhere(function ($ssq) use ($selfUnitsToInclude) {
+                            if (!empty($selfUnitsToInclude)) {
+                                $ssq->where('is_self', true)
+                                    ->whereIn('id', $selfUnitsToInclude);
+                            }
+                        });
+                });
+            })
+            ->when($tenantId, function ($q) use ($tenantId, $month) {
+                $q->where(function ($sq) use ($tenantId, $month) {
+                    $sq->whereHas('agreements', function ($qa) use ($tenantId, $month) {
+                        $qa->where('status', 'active')
+                            ->where('tenant_id', $tenantId)
+                            ->where('start_date', '<=', $month->copy()->endOfMonth())
+                            ->where('end_date', '>=', $month->copy()->startOfMonth());
+                    })->orWhereHas('payments', function ($qp) use ($tenantId, $month) {
+                        $qp->where('tenant_id', $tenantId)
+                            ->where('month', $month->format('Y-m-d'));
+                    });
+                });
+            })
+            ->when($paymentMethod, function ($q) use ($paymentMethod, $month) {
+                $q->whereHas('payments', function ($qp) use ($paymentMethod, $month) {
+                    $qp->where('payment_method', $paymentMethod)
+                        ->where('month', $month->format('Y-m-d'));
+                });
+            })
+            ->when($paymentAccountId, function ($q) use ($paymentAccountId, $month) {
+                $q->whereHas('payments', function ($qp) use ($paymentAccountId, $month) {
+                    $qp->where('payment_account_id', $paymentAccountId)
+                        ->where('month', $month->format('Y-m-d'));
+                });
+            })
+            ->select(['id', 'unit_number', 'landlord_id', 'status', 'is_self', 'default_maintenance_charge'])
+            ->orderBy('unit_number')
+            ->get();
+
+        $agreements = Agreement::where('status', 'active')
+            ->where('start_date', '<=', $month->copy()->endOfMonth())
+            ->where('end_date', '>=', $month->copy()->startOfMonth())
+            ->with(['tenant'])
+            ->get()
+            ->groupBy('unit_id');
+
+        $payments = Payment::where('month', $monthStr)
+            ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
+            ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
+            ->with(['paymentAccount', 'receivingVouchers', 'otherTenant'])
+            ->get()
+            ->groupBy('unit_id');
+
+        $previousUnpaidBalances = Payment::where('month', '<', $monthStr)
+            ->whereIn('status', ['unpaid', 'partial'])
+            ->selectRaw('unit_id, SUM(amount - amount_paid) as prev_unpaid')
+            ->groupBy('unit_id')
+            ->pluck('prev_unpaid', 'unit_id')
+            ->map(fn($val) => (float) $val);
+
+        $existingSecurityDepositAgreementIds = Payment::where('type', 'security_deposit')
+            ->pluck('agreement_id')
+            ->toArray();
+
+        $allocations = DB::table('receiving_voucher_payments')
+            ->join('receiving_vouchers', 'receiving_voucher_payments.receiving_voucher_id', '=', 'receiving_vouchers.id')
+            ->join('payments', 'receiving_voucher_payments.payment_id', '=', 'payments.id')
+            ->whereNull('receiving_vouchers.deleted_at')
+            ->whereNull('payments.deleted_at')
+            ->whereBetween('receiving_vouchers.date', [$month->copy()->startOfMonth()->toDateString(), $month->copy()->endOfMonth()->toDateString()])
+            ->when($paymentMethod, fn($q) => $q->where('receiving_vouchers.payment_method', $paymentMethod))
+            ->when($paymentAccountId, fn($q) => $q->where('receiving_vouchers.payment_account_id', $paymentAccountId))
+            ->select(
+                'payments.unit_id',
+                'payments.type',
+                'receiving_voucher_payments.amount_allocated',
+                'receiving_vouchers.payment_account_id',
+                'receiving_vouchers.payment_method',
+                'receiving_vouchers.voucher_no',
+                'receiving_vouchers.date as voucher_date'
+            )
+            ->get();
+
+        $unitAllocations = $allocations->groupBy('unit_id');
+
+        $prevOtherTenantPayments = !empty($selfUnitsWithPrevUnpaid)
+            ? Payment::whereIn('unit_id', $selfUnitsWithPrevUnpaid)
+                ->whereNotNull('other_tenant_id')
+                ->with(['otherTenant'])
+                ->orderBy('month', 'desc')
+                ->get()
+                ->groupBy('unit_id')
+            : collect();
+
+        $matrixEntries = collect();
+
+        foreach ($units as $index => $unit) {
+            $agreement = $agreements->get($unit->id)?->first();
+            $unitPayments = $payments->get($unit->id) ?? collect();
+
+            if ($unit->is_self && !$unit->otherTenant && $unitPayments->isEmpty()) {
+                $unitPayments = collect();
+            }
+
+            $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
+            $hasSelfTenantPayment = $unitPayments->whereNotNull('other_tenant_id')->isNotEmpty();
+
+            if ($unit->is_self && ($unit->otherTenant || $hasSelfTenantPayment)) {
+                $status = 'OCCUPIED';
+            } elseif ($unit->is_self && $prevUnpaid > 0) {
+                $status = 'PREV UNPAID';
+            } elseif ($agreement) {
+                $status = $unit->status === 'sp' ? 'SP' : 'RENTED';
+            } else {
+                $status = match ($unit->status) {
+                    'self' => 'SELF',
+                    'sp' => 'SP',
+                    default => 'VACANT',
+                };
+            }
+
+            // Rent
+            $rentPayment = $unitPayments->where('type', 'rent')->first();
+            if ($rentPayment) {
+                $rent_due = (float) $rentPayment->amount;
+            } elseif (!$isActualOnly && $agreement) {
+                $rent_due = (float) $agreement->monthly_rent;
+            } else {
+                $rent_due = 0.0;
+            }
+
+            // Services (Maintenance)
+            $maintPayment = $unitPayments->where('type', 'maintenance')->first();
+            if ($maintPayment) {
+                if ($unit->is_self && !$maintPayment->other_tenant_id) {
+                    $serv_due = 0.0;
+                } else {
+                    $serv_due = (float) $maintPayment->amount;
+                }
+            } elseif (!$isActualOnly && $agreement && $agreement->maintenance_charge > 0) {
+                $serv_due = (float) $agreement->maintenance_charge;
+            } elseif (!$isActualOnly && $unit->is_self && $unit->otherTenant && $unit->default_maintenance_charge > 0) {
+                $serv_due = (float) $unit->default_maintenance_charge;
+            } else {
+                $serv_due = 0.0;
+            }
+
+            // Security Deposit
+            $secPayment = $unitPayments->where('type', 'security_deposit')->first();
+            if ($secPayment) {
+                $sec_due = (float) $secPayment->amount;
+            } elseif (!$isActualOnly && $agreement) {
+                $agreementStartMonth = $agreement->start_date ? $agreement->start_date->format('Y-m') : '';
+                $selectedMonthStr = $month->format('Y-m');
+                $hasExistingPayment = in_array($agreement->id, $existingSecurityDepositAgreementIds);
+                if ($agreementStartMonth === $selectedMonthStr && !$hasExistingPayment) {
+                    $sec_due = (float) $agreement->security_deposit;
+                } else {
+                    $sec_due = 0.0;
+                }
+            } else {
+                $sec_due = 0.0;
+            }
+
+            // Extra
+            $extraPayments = $unitPayments->whereNotIn('type', ['rent', 'maintenance', 'security_deposit']);
+            $extra_due = (float) $extraPayments->sum('amount');
+
+            $total_due = $serv_due + $extra_due + $sec_due + $rent_due;
+
+            $unitAllocationsForUnit = $unitAllocations->get($unit->id) ?? collect();
+
+            if ($unitAllocationsForUnit->isNotEmpty()) {
+                $rent_paid = (float) $unitAllocationsForUnit->where('type', 'rent')->sum('amount_allocated');
+                $serv_paid = (float) $unitAllocationsForUnit->where('type', 'maintenance')->sum('amount_allocated');
+                $sec_paid = (float) $unitAllocationsForUnit->where('type', 'security_deposit')->sum('amount_allocated');
+                $extra_paid = (float) $unitAllocationsForUnit->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('amount_allocated');
+                $total_received = (float) $unitAllocationsForUnit->sum('amount_allocated');
+
+                $accountsBreakdown = [];
+                foreach ($paymentAccounts as $account) {
+                    $accountsBreakdown[$account->name] = (float) $unitAllocationsForUnit->where('payment_account_id', $account->id)->sum('amount_allocated');
+                }
+
+                $vouchers = $unitAllocationsForUnit->pluck('voucher_no')->unique()->filter()->toArray();
+                $dates = $unitAllocationsForUnit->map(fn($a) => $a->voucher_date ? Carbon::parse($a->voucher_date)->format('d/m') : null)->unique()->filter()->toArray();
+            } else {
+                $rent_paid = $rentPayment ? (float) $rentPayment->amount_paid : 0.0;
+                $serv_paid = ($maintPayment && (!$unit->is_self || $maintPayment->other_tenant_id)) ? (float) $maintPayment->amount_paid : 0.0;
+                $sec_paid = $secPayment ? (float) $secPayment->amount_paid : 0.0;
+                $extra_paid = (float) $extraPayments->sum('amount_paid');
+                $total_received = $serv_paid + $extra_paid + $sec_paid + $rent_paid;
+
+                $accountsBreakdown = [];
+                foreach ($paymentAccounts as $account) {
+                    $accountsBreakdown[$account->name] = (float) $unitPayments->where('payment_account_id', $account->id)->sum('amount_paid');
+                }
+
+                $vouchers = [];
+                $dates = [];
+                foreach ($unitPayments as $p) {
+                    if ($p->status === 'paid' || $p->amount_paid > 0) {
+                        if ($p->receivingVouchers->isNotEmpty()) {
+                            foreach ($p->receivingVouchers->pluck('voucher_no') as $vNo) {
+                                $vouchers[] = $vNo;
+                            }
+                        } else {
+                            $vouchers[] = $p->receipt_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT));
+                        }
+                        if ($p->paid_at) {
+                            $dates[] = $p->paid_at->format('d/m');
+                        }
+                    }
+                }
+            }
+
+            $pending = max(0.0, $total_due - $total_received) + $prevUnpaid;
+            $datesString = !empty($dates) ? implode(', ', array_unique($dates)) : '';
+            $vouchersString = !empty($vouchers) ? implode('/', array_unique($vouchers)) : '';
+
+            $firstPayment = $unitPayments->first();
+            if ($unit->is_self) {
+                $prevPaymentForUnit = $prevOtherTenantPayments->get($unit->id)?->first();
+                $tenantName = $unit->otherTenant?->name
+                    ?? $firstPayment?->otherTenant?->name
+                    ?? $prevPaymentForUnit?->otherTenant?->name
+                    ?? '—';
+            } else {
+                $tenantName = $agreement?->tenant?->name ?? ($firstPayment?->tenant?->name ?? '—');
+            }
+
+            $matrixEntries->push([
+                'sr' => $index + 1,
+                'date' => $datesString,
+                'rsv' => $vouchersString,
+                'flat_no' => $unit->unit_number,
+                'owner' => $unit->landlord?->name ?? '—',
+                'tenant' => $tenantName,
+                'status' => $status,
+                'serv' => $serv_due,
+                'serv_paid' => $serv_paid,
+                'extra' => $extra_due,
+                'extra_paid' => $extra_paid,
+                'rent' => $rent_due,
+                'rent_paid' => $rent_paid,
+                'security_deposit' => $sec_due,
+                'sec_paid' => $sec_paid,
+                'total_amount' => $total_due,
+                'received' => $total_received,
+                'payment_accounts' => $accountsBreakdown,
+                'prev_unpaid' => $prevUnpaid,
+                'pending' => $pending,
+                'is_self' => (bool) $unit->is_self,
+            ]);
+        }
+
+        if ($statusFilter) {
+            $matrixEntries = $matrixEntries->filter(function ($entry) use ($statusFilter) {
+                $due = (float) $entry['total_amount'];
+                $paid = (float) $entry['received'];
+                $pending = (float) $entry['pending'];
+
+                if ($statusFilter === 'paid') {
+                    return $due > 0 && $pending <= 0;
+                } elseif ($statusFilter === 'unpaid') {
+                    return $due > 0 && $paid <= 0;
+                } elseif ($statusFilter === 'partial') {
+                    return $paid > 0 && $paid < $due;
+                }
+                return true;
+            })->values()->map(function ($entry, $idx) {
+                $entry['sr'] = $idx + 1;
+                return $entry;
+            });
+        }
+
+        return $matrixEntries;
+    }
+
+    /**
+     * Build matrix summary totals from matrix entries collection.
+     */
+    public function buildMatrixSummary(Collection $matrixEntries): array
+    {
+        $paymentAccounts = PaymentAccount::orderBy('name')->get(['id', 'name']);
+
+        $accountsTotal = [];
+        foreach ($paymentAccounts as $account) {
+            $accountsTotal[$account->name] = $matrixEntries->sum(function ($e) use ($account) {
+                return $e['payment_accounts'][$account->name] ?? 0.0;
+            });
+        }
+
+        return [
+            'total_serv' => $matrixEntries->sum('serv'),
+            'total_serv_paid' => $matrixEntries->sum('serv_paid'),
+            'total_extra' => $matrixEntries->sum('extra'),
+            'total_extra_paid' => $matrixEntries->sum('extra_paid'),
+            'total_rent' => $matrixEntries->sum('rent'),
+            'total_rent_paid' => $matrixEntries->sum('rent_paid'),
+            'total_security_deposit' => $matrixEntries->sum('security_deposit'),
+            'total_sec_paid' => $matrixEntries->sum('sec_paid'),
+            'total_amount' => $matrixEntries->sum('total_amount'),
+            'total_received' => $matrixEntries->sum('received'),
+            'accounts_total' => $accountsTotal,
+            'total_prev_unpaid' => $matrixEntries->sum('prev_unpaid'),
+            'total_pending' => $matrixEntries->sum('pending'),
+            'count' => $matrixEntries->count(),
+            'rent_count' => $matrixEntries->where('rent_paid', '>', 0)->count(),
+            'serv_count' => $matrixEntries->where('serv_paid', '>', 0)->count(),
+            'sec_count' => $matrixEntries->where('sec_paid', '>', 0)->count(),
+            'extra_count' => $matrixEntries->where('extra_paid', '>', 0)->count(),
+        ];
+    }
+}

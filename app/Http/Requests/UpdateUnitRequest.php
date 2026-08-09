@@ -30,6 +30,7 @@ class UpdateUnitRequest extends FormRequest
             'landlord_id'             => ['nullable', 'exists:landlords,id'],
             'type'                    => ['required', 'in:flat,shop,office'],
             'status'                  => ['nullable', 'in:vacant,rented,self'],
+            'breaker_status'          => ['nullable', 'in:on,off'],
             'file_no'                 => ['nullable', 'string', 'max:100', Rule::unique('units', 'file_no')->ignore($this->unit->id)],
             'area_sqft'               => ['nullable', 'numeric', 'min:0'],
             'is_self'                 => ['nullable', 'boolean'],

@@ -250,6 +250,7 @@ class UnitController extends Controller
             'is_self'                    => $data['is_self'] ?? false,
             'default_maintenance_charge' => $data['default_maintenance_charge'] ?? null,
             'default_monthly_rent'       => $data['default_monthly_rent'] ?? null,
+            'breaker_status'             => $data['breaker_status'] ?? 'off',
         ]);
 
         if (!empty($data['landlord_id'])) {
@@ -475,6 +476,7 @@ class UnitController extends Controller
             'is_self'                    => $data['is_self'] ?? false,
             'default_maintenance_charge' => $data['default_maintenance_charge'] ?? null,
             'default_monthly_rent'       => $data['default_monthly_rent'] ?? null,
+            'breaker_status'             => $data['breaker_status'] ?? $unit->breaker_status ?? 'off',
         ]);
 
         // Manage ownership records
