@@ -442,8 +442,63 @@ class OtherTenantController extends Controller
             ->with('success', "{$otherTenant->name} detached from unit.");
     }
 
+    /**
+     * Print statement for particular tenant showing paid and pending dues across all past and current units.
+     */
+    public function printStatement(OtherTenant $otherTenant): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('other_tenants.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $otherTenant->load(['unit.floor', 'unit.block']);
+
+        // Fetch full unit history (all past and present attached units)
+        $unitHistory = OtherTenantUnitHistory::where('other_tenant_id', $otherTenant->id)
+            ->with(['unit.floor', 'unit.block'])
+            ->orderBy('attached_at', 'asc')
+            ->get();
+
+        $allUnitIds = $unitHistory->pluck('unit_id')->filter()->unique()->toArray();
+        if ($otherTenant->unit_id) {
+            $allUnitIds[] = $otherTenant->unit_id;
+        }
+        $allUnitIds = array_values(array_unique($allUnitIds));
+
+        // Fetch payments for this tenant across all past and present units
+        $payments = Payment::query()
+            ->where(function ($q) use ($otherTenant, $allUnitIds) {
+                $q->where('other_tenant_id', $otherTenant->id);
+                if (!empty($allUnitIds)) {
+                    $q->orWhereIn('unit_id', $allUnitIds);
+                }
+            })
+            ->with(['unit.floor', 'unit.block', 'paymentAccount', 'receivingVouchers'])
+            ->orderBy('month', 'asc')
+            ->get();
+
+        $totalBilled = (float) $payments->where('type', '!=', 'security_deposit')->sum('amount');
+        $totalPaid = (float) $payments->sum('amount_paid');
+        $totalPending = max(0.00, $totalBilled - $totalPaid);
+
+        $unit = $otherTenant->unit;
+        $latestBreakerInsp = $unit ? $unit->breakerInspections()->latest('inspected_at')->first() : null;
+
+        return view('other-tenants.statement_print', [
+            'title'             => 'Tenant Statement - ' . $otherTenant->name,
+            'otherTenant'       => $otherTenant,
+            'unit'              => $unit,
+            'unitHistory'       => $unitHistory,
+            'payments'          => $payments,
+            'totalBilled'       => $totalBilled,
+            'totalPaid'         => $totalPaid,
+            'totalPending'      => $totalPending,
+            'latestBreakerInsp' => $latestBreakerInsp,
+        ]);
+    }
+
     // -----------------------------------------------------------------------
-    // Private helpers for attach / detach with history
+    // Private helpers for attach / detach with history & breaker toggle
     // -----------------------------------------------------------------------
 
     private function performAttach(OtherTenant $otherTenant, int $unitId, $attachedAt = null): void
@@ -460,6 +515,12 @@ class OtherTenantController extends Controller
             'unit_id'         => $unitId,
             'attached_at'     => $attachedAt ?: Carbon::today(),
         ]);
+
+        // Auto switch unit breaker ON when attached
+        $unit = Unit::find($unitId);
+        if ($unit) {
+            $unit->update(['breaker_status' => 'on']);
+        }
     }
 
 
@@ -469,9 +530,11 @@ class OtherTenantController extends Controller
             return;
         }
 
+        $unitId = $otherTenant->unit_id;
+
         // Close the open history record
         OtherTenantUnitHistory::where('other_tenant_id', $otherTenant->id)
-            ->where('unit_id', $otherTenant->unit_id)
+            ->where('unit_id', $unitId)
             ->whereNull('detached_at')
             ->update(['detached_at' => Carbon::today()]);
 
@@ -481,5 +544,10 @@ class OtherTenantController extends Controller
             'status'  => 'inactive'
         ]);
 
+        // Auto switch unit breaker OFF when detached
+        $unit = Unit::find($unitId);
+        if ($unit) {
+            $unit->update(['breaker_status' => 'off']);
+        }
     }
 }

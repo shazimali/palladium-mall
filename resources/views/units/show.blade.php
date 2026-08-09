@@ -143,6 +143,29 @@
 
             {{-- Landlord & Current Tenant --}}
             <div class="space-y-6">
+                {{-- Electricity Breaker & Meter Control --}}
+                <x-common.component-card title="Electricity Breaker & Meter" desc="Breaker status and meter readings">
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-xs sm:text-sm font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">Breaker Status</p>
+                            <span class="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-sm font-black uppercase border {{ $unit->isBreakerOn() ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300' }}">
+                                ⚡ BREAKER {{ strtoupper($unit->breaker_status ?? 'OFF') }}
+                            </span>
+                        </div>
+
+                        @php
+                            $latestInsp = $unit->breakerInspections()->latest('inspected_at')->first();
+                        @endphp
+                        @if($latestInsp)
+                            <div class="pt-3 border-t border-gray-200 dark:border-gray-800">
+                                <p class="text-xs font-black uppercase tracking-wider text-gray-500">Latest Meter Reading</p>
+                                <p class="text-xl font-black font-mono text-gray-900 dark:text-white mt-0.5">{{ number_format($latestInsp->meter_reading, 2) }} kWh</p>
+                                <p class="text-xs text-gray-400 mt-0.5">Recorded: {{ $latestInsp->inspected_at?->format('d M Y, h:i A') }}</p>
+                            </div>
+                        @endif
+                    </div>
+                </x-common.component-card>
+
                 {{-- Landlord (Owner) --}}
                 <x-common.component-card title="Owner Details" desc="Current owner of the unit">
                     @if($unit->landlord)

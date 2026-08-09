@@ -381,6 +381,7 @@ Route::middleware('auth')->group(function () {
     // Other Tenants
     Route::middleware('permission:other_tenants.view')->group(function () {
         Route::get('other-tenants/print', [\App\Http\Controllers\OtherTenantController::class, 'print'])->name('other-tenants.print');
+        Route::get('other-tenants/{other_tenant}/statement-print', [\App\Http\Controllers\OtherTenantController::class, 'printStatement'])->name('other-tenants.statement-print');
         Route::resource('other-tenants', \App\Http\Controllers\OtherTenantController::class);
     });
     Route::middleware('permission:other_tenants.attach')->group(function () {

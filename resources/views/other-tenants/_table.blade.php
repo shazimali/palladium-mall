@@ -128,7 +128,7 @@
                             {{-- View --}}
                             <a href="{{ route('other-tenants.show', $ot) }}"
                                 class="inline-flex items-center rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
-                                title="View">
+                                title="View Profile">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round"
                                         d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -137,12 +137,19 @@
                                 </svg>
                             </a>
 
+                            {{-- Print Statement --}}
+                            <a href="{{ route('other-tenants.statement-print', $ot) }}" target="_blank"
+                                class="inline-flex items-center rounded-lg p-1.5 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10 transition-colors font-bold text-xs"
+                                title="Print Printable Statement (Paid & Pending)">
+                                🖨️
+                            </a>
+
                             {{-- Attach button --}}
                             @if(auth()->user()->hasPermission('other_tenants.attach') || auth()->user()->isSuperAdmin())
                                 @if($ot->unit_id)
                                     {{-- Detach --}}
                                     <form action="{{ route('other-tenants.detach', $ot) }}" method="POST"
-                                        onsubmit="return confirm('Detach {{ addslashes($ot->name) }} from Unit {{ $ot->unit->unit_number ?? '' }}?')">
+                                        @submit.prevent="confirmAction($el, 'Are you sure you want to detach {{ addslashes($ot->name) }} from Unit {{ $ot->unit->unit_number ?? '' }}? Electricity breaker will automatically switch OFF.', 'Detach Tenant?', 'Yes, Detach')">
                                         @csrf
                                         <button type="submit"
                                             class="inline-flex items-center rounded-lg px-2 py-1 text-xs font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 dark:bg-orange-900/20 dark:text-orange-400 dark:hover:bg-orange-900/40 transition-colors"
@@ -175,7 +182,7 @@
                             {{-- Delete --}}
                             @if(auth()->user()->hasPermission('other_tenants.delete') || auth()->user()->isSuperAdmin())
                                 <form action="{{ route('other-tenants.destroy', $ot) }}" method="POST"
-                                    onsubmit="return confirm('Delete {{ addslashes($ot->name) }}? This cannot be undone.')">
+                                    @submit.prevent="confirmAction($el, 'Are you sure you want to delete {{ addslashes($ot->name) }}? This action cannot be undone.', 'Delete Tenant?', 'Yes, Delete')">
                                     @csrf @method('DELETE')
                                     <button type="submit"
                                         class="inline-flex items-center rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

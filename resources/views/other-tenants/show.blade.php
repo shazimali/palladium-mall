@@ -69,7 +69,22 @@
         </div>
 
         {{-- Quick action links --}}
-        <div class="mt-6 flex items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+        <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+            <a href="{{ route('other-tenants.statement-print', $otherTenant) }}" target="_blank"
+                class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-extrabold text-white hover:bg-gray-800 transition-colors shadow-sm">
+                🖨️ Print Statement
+            </a>
+
+            @if($otherTenant->unit)
+                <form action="{{ route('units.toggle-breaker', $otherTenant->unit) }}" method="POST" class="inline">
+                    @csrf
+                    <button type="button" onclick="confirmAction(this.form, 'Are you sure you want to toggle the electricity breaker status for Unit {{ $otherTenant->unit->unit_number }}?', 'Toggle Breaker Status?', 'Yes, Toggle Breaker')"
+                        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-black uppercase transition-all cursor-pointer shadow-xs {{ $otherTenant->unit->isBreakerOn() ? 'bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-rose-100 text-rose-800 border border-rose-300 hover:bg-rose-200 dark:bg-rose-950/60 dark:text-rose-300' }}">
+                        ⚡ BREAKER {{ strtoupper($otherTenant->unit->breaker_status ?? 'OFF') }} (Click to Toggle)
+                    </button>
+                </form>
+            @endif
+
             @if(auth()->user()->hasPermission('other_tenants.edit') || auth()->user()->isSuperAdmin())
                 <a href="{{ route('other-tenants.edit', $otherTenant) }}"
                     class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 transition-colors">
