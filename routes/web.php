@@ -330,6 +330,9 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/account-summary', [\App\Http\Controllers\AccountSummaryController::class, 'index'])->name('reports.account_summary');
         Route::get('reports/account-summary/pdf', [\App\Http\Controllers\AccountSummaryController::class, 'exportPdf'])->name('reports.account_summary.pdf');
         Route::get('reports/account-summary/excel', [\App\Http\Controllers\AccountSummaryController::class, 'exportExcel'])->name('reports.account_summary.excel');
+
+        Route::get('reports/meter-readings', [\App\Http\Controllers\MeterReadingReportController::class, 'index'])->name('reports.meter-readings');
+        Route::get('reports/meter-readings/print', [\App\Http\Controllers\MeterReadingReportController::class, 'print'])->name('reports.meter-readings.print');
     });
 
 

@@ -255,6 +255,7 @@ class MenuHelper
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
             $reportsSubItems[] = ['name' => 'Receivables Report', 'path' => '/reports/receivables'];
             $reportsSubItems[] = ['name' => 'Payables Report', 'path' => '/reports/payables'];
+            $reportsSubItems[] = ['name' => 'Meter Reading Report', 'path' => '/reports/meter-readings'];
         }
         if (auth()->check() && $user->can('reports.daybook')) {
             $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];
