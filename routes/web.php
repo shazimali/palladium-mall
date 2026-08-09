@@ -142,6 +142,13 @@ Route::middleware('auth')->group(function () {
         Route::resource('general-receiving-vouchers', \App\Http\Controllers\GeneralReceivingVoucherController::class);
         Route::get('general-receiving-vouchers/{general_receiving_voucher}/print', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'print'])->name('general-receiving-vouchers.print');
     });
+
+    Route::middleware('permission:meter_vouchers.view')->group(function () {
+        Route::get('meter-reading-vouchers-print-list', [\App\Http\Controllers\MeterReadingVoucherController::class, 'printList'])
+            ->name('meter-reading-vouchers.print-list');
+        Route::get('meter-reading-vouchers/{meter_reading_voucher}/print', [\App\Http\Controllers\MeterReadingVoucherController::class, 'print'])->name('meter-reading-vouchers.print');
+        Route::resource('meter-reading-vouchers', \App\Http\Controllers\MeterReadingVoucherController::class);
+    });
  
     Route::middleware('permission:payment_accounts.view')->group(function () {
         Route::resource('payment-accounts', PaymentAccountController::class);

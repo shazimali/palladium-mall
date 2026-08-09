@@ -177,6 +177,9 @@ class MenuHelper
             if ($user->can('jv_vouchers.view')) {
                 $voucherSubItems[] = ['name' => 'JV Voucher', 'path' => '/jv-vouchers'];
             }
+            if ($user->can('meter_vouchers.view') || $user->isSuperAdmin()) {
+                $voucherSubItems[] = ['name' => 'Meter Reading Vouchers', 'path' => '/meter-reading-vouchers'];
+            }
         }
 
         if (!empty($voucherSubItems)) {
