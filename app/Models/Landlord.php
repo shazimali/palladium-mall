@@ -71,6 +71,14 @@ class Landlord extends Model
     }
 
     /**
+     * Other Owned Rent Purchase vouchers for this landlord.
+     */
+    public function otherOwnedRentPurchases(): HasMany
+    {
+        return $this->hasMany(OtherOwnedRentPurchaseVoucher::class)->orderBy('date', 'desc');
+    }
+
+    /**
      * Get the remaining opening balance (Opening Balance - Payables).
      */
     public function getRemainingOpeningBalanceAttribute(): float
@@ -88,7 +96,7 @@ class Landlord extends Model
 
     /**
      * Calculate current outstanding balance of the landlord.
-     * Outstanding Balance = Total Value Owed - Vouchers Paid - GRV Paid - Tenant Extra Payments Paid + Mall Payouts to Landlord.
+     * Outstanding Balance = Total Value Owed - Vouchers Paid - GRV Paid - Tenant Extra Payments Paid + Mall Payouts to Landlord + ORP Purchases.
      */
     public function currentBalance(): float
     {
@@ -100,8 +108,9 @@ class Landlord extends Model
         $extraPaid = (float) Payment::where('landlord_id', $this->id)
             ->where('type', 'extra_payment')
             ->sum('amount_paid');
-        $payouts = (float) $this->payouts()->sum('amount');
+        $payouts      = (float) $this->payouts()->sum('amount');
+        $orpPurchases = (float) $this->otherOwnedRentPurchases()->sum('amount');
 
-        return $opening - $vouchersPaid - $grvPaid - $extraPaid + $payouts;
+        return $opening - $vouchersPaid - $grvPaid - $extraPaid + $payouts + $orpPurchases;
     }
 }

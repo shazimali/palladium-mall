@@ -216,6 +216,10 @@ class LandlordLedgerController extends Controller
                 ->where('landlord_id', $landlordId)
                 ->where('date', '<', $dateFrom)
                 ->sum('amount');
+
+            $priorCharged += (float) \App\Models\OtherOwnedRentPurchaseVoucher::where('landlord_id', $landlordId)
+                ->where('date', '<', $dateFrom)
+                ->sum('amount');
         }
 
         // 3. Push a separate entry row for EACH unit record (ownership) of the landlord
@@ -403,6 +407,32 @@ class LandlordLedgerController extends Controller
             ]);
         }
 
+        // 6b. Current period ORP Purchase Vouchers (Debit entries)
+        $orpVouchers = \App\Models\OtherOwnedRentPurchaseVoucher::where('landlord_id', $landlordId)
+            ->with(['unit', 'otherTenant'])
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo,   fn($q) => $q->where('date', '<=', $dateTo))
+            ->orderBy('date', 'asc')
+            ->get();
+
+        foreach ($orpVouchers as $orp) {
+            $unitNo = $orp->unit?->unit_number ?? $singleUnitNo;
+            $entries->push([
+                'date'        => $orp->date,
+                'voucher_no'  => $orp->voucher_no,
+                'type'        => 'Rent Purchase',
+                'description' => 'Other Owned Rent Purchase: ' . $orp->voucher_no
+                               . ($unitNo ? ' — Unit ' . $unitNo : '')
+                               . ' (' . Carbon::parse($orp->month)->format('M Y') . ')'
+                               . ($orp->notes ? ' - ' . $orp->notes : ''),
+                'debit'       => (float) $orp->amount,
+                'credit'      => 0.00,
+                'is_opening'  => false,
+                'model'       => $orp,
+                'unit_number' => $unitNo ?: '—',
+            ]);
+        }
+
         // Sort all entries: unit opening entries first (sorted by date/unit), then non-opening entries (sorted by date)
         $entries = $entries->sortBy(function ($e) {
             $prefix = ($e['is_opening'] ?? false) ? '0000-00-00_' : '1111-11-11_';
@@ -440,7 +470,10 @@ class LandlordLedgerController extends Controller
             ->where('landlord_id', $landlordId)
             ->sum('amount');
 
-        $pendingBalance = $openingBalance - $allTimePaid + $allTimePayouts;
+        $allTimeOrp = (float) \App\Models\OtherOwnedRentPurchaseVoucher::where('landlord_id', $landlordId)
+            ->sum('amount');
+
+        $pendingBalance = $openingBalance - $allTimePaid + $allTimePayouts + $allTimeOrp;
 
         return [
             'landlord'       => $landlord,

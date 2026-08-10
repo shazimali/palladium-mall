@@ -389,6 +389,28 @@ Route::middleware('auth')->group(function () {
             ->name('jv-vouchers.print');
     });
 
+    // Other Owned Rent Purchase (ORP) Vouchers
+    Route::middleware('permission:other_owned_rent_purchase_vouchers.view')->group(function () {
+        Route::resource('other-owned-rent-purchase-vouchers', \App\Http\Controllers\OtherOwnedRentPurchaseVoucherController::class)->names([
+            'index'   => 'other-owned-rent-purchase-vouchers.index',
+            'create'  => 'other-owned-rent-purchase-vouchers.create',
+            'store'   => 'other-owned-rent-purchase-vouchers.store',
+            'show'    => 'other-owned-rent-purchase-vouchers.show',
+            'edit'    => 'other-owned-rent-purchase-vouchers.edit',
+            'update'  => 'other-owned-rent-purchase-vouchers.update',
+            'destroy' => 'other-owned-rent-purchase-vouchers.destroy',
+        ])->parameters([
+            'other-owned-rent-purchase-vouchers' => 'otherOwnedRentPurchaseVoucher',
+        ]);
+        Route::get('other-owned-rent-purchase-vouchers/{otherOwnedRentPurchaseVoucher}/print',
+            [\App\Http\Controllers\OtherOwnedRentPurchaseVoucherController::class, 'print'])
+            ->name('other-owned-rent-purchase-vouchers.print');
+    });
+
+    // AJAX: Get self-owned units by landlord (for ORP Voucher create form)
+    Route::get('ajax/landlord-self-units', [\App\Http\Controllers\OtherOwnedRentPurchaseVoucherController::class, 'getLandlordUnits'])
+        ->name('ajax.landlord-self-units');
+
     // Other Tenants
     Route::middleware('permission:other_tenants.view')->group(function () {
         Route::get('other-tenants/print', [\App\Http\Controllers\OtherTenantController::class, 'print'])->name('other-tenants.print');
