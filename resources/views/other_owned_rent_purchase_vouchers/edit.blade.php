@@ -12,157 +12,7 @@
 
     <form action="{{ route('other-owned-rent-purchase-vouchers.update', $voucher->id) }}" method="POST"
         @submit.prevent="handleSubmit($event)"
-        x-data="{
-            landlordId: '{{ old('landlord_id', $voucher->landlord_id) }}',
-            unitId: '{{ old('unit_id', $voucher->unit_id) }}',
-            otherTenantId: '{{ old('other_tenant_id', $voucher->other_tenant_id) }}',
-            otherTenantName: '{{ addslashes($voucher->otherTenant?->name ?? '') }}',
-            voucherAmount: '{{ old('amount', $voucher->amount) }}',
-            displayAmount: '{{ number_format((float)old('amount', $voucher->amount), 2) }}',
-            month: '{{ old('month', $voucher->month ? $voucher->month->format('Y-m') : '') }}',
-            date: '{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}',
-            notes: @js(old('notes', $voucher->notes)),
-
-            openLandlord: false,
-            searchLandlord: '',
-            highlightedLandlordIndex: -1,
-
-            landlordOptions: [
-                @foreach($landlords as $ll)
-                { id: '{{ $ll->id }}', name: '{{ addslashes($ll->name) }}' },
-                @endforeach
-            ],
-
-            get filteredLandlords() {
-                if (!this.searchLandlord) return this.landlordOptions;
-                let s = this.searchLandlord.toLowerCase();
-                return this.landlordOptions.filter(l => l.name.toLowerCase().includes(s));
-            },
-
-            get selectedLandlordName() {
-                let selected = this.landlordOptions.find(l => l.id == this.landlordId);
-                return selected ? selected.name : '';
-            },
-
-            selectLandlord(opt) {
-                this.landlordId = opt.id;
-                this.openLandlord = false;
-                this.searchLandlord = '';
-                this.highlightedLandlordIndex = -1;
-                this.onLandlordChange();
-            },
-
-            unitsList: [
-                @foreach($units as $u)
-                {
-                    id: '{{ $u->id }}',
-                    unit_number: '{{ addslashes($u->unit_number) }}',
-                    other_tenant: {{ $u->otherTenant ? json_encode(['id' => $u->otherTenant->id, 'name' => $u->otherTenant->name, 'monthly_rent' => (float)$u->otherTenant->monthly_rent]) : 'null' }}
-                },
-                @endforeach
-            ],
-
-            onLandlordChange() {
-                this.unitId = '';
-                this.otherTenantId = '';
-                this.otherTenantName = '';
-                this.voucherAmount = '';
-                this.displayAmount = '';
-                this.unitsList = [];
-
-                if (!this.landlordId) return;
-
-                fetch('{{ route('ajax.landlord-self-units') }}?landlord_id=' + this.landlordId)
-                    .then(res => res.json())
-                    .then(data => {
-                        this.unitsList = data.units || [];
-                    })
-                    .catch(err => console.error(err));
-            },
-
-            onUnitChange() {
-                let u = this.unitsList.find(item => item.id == this.unitId);
-                if (u && u.other_tenant) {
-                    this.otherTenantId = u.other_tenant.id;
-                    this.otherTenantName = u.other_tenant.name;
-                    let rent = u.other_tenant.monthly_rent || 0;
-                    this.voucherAmount = rent;
-                    this.displayAmount = rent > 0 ? rent.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '';
-                } else {
-                    this.otherTenantId = '';
-                    this.otherTenantName = u ? 'No Other Tenant attached' : '';
-                }
-            },
-
-            formatAmount(val) {
-                let clean = String(val).replace(/[^0-9.]/g, '');
-                let parts = clean.split('.');
-                if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
-                this.voucherAmount = clean;
-                if (!clean) {
-                    this.displayAmount = '';
-                    return;
-                }
-                let num = parseFloat(clean);
-                if (isNaN(num)) return;
-                if (clean.endsWith('.')) {
-                    this.displayAmount = num.toLocaleString('en-US') + '.';
-                } else if (parts.length === 2 && parts[1].length > 0) {
-                    this.displayAmount = parseFloat(parts[0]).toLocaleString('en-US') + '.' + parts[1].substring(0, 2);
-                } else {
-                    this.displayAmount = num.toLocaleString('en-US');
-                }
-            },
-
-            handleSubmit(event) {
-                if (!this.landlordId) {
-                    Swal.fire({
-                        title: 'Landlord Required',
-                        text: 'Please select a Landlord.',
-                        icon: 'warning',
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
-                        },
-                        buttonsStyling: false
-                    });
-                    return;
-                }
-
-                let amt = parseFloat(this.voucherAmount || 0);
-                if (isNaN(amt) || amt <= 0) {
-                    Swal.fire({
-                        title: 'Invalid Amount',
-                        text: 'Please enter a valid amount greater than zero.',
-                        icon: 'warning',
-                        confirmButtonText: 'OK',
-                        customClass: {
-                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
-                        },
-                        buttonsStyling: false
-                    });
-                    return;
-                }
-
-                Swal.fire({
-                    title: 'Confirm Update ORP Voucher',
-                    text: 'Are you sure you want to update ORP Voucher {{ $voucher->voucher_no }}?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, Update Voucher',
-                    cancelButtonText: 'Cancel',
-                    customClass: {
-                        confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer mr-2',
-                        cancelButton: 'inline-flex items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700 px-6 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 shadow-md hover:bg-gray-300 transition-colors cursor-pointer'
-                    },
-                    buttonsStyling: false
-                }).then((res) => {
-                    if (res.isConfirmed) {
-                        event.target.submit();
-                    }
-                });
-            }
-        }">
+        x-data="orpVoucherEditForm">
 
         @csrf
         @method('PUT')
@@ -189,16 +39,16 @@
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide rounded-tl-2xl">Voucher Date <span class="text-rose-300 ml-1">*</span></div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
-                            <input type="date" name="date" x-model="date" required
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base font-black text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
+                            <input type="text" id="voucher_date" name="date" value="{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}" required autocomplete="off"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">Billing Month <span class="text-rose-300 ml-1">*</span></div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-tr-2xl">
-                            <input type="month" name="month" x-model="month" required
-                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base font-black text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
+                            <input type="text" id="billing_month" name="month" value="{{ old('month', $voucher->month ? $voucher->month->format('Y-m-01') : '') }}" required autocomplete="off"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all cursor-pointer">
                         </div>
                     </div>
                 </div>
@@ -248,12 +98,14 @@
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base tracking-wide">Self Unit</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
-                            <select name="unit_id" x-model="unitId" @change="onUnitChange()"
+                            <select name="unit_id" x-model="unitId" x-ref="unitSelect" @change="onUnitChange()"
                                 class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2 text-base font-bold text-gray-900 dark:text-white focus:border-brand-500 focus:outline-none">
                                 <option value="">Select Self Unit...</option>
-                                <template x-for="u in unitsList" :key="u.id">
-                                    <option :value="u.id" x-text="u.unit_number + (u.other_tenant ? ' (Tenant: ' + u.other_tenant.name + ')' : ' (No Tenant)')"></option>
-                                </template>
+                                @foreach($units as $u)
+                                    <option value="{{ $u->id }}" {{ old('unit_id', $voucher->unit_id) == $u->id ? 'selected' : '' }}>
+                                        {{ $u->unit_number }} {{ $u->otherTenant ? '(Tenant: ' . $u->otherTenant->name . ')' : '(No Tenant)' }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                     </div>
@@ -314,3 +166,213 @@
 
     </form>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('alpine:init', function () {
+            Alpine.data('orpVoucherEditForm', () => ({
+                landlordId: '{{ old('landlord_id', $voucher->landlord_id) }}',
+                unitId: '{{ old('unit_id', $voucher->unit_id) }}',
+                otherTenantId: '{{ old('other_tenant_id', $voucher->other_tenant_id) }}',
+                otherTenantName: @js($voucher->otherTenant?->name ?? ''),
+                voucherAmount: '{{ old('amount', $voucher->amount) }}',
+                displayAmount: '{{ number_format((float)old('amount', $voucher->amount), 2) }}',
+                month: '{{ old('month', $voucher->month ? $voucher->month->format('Y-m-01') : '') }}',
+                date: '{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}',
+                notes: @js(old('notes', $voucher->notes)),
+
+                openLandlord: false,
+                searchLandlord: '',
+                highlightedLandlordIndex: -1,
+
+                landlordOptions: @js($landlords->map(fn($l) => ['id' => (string)$l->id, 'name' => $l->name])),
+
+                unitsList: @js($units->map(fn($u) => [
+                    'id' => (string)$u->id,
+                    'unit_number' => $u->unit_number,
+                    'other_tenant' => $u->otherTenant ? [
+                        'id' => $u->otherTenant->id,
+                        'name' => $u->otherTenant->name,
+                        'monthly_rent' => (float)$u->otherTenant->monthly_rent,
+                    ] : null,
+                ])),
+
+                get filteredLandlords() {
+                    if (!this.searchLandlord) return this.landlordOptions;
+                    let s = this.searchLandlord.toLowerCase();
+                    return this.landlordOptions.filter(l => l.name.toLowerCase().includes(s));
+                },
+
+                get selectedLandlordName() {
+                    let selected = this.landlordOptions.find(l => l.id == this.landlordId);
+                    return selected ? selected.name : '';
+                },
+
+                selectLandlord(opt) {
+                    this.landlordId = opt.id;
+                    this.openLandlord = false;
+                    this.searchLandlord = '';
+                    this.highlightedLandlordIndex = -1;
+                    this.onLandlordChange();
+                },
+
+                onLandlordChange() {
+                    this.unitId = '';
+                    this.otherTenantId = '';
+                    this.otherTenantName = '';
+                    this.voucherAmount = '';
+                    this.displayAmount = '';
+
+                    let select = this.$refs.unitSelect;
+                    if (select) select.innerHTML = '<option value="">Select Self Unit...</option>';
+
+                    if (!this.landlordId) return;
+
+                    fetch('{{ route('ajax.landlord-self-units') }}?landlord_id=' + this.landlordId)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.unitsList = data.units || [];
+                            if (select) {
+                                data.units.forEach(u => {
+                                    let opt = document.createElement('option');
+                                    opt.value = u.id;
+                                    opt.textContent = u.unit_number + (u.other_tenant ? ' (Tenant: ' + u.other_tenant.name + ')' : ' (No Tenant)');
+                                    select.appendChild(opt);
+                                });
+                            }
+                        })
+                        .catch(err => console.error(err));
+                },
+
+                onUnitChange() {
+                    let u = this.unitsList.find(item => item.id == this.unitId);
+                    if (u && u.other_tenant) {
+                        this.otherTenantId = u.other_tenant.id;
+                        this.otherTenantName = u.other_tenant.name;
+                        let rent = u.other_tenant.monthly_rent || 0;
+                        this.voucherAmount = rent;
+                        this.displayAmount = rent > 0 ? rent.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '';
+                    } else {
+                        this.otherTenantId = '';
+                        this.otherTenantName = u ? 'No Other Tenant attached' : '';
+                    }
+                },
+
+                formatAmount(val) {
+                    let clean = String(val).replace(/[^0-9.]/g, '');
+                    let parts = clean.split('.');
+                    if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
+                    this.voucherAmount = clean;
+                    if (!clean) {
+                        this.displayAmount = '';
+                        return;
+                    }
+                    let num = parseFloat(clean);
+                    if (isNaN(num)) return;
+                    if (clean.endsWith('.')) {
+                        this.displayAmount = num.toLocaleString('en-US') + '.';
+                    } else if (parts.length === 2 && parts[1].length > 0) {
+                        this.displayAmount = parseFloat(parts[0]).toLocaleString('en-US') + '.' + parts[1].substring(0, 2);
+                    } else {
+                        this.displayAmount = num.toLocaleString('en-US');
+                    }
+                },
+
+                handleSubmit(event) {
+                    if (!this.landlordId) {
+                        Swal.fire({
+                            title: 'Landlord Required',
+                            text: 'Please select a Landlord.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                            },
+                            buttonsStyling: false
+                        });
+                        return;
+                    }
+
+                    let amt = parseFloat(this.voucherAmount || 0);
+                    if (isNaN(amt) || amt <= 0) {
+                        Swal.fire({
+                            title: 'Invalid Amount',
+                            text: 'Please enter a valid amount greater than zero.',
+                            icon: 'warning',
+                            confirmButtonText: 'OK',
+                            customClass: {
+                                confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                            },
+                            buttonsStyling: false
+                        });
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Confirm Update ORP Voucher',
+                        text: 'Are you sure you want to update ORP Voucher {{ $voucher->voucher_no }}?',
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Yes, Update Voucher',
+                        cancelButtonText: 'Cancel',
+                        customClass: {
+                            confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer mr-2',
+                            cancelButton: 'inline-flex items-center justify-center rounded-xl bg-gray-200 dark:bg-gray-700 px-6 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 shadow-md hover:bg-gray-300 transition-colors cursor-pointer'
+                        },
+                        buttonsStyling: false
+                    }).then((res) => {
+                        if (res.isConfirmed) {
+                            event.target.submit();
+                        }
+                    });
+                }
+            }));
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr !== 'undefined') {
+                flatpickr('#voucher_date', {
+                    dateFormat: 'Y-m-d',
+                    altInput: true,
+                    altFormat: 'd M Y',
+                    allowInput: true,
+                    disableMobile: true,
+                    defaultDate: '{{ old('date', $voucher->date ? $voucher->date->format('Y-m-d') : '') }}'
+                });
+
+                let monthPlugins = [];
+                if (typeof monthSelectPlugin !== 'undefined') {
+                    monthPlugins.push(new monthSelectPlugin({
+                        shorthand: false,
+                        dateFormat: 'Y-m-01',
+                        altFormat: 'F Y',
+                        theme: 'light',
+                    }));
+                }
+
+                flatpickr('#billing_month', {
+                    dateFormat: 'Y-m-01',
+                    altInput: true,
+                    altFormat: 'F Y',
+                    allowInput: false,
+                    disableMobile: true,
+                    plugins: monthPlugins,
+                    defaultDate: '{{ old('month', $voucher->month ? $voucher->month->format('Y-m-01') : '') }}'
+                });
+            }
+
+            @if ($errors->any() || session('error'))
+                Swal.fire({
+                    title: 'Form Error',
+                    text: "{{ $errors->first() ?: session('error') }}",
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    customClass: {
+                        confirmButton: 'inline-flex items-center justify-center rounded-xl bg-brand-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer'
+                    },
+                    buttonsStyling: false
+                });
+            @endif
+        });
+    </script>
+@endpush
