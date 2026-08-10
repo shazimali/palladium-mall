@@ -209,6 +209,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check()) {
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Note Pad',
+                'path' => '/note-pads',
+            ];
+        }
+
         // 5. Ledgers
         $ledgerSubItems = [];
         if (auth()->check() && $user->can('ledgers.view')) {

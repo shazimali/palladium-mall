@@ -411,6 +411,23 @@ Route::middleware('auth')->group(function () {
     Route::get('ajax/landlord-self-units', [\App\Http\Controllers\OtherOwnedRentPurchaseVoucherController::class, 'getLandlordUnits'])
         ->name('ajax.landlord-self-units');
 
+    // Note Pad (Google Keep style tasks & notes)
+    Route::resource('note-pads', \App\Http\Controllers\NotePadController::class)->names([
+        'index'   => 'note-pads.index',
+        'create'  => 'note-pads.create',
+        'store'   => 'note-pads.store',
+        'show'    => 'note-pads.show',
+        'edit'    => 'note-pads.edit',
+        'update'  => 'note-pads.update',
+        'destroy' => 'note-pads.destroy',
+    ])->parameters([
+        'note-pads' => 'notePad',
+    ]);
+    Route::post('note-pads/{notePad}/toggle-pin', [\App\Http\Controllers\NotePadController::class, 'togglePin'])
+        ->name('note-pads.toggle-pin');
+    Route::post('note-pads/{notePad}/toggle-task', [\App\Http\Controllers\NotePadController::class, 'toggleTask'])
+        ->name('note-pads.toggle-task');
+
     // Other Tenants
     Route::middleware('permission:other_tenants.view')->group(function () {
         Route::get('other-tenants/print', [\App\Http\Controllers\OtherTenantController::class, 'print'])->name('other-tenants.print');
