@@ -63,6 +63,31 @@ class User extends Authenticatable
         return $this->belongsToMany(Role::class, 'user_role');
     }
 
+    /**
+     * Tasks created by this user.
+     */
+    public function createdTasks()
+    {
+        return $this->hasMany(Task::class, 'created_by');
+    }
+
+    /**
+     * Tasks assigned to this user.
+     */
+    public function assignedTasks()
+    {
+        return $this->belongsToMany(Task::class, 'task_assignees')->withTimestamps();
+    }
+
+    /**
+     * Route notifications for the broadcast channel.
+     */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'users.' . $this->id;
+    }
+
+
     // -----------------------------------------------------------------------
     // Permission helpers (cached per request)
     // -----------------------------------------------------------------------
@@ -81,10 +106,12 @@ class User extends Authenticatable
             return $this->permissionsCache;
         }
 
-        $this->permissionsCache = $this->roles()
-            ->with('permissions')
-            ->get()
-            ->flatMap(fn (Role $role) => $role->permissions->pluck('name'))
+        $roles = $this->roles()->with(['permissions', 'permissionGroups.permissions'])->get();
+
+        $directPermissions = $roles->flatMap(fn (Role $role) => $role->permissions->pluck('name'));
+        $groupPermissions  = $roles->flatMap(fn (Role $role) => $role->permissionGroups->flatMap(fn ($group) => $group->permissions->pluck('name')));
+
+        $this->permissionsCache = $directPermissions->concat($groupPermissions)
             ->unique()
             ->values()
             ->all();

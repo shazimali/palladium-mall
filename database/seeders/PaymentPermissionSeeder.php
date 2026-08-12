@@ -11,20 +11,20 @@ class PaymentPermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            ['name' => 'payments.view', 'display_name' => 'View Payments', 'group' => 'Payments'],
-            ['name' => 'payments.create', 'display_name' => 'Create Payments', 'group' => 'Payments'],
-            ['name' => 'payments.edit', 'display_name' => 'Edit Payments', 'group' => 'Payments'],
-            ['name' => 'payments.delete', 'display_name' => 'Delete Payments', 'group' => 'Payments'],
+            ['name' => 'payments.view', 'display_name' => 'View Billing', 'group' => 'Billing'],
+            ['name' => 'payments.create', 'display_name' => 'Create Billing', 'group' => 'Billing'],
+            ['name' => 'payments.edit', 'display_name' => 'Edit Billing', 'group' => 'Billing'],
+            ['name' => 'payments.delete', 'display_name' => 'Delete Billing', 'group' => 'Billing'],
         ];
 
         foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p['name']], $p);
+            Permission::updateOrCreate(['name' => $p['name']], $p);
         }
 
         $admin = Role::where('name', 'admin')->first();
         if ($admin) {
             $admin->permissions()->syncWithoutDetaching(
-                Permission::where('group', 'Payments')->pluck('id')
+                Permission::where('group', 'Billing')->pluck('id')
             );
         }
     }

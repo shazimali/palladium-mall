@@ -240,12 +240,32 @@
                                                 </span>
                                             @endif
                                         </div>
+
+                                        {{-- Ownership (PM Mall vs Other Owned) --}}
+                                        <div class="flex items-center gap-1.5">
+                                            @if($unit->is_self)
+                                                <span
+                                                    class="inline-flex items-center rounded-md bg-amber-400/30 px-2 py-0.5 text-[11px] font-black text-white border border-amber-300/40 backdrop-blur-xs"
+                                                    title="Other-Owned Unit">
+                                                    🏛️ Other Owned
+                                                </span>
+                                            @else
+                                                <span
+                                                    class="inline-flex items-center rounded-md bg-white/20 px-2 py-0.5 text-[11px] font-black text-white border border-white/30 backdrop-blur-xs"
+                                                    title="Managed by PM Mall">
+                                                    🏢 PM Mall
+                                                </span>
+                                            @endif
+                                        </div>
                                     </div>
 
                                     {{-- Status Text Badge --}}
                                     <div class="mt-3 pt-2 border-t border-white/20 flex items-center justify-between">
                                         <span class="text-xs font-black uppercase tracking-wider text-white">
                                             {{ $isEffectiveRented ? 'Rented' : 'Vacant' }}
+                                        </span>
+                                        <span class="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-black/25 text-white/90">
+                                            {{ $unit->is_self ? 'Other Owned' : 'PM Mall' }}
                                         </span>
                                     </div>
                                 </div>

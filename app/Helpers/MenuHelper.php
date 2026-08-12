@@ -126,6 +126,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && ($user->can('tasks.view') || $user->isSuperAdmin())) {
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Tasks Board',
+                'path' => '/tasks',
+            ];
+        }
+
         // 3. People & Directories
         if (auth()->check() && $user->can('owners.view')) {
             $mainItems[] = [
@@ -160,6 +168,10 @@ class MenuHelper
             ];
         }
 
+        if ($user->can('utility_readings.view') || $user->can('utility_readings.edit') || $user->can('utilities.record') || $user->can('utility_meters_management') || $user->can('meters.edit') || $user->can('meter_vouchers.view') || $user->isSuperAdmin()) {
+            $mainItems[] = ['icon' => 'ecommerce', 'name' => 'Utility Meter Readings', 'path' => '/utility-readings'];
+        }
+
         $voucherSubItems = [];
         if (auth()->check()) {
             if ($user->can('receiving_vouchers.view')) {
@@ -180,9 +192,7 @@ class MenuHelper
             if ($user->can('other_owned_rent_purchase_vouchers.view') || $user->isSuperAdmin()) {
                 $voucherSubItems[] = ['name' => 'ORP Vouchers', 'path' => '/other-owned-rent-purchase-vouchers'];
             }
-            if ($user->can('meter_vouchers.view') || $user->isSuperAdmin()) {
-                $voucherSubItems[] = ['name' => 'Meter Reading Vouchers', 'path' => '/meter-reading-vouchers'];
-            }
+
         }
 
         if (!empty($voucherSubItems)) {
@@ -209,7 +219,7 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check()) {
+        if (auth()->check() && ($user->can('note_pads.view') || $user->isSuperAdmin())) {
             $mainItems[] = [
                 'icon' => 'task',
                 'name' => 'Note Pad',
@@ -266,7 +276,6 @@ class MenuHelper
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
             $reportsSubItems[] = ['name' => 'Receivables Report', 'path' => '/reports/receivables'];
             $reportsSubItems[] = ['name' => 'Payables Report', 'path' => '/reports/payables'];
-            $reportsSubItems[] = ['name' => 'Meter Reading Report', 'path' => '/reports/meter-readings'];
         }
         if (auth()->check() && $user->can('reports.daybook')) {
             $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];

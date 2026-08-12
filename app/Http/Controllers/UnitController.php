@@ -437,6 +437,15 @@ class UnitController extends Controller
 
     public function edit(Unit $unit): View
     {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() &&
+            !$user->hasPermission('units.edit') &&
+            !$user->hasPermission('utility_meters_management') &&
+            !$user->hasPermission('meters.edit') &&
+            !$user->hasPermission('meters.delete')) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $unit->load(['meters', 'landlord', 'currentOwnership']);
 
         $floors = Floor::orderBy('name')->get();
@@ -444,19 +453,43 @@ class UnitController extends Controller
         $areas = Area::orderBy('name')->get();
         $landlords = Landlord::orderBy('name')->get();
 
+        $isSuperAdmin       = $user->isSuperAdmin();
+        $hasUnitEdit        = $user->hasPermission('units.edit');
+        $hasMeterMgmt       = $user->hasPermission('utility_meters_management');
+
+        // When user has utility_meters_management / meters permission without units.edit, restrict to Meters-Only view mode
+        $canEditMetersOnly    = !$isSuperAdmin && !$hasUnitEdit;
+        $canEditGeneralFields = $isSuperAdmin || $hasUnitEdit;
+
+        $canEditMeters   = $isSuperAdmin || $hasUnitEdit || $user->hasPermission('meters.edit');
+        $canDeleteMeters = $isSuperAdmin || $hasUnitEdit || $user->hasPermission('meters.delete');
+
         return view('units.edit', [
-            'title'          => 'Update Flat/Shop — ' . $unit->unit_number,
-            'unit'           => $unit,
-            'existingMeters' => $unit->meters->keyBy('type'),
-            'floors'         => $floors,
-            'blocks'         => $blocks,
-            'areas'          => $areas,
-            'landlords'      => $landlords,
+            'title'                => 'Update Flat/Shop — ' . $unit->unit_number,
+            'unit'                 => $unit,
+            'existingMeters'       => $unit->meters->keyBy('type'),
+            'floors'               => $floors,
+            'blocks'               => $blocks,
+            'areas'                => $areas,
+            'landlords'            => $landlords,
+            'canEditGeneralFields' => $canEditGeneralFields,
+            'canEditMetersOnly'    => $canEditMetersOnly,
+            'canEditMeters'        => $canEditMeters,
+            'canDeleteMeters'      => $canDeleteMeters,
         ]);
     }
 
     public function update(UpdateUnitRequest $request, Unit $unit): RedirectResponse
     {
+        $user = auth()->user();
+        $isSuperAdmin = $user->isSuperAdmin();
+        $hasUnitEdit  = $user->hasPermission('units.edit');
+
+        if (!$isSuperAdmin && !$hasUnitEdit) {
+            return redirect()->route('units.show', $unit)
+                ->with('info', "Utility meters for {$unit->unit_number} managed successfully.");
+        }
+
         $data = $request->validated();
         $oldLandlordId = $unit->landlord_id;
         $newLandlordId = $data['landlord_id'] ?? null;

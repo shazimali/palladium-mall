@@ -19,8 +19,10 @@ class UpdateRoleRequest extends FormRequest
             'name' => ['required', 'string', 'max:100', 'unique:roles,name,' . $roleId],
             'display_name' => ['required', 'string', 'max:150'],
             'description' => ['nullable', 'string'],
-            'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['exists:permissions,id'],
+            'permissions'         => ['nullable', 'array'],
+            'permissions.*'       => ['exists:permissions,id'],
+            'permission_groups'   => ['nullable', 'array'],
+            'permission_groups.*' => ['exists:permission_groups,id'],
         ];
     }
 }

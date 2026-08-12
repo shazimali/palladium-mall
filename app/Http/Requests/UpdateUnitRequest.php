@@ -14,6 +14,7 @@ class UpdateUnitRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()->hasPermission('units.edit')
+            || $this->user()->hasPermission('utility_meters_management')
             || $this->user()->isSuperAdmin();
     }
 

@@ -13,22 +13,21 @@ class PaymentAccountPermissionSeeder extends Seeder
     {
         // 1. Seed permissions
         $permissions = [
-            ['name' => 'payment_accounts.view', 'display_name' => 'View Payment Accounts', 'group' => 'Payment Accounts'],
-            ['name' => 'payment_accounts.create', 'display_name' => 'Create Payment Accounts', 'group' => 'Payment Accounts'],
-            ['name' => 'payment_accounts.edit', 'display_name' => 'Edit Payment Accounts', 'group' => 'Payment Accounts'],
-            ['name' => 'payment_accounts.delete', 'display_name' => 'Delete Payment Accounts', 'group' => 'Payment Accounts'],
+            ['name' => 'payment_accounts.view', 'display_name' => 'View Cash and Bank Accounts', 'group' => 'Cash and Bank Accounts'],
+            ['name' => 'payment_accounts.create', 'display_name' => 'Create Cash and Bank Accounts', 'group' => 'Cash and Bank Accounts'],
+            ['name' => 'payment_accounts.edit', 'display_name' => 'Edit Cash and Bank Accounts', 'group' => 'Cash and Bank Accounts'],
+            ['name' => 'payment_accounts.delete', 'display_name' => 'Delete Cash and Bank Accounts', 'group' => 'Cash and Bank Accounts'],
         ];
  
         foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p['name']], $p);
+            Permission::updateOrCreate(['name' => $p['name']], $p);
         }
  
-        // 2. Assign permissions to admin role
-        $admin = Role::where('name', 'admin')->first();
-        if ($admin) {
-            $admin->permissions()->syncWithoutDetaching(
-                Permission::where('group', 'Payment Accounts')->pluck('id')
-            );
+        // 2. Assign permissions to roles
+        $roles = Role::whereIn('name', ['super-admin', 'administrator', 'admin'])->get();
+        $permissionIds = Permission::whereIn('name', array_column($permissions, 'name'))->pluck('id');
+        foreach ($roles as $role) {
+            $role->permissions()->syncWithoutDetaching($permissionIds);
         }
  
         // 3. Seed default payment accounts

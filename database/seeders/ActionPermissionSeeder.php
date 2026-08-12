@@ -14,30 +14,29 @@ class ActionPermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            // Units Actions
-            ['name' => 'units.import', 'display_name' => 'Import Units', 'group' => 'Units'],
-            ['name' => 'units.vacate', 'display_name' => 'Vacate Occupied Units', 'group' => 'Units'],
-            ['name' => 'units.add-tenant', 'display_name' => 'Start Tenancy wizard from Unit', 'group' => 'Units'],
-            ['name' => 'meters.edit', 'display_name' => 'Edit Utility Meters', 'group' => 'Units'],
+            // Flats/Shops Actions
+            ['name' => 'units.import', 'display_name' => 'Import Flats/Shops', 'group' => 'Flats/Shops'],
+            ['name' => 'units.vacate', 'display_name' => 'Vacate Occupied Flats/Shops', 'group' => 'Flats/Shops'],
+            ['name' => 'units.add-tenant', 'display_name' => 'Start Tenancy wizard from Flat/Shop', 'group' => 'Flats/Shops'],
 
             // Landlord property ownership
-            ['name' => 'landlords.edit-units', 'display_name' => 'Edit Landlord Units Ownership', 'group' => 'Landlords'],
+            ['name' => 'landlords.edit-units', 'display_name' => 'Edit Landlord Flats/Shops Ownership', 'group' => 'Landlords'],
 
             // Tenants wizard & checklists
             ['name' => 'tenants.wizard', 'display_name' => 'Run Tenant Registration Wizard', 'group' => 'Tenants'],
             ['name' => 'tenants.move-out', 'display_name' => 'Record Tenant Move-Out', 'group' => 'Tenants'],
             ['name' => 'tenants.print', 'display_name' => 'Print Tenant Agreements and Clearance Forms', 'group' => 'Tenants'],
 
-            // Payments & utility readings
-            ['name' => 'payments.record', 'display_name' => 'Record Payments Collections', 'group' => 'Payments'],
-            ['name' => 'payments.bulk-generate', 'display_name' => 'Bulk Generate Payments', 'group' => 'Payments'],
-            ['name' => 'payments.print', 'display_name' => 'Print Receipts & Invoices', 'group' => 'Payments'],
-            ['name' => 'payments.whatsapp', 'display_name' => 'Share Bill on WhatsApp', 'group' => 'Payments'],
-            ['name' => 'utilities.record', 'display_name' => 'Record Utility Meter Readings', 'group' => 'Payments'],
+            // Billing & utility readings
+            ['name' => 'payments.record', 'display_name' => 'Record Billing Collections', 'group' => 'Billing'],
+            ['name' => 'payments.bulk-generate', 'display_name' => 'Bulk Generate Billing', 'group' => 'Billing'],
+            ['name' => 'payments.print', 'display_name' => 'Print Receipts & Invoices', 'group' => 'Billing'],
+            ['name' => 'payments.whatsapp', 'display_name' => 'Share Bill on WhatsApp', 'group' => 'Billing'],
+            ['name' => 'utilities.record', 'display_name' => 'Record Utility Meter Readings', 'group' => 'Billing'],
         ];
 
         foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p['name']], $p);
+            Permission::updateOrCreate(['name' => $p['name']], $p);
         }
 
         $admin = Role::where('name', 'admin')->first();

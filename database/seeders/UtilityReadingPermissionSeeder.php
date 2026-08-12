@@ -11,21 +11,19 @@ class UtilityReadingPermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            ['name' => 'utilities.view', 'display_name' => 'View Utilities', 'group' => 'Utilities'],
-            ['name' => 'utilities.create', 'display_name' => 'Create Utilities', 'group' => 'Utilities'],
-            ['name' => 'utilities.edit', 'display_name' => 'Edit Utilities', 'group' => 'Utilities'],
-            ['name' => 'utilities.delete', 'display_name' => 'Delete Utilities', 'group' => 'Utilities'],
+            ['name' => 'utility_readings.view', 'display_name' => 'View Utility Meter Readings', 'group' => 'Utility Meter Readings'],
+            ['name' => 'utility_readings.edit', 'display_name' => 'Edit Utility Meter Readings', 'group' => 'Utility Meter Readings'],
         ];
 
         foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p['name']], $p);
+            Permission::updateOrCreate(['name' => $p['name']], $p);
         }
 
-        $admin = Role::where('name', 'admin')->first();
-        if ($admin) {
-            $admin->permissions()->syncWithoutDetaching(
-                Permission::where('group', 'Utilities')->pluck('id')
-            );
+        $roles = Role::whereIn('name', ['super-admin', 'administrator', 'admin'])->get();
+        $permissionIds = Permission::whereIn('name', ['utility_readings.view', 'utility_readings.edit'])->pluck('id');
+
+        foreach ($roles as $role) {
+            $role->permissions()->syncWithoutDetaching($permissionIds);
         }
     }
 }

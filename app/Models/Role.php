@@ -13,6 +13,14 @@ class Role extends Model
     protected $fillable = ['name', 'display_name', 'description'];
 
     /**
+     * Major permission groups (Admin, Finance) directly assigned to this role.
+     */
+    public function permissionGroups(): BelongsToMany
+    {
+        return $this->belongsToMany(PermissionGroup::class, 'role_permission_group');
+    }
+
+    /**
      * The permissions that belong to this role.
      */
     public function permissions(): BelongsToMany

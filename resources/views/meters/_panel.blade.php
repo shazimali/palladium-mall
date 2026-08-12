@@ -118,27 +118,31 @@
 
                     {{-- Action Buttons --}}
                     <div class="mt-3 flex items-center gap-2">
-                        <button
-                            type="button"
-                            @click="startEdit(meter.type)"
-                            class="inline-flex items-center gap-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-600 transition-colors">
-                            <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-                            </svg>
-                            <span x-text="getMeterData(meter.type) ? 'Edit' : 'Add Meter'"></span>
-                        </button>
-                        <template x-if="getMeterData(meter.type)">
+                        @if($canEditMeters ?? true)
                             <button
                                 type="button"
-                                @click="removeMeter(meter.type)"
-                                class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors">
+                                @click="startEdit(meter.type)"
+                                class="inline-flex items-center gap-1 rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-600 transition-colors">
                                 <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                          d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
                                 </svg>
-                                Remove
+                                <span x-text="getMeterData(meter.type) ? 'Edit' : 'Add Meter'"></span>
                             </button>
-                        </template>
+                        @endif
+                        @if($canDeleteMeters ?? true)
+                            <template x-if="getMeterData(meter.type)">
+                                <button
+                                    type="button"
+                                    @click="removeMeter(meter.type)"
+                                    class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Remove
+                                </button>
+                            </template>
+                        @endif
                     </div>
                 </div>
 

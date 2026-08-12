@@ -24,6 +24,8 @@ use App\Http\Controllers\ProfitLossController;
 use App\Http\Controllers\ReceivablePayableReportController;
 use App\Http\Controllers\OwnerDuesController;
 use App\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\TaskController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -143,11 +145,13 @@ Route::middleware('auth')->group(function () {
         Route::get('general-receiving-vouchers/{general_receiving_voucher}/print', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'print'])->name('general-receiving-vouchers.print');
     });
 
-    Route::middleware('permission:meter_vouchers.view')->group(function () {
-        Route::get('meter-reading-vouchers-print-list', [\App\Http\Controllers\MeterReadingVoucherController::class, 'printList'])
-            ->name('meter-reading-vouchers.print-list');
-        Route::get('meter-reading-vouchers/{meter_reading_voucher}/print', [\App\Http\Controllers\MeterReadingVoucherController::class, 'print'])->name('meter-reading-vouchers.print');
-        Route::resource('meter-reading-vouchers', \App\Http\Controllers\MeterReadingVoucherController::class);
+    // Utility Meter Readings (Month & Unit Filtered Grid Interface)
+    Route::get('meter-reading-vouchers', fn() => redirect()->route('utility-readings.index'));
+    Route::middleware('permission:utility_readings.view,utility_readings.edit,utilities.record,utility_meters_management,meters.edit,meter_vouchers.view')->group(function () {
+        Route::get('utility-readings', [\App\Http\Controllers\UtilityReadingController::class, 'index'])->name('utility-readings.index');
+        Route::get('utility-readings/print', [\App\Http\Controllers\UtilityReadingController::class, 'print'])->name('utility-readings.print');
+        Route::post('utility-readings/update-row', [\App\Http\Controllers\UtilityReadingController::class, 'updateRow'])->name('utility-readings.update-row');
+        Route::post('utility-readings/upload-image', [\App\Http\Controllers\UtilityReadingController::class, 'uploadImage'])->name('utility-readings.upload-image');
     });
  
     Route::middleware('permission:payment_accounts.view')->group(function () {
@@ -185,9 +189,11 @@ Route::middleware('auth')->group(function () {
 
     // Meter AJAX routes (embedded in Unit create/edit)
     Route::get('ajax/meters/{unit}', [MeterController::class, 'byUnit'])->name('ajax.meters.by-unit');
-    Route::middleware('permission:meters.edit')->group(function () {
+    Route::middleware('permission:meters.edit,units.edit')->group(function () {
         Route::post('ajax/meters', [MeterController::class, 'store'])->name('ajax.meters.store');
         Route::put('ajax/meters/{meter}', [MeterController::class, 'update'])->name('ajax.meters.update');
+    });
+    Route::middleware('permission:meters.delete,units.edit')->group(function () {
         Route::delete('ajax/meters/{meter}', [MeterController::class, 'destroy'])->name('ajax.meters.destroy');
     });
 
@@ -330,9 +336,8 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/account-summary', [\App\Http\Controllers\AccountSummaryController::class, 'index'])->name('reports.account_summary');
         Route::get('reports/account-summary/pdf', [\App\Http\Controllers\AccountSummaryController::class, 'exportPdf'])->name('reports.account_summary.pdf');
         Route::get('reports/account-summary/excel', [\App\Http\Controllers\AccountSummaryController::class, 'exportExcel'])->name('reports.account_summary.excel');
-
-        Route::get('reports/meter-readings', [\App\Http\Controllers\MeterReadingReportController::class, 'index'])->name('reports.meter-readings');
-        Route::get('reports/meter-readings/print', [\App\Http\Controllers\MeterReadingReportController::class, 'print'])->name('reports.meter-readings.print');
+        Route::get('reports/meter-readings', fn() => redirect()->route('utility-readings.index'));
+        Route::get('reports/meter-readings/print', fn() => redirect()->route('utility-readings.print'));
     });
 
 
@@ -412,21 +417,23 @@ Route::middleware('auth')->group(function () {
         ->name('ajax.landlord-self-units');
 
     // Note Pad (Google Keep style tasks & notes)
-    Route::resource('note-pads', \App\Http\Controllers\NotePadController::class)->names([
-        'index'   => 'note-pads.index',
-        'create'  => 'note-pads.create',
-        'store'   => 'note-pads.store',
-        'show'    => 'note-pads.show',
-        'edit'    => 'note-pads.edit',
-        'update'  => 'note-pads.update',
-        'destroy' => 'note-pads.destroy',
-    ])->parameters([
-        'note-pads' => 'notePad',
-    ]);
-    Route::post('note-pads/{notePad}/toggle-pin', [\App\Http\Controllers\NotePadController::class, 'togglePin'])
-        ->name('note-pads.toggle-pin');
-    Route::post('note-pads/{notePad}/toggle-task', [\App\Http\Controllers\NotePadController::class, 'toggleTask'])
-        ->name('note-pads.toggle-task');
+    Route::middleware('permission:note_pads.view')->group(function () {
+        Route::resource('note-pads', \App\Http\Controllers\NotePadController::class)->names([
+            'index'   => 'note-pads.index',
+            'create'  => 'note-pads.create',
+            'store'   => 'note-pads.store',
+            'show'    => 'note-pads.show',
+            'edit'    => 'note-pads.edit',
+            'update'  => 'note-pads.update',
+            'destroy' => 'note-pads.destroy',
+        ])->parameters([
+            'note-pads' => 'notePad',
+        ]);
+        Route::post('note-pads/{notePad}/toggle-pin', [\App\Http\Controllers\NotePadController::class, 'togglePin'])
+            ->name('note-pads.toggle-pin');
+        Route::post('note-pads/{notePad}/toggle-task', [\App\Http\Controllers\NotePadController::class, 'toggleTask'])
+            ->name('note-pads.toggle-task');
+    });
 
     // Other Tenants
     Route::middleware('permission:other_tenants.view')->group(function () {
@@ -534,4 +541,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/videos', function () {
         return view('pages.ui-elements.videos', ['title' => 'Videos']);
     })->name('videos');
+
+    // Task Management Routes
+    Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+    Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    Route::get('/tasks/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
+    Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+    Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
+    Route::post('/tasks/{task}/comments', [TaskController::class, 'storeComment'])->name('tasks.comments.store');
+    Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+    // Notification API Routes
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-as-read');
 });

@@ -34,6 +34,7 @@ Structural and ownership fields managed directly in the Units module.
     }
 }" class="space-y-8">
 
+    <fieldset @if($canEditMetersOnly ?? false) disabled class="opacity-60 pointer-events-none space-y-8" @else class="space-y-8" @endif>
     {{-- Section 0: Landlord Selection (Optional) --}}
     <div class="rounded-2xl border-2 border-gray-200 bg-gray-50/70 p-6 dark:border-gray-800 dark:bg-white/[0.02]">
         <h4 class="mb-5 text-base sm:text-lg font-black uppercase tracking-wider text-gray-800 dark:text-gray-200">
@@ -489,10 +490,16 @@ Structural and ownership fields managed directly in the Units module.
             </div>
         </div>
     </div>
+    </fieldset>
 
     @if($unit->exists)
         {{-- Utility Meters Section --}}
-        @include('meters._panel', ['unit' => $unit, 'existingMeters' => $existingMeters])
+        @include('meters._panel', [
+            'unit'            => $unit,
+            'existingMeters'  => $existingMeters,
+            'canEditMeters'   => $canEditMeters ?? true,
+            'canDeleteMeters' => $canDeleteMeters ?? true,
+        ])
     @endif
 
 </div>

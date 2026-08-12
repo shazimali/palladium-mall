@@ -28,8 +28,9 @@ class RoleSeeder extends Seeder
             ]
         );
 
-        // Assign all permissions except super admin specific if any to Administrator
+        // Assign all permissions to Super Admin and Administrator
         $allPermissions = Permission::all();
+        $superAdmin->permissions()->sync($allPermissions->pluck('id')->toArray());
         $admin->permissions()->sync($allPermissions->pluck('id')->toArray());
 
         // 3. Editor / Moderator
