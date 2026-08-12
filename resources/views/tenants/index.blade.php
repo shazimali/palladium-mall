@@ -52,7 +52,7 @@
 
             <div class="flex items-center gap-3">
                 @php
-                    $hasActiveFilters = request()->anyFilled(['search', 'status', 'landlord_id', 'date_from', 'date_to']);
+                    $hasActiveFilters = request()->anyFilled(['search', 'status', 'landlord_id', 'date_from', 'date_to', 'expiring_days']);
                 @endphp
                 <button type="button" id="clear-filters-btn" onclick="clearFilters()"
                     class="rounded-xl border-2 border-gray-300 px-5 py-2.5 text-sm font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors cursor-pointer {{ $hasActiveFilters ? '' : 'hidden' }}">
@@ -108,6 +108,17 @@
                         <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                         <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive / Terminated</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
+                    </select>
+                </div>
+
+                <!-- Expiring Agreements Filter -->
+                <div class="relative">
+                    <select name="expiring_days" onchange="fetchResults()"
+                        class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
+                        <option value="">Agreement Expiry</option>
+                        <option value="30" {{ request('expiring_days') == '30' ? 'selected' : '' }}>Expiring in 30 days</option>
+                        <option value="60" {{ request('expiring_days') == '60' ? 'selected' : '' }}>Expiring in 60 days</option>
+                        <option value="90" {{ request('expiring_days') == '90' ? 'selected' : '' }}>Expiring in 90 days</option>
                     </select>
                 </div>
 

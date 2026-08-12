@@ -7,9 +7,9 @@
          style="border-left: 4px solid #f79009;">
         <div>
             <h3 class="text-base font-bold text-gray-800 dark:text-white/90">Expiring Agreements</h3>
-            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Due in next 30 days</p>
+            <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Due in next 60 days</p>
         </div>
-        <a href="{{ route('tenants.index') }}"
+        <a href="{{ route('tenants.index', ['expiring_days' => 60]) }}"
             class="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition-all"
             style="color: #b54708; background: #fffaeb;"
             onmouseover="this.style.background='#fef0c7'" onmouseout="this.style.background='#fffaeb'">

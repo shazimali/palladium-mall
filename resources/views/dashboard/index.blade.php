@@ -58,7 +58,7 @@
                             </p>
                         </div>
                     </div>
-                    <a href="{{ route('tenants.index') }}"
+                    <a href="{{ route('tenants.index', ['expiring_days' => 60]) }}"
                         class="inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-amber-700 transition-colors shadow-xs">
                         View All Tenants / Agreements →
                     </a>

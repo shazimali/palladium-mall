@@ -32,6 +32,16 @@ class TenantController extends Controller
             })
             ->when($request->date_to, function ($q) use ($request) {
                 $q->whereHas('agreements', fn($qa) => $qa->where('end_date', '<=', $request->date_to));
+            })
+            ->when($request->expiring_days, function ($q) use ($request) {
+                $days = (int) $request->expiring_days;
+                $q->whereHas('agreements', function ($qa) use ($days) {
+                    $qa->where('status', 'active')
+                        ->whereBetween('end_date', [
+                            \Carbon\Carbon::today(),
+                            \Carbon\Carbon::today()->addDays($days),
+                        ]);
+                });
             });
 
         // Calculate counts based on current filters (excluding status)
@@ -1641,6 +1651,16 @@ class TenantController extends Controller
             })
             ->when($request->date_to, function ($q) use ($request) {
                 $q->whereHas('agreements', fn($qa) => $qa->where('end_date', '<=', $request->date_to));
+            })
+            ->when($request->expiring_days, function ($q) use ($request) {
+                $days = (int) $request->expiring_days;
+                $q->whereHas('agreements', function ($qa) use ($days) {
+                    $qa->where('status', 'active')
+                        ->whereBetween('end_date', [
+                            \Carbon\Carbon::today(),
+                            \Carbon\Carbon::today()->addDays($days),
+                        ]);
+                });
             });
 
         $standardOccupants = $tenantsQuery->get()->map(function ($t) {
