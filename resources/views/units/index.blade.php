@@ -114,11 +114,6 @@
                     </svg>
                     Print
                 </a>
-                <a href="{{ route('units.print-meters', request()->all()) }}" id="print-meters-btn" target="_blank"
-                    onclick="window.open(this.href,'_blank','width=1200,height=800,scrollbars=yes'); return false;"
-                    class="inline-flex items-center gap-2.5 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-xs cursor-pointer">
-                    ⚡ Print Meters
-                </a>
                 @if(auth()->user()->hasPermission('units.create') || auth()->user()->isSuperAdmin())
                     <a href="{{ route('units.create') }}"
                         class="inline-flex items-center gap-2.5 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors">

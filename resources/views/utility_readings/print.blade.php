@@ -85,6 +85,7 @@
                         <th class="py-2.5 px-3 border border-gray-300">Meter Type</th>
                         <th class="py-2.5 px-3 border border-gray-300">Ref Number</th>
                         <th class="py-2.5 px-3 border border-gray-300">Consumer ID</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-center">Breaker</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-right">Units KV</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-right">Amount (Rs.)</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Status</th>
@@ -103,6 +104,17 @@
                             </td>
                             <td class="py-2 px-3 border border-gray-300 font-mono">{{ $row['meter_ref_no'] }}</td>
                             <td class="py-2 px-3 border border-gray-300 font-mono">{{ $row['meter_consumer_id'] }}</td>
+                            <td class="py-2 px-3 border border-gray-300 text-center font-bold">
+                                @if(strtoupper($row['breaker_status'] ?? 'OFF') === 'ON')
+                                    <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 border border-emerald-300">
+                                        ⚡ ON
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-xs text-rose-800 border border-rose-300">
+                                        🔌 OFF
+                                    </span>
+                                @endif
+                            </td>
                             <td class="py-2 px-3 border border-gray-300 text-right font-mono font-bold">
                                 {{ number_format($row['current_reading'], 2) }}
                             </td>
@@ -121,7 +133,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="py-8 text-center text-gray-500 font-bold">
+                            <td colspan="10" class="py-8 text-center text-gray-500 font-bold">
                                 No utility readings found for {{ $selectedMonthName }}.
                             </td>
                         </tr>
@@ -129,7 +141,7 @@
                 </tbody>
                 <tfoot>
                     <tr class="bg-gray-100 font-black border-t-2 border-gray-400">
-                        <td colspan="6" class="py-3 px-3 text-right uppercase border border-gray-300">Total Summary:
+                        <td colspan="7" class="py-3 px-3 text-right uppercase border border-gray-300">Total Summary:
                         </td>
                         <td class="py-3 px-3 text-right font-mono border border-gray-300 text-blue-900">
                             {{ number_format($totalUnitsConsumed, 2) }}
