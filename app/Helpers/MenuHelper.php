@@ -159,6 +159,22 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && $user->can('inspection_heads.view')) {
+            $mainItems[] = [
+                'icon' => 'list',
+                'name' => 'Inspection Heads',
+                'path' => '/inspection-heads',
+            ];
+        }
+
+        if (auth()->check() && $user->can('cleaning_inspections.view')) {
+            $mainItems[] = [
+                'icon' => 'list',
+                'name' => 'Cleaning Inspections',
+                'path' => '/cleaning-inspections',
+            ];
+        }
+
         // 4. Billings & Cash Flows
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [

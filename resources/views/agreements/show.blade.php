@@ -273,4 +273,100 @@
             </div>
         </div>
     </div>
+
+    {{-- ── Flat Inspection Reports Section ──────────────────────────────── --}}
+    @can('flat_inspections.view')
+        @php
+            $flatMoveIn  = $agreement->flatMoveInReport()->with('items')->first();
+            $flatMoveOut = $agreement->flatMoveOutReport()->with('items')->first();
+        @endphp
+
+        <div class="mt-8 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-extrabold text-gray-800 dark:text-white/90">🏠 Flat Inspection Reports</h3>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {{-- Move In Inspection --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-extrabold text-gray-800 dark:text-white/90 flex items-center gap-2">
+                            🏠 Move In Inspection
+                            @if($flatMoveIn)
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                    {{ $flatMoveIn->passCount() }}/{{ $flatMoveIn->totalCount() }} Pass
+                                </span>
+                            @endif
+                        </h4>
+                        @can('flat_inspections.create')
+                            <a href="{{ route('flat-inspections.create', ['agreement_id' => $agreement->id, 'type' => 'move_in']) }}"
+                               class="inline-flex items-center gap-1 rounded-lg {{ $flatMoveIn ? 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400' : 'bg-brand-500 text-white hover:bg-brand-600' }} px-3 py-1.5 text-xs font-bold transition-colors">
+                                {{ $flatMoveIn ? '✏️ Edit' : '+ Create' }}
+                            </a>
+                        @endcan
+                    </div>
+
+                    @if($flatMoveIn)
+                        <div class="space-y-1 text-xs text-gray-600 dark:text-gray-400 mb-3">
+                            <div><span class="font-semibold">Date:</span> {{ $flatMoveIn->inspected_at?->format('d M Y') ?? '—' }}</div>
+                            <div><span class="font-semibold">Inspector:</span> {{ $flatMoveIn->inspection_member ?: '—' }}</div>
+                            <div><span class="font-semibold">Condition:</span> {{ ucfirst($flatMoveIn->flat_condition ?? '—') }}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="{{ route('flat-inspections.show', $flatMoveIn) }}"
+                               class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+                                👁 View Report
+                            </a>
+                            <a href="{{ route('flat-inspections.print', $flatMoveIn) }}" target="_blank"
+                               class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+                                🖨️ Print
+                            </a>
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-400 dark:text-gray-500 italic">No move-in inspection recorded yet.</p>
+                    @endif
+                </div>
+
+                {{-- Move Out Inspection --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-extrabold text-gray-800 dark:text-white/90 flex items-center gap-2">
+                            🚪 Move Out Inspection
+                            @if($flatMoveOut)
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                    {{ $flatMoveOut->passCount() }}/{{ $flatMoveOut->totalCount() }} Pass
+                                </span>
+                            @endif
+                        </h4>
+                        @can('flat_inspections.create')
+                            <a href="{{ route('flat-inspections.create', ['agreement_id' => $agreement->id, 'type' => 'move_out']) }}"
+                               class="inline-flex items-center gap-1 rounded-lg {{ $flatMoveOut ? 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400' : 'bg-brand-500 text-white hover:bg-brand-600' }} px-3 py-1.5 text-xs font-bold transition-colors">
+                                {{ $flatMoveOut ? '✏️ Edit' : '+ Create' }}
+                            </a>
+                        @endcan
+                    </div>
+
+                    @if($flatMoveOut)
+                        <div class="space-y-1 text-xs text-gray-600 dark:text-gray-400 mb-3">
+                            <div><span class="font-semibold">Date:</span> {{ $flatMoveOut->inspected_at?->format('d M Y') ?? '—' }}</div>
+                            <div><span class="font-semibold">Inspector:</span> {{ $flatMoveOut->inspection_member ?: '—' }}</div>
+                            <div><span class="font-semibold">Condition:</span> {{ ucfirst($flatMoveOut->flat_condition ?? '—') }}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="{{ route('flat-inspections.show', $flatMoveOut) }}"
+                               class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+                                👁 View Report
+                            </a>
+                            <a href="{{ route('flat-inspections.print', $flatMoveOut) }}" target="_blank"
+                               class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
+                                🖨️ Print
+                            </a>
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-400 dark:text-gray-500 italic">No move-out inspection recorded yet.</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @endcan
 @endsection

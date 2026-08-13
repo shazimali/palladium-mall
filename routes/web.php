@@ -162,6 +162,56 @@ Route::middleware('auth')->group(function () {
         Route::resource('inspection-persons', InspectionPersonController::class);
     });
 
+    // Inspection Heads (Master Setup — flat_inspection & cleaning types)
+    Route::middleware('permission:inspection_heads.view')->group(function () {
+        Route::get('inspection-heads', [\App\Http\Controllers\InspectionHeadController::class, 'index'])->name('inspection-heads.index');
+    });
+    Route::middleware('permission:inspection_heads.create')->group(function () {
+        Route::get('inspection-heads/create', [\App\Http\Controllers\InspectionHeadController::class, 'create'])->name('inspection-heads.create');
+        Route::post('inspection-heads', [\App\Http\Controllers\InspectionHeadController::class, 'store'])->name('inspection-heads.store');
+    });
+    Route::middleware('permission:inspection_heads.edit')->group(function () {
+        Route::get('inspection-heads/{inspectionHead}/edit', [\App\Http\Controllers\InspectionHeadController::class, 'edit'])->name('inspection-heads.edit');
+        Route::put('inspection-heads/{inspectionHead}', [\App\Http\Controllers\InspectionHeadController::class, 'update'])->name('inspection-heads.update');
+        Route::post('inspection-heads/{inspectionHead}/toggle-status', [\App\Http\Controllers\InspectionHeadController::class, 'toggleStatus'])->name('inspection-heads.toggle-status');
+    });
+    Route::middleware('permission:inspection_heads.delete')->group(function () {
+        Route::delete('inspection-heads/{inspectionHead}', [\App\Http\Controllers\InspectionHeadController::class, 'destroy'])->name('inspection-heads.destroy');
+    });
+
+    // Flat Inspection Reports (Agreement Move-In / Move-Out)
+    // ⚠️ Static /create MUST come before wildcard /{id} routes
+    Route::middleware('permission:flat_inspections.create')->group(function () {
+        Route::get('flat-inspections/create', [\App\Http\Controllers\FlatInspectionReportController::class, 'create'])->name('flat-inspections.create');
+        Route::post('flat-inspections', [\App\Http\Controllers\FlatInspectionReportController::class, 'store'])->name('flat-inspections.store');
+    });
+    Route::middleware('permission:flat_inspections.view')->group(function () {
+        Route::get('flat-inspections/{flatInspectionReport}', [\App\Http\Controllers\FlatInspectionReportController::class, 'show'])->name('flat-inspections.show');
+        Route::get('flat-inspections/{flatInspectionReport}/print', [\App\Http\Controllers\FlatInspectionReportController::class, 'print'])->name('flat-inspections.print');
+    });
+    Route::middleware('permission:flat_inspections.delete')->group(function () {
+        Route::delete('flat-inspections/{flatInspectionReport}', [\App\Http\Controllers\FlatInspectionReportController::class, 'destroy'])->name('flat-inspections.destroy');
+    });
+
+    // Cleaning Inspection Reports (Daily Building-Wide)
+    // ⚠️ Static routes (/create, /index) MUST come before wildcard /{id} routes
+    Route::middleware('permission:cleaning_inspections.create')->group(function () {
+        Route::get('cleaning-inspections/create', [\App\Http\Controllers\CleaningInspectionReportController::class, 'create'])->name('cleaning-inspections.create');
+        Route::post('cleaning-inspections', [\App\Http\Controllers\CleaningInspectionReportController::class, 'store'])->name('cleaning-inspections.store');
+    });
+    Route::middleware('permission:cleaning_inspections.view')->group(function () {
+        Route::get('cleaning-inspections', [\App\Http\Controllers\CleaningInspectionReportController::class, 'index'])->name('cleaning-inspections.index');
+        Route::get('cleaning-inspections/{cleaningInspection}', [\App\Http\Controllers\CleaningInspectionReportController::class, 'show'])->name('cleaning-inspections.show');
+        Route::get('cleaning-inspections/{cleaningInspection}/print', [\App\Http\Controllers\CleaningInspectionReportController::class, 'print'])->name('cleaning-inspections.print');
+    });
+    Route::middleware('permission:cleaning_inspections.edit')->group(function () {
+        Route::get('cleaning-inspections/{cleaningInspection}/edit', [\App\Http\Controllers\CleaningInspectionReportController::class, 'edit'])->name('cleaning-inspections.edit');
+        Route::put('cleaning-inspections/{cleaningInspection}', [\App\Http\Controllers\CleaningInspectionReportController::class, 'update'])->name('cleaning-inspections.update');
+    });
+    Route::middleware('permission:cleaning_inspections.delete')->group(function () {
+        Route::delete('cleaning-inspections/{cleaningInspection}', [\App\Http\Controllers\CleaningInspectionReportController::class, 'destroy'])->name('cleaning-inspections.destroy');
+    });
+
     Route::middleware('permission:agreements.view')->group(function () {
         // Agreements are view-only — creation happens via tenant wizard
         Route::resource('agreements', AgreementController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);

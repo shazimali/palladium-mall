@@ -226,6 +226,7 @@ class Agreement extends Model
         return $this->hasOne(TenantDocumentChecklist::class);
     }
 
+    // ── Legacy: keep for backward compatibility during transition ─────────────
     public function checklists(): HasMany
     {
         return $this->hasMany(MoveInChecklist::class);
@@ -240,4 +241,22 @@ class Agreement extends Model
     {
         return $this->hasOne(MoveInChecklist::class)->where('type', 'move_out');
     }
+    // ──────────────────────────────────────────────────────────────────────────
+
+    // ── New Dynamic Flat Inspection System ────────────────────────────────────
+    public function flatInspectionReports(): HasMany
+    {
+        return $this->hasMany(FlatInspectionReport::class);
+    }
+
+    public function flatMoveInReport(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(FlatInspectionReport::class)->where('type', 'move_in');
+    }
+
+    public function flatMoveOutReport(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(FlatInspectionReport::class)->where('type', 'move_out');
+    }
+    // ──────────────────────────────────────────────────────────────────────────
 }
