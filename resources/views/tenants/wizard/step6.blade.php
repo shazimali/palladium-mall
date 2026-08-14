@@ -3,19 +3,32 @@
 @section('content')
 <div class="mx-auto max-w-4xl px-4 py-6">
 
-    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <a href="{{ route('tenants.index') }}" class="hover:text-brand-500">Tenants and Agreements</a>
             <span>/</span>
             <span class="text-gray-800 dark:text-white/90">{{ $title }}</span>
         </div>
-        <div>
+        {{-- Quick-print bar --}}
+        <div class="flex flex-wrap items-center gap-2">
+            @php $printIcon = '<path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>' @endphp
+
+            <a href="{{ route('tenants.printStep', [$tenant, 4]) }}" target="_blank"
+               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors shadow-xs">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">{!! $printIcon !!}</svg>
+                Print Documents
+            </a>
+
+            <a href="{{ route('tenants.printStep', [$tenant, 5]) }}" target="_blank"
+               class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors shadow-xs">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">{!! $printIcon !!}</svg>
+                Print Move-In Inspection
+            </a>
+
             <a href="{{ route('tenants.printStep', [$tenant, 6]) }}" target="_blank"
-               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-brand-600 transition-colors">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-                </svg>
-                Print Full Profile & Agreements
+               class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-brand-600 transition-colors">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">{!! $printIcon !!}</svg>
+                Print Full Profile &amp; Agreements
             </a>
         </div>
     </div>
@@ -327,7 +340,19 @@
             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Documents</h3>
-                    <a href="{{ route('tenants.showStep', [$tenant, 4]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                    <div class="flex items-center gap-3">
+                        @if($docChecklist)
+                            <a href="{{ route('tenants.printStep', [$tenant, 4]) }}" target="_blank"
+                               class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                Print
+                            </a>
+                            <span class="text-gray-300 dark:text-gray-700">|</span>
+                        @endif
+                        <a href="{{ route('tenants.showStep', [$tenant, 4]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                    </div>
                 </div>
                 @if($docChecklist)
                     @php $checked = $docChecklist->countChecked(); $total = $docChecklist->countTotal(); @endphp
@@ -346,22 +371,59 @@
             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 p-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">Move-in Inspection</h3>
-                    <a href="{{ route('tenants.showStep', [$tenant, 5]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                    <div class="flex items-center gap-3">
+                        <a href="{{ route('tenants.printStep', [$tenant, 5]) }}" target="_blank"
+                           class="text-xs text-brand-500 hover:underline inline-flex items-center gap-1">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Print
+                        </a>
+                        <span class="text-gray-300 dark:text-gray-700">|</span>
+                        <a href="{{ route('tenants.showStep', [$tenant, 5]) }}" class="text-xs text-brand-500 hover:underline">Edit</a>
+                    </div>
                 </div>
-                @if($moveInChecklist)
-                    @php $checked = $moveInChecklist->countChecked(); $total = $moveInChecklist->countTotal(); @endphp
+
+                @php
+                    $passCount  = $flatInspectionReport?->passCount() ?? 0;
+                    $failCount  = $flatInspectionReport?->failCount() ?? 0;
+                    $totalHeads = $totalInspectionHeads ?? 0;
+                    $pct        = $totalHeads > 0 ? round($passCount / $totalHeads * 100) : 0;
+                    $barColor   = $pct >= 80 ? 'bg-green-500' : ($pct >= 40 ? 'bg-amber-400' : 'bg-rose-500');
+                @endphp
+
+                @if($flatInspectionReport && $totalHeads > 0)
+                    {{-- Progress bar --}}
                     <div class="mb-2 flex items-center gap-2">
                         <div class="flex-1 h-2 rounded-full bg-gray-200 dark:bg-gray-700">
-                            <div class="h-2 rounded-full bg-green-500 transition-all" style="width: {{ $total > 0 ? round($checked / $total * 100) : 0 }}%"></div>
+                            <div class="h-2 rounded-full {{ $barColor }} transition-all" style="width: {{ $pct }}%"></div>
                         </div>
-                        <span class="text-xs text-gray-500">{{ $checked }}/{{ $total }}</span>
+                        <span class="text-xs text-gray-500 font-mono">{{ $passCount }}/{{ $totalHeads }}</span>
                     </div>
-                    <p class="text-xs text-gray-500">{{ $checked }} of {{ $total }} items OK</p>
-                    @if($moveInChecklist->flat_condition)
-                        <p class="mt-1 text-xs {{ $moveInChecklist->flat_condition === 'good' ? 'text-green-500' : 'text-orange-500' }}">
-                            Flat condition: {{ ucfirst(str_replace('_', ' ', $moveInChecklist->flat_condition)) }}
-                        </p>
+
+                    {{-- Pass / Fail / Pending badges --}}
+                    <div class="flex flex-wrap gap-2 mt-1">
+                        <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                            ✅ Pass: {{ $passCount }}
+                        </span>
+                        @if($failCount > 0)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 px-2.5 py-0.5 text-xs font-semibold text-rose-700 dark:text-rose-400">
+                                ❌ Fail: {{ $failCount }}
+                            </span>
+                        @endif
+                        @php $pending = $totalHeads - $passCount - $failCount; @endphp
+                        @if($pending > 0)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 px-2.5 py-0.5 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                                — Pending: {{ $pending }}
+                            </span>
+                        @endif
+                    </div>
+
+                    @if($flatInspectionReport->remarks)
+                        <p class="mt-2 text-xs text-gray-500 italic">{{ $flatInspectionReport->remarks }}</p>
                     @endif
+                @elseif($totalHeads === 0)
+                    <p class="text-xs text-amber-500">⚠ No inspection heads configured.</p>
                 @else
                     <p class="text-sm text-yellow-500">Not completed yet</p>
                 @endif

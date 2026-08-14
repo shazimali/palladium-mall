@@ -35,7 +35,9 @@
             </div>
         </div>
 
-        <form method="POST" action="{{ route('tenants.saveStep', [$tenant, 5]) }}" class="px-6 py-6 space-y-6">
+        <form method="POST" action="{{ route('tenants.saveStep', [$tenant, 5]) }}"
+              enctype="multipart/form-data"
+              class="px-6 py-6 space-y-6">
             @csrf
 
             @php
@@ -130,67 +132,89 @@
                 </div>
             </div>
 
-            @php
-            $sections = [
-                '1. General Cleanliness' => [
-                    'rooms_cleaned'     => 'All rooms cleaned (floors, walls, ceilings)',
-                    'kitchen_cleaned'   => 'Kitchen cleaned (sink, counters, cabinets)',
-                    'bathrooms_cleaned' => 'Bathrooms cleaned (toilet, shower, tiles)',
-                    'no_garbage'        => 'No garbage left inside unit',
-                ],
-                '2. Walls, Paint & Fixtures' => [
-                    'no_wall_damage'    => 'No damage to walls (holes, cracks, stains)',
-                    'paint_condition_ok'=> 'Paint condition acceptable',
-                    'light_fixtures_ok' => 'Light fixtures, switches, sockets working',
-                    'electric_wiring_ok'=> 'Electric cables and wiring in good condition',
-                    'no_breaker_issues' => 'No issues with electricity breakers',
-                ],
-                '3. Furniture, Appliances & Kitchen' => [
-                    'furniture_ok'           => 'Furniture present and in good condition (if provided)',
-                    'ac_working'             => 'Air-conditioners working',
-                    'kitchen_appliances_ok'  => 'Kitchen appliances working (stove, hob, oven, fridge)',
-                    'stove_clean'            => 'Stove / Hob clean and in working condition',
-                    'keys_returned'          => 'Keys for all doors, cupboards, mailbox handed over',
-                ],
-                '4. Doors, Windows & Locks' => [
-                    'doors_locks_ok'   => 'All doors and locks working properly',
-                    'windows_ok'       => 'Windows not broken, open/close properly',
-                    'balcony_doors_ok' => 'Balcony doors / windows secured properly',
-                ],
-                '5. Utilities & Dues' => [
-                    'water_supply_ok'          => 'Water supply working',
-                    'electricity_supply_ok'    => 'Electricity supply working',
-                    'gas_supply_ok'            => 'Gas supply checked',
-                    'no_pending_utility_bills' => 'No pending electricity, water or gas bills',
-                    'no_pending_maintenance'   => 'No pending maintenance dues',
-                    'no_pending_rent'          => 'No pending rent payments',
-                ],
-                '7. Stock & Inventory' => [
-                    'fixtures_available' => 'All original flat fittings and fixtures available',
-                    'no_missing_items'   => 'No missing inventory items',
-                ],
-                '8. Final' => [
-                    'access_cards_returned'  => 'All access cards, parking stickers handed over',
-                    'no_pending_requests'    => 'No pending service requests or complaints',
-                    'move_out_form_signed'   => 'Tenant signed move-in form',
-                ],
-            ];
-            @endphp
-
-            @foreach($sections as $title => $items)
+            {{-- ══════════════════════════════════════════════════════
+                 DYNAMIC FLAT INSPECTION CHECKLIST (InspectionHead)
+            ══════════════════════════════════════════════════════ --}}
+            @if($inspectionHeads->isEmpty())
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-800 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-300">
+                    ⚠️ No inspection checklist items found. Please add <strong>🏠 Flat Inspection</strong> heads via
+                    <a href="{{ route('inspection-heads.index') }}" class="underline font-semibold" target="_blank">Inspection Heads</a>.
+                </div>
+            @else
                 <div class="{{ $sectionClass }}">
-                    <h4 class="{{ $sectionTitle }}">{{ $title }}</h4>
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        @foreach($items as $field => $itemLabel)
-                            <label class="{{ $checkLabel }}">
-                                <input type="checkbox" name="{{ $field }}" value="1" class="{{ $checkboxClass }}"
-                                       {{ old($field, $cl->{$field} ?? false) ? 'checked' : '' }}>
-                                {{ $itemLabel }}
-                            </label>
+                    <h4 class="{{ $sectionTitle }}">🏠 Flat Inspection Checklist</h4>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-4">Mark each item as Pass or Fail, add a comment if needed, and optionally upload a photo (max 2 MB).</p>
+
+                    <div class="space-y-3">
+                        @foreach($inspectionHeads as $head)
+                            @php
+                                $existing      = $flatInspectionReport?->items->firstWhere('inspection_head_id', $head->id);
+                                $savedStatus   = $existing?->status;
+                                $currentStatus = old("head_{$head->id}_status",
+                                    $savedStatus === true  ? 'pass' :
+                                    ($savedStatus === false ? 'fail' : ''));
+                            @endphp
+
+                            <div class="rounded-xl border {{ $currentStatus === 'pass' ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-800/40 dark:bg-emerald-900/10' : ($currentStatus === 'fail' ? 'border-rose-200 bg-rose-50/50 dark:border-rose-800/40 dark:bg-rose-900/10' : 'border-gray-100 bg-white dark:border-gray-800 dark:bg-white/[0.02]') }} p-4 transition-colors">
+
+                            {{-- Row header: item name + pass/fail checkboxes --}}
+                                <div class="flex items-start justify-between gap-4 flex-wrap">
+                                    <p class="text-sm font-semibold text-gray-800 dark:text-white/90 flex-1">
+                                        <span class="text-gray-400 mr-1">{{ $loop->iteration }}.</span> {{ $head->name }}
+                                    </p>
+                                    <div class="flex items-center gap-5 shrink-0">
+                                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                                            <input type="checkbox"
+                                                   id="head_{{ $head->id }}_pass"
+                                                   name="head_{{ $head->id }}_status"
+                                                   value="pass"
+                                                   {{ $currentStatus === 'pass' ? 'checked' : '' }}
+                                                   onchange="toggleInspectionStatus(this, 'head_{{ $head->id }}_fail')"
+                                                   class="h-4 w-4 rounded text-emerald-500 border-gray-300 focus:ring-emerald-400">
+                                            <span class="text-sm font-semibold text-emerald-700 dark:text-emerald-400">✅ Pass</span>
+                                        </label>
+                                        <label class="flex items-center gap-2 cursor-pointer select-none">
+                                            <input type="checkbox"
+                                                   id="head_{{ $head->id }}_fail"
+                                                   name="head_{{ $head->id }}_status"
+                                                   value="fail"
+                                                   {{ $currentStatus === 'fail' ? 'checked' : '' }}
+                                                   onchange="toggleInspectionStatus(this, 'head_{{ $head->id }}_pass')"
+                                                   class="h-4 w-4 rounded text-rose-500 border-gray-300 focus:ring-rose-400">
+                                            <span class="text-sm font-semibold text-rose-700 dark:text-rose-400">❌ Fail</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {{-- Comment --}}
+                                <textarea name="head_{{ $head->id }}_comment"
+                                          rows="1"
+                                          placeholder="Comment (optional)..."
+                                          class="mt-2 w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30">{{ old("head_{$head->id}_comment", $existing?->remarks) }}</textarea>
+
+                                {{-- Image upload + existing thumb --}}
+                                <div class="mt-2 flex items-center gap-3">
+                                    @if($existing?->image_path)
+                                        <a href="{{ Storage::url($existing->image_path) }}" target="_blank" class="shrink-0">
+                                            <img src="{{ Storage::url($existing->image_path) }}"
+                                                 alt="Inspection photo"
+                                                 class="h-14 w-14 rounded-lg object-cover border border-gray-200 dark:border-gray-700 shadow-xs hover:opacity-80 transition-opacity">
+                                        </a>
+                                    @endif
+                                    <label class="flex-1 cursor-pointer">
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ $existing?->image_path ? 'Replace photo' : 'Upload photo' }} (optional, max 200 KB)</span>
+                                        <input type="file"
+                                               name="head_{{ $head->id }}_image"
+                                               accept="image/*"
+                                               class="mt-1 block w-full text-xs text-gray-500 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-brand-900/30 dark:file:text-brand-300">
+                                    </label>
+                                </div>
+
+                            </div>
                         @endforeach
                     </div>
                 </div>
-            @endforeach
+            @endif
 
             {{-- Damage Notes --}}
             <div>
@@ -263,6 +287,14 @@
 @once
 @push('scripts')
 <script>
+// Mutual-exclusion: checking Pass unchecks Fail and vice versa
+function toggleInspectionStatus(changedBox, otherId) {
+    if (changedBox.checked) {
+        const other = document.getElementById(otherId);
+        if (other) other.checked = false;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     const dateEl = document.getElementById('checklist_date');
     if (dateEl && typeof flatpickr !== 'undefined') {

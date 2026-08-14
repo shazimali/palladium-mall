@@ -135,6 +135,7 @@
                             <th class="py-3.5 px-4 text-right">Units KV</th>
                             <th class="py-3.5 px-4 text-right">Bill Amount (Rs.)</th>
                             <th class="py-3.5 px-4 text-center">Status</th>
+                            <th class="py-3.5 px-4 text-center">Meter Status</th>
                             <th class="py-3.5 px-4 text-center">Action</th>
                         </tr>
                     </thead>
@@ -147,6 +148,7 @@
                                 amount: '{{ $row['amount'] }}',
                                 status: '{{ $row['status'] }}',
                                 meter_image_url: '{{ $row['meter_image_url'] }}',
+                                is_active: {{ $row['is_active'] ? 'true' : 'false' }},
                                 isSaving: false,
                                 isUploading: false,
                                 previewModal: false,
@@ -349,20 +351,40 @@
                                     @endif
                                 </td>
 
+                                {{-- Meter Status Column --}}
+                                <td class="py-3 px-4 text-center">
+                                    @if($row['is_active'])
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold uppercase rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block"></span> Active
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold uppercase rounded-lg bg-gray-100 border border-gray-300 text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-gray-400 inline-block"></span> Inactive
+                                        </span>
+                                    @endif
+                                </td>
+
                                 {{-- Save Action Button --}}
                                 <td class="py-3 px-4 text-center">
                                     @if($canEdit)
-                                        <button type="button" x-on:click="saveRow()" :disabled="isSaving"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50">
-                                            <span x-show="!isSaving">💾 Save</span>
-                                            <span x-show="isSaving" class="flex items-center gap-1">
-                                                <svg class="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
-                                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                                                </svg>
-                                                Saving...
+                                        <template x-if="is_active">
+                                            <button type="button" x-on:click="saveRow()" :disabled="isSaving"
+                                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-extrabold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50">
+                                                <span x-show="!isSaving">💾 Save</span>
+                                                <span x-show="isSaving" class="flex items-center gap-1">
+                                                    <svg class="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
+                                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                                    </svg>
+                                                    Saving...
+                                                </span>
+                                            </button>
+                                        </template>
+                                        <template x-if="!is_active">
+                                            <span class="inline-flex items-center px-2.5 py-1.5 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed" title="Meter is inactive — cannot record readings">
+                                                🚫 Inactive
                                             </span>
-                                        </button>
+                                        </template>
                                     @else
                                         <span class="text-xs text-gray-400 font-semibold uppercase">Read Only</span>
                                     @endif
@@ -371,7 +393,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                                <td colspan="10" class="py-12 text-center text-gray-400 dark:text-gray-500">
                                     <p class="text-3xl mb-2">⚡</p>
                                     <p class="font-bold text-sm">No utility meters found matching your filter criteria.</p>
                                 </td>

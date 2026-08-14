@@ -52,64 +52,66 @@
         <div class="info-item"><span class="info-label">Flat Condition:</span><span class="info-value"><strong>{{ $checklist?->flat_condition ? ucfirst($checklist->flat_condition) : 'N/A' }}</strong></span></div>
     </div>
 
-    @php
-    $sections = [
-        '1. General Cleanliness' => [
-            'rooms_cleaned'     => 'All rooms cleaned (floors, walls, ceilings)',
-            'kitchen_cleaned'   => 'Kitchen cleaned (sink, counters, cabinets)',
-            'bathrooms_cleaned' => 'Bathrooms cleaned (toilet, shower, tiles)',
-            'no_garbage'        => 'No garbage left inside unit',
-        ],
-        '2. Walls, Paint & Fixtures' => [
-            'no_wall_damage'    => 'No damage to walls (holes, cracks, stains)',
-            'paint_condition_ok'=> 'Paint condition acceptable',
-            'light_fixtures_ok' => 'Light fixtures, switches, sockets working',
-            'electric_wiring_ok'=> 'Electric cables and wiring in good condition',
-            'no_breaker_issues' => 'No issues with electricity breakers',
-        ],
-        '3. Furniture, Appliances & Kitchen' => [
-            'furniture_ok'           => 'Furniture present and in good condition (if provided)',
-            'ac_working'             => 'Air-conditioners working',
-            'kitchen_appliances_ok'  => 'Kitchen appliances working (stove, hob, oven, fridge)',
-            'stove_clean'            => 'Stove / Hob clean and in working condition',
-            'keys_returned'          => 'Keys for all doors, cupboards, mailbox handed over',
-        ],
-        '4. Doors, Windows & Locks' => [
-            'doors_locks_ok'   => 'All doors and locks working properly',
-            'windows_ok'       => 'Windows not broken, open/close properly',
-            'balcony_doors_ok' => 'Balcony doors / windows secured properly',
-        ],
-        '5. Utilities & Dues' => [
-            'water_supply_ok'          => 'Water supply working',
-            'electricity_supply_ok'    => 'Electricity supply working',
-            'gas_supply_ok'            => 'Gas supply checked',
-            'no_pending_utility_bills' => 'No pending electricity, water or gas bills',
-            'no_pending_maintenance'   => 'No pending maintenance dues',
-            'no_pending_rent'          => 'No pending rent payments',
-        ],
-        '6. Stock & Inventory' => [
-            'fixtures_available' => 'All original flat fittings and fixtures available',
-            'no_missing_items'   => 'No missing inventory items',
-        ],
-        '7. Final Actions' => [
-            'access_cards_returned'  => 'All access cards, parking stickers handed over',
-            'no_pending_requests'    => 'No pending service requests or complaints',
-            'move_out_form_signed'   => 'Tenant signed move-in form',
-        ],
-    ];
-    @endphp
-
-    @foreach($sections as $title => $items)
-        <div class="section-title">{{ $title }}</div>
-        <div class="checklist-grid">
-            @foreach($items as $field => $itemLabel)
-                <div class="checklist-item">
-                    <span class="check-box">{!! ($checklist && $checklist->{$field}) ? '&#9745;' : '&#9744;' !!}</span>
-                    <span>{{ $itemLabel }}</span>
-                </div>
-            @endforeach
-        </div>
-    @endforeach
+    @if($inspectionHeads->isEmpty())
+        <div class="section-title">🏠 Flat Inspection Checklist</div>
+        <p style="color:#b45309; font-size:12px;">⚠️ No inspection heads configured. Please add Flat Inspection heads via the admin panel.</p>
+    @else
+        <div class="section-title">🏠 Flat Inspection Checklist</div>
+        <table style="width:100%; border-collapse: collapse; font-size: 12px; margin-bottom: 15px;">
+            <thead>
+                <tr style="background:#f3f4f6; border-bottom: 2px solid #d1d5db; font-weight: bold; text-transform: uppercase; font-size: 10px;">
+                    <th style="padding: 6px 8px; border: 1px solid #e5e7eb; text-align: left; width: 32px;">#</th>
+                    <th style="padding: 6px 8px; border: 1px solid #e5e7eb; text-align: left;">Inspection Item</th>
+                    <th style="padding: 6px 8px; border: 1px solid #e5e7eb; text-align: center; width: 70px;">Result</th>
+                    <th style="padding: 6px 8px; border: 1px solid #e5e7eb; text-align: left;">Comment</th>
+                    <th style="padding: 6px 8px; border: 1px solid #e5e7eb; text-align: center; width: 60px;">Photo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($inspectionHeads as $head)
+                    @php
+                        $item   = $flatInspectionReport?->items->firstWhere('inspection_head_id', $head->id);
+                        $status = $item?->status;
+                        $rowBg  = $status === true ? '#f0fdf4' : ($status === false ? '#fff1f2' : '#ffffff');
+                    @endphp
+                    <tr style="background: {{ $rowBg }}; border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 5px 8px; border: 1px solid #e5e7eb; color: #9ca3af; font-size: 10px;">{{ $loop->iteration }}</td>
+                        <td style="padding: 5px 8px; border: 1px solid #e5e7eb; font-weight: 600;">{{ $head->name }}</td>
+                        <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: center; font-weight: bold;">
+                            @if($status === true)
+                                <span style="color: #16a34a;">✅ PASS</span>
+                            @elseif($status === false)
+                                <span style="color: #dc2626;">❌ FAIL</span>
+                            @else
+                                <span style="color: #9ca3af;">—</span>
+                            @endif
+                        </td>
+                        <td style="padding: 5px 8px; border: 1px solid #e5e7eb; color: #4b5563; font-size: 11px;">{{ $item?->remarks ?? '' }}</td>
+                        <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: center;">
+                            @if($item?->image_path)
+                                <img src="{{ Storage::url($item->image_path) }}"
+                                     alt="Photo"
+                                     style="height: 40px; width: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #d1d5db;">
+                            @endif
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+            @if($flatInspectionReport)
+                <tfoot>
+                    <tr style="background: #f9fafb; font-weight: bold; font-size: 10px; border-top: 2px solid #d1d5db;">
+                        <td colspan="2" style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: right; text-transform: uppercase;">Summary:</td>
+                        <td style="padding: 5px 8px; border: 1px solid #e5e7eb; text-align: center;">
+                            <span style="color: #16a34a;">✅ {{ $flatInspectionReport->passCount() }}</span>
+                            &nbsp;
+                            <span style="color: #dc2626;">❌ {{ $flatInspectionReport->failCount() }}</span>
+                        </td>
+                        <td colspan="2" style="padding: 5px 8px; border: 1px solid #e5e7eb;"></td>
+                    </tr>
+                </tfoot>
+            @endif
+        </table>
+    @endif
 
     <div class="section-title">Inspection Remarks & Notes</div>
     <div class="notes-area">

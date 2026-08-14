@@ -38,6 +38,7 @@ class DatabaseSeeder extends Seeder
             SystemPermissionSeeder::class,
             TaskPermissionSeeder::class,
             NotePadPermissionSeeder::class,
+            InspectionPermissionSeeder::class,
             PermissionGroupSeeder::class,
             RoleSeeder::class,
             AdminUserSeeder::class,

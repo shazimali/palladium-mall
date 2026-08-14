@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Agreement;
+use App\Models\FlatInspectionReport;
+use App\Models\FlatInspectionReportItem;
+use App\Models\InspectionHead;
+use App\Models\InspectionPerson;
 use App\Models\MoveInChecklist;
 use App\Models\Tenant;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class MoveOutController extends Controller
@@ -21,28 +26,50 @@ class MoveOutController extends Controller
             ? $agreement->payments()->with('meter')->orderBy('month')->get()
             : collect();
 
+        $flatInspectionReport = $agreement
+            ? FlatInspectionReport::with('items')
+                ->where('agreement_id', $agreement->id)
+                ->where('type', 'move_out')
+                ->first()
+            : null;
+
         return view('tenants.move_out', [
-            'title'     => 'Move-Out Inspection — ' . $tenant->name,
-            'tenant'    => $tenant,
-            'agreement' => $agreement,
-            'payments'  => $payments,
-            'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
+            'title'                => 'Move-Out Inspection — ' . $tenant->name,
+            'tenant'               => $tenant,
+            'agreement'            => $agreement,
+            'payments'             => $payments,
+            'inspectionPersons'    => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
+            'inspectionHeads'      => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
+            'flatInspectionReport' => $flatInspectionReport,
         ]);
     }
 
     public function store(Request $request, Tenant $tenant): RedirectResponse
     {
-        $data = $request->validate([
-            'inspection_person_id' => 'required|exists:inspection_persons,id',
-            'checklist_date'    => 'required|date',
-            'damage_notes'      => 'nullable|string',
-            'inventory_notes'   => 'nullable|string',
-            'flat_condition'    => 'nullable|in:good,needs_repair',
-            'deposit_deduction' => 'nullable|numeric|min:0',
-            'final_remarks'     => 'nullable|string',
-        ]);
+        $rules = [
+            'inspection_person_id'  => 'required|exists:inspection_persons,id',
+            'checklist_date'        => 'required|date',
+            'damage_notes'          => 'nullable|string',
+            'inventory_notes'       => 'nullable|string',
+            'flat_condition'        => 'nullable|in:good,needs_repair',
+            'deposit_deduction'     => 'nullable|numeric|min:0',
+            'final_remarks'         => 'nullable|string',
+            'final_meter_reading'   => 'required|numeric|min:0',
+            'final_meter_image'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'breaker_off_statement' => 'nullable|string|max:1000',
+        ];
 
-        $inspector = \App\Models\InspectionPerson::findOrFail($request->inspection_person_id);
+        // Dynamic validation for each InspectionHead row
+        $heads = InspectionHead::active()->flatInspection()->get();
+        foreach ($heads as $head) {
+            $rules["head_{$head->id}_status"]  = 'nullable|in:pass,fail';
+            $rules["head_{$head->id}_comment"] = 'nullable|string|max:500';
+            $rules["head_{$head->id}_image"]   = 'nullable|image|mimes:jpg,jpeg,png,webp|max:200';
+        }
+
+        $data = $request->validate($rules);
+
+        $inspector = InspectionPerson::findOrFail($request->inspection_person_id);
         $data['inspection_member'] = $inspector->name;
 
         $booleans = [
@@ -61,7 +88,62 @@ class MoveOutController extends Controller
         $data['type'] = 'move_out';
         $data['agreement_id'] = $tenant->activeAgreement?->id;
 
-        MoveInChecklist::create(array_merge($data, ['tenant_id' => $tenant->id]));
+        $checklistData = $data;
+        unset($checklistData['final_meter_reading'], $checklistData['final_meter_image'], $checklistData['breaker_off_statement']);
+        foreach ($heads as $head) {
+            unset($checklistData["head_{$head->id}_status"],
+                  $checklistData["head_{$head->id}_comment"],
+                  $checklistData["head_{$head->id}_image"]);
+        }
+
+        MoveInChecklist::create(array_merge($checklistData, ['tenant_id' => $tenant->id]));
+
+        // Upsert FlatInspectionReport (type = move_out) & items
+        if ($tenant->activeAgreement) {
+            $report = FlatInspectionReport::updateOrCreate(
+                ['agreement_id' => $tenant->activeAgreement->id, 'type' => 'move_out'],
+                [
+                    'tenant_id'            => $tenant->id,
+                    'inspected_by'         => auth()->id(),
+                    'inspection_person_id' => $inspector->id,
+                    'inspection_member'    => $inspector->name,
+                    'inspected_at'         => $data['checklist_date'],
+                    'flat_condition'       => $data['flat_condition'] ?? null,
+                    'remarks'              => $data['final_remarks'] ?? null,
+                ]
+            );
+
+            foreach ($heads as $head) {
+                $rawStatus = $request->input("head_{$head->id}_status");
+                $status    = $rawStatus === 'pass' ? true : ($rawStatus === 'fail' ? false : null);
+                $comment   = $request->input("head_{$head->id}_comment");
+
+                $existingItem = FlatInspectionReportItem::where('flat_inspection_report_id', $report->id)
+                    ->where('inspection_head_id', $head->id)
+                    ->first();
+
+                $imagePath = $existingItem?->image_path;
+                if ($request->hasFile("head_{$head->id}_image")) {
+                    if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                        Storage::disk('public')->delete($imagePath);
+                    }
+                    $imagePath = $request->file("head_{$head->id}_image")
+                        ->store('flat_inspections', 'public');
+                }
+
+                FlatInspectionReportItem::updateOrCreate(
+                    [
+                        'flat_inspection_report_id' => $report->id,
+                        'inspection_head_id'        => $head->id,
+                    ],
+                    [
+                        'status'     => $status,
+                        'remarks'    => $comment,
+                        'image_path' => $imagePath,
+                    ]
+                );
+            }
+        }
 
         if ($tenant->activeAgreement) {
             $tenant->activeAgreement->update([
@@ -118,10 +200,19 @@ class MoveOutController extends Controller
         $agreement = $tenant->agreements()->where('id', $moveOut->agreement_id)->first()
             ?? $tenant->agreements()->latest()->first();
 
+        $flatInspectionReport = $agreement
+            ? FlatInspectionReport::with(['items', 'inspectionPerson'])
+                ->where('agreement_id', $agreement->id)
+                ->where('type', 'move_out')
+                ->first()
+            : null;
+
         return view('tenants.print.move_out', [
-            'tenant' => $tenant,
-            'moveOut' => $moveOut,
-            'agreement' => $agreement,
+            'tenant'               => $tenant,
+            'moveOut'              => $moveOut,
+            'agreement'            => $agreement,
+            'inspectionHeads'      => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
+            'flatInspectionReport' => $flatInspectionReport,
         ]);
     }
 

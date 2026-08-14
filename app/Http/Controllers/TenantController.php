@@ -4,7 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Agreement;
 use App\Models\EmergencyContact;
+use App\Models\FlatInspectionReport;
+use App\Models\FlatInspectionReportItem;
 use App\Models\Guarantor;
+use App\Models\InspectionHead;
+use App\Models\InspectionPerson;
 use App\Models\MoveInChecklist;
 use App\Models\Tenant;
 use App\Models\TenantDocumentChecklist;
@@ -62,8 +66,9 @@ class TenantController extends Controller
             ->withQueryString();
 
         $search = $request->input('search');
-        $highlight = function($text) use ($search) {
-            if (empty($text)) return '';
+        $highlight = function ($text) use ($search) {
+            if (empty($text))
+                return '';
             if (empty($search)) {
                 return e($text);
             }
@@ -555,10 +560,17 @@ class TenantController extends Controller
                 'checklist' => $draftAgreement ? $draftAgreement->documentChecklist : null,
             ])),
             5 => view('tenants.wizard.step5', array_merge($data, [
-                'checklist' => $draftAgreement ? $draftAgreement->moveInChecklist : null,
+                'checklist' => $draftAgreement?->moveInChecklist,
                 'agreement' => $draftAgreement,
-                'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
-                'defaultMeterReading' => $draftAgreement?->initial_meter_reading ?? ($tenant->unit?->getLatestMeterReading() ?? ($draftAgreement?->unit_id ? \App\Models\Unit::find($draftAgreement->unit_id)?->getLatestMeterReading() : null)),
+                'inspectionPersons' => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
+                'defaultMeterReading' => $draftAgreement?->initial_meter_reading ?? ($tenant->unit?->getLatestMeterReading() ?? ($draftAgreement?->unit_id ? Unit::find($draftAgreement->unit_id)?->getLatestMeterReading() : null)),
+                'inspectionHeads' => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
+                'flatInspectionReport' => $draftAgreement
+                    ? FlatInspectionReport::with('items')
+                        ->where('agreement_id', $draftAgreement->id)
+                        ->where('type', 'move_in')
+                        ->first()
+                    : null,
             ])),
             6 => view('tenants.wizard.step6', array_merge($data, [
                 'partners' => $draftAgreement ? $draftAgreement->partners()->get() : collect(),
@@ -569,6 +581,13 @@ class TenantController extends Controller
                 'docChecklist' => $draftAgreement ? $draftAgreement->documentChecklist : null,
                 'moveInChecklist' => $draftAgreement ? $draftAgreement->moveInChecklist : null,
                 'breakerInspection' => $draftAgreement?->unit?->breakerInspections()->where('breaker_status', 'on')->latest('inspected_at')->first() ?? $draftAgreement?->unit?->latestBreakerInspection,
+                'flatInspectionReport' => $draftAgreement
+                    ? FlatInspectionReport::with('items')
+                        ->where('agreement_id', $draftAgreement->id)
+                        ->where('type', 'move_in')
+                        ->first()
+                    : null,
+                'totalInspectionHeads' => InspectionHead::active()->flatInspection()->count(),
             ])),
             default => redirect()->route('tenants.showStep', [$tenant, 1]),
         };
@@ -856,16 +875,16 @@ class TenantController extends Controller
                 $inspectorName = $inspector?->name ?? auth()->user()->name;
 
                 \App\Models\UnitBreakerInspection::create([
-                    'unit_id'                 => $unit->id,
-                    'agreement_id'            => $agreementId,
-                    'inspection_person_id'    => $inspector?->id,
-                    'breaker_status'          => 'on',
-                    'meter_reading'           => (float) $request->input('meter_reading'),
-                    'meter_image'             => $meterImagePath,
-                    'signed_inspection_doc'   => $signedDocPath,
+                    'unit_id' => $unit->id,
+                    'agreement_id' => $agreementId,
+                    'inspection_person_id' => $inspector?->id,
+                    'breaker_status' => 'on',
+                    'meter_reading' => (float) $request->input('meter_reading'),
+                    'meter_image' => $meterImagePath,
+                    'signed_inspection_doc' => $signedDocPath,
                     'inspection_officer_name' => $inspectorName,
-                    'officer_statement'       => $request->input('officer_statement', 'Initial move-in inspection. Breaker turned ON for tenant agreement.'),
-                    'inspected_at'            => now(),
+                    'officer_statement' => $request->input('officer_statement', 'Initial move-in inspection. Breaker turned ON for tenant agreement.'),
+                    'inspected_at' => now(),
                 ]);
 
                 $unit->update(['breaker_status' => 'on']);
@@ -1018,23 +1037,35 @@ class TenantController extends Controller
 
     private function saveStep5(Request $request, Tenant $tenant): RedirectResponse
     {
-        $data = $request->validate([
-            'inspection_person_id'  => 'required|exists:inspection_persons,id',
-            'checklist_date'        => 'required|date',
-            'meter_reading'         => 'nullable|numeric|min:0',
-            'meter_image'           => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+        // --- Base validation ---
+        $rules = [
+            'inspection_person_id' => 'required|exists:inspection_persons,id',
+            'checklist_date' => 'required|date',
+            'meter_reading' => 'nullable|numeric|min:0',
+            'meter_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
             'signed_inspection_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'officer_statement'     => 'nullable|string|max:1000',
-            'damage_notes'          => 'nullable|string',
-            'inventory_notes'       => 'nullable|string',
-            'flat_condition'        => 'nullable|in:good,needs_repair',
-            'deposit_deduction'     => 'nullable|numeric|min:0',
-            'final_remarks'         => 'nullable|string',
-        ]);
+            'officer_statement' => 'nullable|string|max:1000',
+            'damage_notes' => 'nullable|string',
+            'inventory_notes' => 'nullable|string',
+            'flat_condition' => 'nullable|in:good,needs_repair',
+            'deposit_deduction' => 'nullable|numeric|min:0',
+            'final_remarks' => 'nullable|string',
+        ];
 
-        $inspector = \App\Models\InspectionPerson::findOrFail($request->inspection_person_id);
+        // Dynamic validation for each InspectionHead row
+        $heads = InspectionHead::active()->flatInspection()->get();
+        foreach ($heads as $head) {
+            $rules["head_{$head->id}_status"] = 'nullable|in:pass,fail';
+            $rules["head_{$head->id}_comment"] = 'nullable|string|max:500';
+            $rules["head_{$head->id}_image"] = 'nullable|image|mimes:jpg,jpeg,png,webp|max:200';
+        }
+
+        $data = $request->validate($rules);
+
+        $inspector = InspectionPerson::findOrFail($request->inspection_person_id);
         $data['inspection_member'] = $inspector->name;
 
+        // Keep saving old boolean columns (backward compat — columns still exist)
         $booleans = [
             'rooms_cleaned',
             'kitchen_cleaned',
@@ -1077,17 +1108,15 @@ class TenantController extends Controller
                 ->with('error', 'Agreement not found. Please complete Step 3 first.');
         }
         $data['agreement_id'] = $agreement->id;
-        $data['tenant_id'] = $tenant->id; // fallback
+        $data['tenant_id'] = $tenant->id;
 
-        // Save Breaker & Initial Meter Inspection for Move-In
+        // --- Breaker & Initial Meter Inspection ---
         if ($request->filled('meter_reading')) {
             $meterReading = (float) $request->input('meter_reading');
-
             $meterImagePath = null;
             if ($request->hasFile('meter_image')) {
                 $meterImagePath = $request->file('meter_image')->store('breaker_inspections', 'public');
             }
-
             $signedDocPath = null;
             if ($request->hasFile('signed_inspection_doc')) {
                 $signedDocPath = $request->file('signed_inspection_doc')->store('breaker_inspections/signed_docs', 'public');
@@ -1095,43 +1124,102 @@ class TenantController extends Controller
 
             $agreement->update(['initial_meter_reading' => $meterReading]);
 
-            $unit = $tenant->unit ?: ($agreement->unit_id ? \App\Models\Unit::find($agreement->unit_id) : null);
-
+            $unit = $tenant->unit ?: ($agreement->unit_id ? Unit::find($agreement->unit_id) : null);
             if ($unit) {
                 \App\Models\UnitBreakerInspection::create([
-                    'unit_id'                 => $unit->id,
-                    'agreement_id'            => $agreement->id,
-                    'inspection_person_id'    => $inspector->id,
-                    'breaker_status'          => 'on',
-                    'meter_reading'           => $meterReading,
-                    'meter_image'             => $meterImagePath,
-                    'signed_inspection_doc'   => $signedDocPath,
+                    'unit_id' => $unit->id,
+                    'agreement_id' => $agreement->id,
+                    'inspection_person_id' => $inspector->id,
+                    'breaker_status' => 'on',
+                    'meter_reading' => $meterReading,
+                    'meter_image' => $meterImagePath,
+                    'signed_inspection_doc' => $signedDocPath,
                     'inspection_officer_name' => $inspector->name,
-                    'officer_statement'       => $request->input('officer_statement', "Move-in inspection completed by {$inspector->name}. Initial meter reading recorded and breaker turned ON."),
-                    'inspected_at'            => now(),
+                    'officer_statement' => $request->input('officer_statement', "Move-in inspection completed by {$inspector->name}. Initial meter reading recorded and breaker turned ON."),
+                    'inspected_at' => now(),
                 ]);
-
                 $unit->update(['breaker_status' => 'on']);
             }
         }
 
-        // Remove non-checklist fields from $data before saving MoveInChecklist
-        unset($data['meter_reading'], $data['meter_image'], $data['signed_inspection_doc'], $data['officer_statement']);
+        // --- Save legacy MoveInChecklist (keep existing columns) ---
+        $checklistData = $data;
+        unset(
+            $checklistData['meter_reading'],
+            $checklistData['meter_image'],
+            $checklistData['signed_inspection_doc'],
+            $checklistData['officer_statement']
+        );
+        // Strip dynamic head fields from checklist data
+        foreach ($heads as $head) {
+            unset(
+                $checklistData["head_{$head->id}_status"],
+                $checklistData["head_{$head->id}_comment"],
+                $checklistData["head_{$head->id}_image"]
+            );
+        }
 
         $agreement->checklists()
             ->where('type', 'move_in')
             ->updateOrCreate(
                 ['agreement_id' => $agreement->id, 'type' => 'move_in'],
-                $data
+                $checklistData
             );
+
+        // --- Upsert FlatInspectionReport (move_in) + per-head items ---
+        $report = FlatInspectionReport::updateOrCreate(
+            ['agreement_id' => $agreement->id, 'type' => 'move_in'],
+            [
+                'tenant_id' => $tenant->id,
+                'inspected_by' => auth()->id(),
+                'inspection_person_id' => $inspector->id,
+                'inspection_member' => $inspector->name,
+                'inspected_at' => $data['checklist_date'],
+                'flat_condition' => $data['flat_condition'] ?? null,
+                'remarks' => $data['final_remarks'] ?? null,
+            ]
+        );
+
+        foreach ($heads as $head) {
+            $rawStatus = $request->input("head_{$head->id}_status");
+            $status = $rawStatus === 'pass' ? true : ($rawStatus === 'fail' ? false : null);
+            $comment = $request->input("head_{$head->id}_comment");
+
+            // Only replace image if a new one was uploaded; keep existing otherwise
+            $existingItem = FlatInspectionReportItem::where('flat_inspection_report_id', $report->id)
+                ->where('inspection_head_id', $head->id)
+                ->first();
+
+            $imagePath = $existingItem?->image_path;
+            if ($request->hasFile("head_{$head->id}_image")) {
+                // Delete old image
+                if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                    Storage::disk('public')->delete($imagePath);
+                }
+                $imagePath = $request->file("head_{$head->id}_image")
+                    ->store('flat_inspections', 'public');
+            }
+
+            FlatInspectionReportItem::updateOrCreate(
+                [
+                    'flat_inspection_report_id' => $report->id,
+                    'inspection_head_id' => $head->id,
+                ],
+                [
+                    'status' => $status,
+                    'remarks' => $comment,
+                    'image_path' => $imagePath,
+                ]
+            );
+        }
 
         if ($request->input('save_only')) {
             return redirect()->route('tenants.showStep', [$tenant, 5])
-                ->with('success', 'Step 5 saved.');
+                ->with('success', 'Step 5 saved successfully.');
         }
 
         return redirect()->route('tenants.showStep', [$tenant, 6])
-            ->with('success', 'Step 5 saved.');
+            ->with('success', 'Step 5 saved successfully.');
     }
 
     // -----------------------------------------------------------------------
@@ -1235,6 +1323,13 @@ class TenantController extends Controller
                 'tenant' => $tenant,
                 'checklist' => $moveInChecklist,
                 'agreement' => $agreement,
+                'inspectionHeads' => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
+                'flatInspectionReport' => $agreement
+                    ? FlatInspectionReport::with(['items', 'inspectionPerson'])
+                        ->where('agreement_id', $agreement->id)
+                        ->where('type', 'move_in')
+                        ->first()
+                    : null,
             ]);
         } elseif ($step === 6) {
             return view('tenants.print.all', [
@@ -1272,7 +1367,41 @@ class TenantController extends Controller
         $emergencyContacts = $selectedAgreement ? $selectedAgreement->emergencyContacts : collect();
         $documentChecklist = $selectedAgreement ? $selectedAgreement->documentChecklist : null;
         $moveInChecklist = $selectedAgreement ? $selectedAgreement->moveInChecklist : null;
+        if (!$moveInChecklist) {
+            $moveInChecklist = $tenant->moveInChecklists()->where('type', 'move_in')->latest()->first();
+        }
         $moveOutChecklist = $selectedAgreement ? $selectedAgreement->moveOutChecklist : null;
+        if (!$moveOutChecklist) {
+            $moveOutChecklist = $tenant->moveInChecklists()->where('type', 'move_out')->latest()->first();
+        }
+
+        $moveInFlatReport = $selectedAgreement
+            ? FlatInspectionReport::with('items')
+                ->where('agreement_id', $selectedAgreement->id)
+                ->where('type', 'move_in')
+                ->first()
+            : FlatInspectionReport::with('items')
+                ->where('tenant_id', $tenant->id)
+                ->where('type', 'move_in')
+                ->latest()
+                ->first();
+
+        $moveOutFlatReport = $selectedAgreement
+            ? FlatInspectionReport::with('items')
+                ->where('agreement_id', $selectedAgreement->id)
+                ->where('type', 'move_out')
+                ->first()
+            : null;
+
+        if (!$moveOutFlatReport) {
+            $moveOutFlatReport = FlatInspectionReport::with('items')
+                ->where('tenant_id', $tenant->id)
+                ->where('type', 'move_out')
+                ->latest()
+                ->first();
+        }
+
+        $totalInspectionHeads = InspectionHead::active()->flatInspection()->count();
 
         return view('tenants.show', [
             'title' => 'Tenant — ' . $tenant->name,
@@ -1284,6 +1413,9 @@ class TenantController extends Controller
             'documentChecklist' => $documentChecklist,
             'moveInChecklist' => $moveInChecklist,
             'moveOutChecklist' => $moveOutChecklist,
+            'moveInFlatReport' => $moveInFlatReport,
+            'moveOutFlatReport' => $moveOutFlatReport,
+            'totalInspectionHeads' => $totalInspectionHeads,
         ]);
     }
 
@@ -1670,16 +1802,16 @@ class TenantController extends Controller
                 : '—';
 
             return [
-                'unit_number'      => $t->unit->unit_number ?? '—',
-                'tenant_name'      => $t->name,
-                'phone'            => $t->phone ?? '—',
-                'emergency_contact'=> $emContactStr,
-                'landlord_name'    => $t->unit->landlord->name ?? '—',
-                'start_date'       => $t->activeAgreement?->start_date ? $t->activeAgreement->start_date->format('d M Y') : '—',
-                'photo_url'        => $t->passport_photo_url,
-                'monthly_rent'     => (float)($t->activeAgreement->monthly_rent ?? 0),
-                'security_deposit' => (float)($t->activeAgreement->security_deposit ?? 0),
-                'is_other_owned'   => false,
+                'unit_number' => $t->unit->unit_number ?? '—',
+                'tenant_name' => $t->name,
+                'phone' => $t->phone ?? '—',
+                'emergency_contact' => $emContactStr,
+                'landlord_name' => $t->unit->landlord->name ?? '—',
+                'start_date' => $t->activeAgreement?->start_date ? $t->activeAgreement->start_date->format('d M Y') : '—',
+                'photo_url' => $t->passport_photo_url,
+                'monthly_rent' => (float) ($t->activeAgreement->monthly_rent ?? 0),
+                'security_deposit' => (float) ($t->activeAgreement->security_deposit ?? 0),
+                'is_other_owned' => false,
             ];
         });
 
@@ -1699,16 +1831,16 @@ class TenantController extends Controller
                 : ($ot->created_at ? $ot->created_at->format('d M Y') : '—');
 
             return [
-                'unit_number'      => $ot->unit->unit_number ?? '—',
-                'tenant_name'      => $ot->name,
-                'phone'            => $ot->phone ?? '—',
-                'emergency_contact'=> $emContactStr,
-                'landlord_name'    => $ot->unit->landlord->name ?? '—',
-                'start_date'       => $startDate,
-                'photo_url'        => $ot->photo_url,
-                'monthly_rent'     => (float)($ot->monthly_rent ?? $ot->unit->rent_amount ?? 0),
+                'unit_number' => $ot->unit->unit_number ?? '—',
+                'tenant_name' => $ot->name,
+                'phone' => $ot->phone ?? '—',
+                'emergency_contact' => $emContactStr,
+                'landlord_name' => $ot->unit->landlord->name ?? '—',
+                'start_date' => $startDate,
+                'photo_url' => $ot->photo_url,
+                'monthly_rent' => (float) ($ot->monthly_rent ?? $ot->unit->rent_amount ?? 0),
                 'security_deposit' => 0.0,
-                'is_other_owned'   => true,
+                'is_other_owned' => true,
             ];
         });
 

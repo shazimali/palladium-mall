@@ -139,6 +139,7 @@ class UtilityReadingController extends Controller
                 'status'            => $status,
                 'meter_image_url'   => $meterImage,
                 'notes'             => $voucher->notes ?? '',
+                'is_active'         => (bool) $meter->is_active,
             ];
         }
 
@@ -268,8 +269,17 @@ class UtilityReadingController extends Controller
                 'current_reading'   => $currentReading,
                 'amount'            => $amount,
                 'status'            => $status,
+                'is_active'         => (bool) $meter->is_active,
             ];
         }
+
+        $activeMeters   = collect($readings)->where('is_active', true)->count();
+        $inactiveMeters = collect($readings)->where('is_active', false)->count();
+        $breakerOn      = collect($readings)->filter(fn($r) => strtoupper($r['breaker_status'] ?? 'OFF') === 'ON')->count();
+        $breakerOff     = collect($readings)->filter(fn($r) => strtoupper($r['breaker_status'] ?? 'OFF') === 'OFF')->count();
+        $paidCount      = collect($readings)->where('status', 'paid')->count();
+        $unpaidCount    = collect($readings)->where('status', 'unpaid')->count();
+        $pendingCount   = collect($readings)->where('status', 'pending')->count();
 
         return view('utility_readings.print', [
             'readings'           => $readings,
@@ -279,6 +289,13 @@ class UtilityReadingController extends Controller
             'totalBilled'        => $totalBilled,
             'totalPaid'          => $totalPaid,
             'totalUnpaid'        => $totalUnpaid,
+            'activeMeters'       => $activeMeters,
+            'inactiveMeters'     => $inactiveMeters,
+            'breakerOn'          => $breakerOn,
+            'breakerOff'         => $breakerOff,
+            'paidCount'          => $paidCount,
+            'unpaidCount'        => $unpaidCount,
+            'pendingCount'       => $pendingCount,
         ]);
     }
 

@@ -73,6 +73,22 @@
             </h2>
         </div>
 
+        <!-- SUMMARY BAR -->
+        <div class="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide">
+            <span class="text-gray-400 font-extrabold mr-1">Meter Status:</span>
+            <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">● Active: {{ $activeMeters }}</span>
+            <span class="inline-flex items-center gap-1 rounded bg-gray-200 px-2 py-0.5 text-gray-600 border border-gray-300">● Inactive: {{ $inactiveMeters }}</span>
+            <span class="mx-2 text-gray-300">|</span>
+            <span class="text-gray-400 font-extrabold mr-1">Breaker:</span>
+            <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">⚡ ON: {{ $breakerOn }}</span>
+            <span class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-rose-800 border border-rose-300">🔌 OFF: {{ $breakerOff }}</span>
+            <span class="mx-2 text-gray-300">|</span>
+            <span class="text-gray-400 font-extrabold mr-1">Payment:</span>
+            <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">✅ Paid: {{ $paidCount }}</span>
+            <span class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-rose-800 border border-rose-300">❌ Unpaid: {{ $unpaidCount }}</span>
+            <span class="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-amber-800 border border-amber-300">⏳ Pending: {{ $pendingCount }}</span>
+        </div>
+
         <!-- READINGS DATA TABLE -->
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs border-collapse">
@@ -86,6 +102,7 @@
                         <th class="py-2.5 px-3 border border-gray-300">Ref Number</th>
                         <th class="py-2.5 px-3 border border-gray-300">Consumer ID</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Breaker</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-center">Meter Status</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-right">Units KV</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-right">Amount (Rs.)</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Status</th>
@@ -115,6 +132,18 @@
                                     </span>
                                 @endif
                             </td>
+                            {{-- Meter Status Column --}}
+                            <td class="py-2 px-3 border border-gray-300 text-center font-bold">
+                                @if($row['is_active'])
+                                    <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 border border-emerald-300 font-extrabold uppercase">
+                                        ● Active
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 border border-gray-300 font-extrabold uppercase">
+                                        ● Inactive
+                                    </span>
+                                @endif
+                            </td>
                             <td class="py-2 px-3 border border-gray-300 text-right font-mono font-bold">
                                 {{ number_format($row['current_reading'], 2) }}
                             </td>
@@ -133,16 +162,16 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="py-8 text-center text-gray-500 font-bold">
+                            <td colspan="11" class="py-8 text-center text-gray-500 font-bold">
                                 No utility readings found for {{ $selectedMonthName }}.
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
                 <tfoot>
+                    {{-- Totals Row --}}
                     <tr class="bg-gray-100 font-black border-t-2 border-gray-400">
-                        <td colspan="7" class="py-3 px-3 text-right uppercase border border-gray-300">Total Summary:
-                        </td>
+                        <td colspan="8" class="py-3 px-3 text-right uppercase border border-gray-300">Total Summary:</td>
                         <td class="py-3 px-3 text-right font-mono border border-gray-300 text-blue-900">
                             {{ number_format($totalUnitsConsumed, 2) }}
                         </td>
@@ -156,7 +185,7 @@
         </div>
 
         <!-- FOOTER SIGNATURES & TIME STAMP -->
-        <div class="mt-12 pt-6 border-t border-gray-300 flex justify-between items-end text-xs text-gray-600">
+        <div class="mt-8 pt-6 border-t border-gray-300 flex justify-between items-end text-xs text-gray-600">
             <div>
                 <p>Printed On: <span class="font-bold text-gray-900">{{ now()->format('d M Y, h:i A') }}</span></p>
                 <p>Printed By: <span class="font-bold text-gray-900">{{ auth()->user()->name ?? 'System' }}</span></p>
