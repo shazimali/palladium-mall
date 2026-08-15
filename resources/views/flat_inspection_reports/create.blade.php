@@ -4,7 +4,6 @@
     @php
         $typeLabel = $type === 'move_in' ? 'Move In' : 'Move Out';
         $unit = $agreement->unit;
-        $flat = $unit?->flat;
     @endphp
 
     <x-common.page-breadcrumb pageTitle="Flat Inspection — {{ $typeLabel }}" />
@@ -18,7 +17,7 @@
                         {{ $typeLabel === 'Move In' ? '🏠' : '🚪' }} {{ $typeLabel }} Inspection
                     </h2>
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        Flat: <strong class="text-gray-700 dark:text-white/80">{{ $flat?->flat_number ?? $unit?->unit_number ?? '—' }}</strong>
+                        Unit / Flat: <strong class="text-gray-700 dark:text-white/80">{{ $unit?->unit_number ?? '—' }}</strong>
                         &nbsp;|&nbsp; Tenant: <strong class="text-gray-700 dark:text-white/80">{{ $agreement->tenant?->name ?? '—' }}</strong>
                     </p>
                 </div>

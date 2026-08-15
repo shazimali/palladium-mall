@@ -294,9 +294,23 @@
                     </div>
                     <div>
                         <label class="{{ $label }}">Deposit Deduction (PKR)</label>
-                        <input type="number" name="deposit_deduction" value="{{ old('deposit_deduction', 0) }}"
+                        <input type="number" name="deposit_deduction" id="deposit_deduction_input" value="{{ old('deposit_deduction', 0) }}"
                                min="0" step="0.01" class="{{ $input }}">
                         <p class="mt-1 text-xs text-gray-400">Amount to deduct from security deposit for damages</p>
+                        @error('deposit_deduction') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="{{ $label }}">Payment Account (Deduction Inflow)</label>
+                        <select name="payment_account_id" id="payment_account_id" class="{{ $input }} {{ $errors->has('payment_account_id') ? 'border-red-400' : '' }}">
+                            <option value="">Select Account (Required if deduction &gt; 0)</option>
+                            @foreach($paymentAccounts as $account)
+                                <option value="{{ $account->id }}" {{ old('payment_account_id') == $account->id ? 'selected' : '' }}>
+                                    {{ $account->name }} ({{ ucfirst($account->type) }}) — Balance: Rs. {{ number_format($account->current_balance) }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-400">Account to receive the deducted funds (credited to account &amp; ledgers)</p>
+                        @error('payment_account_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
                     <div class="sm:col-span-2">
                         <div class="rounded-xl border border-gray-200 bg-gray-50/50 p-4 dark:border-gray-800 dark:bg-white/[0.01]">

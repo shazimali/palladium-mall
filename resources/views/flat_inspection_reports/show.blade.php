@@ -10,7 +10,7 @@
                     {{ $report->type === 'move_in' ? '🏠 Move In' : '🚪 Move Out' }} Inspection Report
                 </h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Flat: <strong>{{ $report->agreement?->unit?->flat?->flat_number ?? '—' }}</strong>
+                    Unit / Flat: <strong>{{ $report->agreement?->unit?->unit_number ?? $report->tenant?->unit?->unit_number ?? '—' }}</strong>
                     &nbsp;|&nbsp; Tenant: <strong>{{ $report->tenant?->name ?? '—' }}</strong>
                     &nbsp;|&nbsp; Date: <strong>{{ $report->inspected_at?->format('d M Y') ?? '—' }}</strong>
                 </p>

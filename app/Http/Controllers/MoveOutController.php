@@ -8,10 +8,14 @@ use App\Models\FlatInspectionReportItem;
 use App\Models\InspectionHead;
 use App\Models\InspectionPerson;
 use App\Models\MoveInChecklist;
+use App\Models\Payment;
+use App\Models\PaymentAccount;
+use App\Models\ReceivingVoucher;
 use App\Models\Tenant;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -40,6 +44,7 @@ class MoveOutController extends Controller
             'payments'             => $payments,
             'inspectionPersons'    => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
             'inspectionHeads'      => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
+            'paymentAccounts'      => PaymentAccount::where('is_active', true)->orderBy('name')->get(),
             'flatInspectionReport' => $flatInspectionReport,
         ]);
     }
@@ -53,6 +58,7 @@ class MoveOutController extends Controller
             'inventory_notes'       => 'nullable|string',
             'flat_condition'        => 'nullable|in:good,needs_repair',
             'deposit_deduction'     => 'nullable|numeric|min:0',
+            'payment_account_id'    => 'nullable|required_if:deposit_deduction,>0|exists:payment_accounts,id',
             'final_remarks'         => 'nullable|string',
             'final_meter_reading'   => 'required|numeric|min:0',
             'final_meter_image'     => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
@@ -96,98 +102,152 @@ class MoveOutController extends Controller
                   $checklistData["head_{$head->id}_image"]);
         }
 
-        MoveInChecklist::create(array_merge($checklistData, ['tenant_id' => $tenant->id]));
+        $depositDeduction = (float) ($data['deposit_deduction'] ?? 0);
 
-        // Upsert FlatInspectionReport (type = move_out) & items
-        if ($tenant->activeAgreement) {
-            $report = FlatInspectionReport::updateOrCreate(
-                ['agreement_id' => $tenant->activeAgreement->id, 'type' => 'move_out'],
-                [
-                    'tenant_id'            => $tenant->id,
-                    'inspected_by'         => auth()->id(),
-                    'inspection_person_id' => $inspector->id,
-                    'inspection_member'    => $inspector->name,
-                    'inspected_at'         => $data['checklist_date'],
-                    'flat_condition'       => $data['flat_condition'] ?? null,
-                    'remarks'              => $data['final_remarks'] ?? null,
-                ]
-            );
+        DB::transaction(function () use ($tenant, $data, $checklistData, $heads, $inspector, $depositDeduction, $request) {
+            $checklist = MoveInChecklist::create(array_merge($checklistData, ['tenant_id' => $tenant->id]));
 
-            foreach ($heads as $head) {
-                $rawStatus = $request->input("head_{$head->id}_status");
-                $status    = $rawStatus === 'pass' ? true : ($rawStatus === 'fail' ? false : null);
-                $comment   = $request->input("head_{$head->id}_comment");
+            // Deposit deduction accounting inflow & ledger entry
+            if ($depositDeduction > 0 && !empty($data['payment_account_id'])) {
+                $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
+                $activeAg = $tenant->activeAgreement;
+                $targetUnitId = $tenant->unit_id ?? $activeAg?->unit_id;
 
-                $existingItem = FlatInspectionReportItem::where('flat_inspection_report_id', $report->id)
-                    ->where('inspection_head_id', $head->id)
-                    ->first();
+                // 1. Create a Payment (bill) of type 'deposit_deduction'
+                $deductionPayment = Payment::create([
+                    'tenant_id'          => $tenant->id,
+                    'unit_id'            => $targetUnitId,
+                    'agreement_id'       => $activeAg?->id,
+                    'type'               => 'deposit_deduction',
+                    'month'              => $data['checklist_date'],
+                    'due_date'           => $data['checklist_date'],
+                    'amount'             => $depositDeduction,
+                    'amount_paid'        => $depositDeduction,
+                    'payment_method'     => $paymentAccount->type,
+                    'payment_account_id' => $paymentAccount->id,
+                    'status'             => 'paid',
+                    'paid_at'            => $data['checklist_date'],
+                    'notes'              => 'Deposit deduction for damages/repairs upon move-out.' . (!empty($data['damage_notes']) ? ' (' . $data['damage_notes'] . ')' : ''),
+                ]);
 
-                $imagePath = $existingItem?->image_path;
-                if ($request->hasFile("head_{$head->id}_image")) {
-                    if ($imagePath && Storage::disk('public')->exists($imagePath)) {
-                        Storage::disk('public')->delete($imagePath);
-                    }
-                    $imagePath = $request->file("head_{$head->id}_image")
-                        ->store('flat_inspections', 'public');
+                // 2. Create a ReceivingVoucher to reflect funds inflow to the Payment Account
+                $voucherNotes = 'Deposit deduction (Damages/Repairs) - ' . $tenant->name;
+                if ($tenant->unit) {
+                    $voucherNotes .= ' (Unit ' . $tenant->unit->unit_number . ')';
+                }
+                if (!empty($data['damage_notes'])) {
+                    $voucherNotes .= ' [' . $data['damage_notes'] . ']';
                 }
 
-                FlatInspectionReportItem::updateOrCreate(
+                $receivingVoucher = ReceivingVoucher::create([
+                    'date'               => $data['checklist_date'],
+                    'amount'             => $depositDeduction,
+                    'received_from_type' => 'tenant',
+                    'tenant_id'          => $tenant->id,
+                    'payment_method'     => $paymentAccount->type,
+                    'payment_account_id' => $paymentAccount->id,
+                    'reference'          => 'MOVE-OUT-DED-' . $tenant->id,
+                    'notes'              => $voucherNotes,
+                    'user_id'            => auth()->id() ?? 1,
+                ]);
+
+                // 3. Link the ReceivingVoucher to the Payment
+                $receivingVoucher->payments()->attach($deductionPayment->id, [
+                    'amount_allocated' => $depositDeduction,
+                ]);
+            }
+
+            // Upsert FlatInspectionReport (type = move_out) & items
+            if ($tenant->activeAgreement) {
+                $report = FlatInspectionReport::updateOrCreate(
+                    ['agreement_id' => $tenant->activeAgreement->id, 'type' => 'move_out'],
                     [
-                        'flat_inspection_report_id' => $report->id,
-                        'inspection_head_id'        => $head->id,
-                    ],
-                    [
-                        'status'     => $status,
-                        'remarks'    => $comment,
-                        'image_path' => $imagePath,
+                        'tenant_id'            => $tenant->id,
+                        'inspected_by'         => auth()->id(),
+                        'inspection_person_id' => $inspector->id,
+                        'inspection_member'    => $inspector->name,
+                        'inspected_at'         => $data['checklist_date'],
+                        'flat_condition'       => $data['flat_condition'] ?? null,
+                        'remarks'              => $data['final_remarks'] ?? null,
                     ]
                 );
+
+                foreach ($heads as $head) {
+                    $rawStatus = $request->input("head_{$head->id}_status");
+                    $status    = $rawStatus === 'pass' ? true : ($rawStatus === 'fail' ? false : null);
+                    $comment   = $request->input("head_{$head->id}_comment");
+
+                    $existingItem = FlatInspectionReportItem::where('flat_inspection_report_id', $report->id)
+                        ->where('inspection_head_id', $head->id)
+                        ->first();
+
+                    $imagePath = $existingItem?->image_path;
+                    if ($request->hasFile("head_{$head->id}_image")) {
+                        if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                            Storage::disk('public')->delete($imagePath);
+                        }
+                        $imagePath = $request->file("head_{$head->id}_image")
+                            ->store('flat_inspections', 'public');
+                    }
+
+                    FlatInspectionReportItem::updateOrCreate(
+                        [
+                            'flat_inspection_report_id' => $report->id,
+                            'inspection_head_id'        => $head->id,
+                        ],
+                        [
+                            'status'     => $status,
+                            'remarks'    => $comment,
+                            'image_path' => $imagePath,
+                        ]
+                    );
+                }
             }
-        }
 
-        if ($tenant->activeAgreement) {
-            $tenant->activeAgreement->update([
-                'final_meter_reading' => (float) $request->input('final_meter_reading', 0),
-            ]);
-        }
-
-        // Record Breaker OFF inspection log & turn breaker OFF on Unit
-        if ($tenant->unit) {
-            $meterImagePath = null;
-            if ($request->hasFile('final_meter_image')) {
-                $meterImagePath = $request->file('final_meter_image')->store('breaker_inspections', 'public');
+            if ($tenant->activeAgreement) {
+                $tenant->activeAgreement->update([
+                    'final_meter_reading' => (float) $request->input('final_meter_reading', 0),
+                ]);
             }
 
-            \App\Models\UnitBreakerInspection::create([
-                'unit_id'                 => $tenant->unit->id,
-                'agreement_id'            => $tenant->activeAgreement?->id,
-                'inspection_person_id'    => $inspector->id,
-                'breaker_status'          => 'off',
-                'meter_reading'           => (float) $request->input('final_meter_reading', 0),
-                'meter_image'             => $meterImagePath,
-                'inspection_officer_name' => $inspector->name,
-                'officer_statement'       => $request->input('breaker_off_statement', "Final move-out inspection completed by {$inspector->name}. Breaker turned OFF to prevent electricity corruption on vacant unit."),
-                'inspected_at'            => now(),
-            ]);
+            // Record Breaker OFF inspection log & turn breaker OFF on Unit
+            if ($tenant->unit) {
+                $meterImagePath = null;
+                if ($request->hasFile('final_meter_image')) {
+                    $meterImagePath = $request->file('final_meter_image')->store('breaker_inspections', 'public');
+                }
 
-            $tenant->unit->update([
-                'status'         => 'vacant',
-                'breaker_status' => 'off',
-            ]);
-        }
+                \App\Models\UnitBreakerInspection::create([
+                    'unit_id'                 => $tenant->unit->id,
+                    'agreement_id'            => $tenant->activeAgreement?->id,
+                    'inspection_person_id'    => $inspector->id,
+                    'breaker_status'          => 'off',
+                    'meter_reading'           => (float) $request->input('final_meter_reading', 0),
+                    'meter_image'             => $meterImagePath,
+                    'inspection_officer_name' => $inspector->name,
+                    'officer_statement'       => $request->input('breaker_off_statement', "Final move-out inspection completed by {$inspector->name}. Breaker turned OFF to prevent electricity corruption on vacant unit."),
+                    'inspected_at'            => now(),
+                ]);
 
-        // Terminate agreement & update tenant
-        $tenant->activeAgreement?->update(['status' => 'terminated']);
-        $tenant->update(['status' => 'inactive', 'unit_id' => null]);
+                $tenant->unit->update([
+                    'status'         => 'vacant',
+                    'breaker_status' => 'off',
+                ]);
+            }
+
+            // Terminate agreement & update tenant
+            $tenant->activeAgreement?->update(['status' => 'terminated']);
+            $tenant->update(['status' => 'inactive', 'unit_id' => null]);
+        });
 
         return redirect()->route('tenants.show', $tenant)
-            ->with('success', 'Move-out inspection saved. Unit is now vacant and electricity breaker is turned OFF.');
+            ->with('success', 'Move-out inspection saved. Deposit deduction recorded to payment account, unit marked vacant, and breaker turned OFF.');
     }
 
     public function printMoveOut(Tenant $tenant): View
     {
         $tenant->load(['unit', 'moveInChecklists' => function($q) {
-            $q->where('type', 'move_out');
+            $q->where('type', 'move_out')->with('paymentAccount');
         }]);
 
         $moveOut = $tenant->moveInChecklists->where('type', 'move_out')->first();

@@ -589,6 +589,9 @@
                     @if($moveOutChecklist?->deposit_deduction > 0)
                         <p class="text-xs font-semibold text-red-600 dark:text-red-400 mt-2">
                             Deposit Deduction: PKR {{ number_format($moveOutChecklist->deposit_deduction) }}
+                            @if($moveOutChecklist->paymentAccount)
+                                <span class="font-normal text-gray-500 dark:text-gray-400">(Credited to: {{ $moveOutChecklist->paymentAccount->name }})</span>
+                            @endif
                         </p>
                     @endif
                     <div

@@ -21,7 +21,7 @@ class FlatInspectionReportController extends Controller
         $agreementId = $request->agreement_id;
         $type        = $request->get('type', 'move_in'); // move_in | move_out
 
-        $agreement = Agreement::with(['tenant', 'unit.flat'])->findOrFail($agreementId);
+        $agreement = Agreement::with(['tenant', 'unit.floor', 'unit.block'])->findOrFail($agreementId);
 
         // Load existing report if it exists (for edit mode)
         $report = FlatInspectionReport::with('items')
@@ -116,7 +116,7 @@ class FlatInspectionReportController extends Controller
      */
     public function show(FlatInspectionReport $flatInspectionReport)
     {
-        $report = $flatInspectionReport->load(['agreement.tenant', 'agreement.unit.flat', 'items.head', 'inspectionPerson', 'inspector']);
+        $report = $flatInspectionReport->load(['agreement.tenant', 'agreement.unit.floor', 'items.head', 'inspectionPerson', 'inspector']);
         return view('flat_inspection_reports.show', compact('report'));
     }
 
@@ -125,7 +125,7 @@ class FlatInspectionReportController extends Controller
      */
     public function print(FlatInspectionReport $flatInspectionReport)
     {
-        $report = $flatInspectionReport->load(['agreement.tenant', 'agreement.unit.flat', 'items.head', 'inspectionPerson', 'inspector']);
+        $report = $flatInspectionReport->load(['agreement.tenant', 'agreement.unit.floor', 'items.head', 'inspectionPerson', 'inspector']);
         return view('flat_inspection_reports.print', compact('report'));
     }
 

@@ -27,7 +27,7 @@ class MoveInChecklist extends Model
         'fixtures_available', 'no_missing_items', 'inventory_notes',
         // 8. Final
         'access_cards_returned', 'no_pending_requests', 'move_out_form_signed',
-        'flat_condition', 'deposit_deduction', 'final_remarks',
+        'flat_condition', 'deposit_deduction', 'payment_account_id', 'final_remarks',
     ];
 
     protected $casts = [
@@ -76,6 +76,11 @@ class MoveInChecklist extends Model
     public function inspectionPerson(): BelongsTo
     {
         return $this->belongsTo(InspectionPerson::class, 'inspection_person_id');
+    }
+
+    public function paymentAccount(): BelongsTo
+    {
+        return $this->belongsTo(PaymentAccount::class);
     }
 
     public function countChecked(): int

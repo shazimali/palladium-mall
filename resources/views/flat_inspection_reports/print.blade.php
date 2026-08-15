@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Flat Inspection — {{ $report->type_label }} | {{ $report->agreement?->unit?->flat?->flat_number ?? '' }}</title>
+    <title>Flat Inspection — {{ $report->type_label }} | {{ $report->agreement?->unit?->unit_number ?? '' }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #222; }
@@ -47,7 +47,7 @@
                     {{ $report->type === 'move_in' ? '🏠 Move In' : '🚪 Move Out' }} Flat Inspection Report
                 </div>
                 <div class="subtitle">
-                    Flat: {{ $report->agreement?->unit?->flat?->flat_number ?? '—' }} &nbsp;|&nbsp;
+                    Unit / Flat: {{ $report->agreement?->unit?->unit_number ?? '—' }} &nbsp;|&nbsp;
                     Tenant: {{ $report->tenant?->name ?? '—' }} &nbsp;|&nbsp;
                     Agreement #{{ $report->agreement_id }}
                 </div>

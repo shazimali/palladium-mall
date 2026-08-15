@@ -1370,9 +1370,9 @@ class TenantController extends Controller
         if (!$moveInChecklist) {
             $moveInChecklist = $tenant->moveInChecklists()->where('type', 'move_in')->latest()->first();
         }
-        $moveOutChecklist = $selectedAgreement ? $selectedAgreement->moveOutChecklist : null;
+        $moveOutChecklist = $selectedAgreement ? $selectedAgreement->moveOutChecklist()->with('paymentAccount')->first() : null;
         if (!$moveOutChecklist) {
-            $moveOutChecklist = $tenant->moveInChecklists()->where('type', 'move_out')->latest()->first();
+            $moveOutChecklist = $tenant->moveInChecklists()->where('type', 'move_out')->with('paymentAccount')->latest()->first();
         }
 
         $moveInFlatReport = $selectedAgreement

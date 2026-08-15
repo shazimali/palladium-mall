@@ -287,6 +287,10 @@
                 style="color: #dc2626;">- {{ number_format($outstanding) }} PKR</span></div>
         <div class="item"><span class="label">Damage / Repair Deductions:</span><span class="value"
                 style="color: #dc2626;">- {{ number_format($damageDeduction) }} PKR</span></div>
+        @if($moveOut->paymentAccount)
+            <div class="item"><span class="label">Deduction Credited To:</span><span class="value"
+                    style="font-weight: 600; color: #16a34a;">{{ $moveOut->paymentAccount->name }} ({{ ucfirst($moveOut->paymentAccount->type) }})</span></div>
+        @endif
         <div class="item"
             style="grid-column: span 2; font-size: 14px; border-bottom: 2px double #333; padding-bottom: 5px;"><span
                 class="label">Estimated Net Refund:</span><span class="value"
