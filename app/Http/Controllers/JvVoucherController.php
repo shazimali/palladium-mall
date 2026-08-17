@@ -244,6 +244,29 @@ class JvVoucherController extends Controller
     }
 
     /**
+     * Show the Settle JV Voucher page.
+     */
+    public function payForm(JvVoucher $jvVoucher): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('jv_vouchers.pay')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        if ($jvVoucher->status === 'paid') {
+            return redirect()->route('jv-vouchers.show', $jvVoucher->id)
+                ->with('error', 'This JV Voucher is already marked as Paid.');
+        }
+
+        $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
+
+        return view('jv_vouchers.settle', [
+            'title'           => 'Settle JV Voucher — ' . $jvVoucher->voucher_no,
+            'voucher'         => $jvVoucher->load(['expenseHead', 'user']),
+            'paymentAccounts' => $paymentAccounts,
+        ]);
+    }
+
+    /**
      * Mark an unpaid JV Voucher as Paid.
      */
     public function pay(Request $request, JvVoucher $jvVoucher): RedirectResponse
@@ -282,7 +305,8 @@ class JvVoucherController extends Controller
 
         ActivityLog::log('pay_jv_voucher', "Marked JV Voucher {$jvVoucher->voucher_no} as Paid via {$paymentAccount->name}", $jvVoucher);
 
-        return redirect()->back()->with('success', "JV Voucher {$jvVoucher->voucher_no} marked as Paid successfully.");
+        return redirect()->route('jv-vouchers.show', $jvVoucher->id)
+            ->with('success', "JV Voucher {$jvVoucher->voucher_no} marked as Paid successfully.");
     }
 
     /**

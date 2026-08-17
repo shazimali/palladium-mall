@@ -427,6 +427,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:jv_vouchers.view')->group(function () {
         Route::get('jv-vouchers-print-list', [\App\Http\Controllers\JvVoucherController::class, 'printList'])
             ->name('jv-vouchers.print-list');
+        Route::get('jv-vouchers/{jvVoucher}/settle', [\App\Http\Controllers\JvVoucherController::class, 'payForm'])
+            ->name('jv-vouchers.settle');
         Route::post('jv-vouchers/{jvVoucher}/pay', [\App\Http\Controllers\JvVoucherController::class, 'pay'])
             ->name('jv-vouchers.pay');
         Route::resource('jv-vouchers', \App\Http\Controllers\JvVoucherController::class)->names([
