@@ -159,6 +159,14 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && ($user->can('inspection_heads.view') || $user->isSuperAdmin())) {
+            $mainItems[] = [
+                'icon' => 'grid',
+                'name' => 'Report Types',
+                'path' => '/report-types',
+            ];
+        }
+
         if (auth()->check() && $user->can('inspection_heads.view')) {
             $mainItems[] = [
                 'icon' => 'list',
@@ -167,12 +175,22 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('cleaning_inspections.view')) {
-            $mainItems[] = [
-                'icon' => 'list',
-                'name' => 'Cleaning Inspections',
-                'path' => '/cleaning-inspections',
-            ];
+        if (auth()->check() && ($user->can('inspection_heads.view') || $user->can('cleaning_inspections.view') || $user->isSuperAdmin())) {
+            $serviceReportTypes = \App\Models\ReportType::active()->ordered()->get();
+            if ($serviceReportTypes->isNotEmpty()) {
+                $serviceReportSubItems = [];
+                foreach ($serviceReportTypes as $srt) {
+                    $serviceReportSubItems[] = [
+                        'name' => $srt->name . ($srt->is_daily ? ' (Daily)' : ''),
+                        'path' => '/inspection-reports/' . $srt->key,
+                    ];
+                }
+                $mainItems[] = [
+                    'icon'     => 'list',
+                    'name'     => 'Services Reports',
+                    'subItems' => $serviceReportSubItems,
+                ];
+            }
         }
 
         // 4. Billings & Cash Flows

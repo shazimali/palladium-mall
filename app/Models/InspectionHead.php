@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InspectionHead extends Model
 {
-    protected $fillable = ['name', 'key', 'type', 'is_active', 'sort_order'];
+    protected $fillable = ['name', 'key', 'type', 'types', 'is_active', 'sort_order'];
 
     protected $casts = [
         'is_active'  => 'boolean',
         'sort_order' => 'integer',
+        'types'      => 'array',
     ];
 
     public function flatInspectionItems(): HasMany
@@ -29,22 +30,53 @@ class InspectionHead extends Model
         return $query->where('is_active', true);
     }
 
+    public function scopeForType($query, string $type)
+    {
+        return $query->where(function ($q) use ($type) {
+            $q->whereJsonContains('types', $type)
+              ->orWhere('type', $type);
+        });
+    }
+
     public function scopeFlatInspection($query)
     {
-        return $query->where('type', 'flat_inspection');
+        return $this->scopeForType($query, 'flat_inspection');
     }
 
     public function scopeCleaning($query)
     {
-        return $query->where('type', 'cleaning');
+        return $this->scopeForType($query, 'cleaning');
+    }
+
+    public function reportType()
+    {
+        return $this->belongsTo(ReportType::class, 'type', 'key');
+    }
+
+    public function getTypesListAttribute(): array
+    {
+        if (!empty($this->types) && is_array($this->types)) {
+            return $this->types;
+        }
+        return $this->type ? [$this->type] : [];
+    }
+
+    public function getTypeLabelsAttribute(): array
+    {
+        $keys = $this->types_list;
+        $reportTypes = ReportType::whereIn('key', $keys)->pluck('name', 'key')->toArray();
+
+        $labels = [];
+        foreach ($keys as $k) {
+            $labels[] = $reportTypes[$k] ?? ucwords(str_replace('_', ' ', $k));
+        }
+
+        return $labels;
     }
 
     public function getTypeLabelAttribute(): string
     {
-        return match ($this->type) {
-            'flat_inspection' => 'Flat Inspection',
-            'cleaning'        => 'Cleaning',
-            default           => ucfirst($this->type),
-        };
+        $labels = $this->type_labels;
+        return !empty($labels) ? implode(', ', $labels) : '—';
     }
 }

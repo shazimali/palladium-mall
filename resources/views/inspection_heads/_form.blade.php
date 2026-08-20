@@ -1,5 +1,8 @@
-{{-- Shared form fields for create/edit inspection heads --}}
-@php $head = $head ?? null; @endphp
+@php
+    $head = $head ?? null;
+    $reportTypes = $reportTypes ?? \App\Models\ReportType::active()->ordered()->get();
+    $selectedTypes = old('types', $head ? $head->types_list : []);
+@endphp
 
 <div>
     <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Name <span class="text-red-500">*</span></label>
@@ -18,14 +21,33 @@
 </div>
 
 <div>
-    <label class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Type <span class="text-red-500">*</span></label>
-    <select name="type" required
-            class="h-11 w-full rounded-lg border border-gray-300 px-4 text-sm text-gray-800 focus:border-brand-300 focus:ring-3 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('type') border-red-500 @enderror">
-        <option value="">— Select Type —</option>
-        <option value="flat_inspection" @selected(old('type', $head?->type) === 'flat_inspection')>🏠 Flat Inspection</option>
-        <option value="cleaning" @selected(old('type', $head?->type) === 'cleaning')>🧹 Cleaning</option>
-    </select>
-    @error('type') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+    <div class="flex items-center justify-between mb-1.5">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-400">
+            Report Types <span class="text-red-500">*</span>
+            <span class="text-xs font-normal text-gray-400 ml-1">(Select one or more)</span>
+        </label>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3 rounded-xl border border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-900/50 @error('types') border-red-500 @enderror">
+        @foreach($reportTypes as $rt)
+            @php
+                $isChecked = in_array($rt->key, (array) $selectedTypes);
+            @endphp
+            <label class="relative flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-150
+                          {{ $isChecked ? 'border-brand-500 bg-brand-50/60 dark:bg-brand-950/30 dark:border-brand-500/80 shadow-xs' : 'border-gray-200 bg-white hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700' }}">
+                <input type="checkbox" name="types[]" value="{{ $rt->key }}" @checked($isChecked)
+                       class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-800 cursor-pointer" />
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-gray-800 dark:text-white/90">{{ $rt->name }}</span>
+                    @if($rt->description)
+                        <span class="text-[11px] text-gray-400 mt-0.5 line-clamp-1">{{ $rt->description }}</span>
+                    @endif
+                </div>
+            </label>
+        @endforeach
+    </div>
+    @error('types') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+    @error('types.*') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
 </div>
 
 <div>

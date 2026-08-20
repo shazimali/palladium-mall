@@ -20,10 +20,11 @@
                             <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">Report Date <span
                                     class="text-red-500">*</span></label>
                             <div class="relative">
-                                <input type="text" id="report_date" name="report_date"
-                                    value="{{ old('report_date', $today ?? now()->toDateString()) }}" required
-                                    placeholder="Select date..."
-                                    class="h-11 w-full rounded-lg border border-gray-300 pl-10 pr-3 text-base cursor-pointer dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('report_date') border-red-500 @enderror" />
+                                <input type="text" id="report_date_display"
+                                    value="{{ \Carbon\Carbon::parse(old('report_date', $today ?? now()->toDateString()))->format('d M Y') }}"
+                                    readonly
+                                    class="h-11 w-full rounded-lg border border-gray-300 pl-10 pr-3 text-base bg-gray-100 text-gray-700 cursor-not-allowed font-semibold dark:border-gray-700 dark:bg-gray-800 dark:text-white/80 select-none @error('report_date') border-red-500 @enderror" />
+                                <input type="hidden" id="report_date" name="report_date" value="{{ old('report_date', $today ?? now()->toDateString()) }}" />
                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                                         stroke="currentColor">
@@ -220,19 +221,6 @@
 
     @push('scripts')
         <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                if (typeof flatpickr !== 'undefined') {
-                    flatpickr('#report_date', {
-                        dateFormat: 'Y-m-d',
-                        altInput: true,
-                        altFormat: 'd M Y',
-                        allowInput: true,
-                        disableMobile: true,
-                        defaultDate: '{{ old('report_date', $today ?? now()->toDateString()) }}'
-                    });
-                }
-            });
-
             (function () {
                 const MAX_KB = 200;
 

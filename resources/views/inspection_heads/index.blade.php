@@ -8,7 +8,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div>
                 <h2 class="text-lg font-extrabold text-gray-800 dark:text-white/90">Inspection Heads</h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage checklist items for Flat Inspection and Cleaning reports.</p>
+                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Master checklist items for service inspection reports.</p>
             </div>
             @can('inspection_heads.create')
                 <a href="{{ route('inspection-heads.create') }}"
@@ -23,11 +23,12 @@
         <form method="GET" action="{{ route('inspection-heads.index') }}"
               class="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div>
-                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Type</label>
+                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Filter by Type</label>
                 <select name="type" class="h-9 rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                     <option value="">All Types</option>
-                    <option value="flat_inspection" @selected(request('type') === 'flat_inspection')>🏠 Flat Inspection</option>
-                    <option value="cleaning" @selected(request('type') === 'cleaning')>🧹 Cleaning</option>
+                    @foreach($reportTypes as $rt)
+                        <option value="{{ $rt->key }}" @selected(request('type') === $rt->key)>{{ $rt->name }}</option>
+                    @endforeach
                 </select>
             </div>
             <div>
@@ -47,11 +48,10 @@
                 <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800 text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-900/40">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Order</th>
                             <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Name</th>
                             <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Key</th>
-                            <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Type</th>
-                            <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Order</th>
+                            <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Applicable Types</th>
                             <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
                             <th class="px-4 py-3 text-right text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
                         </tr>
@@ -59,17 +59,31 @@
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @forelse($heads as $head)
                             <tr class="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
-                                <td class="px-4 py-3 text-gray-400 text-xs">{{ $heads->firstItem() + $loop->index }}</td>
+                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 font-mono text-xs font-bold">
+                                    #{{ $head->sort_order }}
+                                </td>
                                 <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/90">{{ $head->name }}</td>
                                 <td class="px-4 py-3 font-mono text-xs text-gray-400 dark:text-gray-500">{{ $head->key }}</td>
                                 <td class="px-4 py-3">
-                                    @if($head->type === 'flat_inspection')
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">🏠 Flat Inspection</span>
-                                    @else
-                                        <span class="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700 dark:bg-green-900/30 dark:text-green-300">🧹 Cleaning</span>
-                                    @endif
+                                    <div class="flex flex-wrap gap-1">
+                                        @forelse($head->types_list as $tKey)
+                                            @php
+                                                $tObj = $reportTypes->firstWhere('key', $tKey);
+                                                $tName = $tObj ? $tObj->name : ucwords(str_replace('_', ' ', $tKey));
+                                            @endphp
+                                            <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold
+                                                {{ $tKey === 'flat_inspection'
+                                                    ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                                                    : ($tKey === 'cleaning'
+                                                        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                                        : 'bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300') }}">
+                                                {{ $tName }}
+                                            </span>
+                                        @empty
+                                            <span class="text-xs text-gray-400">—</span>
+                                        @endforelse
+                                    </div>
                                 </td>
-                                <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ $head->sort_order }}</td>
                                 <td class="px-4 py-3">
                                     @can('inspection_heads.edit')
                                         <button
@@ -110,7 +124,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                                <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                                     No inspection heads found. <a href="{{ route('inspection-heads.create') }}" class="text-brand-500 font-semibold hover:underline">Create one</a>
                                 </td>
                             </tr>
@@ -131,7 +145,10 @@
     function toggleStatus(id, btn) {
         fetch(`/inspection-heads/${id}/toggle-status`, {
             method: 'POST',
-            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
+            }
         })
         .then(r => r.json())
         .then(data => {
