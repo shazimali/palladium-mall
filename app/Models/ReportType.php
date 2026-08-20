@@ -70,9 +70,10 @@ class ReportType extends Model
             return true;
         }
 
-        $now = now()->format('H:i:s');
-        $start = $this->daily_start_time ?? '09:00:00';
-        $end = $this->daily_end_time ?? '20:00:00';
+        $tz = config('app.timezone', 'Asia/Karachi');
+        $now = now()->setTimezone($tz)->format('H:i:s');
+        $start = $this->daily_start_time ? Carbon::parse($this->daily_start_time)->format('H:i:s') : '09:00:00';
+        $end   = $this->daily_end_time   ? Carbon::parse($this->daily_end_time)->format('H:i:s')   : '20:00:00';
 
         return ($now >= $start && $now <= $end);
     }

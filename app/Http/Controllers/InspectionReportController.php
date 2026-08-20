@@ -48,6 +48,11 @@ class InspectionReportController extends Controller
         $today = now()->toDateString();
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
 
+        if ($reportType->is_daily && !$isWithinWindow) {
+            return redirect()->route('inspection-reports.index', $type)
+                ->with('error', "{$reportType->name} reports can only be created between {$reportType->time_window_display}.");
+        }
+
         // If daily report mode, check if current user already submitted today's report
         if ($reportType->is_daily && $reportType->one_per_user_daily) {
             $existing = InspectionReport::where('report_type_id', $reportType->id)
@@ -73,9 +78,8 @@ class InspectionReportController extends Controller
 
         // Daily Time Window check
         if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow()) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', "{$reportType->name} can only be generated between {$reportType->time_window_display}.");
+            return redirect()->route('inspection-reports.index', $type)
+                ->with('error', "{$reportType->name} reports can only be generated between {$reportType->time_window_display}.");
         }
 
         // Daily 1-Report-per-User check
@@ -143,11 +147,17 @@ class InspectionReportController extends Controller
     public function edit(string $type, InspectionReport $report)
     {
         $reportType = $this->resolveReportType($type);
+        $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
+
+        if ($reportType->is_daily && !$isWithinWindow) {
+            return redirect()->route('inspection-reports.show', ['type' => $type, 'report' => $report->id])
+                ->with('error', "{$reportType->name} reports can only be edited during the allowed time window ({$reportType->time_window_display}).");
+        }
+
         $report->load('items');
         $heads = InspectionHead::active()->forType($type)->orderBy('sort_order')->orderBy('name')->get();
         $systemRemarks = $reportType->activeRemarks;
         $existingItems = $report->items->keyBy('inspection_head_id');
-        $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
 
         return view('inspection_reports.edit', compact('reportType', 'report', 'heads', 'systemRemarks', 'existingItems', 'isWithinWindow'));
     }
@@ -155,6 +165,12 @@ class InspectionReportController extends Controller
     public function update(Request $request, string $type, InspectionReport $report)
     {
         $reportType = $this->resolveReportType($type);
+
+        if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow()) {
+            return redirect()->route('inspection-reports.show', ['type' => $type, 'report' => $report->id])
+                ->with('error', "{$reportType->name} reports can only be edited during the allowed time window ({$reportType->time_window_display}).");
+        }
+
         $hasSystemRemarks = $reportType->activeRemarks()->exists();
 
         $validationRules = [
