@@ -10,11 +10,13 @@
                 <h2 class="text-lg font-extrabold text-gray-800 dark:text-white/90">Report Types & Schedule Settings</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage dynamic inspection modules, daily time-windows (09:00 AM - 08:00 PM), and system remarks.</p>
             </div>
-            <a href="{{ route('report-types.create') }}"
-               class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                Add Report Type
-            </a>
+            @can('report_types.create')
+                <a href="{{ route('report-types.create') }}"
+                   class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                    Add Report Type
+                </a>
+            @endcan
         </div>
 
         {{-- Table --}}
@@ -62,10 +64,14 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3.5 text-center">
-                                    <a href="{{ route('report-types.remarks', $rt) }}"
-                                       class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/70 px-3 py-1.5 text-xs font-bold text-brand-600 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/40 dark:text-brand-400 transition-colors shadow-2xs">
-                                        💬 {{ $rt->remarks->count() }} Remarks
-                                    </a>
+                                    @can('report_types.edit')
+                                        <a href="{{ route('report-types.remarks', $rt) }}"
+                                           class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/70 px-3 py-1.5 text-xs font-bold text-brand-600 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/40 dark:text-brand-400 transition-colors shadow-2xs">
+                                            💬 {{ $rt->remarks->count() }} Remarks
+                                        </a>
+                                    @else
+                                        <span class="text-xs font-bold text-gray-500">💬 {{ $rt->remarks->count() }} Remarks</span>
+                                    @endcan
                                 </td>
                                 <td class="px-4 py-3.5 text-center">
                                     <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold
@@ -74,29 +80,39 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-3.5 text-center">
-                                    <button onclick="toggleTypeStatus({{ $rt->id }}, this)"
-                                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition-colors
-                                                {{ $rt->is_active ? 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400' }}">
-                                        <span class="status-dot w-1.5 h-1.5 rounded-full inline-block {{ $rt->is_active ? 'bg-green-500' : 'bg-red-500' }}"></span>
-                                        <span class="status-label">{{ $rt->is_active ? 'Active' : 'Inactive' }}</span>
-                                    </button>
+                                    @can('report_types.edit')
+                                        <button onclick="toggleTypeStatus({{ $rt->id }}, this)"
+                                                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold transition-colors
+                                                    {{ $rt->is_active ? 'bg-green-50 text-green-700 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400' }}">
+                                            <span class="status-dot w-1.5 h-1.5 rounded-full inline-block {{ $rt->is_active ? 'bg-green-500' : 'bg-red-500' }}"></span>
+                                            <span class="status-label">{{ $rt->is_active ? 'Active' : 'Inactive' }}</span>
+                                        </button>
+                                    @else
+                                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold {{ $rt->is_active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600' }}">
+                                            {{ $rt->is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    @endcan
                                 </td>
                                 <td class="px-4 py-3.5 text-right">
                                     <div class="inline-flex items-center gap-1.5">
-                                        <a href="{{ route('report-types.edit', $rt) }}"
-                                           class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 transition-colors shadow-2xs">
-                                            ⚙️ Settings
-                                        </a>
-                                        <form action="{{ route('report-types.destroy', $rt) }}" method="POST"
-                                              onsubmit="return confirm('Delete report type {{ $rt->name }}?')">
-                                            @csrf @method('DELETE')
-                                            <button type="submit"
-                                                    {{ $rt->inspection_heads_count > 0 ? 'disabled' : '' }}
-                                                    title="{{ $rt->inspection_heads_count > 0 ? 'Cannot delete: linked to inspection heads' : 'Delete' }}"
-                                                    class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 dark:border-red-800/30 dark:bg-red-900/20 dark:text-red-400 transition-colors {{ $rt->inspection_heads_count > 0 ? 'opacity-40 cursor-not-allowed' : '' }}">
-                                                🗑
-                                            </button>
-                                        </form>
+                                        @can('report_types.edit')
+                                            <a href="{{ route('report-types.edit', $rt) }}"
+                                               class="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-bold text-gray-700 hover:bg-gray-50 hover:text-brand-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 transition-colors shadow-2xs">
+                                                ⚙️ Settings
+                                            </a>
+                                        @endcan
+                                        @can('report_types.delete')
+                                            <form action="{{ route('report-types.destroy', $rt) }}" method="POST"
+                                                  onsubmit="return confirm('Delete report type {{ $rt->name }}?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit"
+                                                        {{ $rt->inspection_heads_count > 0 ? 'disabled' : '' }}
+                                                        title="{{ $rt->inspection_heads_count > 0 ? 'Cannot delete: linked to inspection heads' : 'Delete' }}"
+                                                        class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 hover:bg-red-100 dark:border-red-800/30 dark:bg-red-900/20 dark:text-red-400 transition-colors {{ $rt->inspection_heads_count > 0 ? 'opacity-40 cursor-not-allowed' : '' }}">
+                                                    🗑
+                                                </button>
+                                            </form>
+                                        @endcan
                                     </div>
                                 </td>
                             </tr>

@@ -159,7 +159,7 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && ($user->can('inspection_heads.view') || $user->isSuperAdmin())) {
+        if (auth()->check() && ($user->can('report_types.view') || $user->isSuperAdmin())) {
             $mainItems[] = [
                 'icon' => 'grid',
                 'name' => 'Report Types',
@@ -167,7 +167,7 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && $user->can('inspection_heads.view')) {
+        if (auth()->check() && ($user->can('inspection_heads.view') || $user->isSuperAdmin())) {
             $mainItems[] = [
                 'icon' => 'list',
                 'name' => 'Inspection Heads',
@@ -175,7 +175,7 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && ($user->can('inspection_heads.view') || $user->can('cleaning_inspections.view') || $user->isSuperAdmin())) {
+        if (auth()->check() && ($user->can('inspection_reports.view') || $user->can('cleaning_inspections.view') || $user->isSuperAdmin())) {
             $serviceReportTypes = \App\Models\ReportType::active()->ordered()->get();
             if ($serviceReportTypes->isNotEmpty()) {
                 $serviceReportSubItems = [];
