@@ -72,7 +72,7 @@ class PaymentVoucherController extends Controller
         }
 
         $parties = \App\Models\Party::orderBy('name')->get();
-        $tenants = Tenant::with('unit')->orderBy('name')->get();
+        $tenants = Tenant::with(['unit', 'agreements.unit'])->orderBy('name')->get();
         $landlords = Landlord::orderBy('name')->get();
         $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)
@@ -338,7 +338,7 @@ class PaymentVoucherController extends Controller
         }
 
         $parties = \App\Models\Party::orderBy('name')->get();
-        $tenants = Tenant::with('unit')->orderBy('name')->get();
+        $tenants = Tenant::with(['unit', 'agreements.unit'])->orderBy('name')->get();
         $landlords = Landlord::orderBy('name')->get();
         $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)

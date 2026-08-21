@@ -43,13 +43,15 @@
             tenantOptions: [
                 @foreach($tenants as $tenant)
                 @php
-                    $uNum = $tenant->unit ? $tenant->unit->unit_number : '';
+                    $effUnit = $tenant->effective_unit;
+                    $uNum = $effUnit ? $effUnit->unit_number : ($tenant->unit ? $tenant->unit->unit_number : '');
+                    $effUnitId = $effUnit?->id ?? $tenant->unit_id ?? '';
                     $hasKeyword = preg_match('/(flat|shop)/i', $uNum);
                     $uLabel = $uNum ? ($hasKeyword ? "($uNum)" : "(Flat/Shop $uNum)") : '';
                 @endphp
                 {
                     id: '{{ $tenant->id }}',
-                    unitId: '{{ $tenant->unit_id ?? "" }}',
+                    unitId: '{{ $effUnitId }}',
                     name: '{{ addslashes($tenant->name) }}',
                     unit: '{{ addslashes($uNum) }}',
                     label: '{{ addslashes($tenant->name) }} {{ addslashes($uLabel) }}'
