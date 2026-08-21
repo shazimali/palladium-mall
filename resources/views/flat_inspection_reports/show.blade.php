@@ -1,31 +1,39 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Flat Inspection Report" />
+    <x-common.page-breadcrumb pageTitle="Flat Inspection Report Details" />
 
     <div class="mx-auto w-full max-w-4xl space-y-4">
         <div class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div>
-                <h2 class="text-lg font-extrabold text-gray-800 dark:text-white/90">
-                    {{ $report->type === 'move_in' ? '🏠 Move In' : '🚪 Move Out' }} Inspection Report
-                </h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Unit / Flat: <strong>{{ $report->agreement?->unit?->unit_number ?? $report->tenant?->unit?->unit_number ?? '—' }}</strong>
-                    &nbsp;|&nbsp; Tenant: <strong>{{ $report->tenant?->name ?? '—' }}</strong>
+                <div class="flex items-center gap-2 mb-1">
+                    <h2 class="text-lg font-extrabold text-gray-800 dark:text-white/90">
+                        {{ $report->type_label }}
+                    </h2>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $report->stage_badge_class }}">
+                        {{ $report->type_label }}
+                    </span>
+                </div>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Unit / Flat: <strong>{{ $report->effective_unit?->unit_number ?? '—' }}</strong>
+                    @if($report->tenant)
+                        &nbsp;|&nbsp; Tenant: <strong>{{ $report->tenant->name }}</strong>
+                    @endif
+                    @if($report->agreement_id)
+                        &nbsp;|&nbsp; Agreement #<strong>{{ $report->agreement_id }}</strong>
+                    @endif
                     &nbsp;|&nbsp; Date: <strong>{{ $report->inspected_at?->format('d M Y') ?? '—' }}</strong>
                 </p>
             </div>
-            <div class="flex gap-2">
-                <a href="{{ route('flat-inspections.print', $report) }}" target="_blank"
-                   class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400">
-                    🖨️ Print
+            <div class="flex items-center gap-2">
+                <a href="{{ route('inspection-reports.index', 'flat_inspection') }}"
+                   class="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400">
+                    ← History
                 </a>
-                @can('flat_inspections.create')
-                    <a href="{{ route('flat-inspections.create', ['agreement_id' => $report->agreement_id, 'type' => $report->type]) }}"
-                       class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-3 py-2 text-xs font-bold text-white hover:bg-brand-600">
-                        ✏️ Edit
-                    </a>
-                @endcan
+                <a href="{{ route('inspection-reports.print', ['type' => 'flat_inspection', 'report' => $report->id]) }}" target="_blank"
+                   class="inline-flex items-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2 text-xs font-bold text-white hover:bg-gray-800">
+                    🖨️ Print Report
+                </a>
             </div>
         </div>
 
@@ -48,10 +56,10 @@
         {{-- Meta Info --}}
         <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div><span class="block text-xs text-gray-400">Inspector</span><span class="font-semibold text-gray-800 dark:text-white/90">{{ $report->inspection_member ?: ($report->inspectionPerson?->name ?? '—') }}</span></div>
+                <div><span class="block text-xs text-gray-400">Inspector / Officer</span><span class="font-semibold text-gray-800 dark:text-white/90">{{ $report->inspectionPerson?->name ?? ($report->inspection_member ?: '—') }}</span></div>
                 <div><span class="block text-xs text-gray-400">Date</span><span class="font-semibold text-gray-800 dark:text-white/90">{{ $report->inspected_at?->format('d M Y') ?? '—' }}</span></div>
                 <div><span class="block text-xs text-gray-400">Flat Condition</span><span class="font-semibold text-gray-800 dark:text-white/90">{{ ucfirst($report->flat_condition ?? '—') }}</span></div>
-                <div><span class="block text-xs text-gray-400">Reported By</span><span class="font-semibold text-gray-800 dark:text-white/90">{{ $report->inspector?->name ?? '—' }}</span></div>
+                <div><span class="block text-xs text-gray-400">Logged By</span><span class="font-semibold text-gray-800 dark:text-white/90">{{ $report->inspector?->name ?? 'Admin' }}</span></div>
             </div>
             @if($report->remarks)
                 <p class="mt-4 text-sm text-gray-600 dark:text-gray-400 border-t border-gray-100 pt-3 dark:border-gray-800"><strong>Overall Remarks:</strong> {{ $report->remarks }}</p>
@@ -73,7 +81,7 @@
                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                     @foreach($report->items as $i => $item)
                         <tr class="hover:bg-gray-50/50">
-                            <td class="px-4 py-3 text-xs text-gray-400">{{ $i + 1 }}</td>
+                            <td class="px-4 py-3 text-xs text-gray-400 font-mono">{{ $i + 1 }}</td>
                             <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white/80">{{ $item->head?->name ?? '—' }}</td>
                             <td class="px-4 py-3">
                                 @if($item->status === true)

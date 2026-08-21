@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
-    <title>Flat Inspection — {{ $report->type_label }} | {{ $report->agreement?->unit?->unit_number ?? '' }}</title>
+    <title>Flat Inspection — {{ $report->type_label }} | {{ $report->effective_unit?->unit_number ?? '' }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #222; }
@@ -44,12 +44,16 @@
             <div>
                 <div class="mall-heading">PALLADIUM MALL</div>
                 <div class="title">
-                    {{ $report->type === 'move_in' ? '🏠 Move In' : '🚪 Move Out' }} Flat Inspection Report
+                    {{ $report->type_label }} Report
                 </div>
                 <div class="subtitle">
-                    Unit / Flat: {{ $report->agreement?->unit?->unit_number ?? '—' }} &nbsp;|&nbsp;
-                    Tenant: {{ $report->tenant?->name ?? '—' }} &nbsp;|&nbsp;
-                    Agreement #{{ $report->agreement_id }}
+                    Unit / Flat: <strong>{{ $report->effective_unit?->unit_number ?? '—' }}</strong> ({{ ucfirst($report->effective_unit?->type ?? 'Flat') }})
+                    @if($report->tenant)
+                        &nbsp;|&nbsp; Tenant: <strong>{{ $report->tenant->name }}</strong>
+                    @endif
+                    @if($report->agreement_id)
+                        &nbsp;|&nbsp; Agreement #<strong>{{ $report->agreement_id }}</strong>
+                    @endif
                 </div>
             </div>
             <div style="text-align:right">
@@ -78,46 +82,61 @@
 
         {{-- Meta --}}
         <div class="meta-grid">
-            <div class="meta-item"><label>Inspector</label><span>{{ $report->inspection_member ?: ($report->inspectionPerson?->name ?? '—') }}</span></div>
-            <div class="meta-item"><label>Inspection Date</label><span>{{ $report->inspected_at?->format('d M Y') ?? '—' }}</span></div>
-            <div class="meta-item"><label>Flat Condition</label><span>{{ ucfirst($report->flat_condition ?? '—') }}</span></div>
-            <div class="meta-item"><label>Type</label><span>{{ $report->type_label }}</span></div>
+            <div class="meta-item">
+                <label>Unit / Flat</label>
+                <span>Unit {{ $report->effective_unit?->unit_number ?? '—' }} ({{ ucfirst($report->effective_unit?->type ?? 'Unit') }})</span>
+            </div>
+            <div class="meta-item">
+                <label>Stage / Type</label>
+                <span>{{ $report->type_label }}</span>
+            </div>
+            <div class="meta-item">
+                <label>Inspector</label>
+                <span>{{ $report->inspector?->name ?? 'Admin' }}</span>
+            </div>
+            <div class="meta-item">
+                <label>Inspection Officer</label>
+                <span>{{ $report->inspectionPerson?->name ?? ($report->inspection_member ?: '—') }}</span>
+            </div>
         </div>
+
         @if($report->remarks)
-            <p style="margin-bottom:14px; font-size:11px; background:#fffde7; padding:8px; border-radius:5px; border:1px solid #fde68a;"><strong>Overall Remarks:</strong> {{ $report->remarks }}</p>
+            <div style="margin-bottom:14px; padding:10px; background:#fffbeb; border:1px solid #fef3c7; border-radius:6px; font-size:11px; color:#92400e;">
+                <strong>Overall Remarks:</strong> {{ $report->remarks }}
+            </div>
         @endif
 
-        {{-- Items Table --}}
+        {{-- Checklist Table --}}
         <table>
             <thead>
                 <tr>
                     <th style="width:30px">#</th>
-                    <th>Inspection Head</th>
-                    <th style="width:90px">Status</th>
+                    <th style="width:200px">Inspection Head</th>
+                    <th style="width:70px">Status</th>
                     <th>Remarks</th>
-                    <th style="width:70px">Image</th>
+                    <th style="width:60px">Image</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($report->items as $i => $item)
                     <tr>
-                        <td>{{ $i + 1 }}</td>
+                        <td style="text-align:center; color:#888">{{ $i + 1 }}</td>
                         <td><strong>{{ $item->head?->name ?? '—' }}</strong></td>
                         <td>
                             @if($item->status === true)
-                                <span class="badge-pass">✅ Pass</span>
+                                <span class="badge-pass">PASS</span>
                             @elseif($item->status === false)
-                                <span class="badge-fail">❌ Fail</span>
+                                <span class="badge-fail">FAIL</span>
                             @else
-                                <span class="badge-na">— N/A</span>
+                                <span class="badge-na">N/A</span>
                             @endif
                         </td>
                         <td>{{ $item->remarks ?: '—' }}</td>
-                        <td>
+                        <td style="text-align:center">
                             @if($item->image_path)
                                 <img src="{{ Storage::url($item->image_path) }}" class="img-thumb" />
                             @else
-                                —
+                                <span style="color:#ccc">—</span>
                             @endif
                         </td>
                     </tr>
@@ -127,9 +146,18 @@
 
         {{-- Signatures --}}
         <div class="signatures">
-            <div class="sig-box">Inspector / {{ $report->inspection_member ?? 'Inspector' }}</div>
-            <div class="sig-box">Tenant / {{ $report->tenant?->name ?? 'Tenant' }}</div>
-            <div class="sig-box">Management</div>
+            <div class="sig-box">
+                <p>Inspection Officer</p>
+                <p style="font-size:10px; color:#888; margin-top:2px;">{{ $report->inspectionPerson?->name ?? ($report->inspection_member ?: 'Inspector') }}</p>
+            </div>
+            <div class="sig-box">
+                <p>{{ $report->tenant ? 'Tenant Signature' : 'Maintenance Supervisor' }}</p>
+                <p style="font-size:10px; color:#888; margin-top:2px;">{{ $report->tenant?->name ?? 'Office Admin' }}</p>
+            </div>
+            <div class="sig-box">
+                <p>Operations Manager</p>
+                <p style="font-size:10px; color:#888; margin-top:2px;">Palladium Mall</p>
+            </div>
         </div>
     </div>
 </body>

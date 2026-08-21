@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FlatInspectionReport;
+use App\Models\FlatInspectionReportItem;
+use App\Models\InspectionHead;
+use App\Models\InspectionPerson;
 use App\Models\InspectionReport;
 use App\Models\InspectionReportItem;
-use App\Models\InspectionHead;
 use App\Models\ReportType;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -40,6 +44,29 @@ class InspectionReportController extends Controller
         $this->authorizeInspection('view', $type);
         $reportType = $this->resolveReportType($type);
 
+        if ($type === 'flat_inspection') {
+            $query = FlatInspectionReport::with([
+                'unit.floor', 'unit.block',
+                'agreement.unit.floor', 'agreement.unit.block',
+                'agreement.tenant', 'tenant',
+                'inspector', 'inspectionPerson', 'items'
+            ])
+            ->when($request->filled('unit_id'), function ($q) use ($request) {
+                $q->where('unit_id', $request->unit_id)
+                  ->orWhereHas('agreement', fn($aq) => $aq->where('unit_id', $request->unit_id));
+            })
+            ->when($request->filled('stage'), fn($q) => $q->where('type', $request->stage))
+            ->when($request->filled('date_from'), fn($q) => $q->where('inspected_at', '>=', $request->date_from))
+            ->when($request->filled('date_to'), fn($q) => $q->where('inspected_at', '<=', $request->date_to))
+            ->latest('inspected_at')
+            ->latest('id');
+
+            $reports = $query->paginate(20)->withQueryString();
+            $units = Unit::orderBy('unit_number')->get(['id', 'unit_number', 'type']);
+
+            return view('inspection_reports.flat_index', compact('reportType', 'reports', 'units'));
+        }
+
         $query = InspectionReport::with(['reporter', 'items'])
             ->where('report_type_id', $reportType->id)
             ->orderByDesc('report_date')
@@ -67,6 +94,22 @@ class InspectionReportController extends Controller
         $reportType = $this->resolveReportType($type);
         $today = now()->toDateString();
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
+
+        if ($type === 'flat_inspection') {
+            // Load vacant units and units without active agreements
+            $units = Unit::with(['floor', 'block'])
+                ->where('status', 'vacant')
+                ->orWhereDoesntHave('agreements', function ($q) {
+                    $q->where('status', 'active');
+                })
+                ->orderBy('unit_number')
+                ->get();
+
+            $heads = InspectionHead::active()->flatInspection()->orderBy('sort_order')->orderBy('name')->get();
+            $inspectionPersons = InspectionPerson::where('is_active', true)->orderBy('name')->get();
+
+            return view('inspection_reports.flat_create', compact('reportType', 'units', 'heads', 'inspectionPersons', 'today'));
+        }
 
         if ($reportType->is_daily && !$isWithinWindow) {
             return redirect()->route('inspection-reports.index', $type)
@@ -96,6 +139,58 @@ class InspectionReportController extends Controller
     {
         $this->authorizeInspection('create', $type);
         $reportType = $this->resolveReportType($type);
+
+        if ($type === 'flat_inspection') {
+            $request->validate([
+                'unit_id'              => 'required|exists:units,id',
+                'inspected_at'         => 'required|date',
+                'inspection_person_id' => 'nullable|exists:inspection_persons,id',
+                'inspection_member'    => 'nullable|string|max:255',
+                'flat_condition'       => 'nullable|in:good,average,poor',
+                'remarks'              => 'nullable|string|max:2000',
+                'items'                => 'nullable|array',
+                'items.*.status'       => 'nullable|in:pass,fail,na',
+                'items.*.remarks'      => 'nullable|string|max:1000',
+                'items.*.image'        => 'nullable|image|max:200',
+            ]);
+
+            $report = FlatInspectionReport::create([
+                'unit_id'              => $request->unit_id,
+                'agreement_id'         => null,
+                'tenant_id'            => null,
+                'type'                 => 'vacant',
+                'inspected_by'         => Auth::id(),
+                'inspection_member'    => $request->inspection_member,
+                'inspection_person_id' => $request->inspection_person_id,
+                'inspected_at'         => $request->inspected_at,
+                'flat_condition'       => $request->flat_condition,
+                'remarks'              => $request->remarks,
+            ]);
+
+            foreach ($request->input('items', []) as $headId => $itemData) {
+                $statusVal = match ($itemData['status'] ?? 'na') {
+                    'pass'  => true,
+                    'fail'  => false,
+                    default => null,
+                };
+
+                $imagePath = null;
+                if ($request->hasFile("items.{$headId}.image")) {
+                    $imagePath = $request->file("items.{$headId}.image")->store('inspection_images/flat', 'public');
+                }
+
+                FlatInspectionReportItem::create([
+                    'flat_inspection_report_id' => $report->id,
+                    'inspection_head_id'        => $headId,
+                    'status'                    => $statusVal,
+                    'remarks'                   => $itemData['remarks'] ?? null,
+                    'image_path'                => $imagePath,
+                ]);
+            }
+
+            return redirect()->route('inspection-reports.index', 'flat_inspection')
+                ->with('success', 'Vacant Flat Inspection recorded successfully.');
+        }
 
         // Daily Time Window check
         if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow()) {
@@ -157,19 +252,46 @@ class InspectionReportController extends Controller
             ->with('success', "{$reportType->name} report saved successfully.");
     }
 
-    public function show(string $type, InspectionReport $report)
+    public function show(string $type, $reportId)
     {
         $this->authorizeInspection('view', $type);
         $reportType = $this->resolveReportType($type);
-        $report->load(['items.head', 'items.systemRemark', 'reporter', 'reportType']);
+
+        if ($type === 'flat_inspection') {
+            $report = FlatInspectionReport::with([
+                'unit.floor', 'unit.block',
+                'agreement.unit.floor', 'agreement.unit.block',
+                'agreement.tenant', 'tenant',
+                'inspector', 'inspectionPerson',
+                'items.head'
+            ])->findOrFail($reportId);
+
+            return view('flat_inspection_reports.show', compact('report', 'reportType'));
+        }
+
+        $report = InspectionReport::with(['items.head', 'items.systemRemark', 'reporter', 'reportType'])
+            ->findOrFail($reportId);
 
         return view('inspection_reports.show', compact('reportType', 'report'));
     }
 
-    public function edit(string $type, InspectionReport $report)
+    public function edit(string $type, $reportId)
     {
         $this->authorizeInspection('edit', $type);
         $reportType = $this->resolveReportType($type);
+
+        if ($type === 'flat_inspection') {
+            $report = FlatInspectionReport::with('items')->findOrFail($reportId);
+            $heads = InspectionHead::active()->flatInspection()->orderBy('sort_order')->orderBy('name')->get();
+            $inspectionPersons = InspectionPerson::where('is_active', true)->orderBy('name')->get();
+            $existingItems = $report->items->keyBy('inspection_head_id');
+            $today = $report->inspected_at?->toDateString() ?? now()->toDateString();
+            $units = Unit::orderBy('unit_number')->get();
+
+            return view('inspection_reports.flat_create', compact('reportType', 'report', 'units', 'heads', 'inspectionPersons', 'today', 'existingItems'));
+        }
+
+        $report = InspectionReport::findOrFail($reportId);
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
 
         if ($reportType->is_daily && !$isWithinWindow) {
@@ -185,10 +307,34 @@ class InspectionReportController extends Controller
         return view('inspection_reports.edit', compact('reportType', 'report', 'heads', 'systemRemarks', 'existingItems', 'isWithinWindow'));
     }
 
-    public function update(Request $request, string $type, InspectionReport $report)
+    public function update(Request $request, string $type, $reportId)
     {
         $this->authorizeInspection('edit', $type);
         $reportType = $this->resolveReportType($type);
+
+        if ($type === 'flat_inspection') {
+            $report = FlatInspectionReport::findOrFail($reportId);
+            $request->validate([
+                'inspected_at'         => 'required|date',
+                'inspection_person_id' => 'nullable|exists:inspection_persons,id',
+                'inspection_member'    => 'nullable|string|max:255',
+                'flat_condition'       => 'nullable|in:good,average,poor',
+                'remarks'              => 'nullable|string|max:2000',
+            ]);
+
+            $report->update([
+                'inspected_at'         => $request->inspected_at,
+                'inspection_person_id' => $request->inspection_person_id,
+                'inspection_member'    => $request->inspection_member,
+                'flat_condition'       => $request->flat_condition,
+                'remarks'              => $request->remarks,
+            ]);
+
+            return redirect()->route('inspection-reports.index', 'flat_inspection')
+                ->with('success', 'Flat inspection updated successfully.');
+        }
+
+        $report = InspectionReport::findOrFail($reportId);
 
         if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow()) {
             return redirect()->route('inspection-reports.show', ['type' => $type, 'report' => $report->id])
@@ -234,11 +380,25 @@ class InspectionReportController extends Controller
             ->with('success', "{$reportType->name} report updated successfully.");
     }
 
-    public function destroy(string $type, InspectionReport $report)
+    public function destroy(string $type, $reportId)
     {
         $this->authorizeInspection('delete', $type);
         $reportType = $this->resolveReportType($type);
 
+        if ($type === 'flat_inspection') {
+            $report = FlatInspectionReport::findOrFail($reportId);
+            foreach ($report->items as $item) {
+                if ($item->image_path) {
+                    Storage::disk('public')->delete($item->image_path);
+                }
+            }
+            $report->delete();
+
+            return redirect()->route('inspection-reports.index', 'flat_inspection')
+                ->with('success', 'Flat inspection deleted successfully.');
+        }
+
+        $report = InspectionReport::findOrFail($reportId);
         foreach ($report->items as $item) {
             if ($item->image_path) {
                 Storage::disk('public')->delete($item->image_path);
@@ -250,11 +410,29 @@ class InspectionReportController extends Controller
             ->with('success', "{$reportType->name} report deleted.");
     }
 
-    public function print(string $type, InspectionReport $report)
+    public function print(string $type, $reportId)
     {
         $this->authorizeInspection('view', $type);
         $reportType = $this->resolveReportType($type);
-        $report->load(['items.head', 'items.systemRemark', 'reporter', 'reportType']);
+
+        if ($type === 'flat_inspection') {
+            $report = FlatInspectionReport::with([
+                'unit.floor', 'unit.block',
+                'agreement.unit.floor', 'agreement.unit.block',
+                'agreement.tenant', 'tenant',
+                'inspector', 'inspectionPerson',
+                'items.head'
+            ])->findOrFail($reportId);
+
+            return view('flat_inspection_reports.print', [
+                'report'    => $report,
+                'agreement' => $report->agreement,
+                'tenant'    => $report->tenant,
+            ]);
+        }
+
+        $report = InspectionReport::with(['items.head', 'items.systemRemark', 'reporter', 'reportType'])
+            ->findOrFail($reportId);
 
         return view('inspection_reports.print', compact('reportType', 'report'));
     }

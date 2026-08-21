@@ -162,6 +162,7 @@ class MoveOutController extends Controller
                 $report = FlatInspectionReport::updateOrCreate(
                     ['agreement_id' => $tenant->activeAgreement->id, 'type' => 'move_out'],
                     [
+                        'unit_id'              => $tenant->activeAgreement->unit_id,
                         'tenant_id'            => $tenant->id,
                         'inspected_by'         => auth()->id(),
                         'inspection_person_id' => $inspector->id,

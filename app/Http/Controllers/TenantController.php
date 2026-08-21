@@ -562,19 +562,40 @@ class TenantController extends Controller
             4 => view('tenants.wizard.step4', array_merge($data, [
                 'checklist' => $draftAgreement ? $draftAgreement->documentChecklist : null,
             ])),
-            5 => view('tenants.wizard.step5', array_merge($data, [
-                'checklist' => $draftAgreement?->moveInChecklist,
-                'agreement' => $draftAgreement,
-                'inspectionPersons' => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
-                'defaultMeterReading' => $draftAgreement?->initial_meter_reading ?? ($tenant->unit?->getLatestMeterReading() ?? ($draftAgreement?->unit_id ? Unit::find($draftAgreement->unit_id)?->getLatestMeterReading() : null)),
-                'inspectionHeads' => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
-                'flatInspectionReport' => $draftAgreement
-                    ? FlatInspectionReport::with('items')
+            5 => (function() use ($data, $draftAgreement, $tenant) {
+                $flatReport = null;
+                $prefilledFromVacant = false;
+
+                if ($draftAgreement) {
+                    $flatReport = FlatInspectionReport::with('items')
                         ->where('agreement_id', $draftAgreement->id)
                         ->where('type', 'move_in')
-                        ->first()
-                    : null,
-            ])),
+                        ->first();
+
+                    if (!$flatReport && $draftAgreement->unit_id) {
+                        $vacantReport = FlatInspectionReport::with('items')
+                            ->where('unit_id', $draftAgreement->unit_id)
+                            ->where('type', 'vacant')
+                            ->latest('id')
+                            ->first();
+
+                        if ($vacantReport) {
+                            $flatReport = $vacantReport;
+                            $prefilledFromVacant = true;
+                        }
+                    }
+                }
+
+                return view('tenants.wizard.step5', array_merge($data, [
+                    'checklist' => $draftAgreement?->moveInChecklist,
+                    'agreement' => $draftAgreement,
+                    'inspectionPersons' => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
+                    'defaultMeterReading' => $draftAgreement?->initial_meter_reading ?? ($tenant->unit?->getLatestMeterReading() ?? ($draftAgreement?->unit_id ? Unit::find($draftAgreement->unit_id)?->getLatestMeterReading() : null)),
+                    'inspectionHeads' => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
+                    'flatInspectionReport' => $flatReport,
+                    'prefilledFromVacant' => $prefilledFromVacant,
+                ]));
+            })(),
             6 => view('tenants.wizard.step6', array_merge($data, [
                 'partners' => $draftAgreement ? $draftAgreement->partners()->get() : collect(),
                 'guarantors' => $draftAgreement ? $draftAgreement->guarantors()->get() : collect(),
@@ -1173,13 +1194,14 @@ class TenantController extends Controller
         $report = FlatInspectionReport::updateOrCreate(
             ['agreement_id' => $agreement->id, 'type' => 'move_in'],
             [
-                'tenant_id' => $tenant->id,
-                'inspected_by' => auth()->id(),
+                'unit_id'              => $agreement->unit_id,
+                'tenant_id'            => $tenant->id,
+                'inspected_by'         => auth()->id(),
                 'inspection_person_id' => $inspector->id,
-                'inspection_member' => $inspector->name,
-                'inspected_at' => $data['checklist_date'],
-                'flat_condition' => $data['flat_condition'] ?? null,
-                'remarks' => $data['final_remarks'] ?? null,
+                'inspection_member'    => $inspector->name,
+                'inspected_at'         => $data['checklist_date'],
+                'flat_condition'       => $data['flat_condition'] ?? null,
+                'remarks'              => $data['final_remarks'] ?? null,
             ]
         );
 

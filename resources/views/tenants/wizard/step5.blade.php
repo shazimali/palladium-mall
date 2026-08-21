@@ -40,6 +40,17 @@
               class="px-6 py-6 space-y-6">
             @csrf
 
+            @if(!empty($prefilledFromVacant) && $flatInspectionReport)
+                <div class="rounded-xl border border-blue-200 bg-blue-50/80 p-4 text-xs text-blue-900 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-300 flex items-start gap-3">
+                    <span class="text-base">ℹ️</span>
+                    <div>
+                        <strong class="font-bold">Auto Pre-Filled from Vacant Inspection:</strong>
+                        Checklist items and condition have been pre-filled from the vacant flat inspection conducted on <strong>{{ $flatInspectionReport->inspected_at?->format('d M Y') ?? 'earlier' }}</strong>.
+                        Saving this form will create a new <strong>Move-In Inspection</strong> linked to this agreement while preserving the previous vacant inspection in the unit's history.
+                    </div>
+                </div>
+            @endif
+
             @php
             $cl = $checklist;
             $input = 'w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 dark:placeholder-gray-600';
