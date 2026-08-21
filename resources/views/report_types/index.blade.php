@@ -1,20 +1,20 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Report Types" />
+    <x-common.page-breadcrumb pageTitle="Admin Reporting" />
 
     <div class="mx-auto w-full space-y-4">
         {{-- Header --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div>
-                <h2 class="text-lg font-extrabold text-gray-800 dark:text-white/90">Report Types & Schedule Settings</h2>
+                <h2 class="text-lg font-extrabold text-gray-800 dark:text-white/90">Admin Reporting Settings</h2>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Manage dynamic inspection modules, daily time-windows (09:00 AM - 08:00 PM), and system remarks.</p>
             </div>
             @can('report_types.create')
                 <a href="{{ route('report-types.create') }}"
                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Add Report Type
+                    Admin Report
                 </a>
             @endcan
         </div>

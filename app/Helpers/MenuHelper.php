@@ -162,7 +162,7 @@ class MenuHelper
         if (auth()->check() && ($user->can('report_types.view') || $user->isSuperAdmin())) {
             $mainItems[] = [
                 'icon' => 'grid',
-                'name' => 'Report Types',
+                'name' => 'Admin Reporting',
                 'path' => '/report-types',
             ];
         }
@@ -170,7 +170,7 @@ class MenuHelper
         if (auth()->check() && ($user->can('inspection_heads.view') || $user->isSuperAdmin())) {
             $mainItems[] = [
                 'icon' => 'list',
-                'name' => 'Inspection Heads',
+                'name' => 'Report Inspection Heads',
                 'path' => '/inspection-heads',
             ];
         }
@@ -191,7 +191,7 @@ class MenuHelper
                 if (!empty($serviceReportSubItems)) {
                     $mainItems[] = [
                         'icon' => 'list',
-                        'name' => 'Office Reports',
+                        'name' => 'Admin Office Reports',
                         'subItems' => $serviceReportSubItems,
                     ];
                 }
