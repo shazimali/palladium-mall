@@ -136,8 +136,7 @@
                 <tbody class="divide-y divide-gray-200">
                     @forelse($vouchers as $index => $voucher)
                         @php
-                            $firstPayment = $voucher->payments->first();
-                            $unitNo = $firstPayment?->unit?->unit_number ?? ($voucher->tenant?->unit?->unit_number ?? '—');
+                            $unitNo = $voucher->display_unit_number;
                             
                             $recipientName = '—';
                             if ($voucher->received_from_type === 'owner') {

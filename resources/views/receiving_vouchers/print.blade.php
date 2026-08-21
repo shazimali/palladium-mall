@@ -119,7 +119,7 @@
                 <div class="grid grid-cols-3 min-h-[52px]">
                     <div class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">Flat / Shop</div>
                     <div class="col-span-2 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-black text-base sm:text-lg">
-                        {{ $voucher->payments->first()?->unit?->unit_number ? $voucher->payments->first()->unit->unit_number : 'N/A' }}
+                        {{ $voucher->display_unit_number !== '—' ? $voucher->display_unit_number : 'N/A' }}
                     </div>
                 </div>
 

@@ -94,4 +94,23 @@ class ReceivingVoucher extends Model
             ->withPivot('amount_allocated')
             ->withTimestamps();
     }
+
+    /**
+     * Get the associated unit number (from linked payments, tenant current unit, or last agreement unit).
+     */
+    public function getDisplayUnitNumberAttribute(): string
+    {
+        // 1. Check linked payments
+        $paymentUnit = $this->payments->first(fn($p) => $p->unit)?->unit?->unit_number;
+        if ($paymentUnit) {
+            return $paymentUnit;
+        }
+
+        // 2. Check tenant's effective unit (current unit or last agreement unit)
+        if ($this->tenant) {
+            return $this->tenant->effective_unit?->unit_number ?? '—';
+        }
+
+        return '—';
+    }
 }

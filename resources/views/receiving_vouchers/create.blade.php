@@ -17,12 +17,27 @@
 
             options: [
                 @foreach($units as $unit)
+                @php
+                    $tenantObj = $unit->tenant ?: ($unit->agreements->sortByDesc('id')->first()?->tenant);
+                    $tenantName = $tenantObj ? $tenantObj->name : ($unit->otherTenant ? $unit->otherTenant->name : '');
+                    $tenantLabel = '';
+                    if ($unit->tenant) {
+                        $tenantLabel = '(Tenant: ' . $unit->tenant->name . ')';
+                    } elseif ($tenantObj) {
+                        $tenantLabel = '(Moved Out: ' . $tenantObj->name . ')';
+                    } elseif ($unit->otherTenant) {
+                        $tenantLabel = '(Other Tenant: ' . $unit->otherTenant->name . ')';
+                    } else {
+                        $tenantLabel = '(Vacant)';
+                    }
+                    $searchLabel = strtolower($unit->unit_number . ' ' . $tenantName . ' ' . ($tenantLabel ? $tenantLabel : 'vacant'));
+                @endphp
                 {
                     id: '{{ $unit->id }}',
                     unit: '{{ addslashes($unit->unit_number) }}',
-                    tenantName: '{{ $unit->tenant ? addslashes($unit->tenant->name) : ($unit->otherTenant ? addslashes($unit->otherTenant->name) : "Vacant") }}',
-                    tenant: '{{ $unit->tenant ? "(Tenant: " . addslashes($unit->tenant->name) . ")" : ($unit->otherTenant ? "(Other Tenant: " . addslashes($unit->otherTenant->name) . ")" : "(Vacant)") }}',
-                    searchLabel: '{{ strtolower($unit->unit_number . " " . ($unit->tenant?->name ?? ($unit->otherTenant?->name ?? "vacant"))) }}'
+                    tenantName: '{{ addslashes($tenantName ?: "Vacant") }}',
+                    tenant: '{{ addslashes($tenantLabel) }}',
+                    searchLabel: '{{ addslashes($searchLabel) }}'
                 },
                 @endforeach
             ],

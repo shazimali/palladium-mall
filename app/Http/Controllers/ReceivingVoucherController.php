@@ -26,7 +26,7 @@ class ReceivingVoucherController extends Controller
         }
 
         $vouchers = ReceivingVoucher::query()
-            ->with(['tenant.unit', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant'])
+            ->with(['tenant.unit', 'tenant.agreements.unit', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
                 $q->where(function ($sub) use ($term) {
@@ -36,16 +36,23 @@ class ReceivingVoucherController extends Controller
                         ->orWhere('notes', 'like', "%{$term}%")
                         ->orWhereHas('tenant', function ($t) use ($term) {
                             $t->where('name', 'like', "%{$term}%")
-                                ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
+                                ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"))
+                                ->orWhereHas('agreements.unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
                         })
+                        ->orWhereHas('payments.unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"))
                         ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
                 });
             })
             ->when($request->received_from_type, fn($q) => $q->where('received_from_type', $request->received_from_type))
             ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
             ->when($request->unit_id, function ($q) use ($request) {
-                $q->whereHas('payments', function ($qp) use ($request) {
-                    $qp->where('unit_id', $request->unit_id);
+                $q->where(function ($sq) use ($request) {
+                    $sq->whereHas('payments', function ($qp) use ($request) {
+                        $qp->where('unit_id', $request->unit_id);
+                    })->orWhereHas('tenant', function ($qt) use ($request) {
+                        $qt->where('unit_id', $request->unit_id)
+                           ->orWhereHas('agreements', fn($qa) => $qa->where('unit_id', $request->unit_id));
+                    });
                 });
             })
             ->when($request->date_from, fn($q) => $q->where('date', '>=', $request->date_from))
@@ -75,7 +82,7 @@ class ReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $units = Unit::with(['tenant', 'otherTenant'])->orderBy('unit_number')->get();
+        $units = Unit::with(['tenant', 'otherTenant', 'agreements.tenant'])->orderBy('unit_number')->get();
         $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orderBy('name')->get();
 
@@ -130,8 +137,18 @@ class ReceivingVoucherController extends Controller
 
         $data = $request->validate($rules);
 
-        $unit = Unit::with('tenant')->findOrFail($data['unit_id']);
-        $data['tenant_id'] = $unit->tenant?->id;
+        $unit = Unit::with(['tenant', 'agreements.tenant'])->findOrFail($data['unit_id']);
+        $tenantId = $unit->tenant?->id;
+
+        if (!$tenantId) {
+            $firstPayment = Payment::where('unit_id', $data['unit_id'])
+                ->whereIn('status', ['unpaid', 'partial'])
+                ->whereNotNull('tenant_id')
+                ->first();
+            $tenantId = $firstPayment?->tenant_id ?? $unit->agreements->sortByDesc('id')->first()?->tenant_id;
+        }
+
+        $data['tenant_id'] = $tenantId;
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         $data['payment_method'] = $paymentAccount->type;
@@ -304,7 +321,7 @@ class ReceivingVoucherController extends Controller
             abort(403, 'Unauthorized action. You do not have permission to edit vouchers.');
         }
 
-        $units = Unit::with(['tenant', 'otherTenant'])->orderBy('unit_number')->get();
+        $units = Unit::with(['tenant', 'otherTenant', 'agreements.tenant'])->orderBy('unit_number')->get();
         $owners = Owner::orderBy('name')->get();
         $paymentAccounts = PaymentAccount::where('is_active', true)->orWhere('id', $receivingVoucher->payment_account_id)->orderBy('name')->get();
 
@@ -365,8 +382,18 @@ class ReceivingVoucherController extends Controller
 
         $data = $request->validate($rules);
 
-        $unit = Unit::with('tenant')->findOrFail($data['unit_id']);
-        $data['tenant_id'] = $unit->tenant?->id;
+        $unit = Unit::with(['tenant', 'agreements.tenant'])->findOrFail($data['unit_id']);
+        $tenantId = $unit->tenant?->id;
+
+        if (!$tenantId) {
+            $firstPayment = Payment::where('unit_id', $data['unit_id'])
+                ->whereIn('status', ['unpaid', 'partial'])
+                ->whereNotNull('tenant_id')
+                ->first();
+            $tenantId = $firstPayment?->tenant_id ?? $unit->agreements->sortByDesc('id')->first()?->tenant_id;
+        }
+
+        $data['tenant_id'] = $tenantId;
 
         $paymentAccount = PaymentAccount::findOrFail($data['payment_account_id']);
         $data['payment_method'] = $paymentAccount->type;
@@ -523,23 +550,33 @@ class ReceivingVoucherController extends Controller
         }
 
         $query = ReceivingVoucher::query()
-            ->with(['tenant.unit', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant'])
+            ->with(['tenant.unit', 'tenant.agreements.unit', 'owner', 'paymentAccount', 'user', 'payments.unit', 'payments.otherTenant'])
             ->when($request->search, function ($q) use ($request) {
                 $term = $request->search;
-                $q->where('voucher_no', 'like', "%{$term}%")
-                    ->orWhere('reference', 'like', "%{$term}%")
-                    ->orWhere('other_name', 'like', "%{$term}%")
-                    ->orWhereHas('tenant', function ($t) use ($term) {
-                        $t->where('name', 'like', "%{$term}%")
-                            ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
-                    })
-                    ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('reference', 'like', "%{$term}%")
+                        ->orWhere('other_name', 'like', "%{$term}%")
+                        ->orWhere('notes', 'like', "%{$term}%")
+                        ->orWhereHas('tenant', function ($t) use ($term) {
+                            $t->where('name', 'like', "%{$term}%")
+                                ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"))
+                                ->orWhereHas('agreements.unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
+                        })
+                        ->orWhereHas('payments.unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"))
+                        ->orWhereHas('owner', fn($o) => $o->where('name', 'like', "%{$term}%"));
+                });
             })
             ->when($request->received_from_type, fn($q) => $q->where('received_from_type', $request->received_from_type))
             ->when($request->payment_account_id, fn($q) => $q->where('payment_account_id', $request->payment_account_id))
             ->when($request->unit_id, function ($q) use ($request) {
-                $q->whereHas('payments', function ($qp) use ($request) {
-                    $qp->where('unit_id', $request->unit_id);
+                $q->where(function ($sq) use ($request) {
+                    $sq->whereHas('payments', function ($qp) use ($request) {
+                        $qp->where('unit_id', $request->unit_id);
+                    })->orWhereHas('tenant', function ($qt) use ($request) {
+                        $qt->where('unit_id', $request->unit_id)
+                           ->orWhereHas('agreements', fn($qa) => $qa->where('unit_id', $request->unit_id));
+                    });
                 });
             })
             ->when($request->date_from, fn($q) => $q->where('date', '>=', $request->date_from))

@@ -310,33 +310,33 @@
                                     </td>
                                     <td class="px-4 py-3 text-xs">{{ $voucher->date->format('d M Y') }}</td>
                                     <td class="px-4 py-3 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                        @if($voucher->received_from_type === 'tenant')
-                                            @php
-                                                $unitNumber = '—';
-                                                $tenantName = '';
-                                                if ($voucher->tenant) {
-                                                    $unitNumber = $voucher->tenant->unit->unit_number ?? '—';
-                                                    $tenantName = $voucher->tenant->name;
-                                                } else {
-                                                    $firstPayment = $voucher->payments->first();
-                                                    if ($firstPayment) {
-                                                        $unitNumber = $firstPayment->unit->unit_number ?? '—';
-                                                        $tenantName = $firstPayment->otherTenant->name ?? '—';
-                                                    }
+                                        @php
+                                            $unitNumber = $voucher->display_unit_number;
+                                            $tenantName = '';
+                                            if ($voucher->tenant) {
+                                                $tenantName = $voucher->tenant->name;
+                                            } else {
+                                                $firstPayment = $voucher->payments->first();
+                                                if ($firstPayment) {
+                                                    $tenantName = $firstPayment->otherTenant->name ?? '';
                                                 }
-                                            @endphp
+                                            }
+                                        @endphp
+                                        @if($unitNumber !== '—')
                                             <div class="unit-badge-lg">{{ $unitNumber }}</div>
+                                        @else
+                                            <div>—</div>
+                                        @endif
+                                        @if($voucher->received_from_type === 'tenant')
                                             @if($tenantName)
                                                 <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-normal">{{ $tenantName }}
                                                 </div>
                                             @endif
                                         @elseif($voucher->received_from_type === 'owner')
-                                            <div>—</div>
                                             <div class="text-[11px] text-brand-600 dark:text-brand-400 mt-0.5 font-normal">👤
                                                 {{ $voucher->owner->name ?? 'Deleted Owner' }} (Owner)
                                             </div>
                                         @else
-                                            <div>—</div>
                                             <div class="text-[11px] text-gray-500 mt-0.5 font-normal">{{ $voucher->other_name }}
                                             </div>
                                         @endif
