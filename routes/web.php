@@ -228,6 +228,16 @@ Route::middleware('auth')->group(function () {
         Route::delete('flat-inspections/{flatInspectionReport}', [\App\Http\Controllers\FlatInspectionReportController::class, 'destroy'])->name('flat-inspections.destroy');
     });
 
+    // Post Schedule Heads
+    Route::middleware('permission:post_schedule_heads.view')->group(function () {
+        Route::resource('post-schedule-heads', \App\Http\Controllers\PostScheduleHeadController::class)->except(['show', 'create', 'edit']);
+    });
+
+    // Post Schedules (Day-based duty roster & daily print)
+    Route::get('post-schedules/print-daily', [\App\Http\Controllers\PostScheduleController::class, 'printDaily'])->name('post-schedules.print-daily');
+    Route::post('post-schedules/copy-days', [\App\Http\Controllers\PostScheduleController::class, 'copyDays'])->name('post-schedules.copy-days');
+    Route::resource('post-schedules', \App\Http\Controllers\PostScheduleController::class);
+
     Route::middleware('permission:agreements.view')->group(function () {
         // Agreements are view-only — creation happens via tenant wizard
         Route::resource('agreements', AgreementController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);

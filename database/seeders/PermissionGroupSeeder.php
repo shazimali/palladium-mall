@@ -43,6 +43,8 @@ class PermissionGroupSeeder extends Seeder
             'Inspection Heads',
             'Inspection Reports',
             'Flat Inspection',
+            'Post Schedule Heads',
+            'Post Schedules',
             'Task Management',
             'Note Pad',
             'Utility Meter Readings',

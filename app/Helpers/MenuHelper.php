@@ -198,6 +198,14 @@ class MenuHelper
             }
         }
 
+        if (auth()->check() && ($user->can('post_schedules.view') || $user->isSuperAdmin())) {
+            $mainItems[] = [
+                'icon' => 'forms',
+                'name' => 'Post Schedule',
+                'path' => '/post-schedules',
+            ];
+        }
+
         // 4. Billings & Cash Flows
         if (auth()->check() && $user->can('payments.view')) {
             $mainItems[] = [
