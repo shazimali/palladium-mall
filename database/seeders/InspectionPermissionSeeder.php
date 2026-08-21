@@ -36,12 +36,15 @@ class InspectionPermissionSeeder extends Seeder
             ['name' => 'flat_inspections.delete', 'display_name' => 'Delete Flat Inspections', 'group' => 'Flat Inspection'],
         ];
 
+        $adminGroup = \App\Models\PermissionGroup::where('name', 'admin')->first();
+
         foreach ($permissions as $perm) {
             Permission::updateOrCreate(
                 ['name' => $perm['name']],
                 [
-                    'display_name' => $perm['display_name'],
-                    'group'        => $perm['group'],
+                    'display_name'        => $perm['display_name'],
+                    'group'               => $perm['group'],
+                    'permission_group_id' => $adminGroup?->id,
                 ]
             );
         }
@@ -51,6 +54,13 @@ class InspectionPermissionSeeder extends Seeder
             $admin->permissions()->syncWithoutDetaching(
                 Permission::whereIn('name', array_column($permissions, 'name'))->pluck('id')
             );
+        }
+
+        // Clean up obsolete cleaning_inspections permissions
+        $obsoletePerms = Permission::where('name', 'LIKE', 'cleaning_inspections.%')->get();
+        foreach ($obsoletePerms as $op) {
+            $op->roles()->detach();
+            $op->delete();
         }
 
         $this->command->info('Inspection permissions updated: ' . count($permissions) . ' permissions.');

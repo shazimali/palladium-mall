@@ -175,21 +175,26 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && ($user->can('inspection_reports.view') || $user->can('cleaning_inspections.view') || $user->isSuperAdmin())) {
+        if (auth()->check()) {
             $serviceReportTypes = \App\Models\ReportType::active()->ordered()->get();
             if ($serviceReportTypes->isNotEmpty()) {
                 $serviceReportSubItems = [];
                 foreach ($serviceReportTypes as $srt) {
-                    $serviceReportSubItems[] = [
-                        'name' => $srt->name . ($srt->is_daily ? ' (Daily)' : ''),
-                        'path' => '/inspection-reports/' . $srt->key,
+                    $perm = ($srt->key === 'flat_inspection') ? 'flat_inspections.view' : 'inspection_reports.view';
+                    if ($user->can($perm) || $user->isSuperAdmin()) {
+                        $serviceReportSubItems[] = [
+                            'name' => $srt->name . ($srt->is_daily ? ' (Daily)' : ''),
+                            'path' => '/inspection-reports/' . $srt->key,
+                        ];
+                    }
+                }
+                if (!empty($serviceReportSubItems)) {
+                    $mainItems[] = [
+                        'icon' => 'list',
+                        'name' => 'Office Reports',
+                        'subItems' => $serviceReportSubItems,
                     ];
                 }
-                $mainItems[] = [
-                    'icon'     => 'list',
-                    'name'     => 'Services Reports',
-                    'subItems' => $serviceReportSubItems,
-                ];
             }
         }
 

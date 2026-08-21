@@ -201,25 +201,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('inspection-heads/{inspectionHead}', [\App\Http\Controllers\InspectionHeadController::class, 'destroy'])->name('inspection-heads.destroy');
     });
 
-    // Dynamic Inspection Reports (Services Reports per ReportType)
-    Route::middleware('permission:inspection_reports.create')->group(function () {
-        Route::get('inspection-reports/{type}/create', [\App\Http\Controllers\InspectionReportController::class, 'create'])->name('inspection-reports.create');
-        Route::post('inspection-reports/{type}', [\App\Http\Controllers\InspectionReportController::class, 'store'])->name('inspection-reports.store');
-        Route::get('cleaning-inspections/create', fn() => redirect()->route('inspection-reports.create', 'cleaning'));
-    });
-    Route::middleware('permission:inspection_reports.view')->group(function () {
-        Route::get('inspection-reports/{type}', [\App\Http\Controllers\InspectionReportController::class, 'index'])->name('inspection-reports.index');
-        Route::get('inspection-reports/{type}/{report}', [\App\Http\Controllers\InspectionReportController::class, 'show'])->name('inspection-reports.show');
-        Route::get('inspection-reports/{type}/{report}/print', [\App\Http\Controllers\InspectionReportController::class, 'print'])->name('inspection-reports.print');
-        Route::get('cleaning-inspections', fn() => redirect()->route('inspection-reports.index', 'cleaning'));
-    });
-    Route::middleware('permission:inspection_reports.edit')->group(function () {
-        Route::get('inspection-reports/{type}/{report}/edit', [\App\Http\Controllers\InspectionReportController::class, 'edit'])->name('inspection-reports.edit');
-        Route::put('inspection-reports/{type}/{report}', [\App\Http\Controllers\InspectionReportController::class, 'update'])->name('inspection-reports.update');
-    });
-    Route::middleware('permission:inspection_reports.delete')->group(function () {
-        Route::delete('inspection-reports/{type}/{report}', [\App\Http\Controllers\InspectionReportController::class, 'destroy'])->name('inspection-reports.destroy');
-    });
+    // Dynamic Inspection Reports & Flat Inspection Reports per Type
+    // Static /create and general routes
+    Route::get('inspection-reports/{type}/create', [\App\Http\Controllers\InspectionReportController::class, 'create'])->name('inspection-reports.create');
+    Route::post('inspection-reports/{type}', [\App\Http\Controllers\InspectionReportController::class, 'store'])->name('inspection-reports.store');
+    Route::get('inspection-reports/{type}', [\App\Http\Controllers\InspectionReportController::class, 'index'])->name('inspection-reports.index');
+    Route::get('inspection-reports/{type}/{report}', [\App\Http\Controllers\InspectionReportController::class, 'show'])->name('inspection-reports.show');
+    Route::get('inspection-reports/{type}/{report}/print', [\App\Http\Controllers\InspectionReportController::class, 'print'])->name('inspection-reports.print');
+    Route::get('inspection-reports/{type}/{report}/edit', [\App\Http\Controllers\InspectionReportController::class, 'edit'])->name('inspection-reports.edit');
+    Route::put('inspection-reports/{type}/{report}', [\App\Http\Controllers\InspectionReportController::class, 'update'])->name('inspection-reports.update');
+    Route::delete('inspection-reports/{type}/{report}', [\App\Http\Controllers\InspectionReportController::class, 'destroy'])->name('inspection-reports.destroy');
+    Route::get('cleaning-inspections/create', fn() => redirect()->route('inspection-reports.create', 'cleaning'));
+    Route::get('cleaning-inspections', fn() => redirect()->route('inspection-reports.index', 'cleaning'));
 
     // Flat Inspection Reports (Agreement Move-In / Move-Out)
     // ⚠️ Static /create MUST come before wildcard /{id} routes

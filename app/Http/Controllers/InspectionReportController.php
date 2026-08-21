@@ -17,8 +17,27 @@ class InspectionReportController extends Controller
         return ReportType::where('key', $typeKey)->firstOrFail();
     }
 
+    private function authorizeInspection(string $action, string $type): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            abort(403);
+        }
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        $permPrefix = ($type === 'flat_inspection') ? 'flat_inspections' : 'inspection_reports';
+        $permission = "{$permPrefix}.{$action}";
+
+        if (!$user->can($permission)) {
+            abort(403, "You do not have permission to {$action} {$type} inspection reports ({$permission}).");
+        }
+    }
+
     public function index(Request $request, string $type)
     {
+        $this->authorizeInspection('view', $type);
         $reportType = $this->resolveReportType($type);
 
         $query = InspectionReport::with(['reporter', 'items'])
@@ -44,6 +63,7 @@ class InspectionReportController extends Controller
 
     public function create(string $type)
     {
+        $this->authorizeInspection('create', $type);
         $reportType = $this->resolveReportType($type);
         $today = now()->toDateString();
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
@@ -74,6 +94,7 @@ class InspectionReportController extends Controller
 
     public function store(Request $request, string $type)
     {
+        $this->authorizeInspection('create', $type);
         $reportType = $this->resolveReportType($type);
 
         // Daily Time Window check
@@ -138,6 +159,7 @@ class InspectionReportController extends Controller
 
     public function show(string $type, InspectionReport $report)
     {
+        $this->authorizeInspection('view', $type);
         $reportType = $this->resolveReportType($type);
         $report->load(['items.head', 'items.systemRemark', 'reporter', 'reportType']);
 
@@ -146,6 +168,7 @@ class InspectionReportController extends Controller
 
     public function edit(string $type, InspectionReport $report)
     {
+        $this->authorizeInspection('edit', $type);
         $reportType = $this->resolveReportType($type);
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
 
@@ -164,6 +187,7 @@ class InspectionReportController extends Controller
 
     public function update(Request $request, string $type, InspectionReport $report)
     {
+        $this->authorizeInspection('edit', $type);
         $reportType = $this->resolveReportType($type);
 
         if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow()) {
@@ -212,6 +236,7 @@ class InspectionReportController extends Controller
 
     public function destroy(string $type, InspectionReport $report)
     {
+        $this->authorizeInspection('delete', $type);
         $reportType = $this->resolveReportType($type);
 
         foreach ($report->items as $item) {
@@ -227,6 +252,7 @@ class InspectionReportController extends Controller
 
     public function print(string $type, InspectionReport $report)
     {
+        $this->authorizeInspection('view', $type);
         $reportType = $this->resolveReportType($type);
         $report->load(['items.head', 'items.systemRemark', 'reporter', 'reportType']);
 

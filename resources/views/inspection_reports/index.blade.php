@@ -1,6 +1,10 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        $permPrefix = ($reportType->key === 'flat_inspection') ? 'flat_inspections' : 'inspection_reports';
+    @endphp
+
     <x-common.page-breadcrumb pageTitle="{{ $reportType->name }} Reports" />
 
     <div class="mx-auto w-full space-y-4">
@@ -26,7 +30,7 @@
                         <span>⏰ Active Window:</span> {{ $reportType->time_window_display }}
                     </div>
                 @endif
-                @can('inspection_reports.create')
+                @can("{$permPrefix}.create")
                     @if(!$reportType->is_daily || $isWithinWindow)
                         <a href="{{ route('inspection-reports.create', $reportType->key) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
@@ -113,7 +117,7 @@
                                            class="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 transition-colors">
                                             🖨️ Print
                                         </a>
-                                        @can('inspection_reports.edit')
+                                        @can("{$permPrefix}.edit")
                                             @if(!$reportType->is_daily || $isWithinWindow)
                                                 <a href="{{ route('inspection-reports.edit', ['type' => $reportType->key, 'report' => $report->id]) }}"
                                                    class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 dark:border-blue-800/30 dark:bg-blue-900/20 dark:text-blue-400 transition-colors">
@@ -121,20 +125,20 @@
                                                 </a>
                                             @endif
                                         @endcan
-                                    @can('inspection_reports.delete')
-                                        <form action="{{ route('inspection-reports.destroy', ['type' => $reportType->key, 'report' => $report->id]) }}" method="POST"
-                                              onsubmit="return confirm('Delete this inspection report?')">
-                                            @csrf @method('DELETE')
-                                            <button type="submit"
-                                                    class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-800/30 dark:bg-red-900/20 dark:text-red-400 transition-colors">
-                                                🗑
-                                            </button>
-                                        </form>
-                                    @endcan
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
+                                        @can("{$permPrefix}.delete")
+                                            <form action="{{ route('inspection-reports.destroy', ['type' => $reportType->key, 'report' => $report->id]) }}" method="POST"
+                                                  onsubmit="return confirm('Delete this inspection report?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit"
+                                                        class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-800/30 dark:bg-red-900/20 dark:text-red-400 transition-colors">
+                                                    🗑
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
                             <tr>
                                 <td colspan="6" class="px-6 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
                                     No {{ $reportType->name }} reports found.
