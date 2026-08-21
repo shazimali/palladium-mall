@@ -51,6 +51,20 @@
         {{-- Filters --}}
         <form method="GET" action="{{ route('inspection-reports.index', $reportType->key) }}"
               class="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+            @if($reportType->hasMembers())
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Member</label>
+                    <select name="member_id" class="h-9 w-44 rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 font-medium">
+                        <option value="">All Members</option>
+                        @foreach($members as $mem)
+                            <option value="{{ $mem->id }}" @selected(request('member_id') == $mem->id)>
+                                {{ $mem->member_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            @endif
+
             <div>
                 <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">From Date</label>
                 <div class="relative">
@@ -66,7 +80,7 @@
                 </div>
             </div>
             <button type="submit" class="h-9 rounded-lg bg-brand-500 px-4 text-sm font-bold text-white hover:bg-brand-600 shadow-sm transition-colors">Filter</button>
-            @if(request()->hasAny(['date_from', 'date_to']))
+            @if(request()->hasAny(['member_id', 'date_from', 'date_to']))
                 <a href="{{ route('inspection-reports.index', $reportType->key) }}" class="h-9 flex items-center rounded-lg border border-gray-300 px-4 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400">Clear</a>
             @endif
         </form>
@@ -78,6 +92,9 @@
                     <thead class="bg-gray-50 dark:bg-gray-900/40">
                         <tr>
                             <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Report Date</th>
+                            @if($reportType->hasMembers())
+                                <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Member</th>
+                            @endif
                             <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Reported By</th>
                             <th class="px-4 py-3 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pass / Clean</th>
                             <th class="px-4 py-3 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Issues</th>
@@ -91,6 +108,17 @@
                                 <td class="px-4 py-3 font-bold text-gray-800 dark:text-white/90">
                                     {{ $report->report_date->format('d M Y') }}
                                 </td>
+                                @if($reportType->hasMembers())
+                                    <td class="px-4 py-3">
+                                        @if($report->member)
+                                            <span class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                                                👤 {{ $report->member->member_name }}
+                                            </span>
+                                        @else
+                                            <span class="text-gray-400 text-xs">—</span>
+                                        @endif
+                                    </td>
+                                @endif
                                 <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
                                     {{ $report->reporter?->name ?? '—' }}
                                 </td>

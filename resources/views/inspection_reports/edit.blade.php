@@ -11,32 +11,50 @@
                 @csrf
                 @method('PUT')
 
-                {{-- Date & Overall Remarks --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {{-- Date, Member & Overall Remarks --}}
+                <div class="grid grid-cols-1 md:grid-cols-{{ (isset($hasMembers) && $hasMembers) ? '3' : '2' }} gap-5">
                     @if($reportType->is_daily)
                         <div>
-                            <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">Report Date</label>
-                            <div class="h-11 flex items-center px-3 rounded-lg border border-gray-200 bg-gray-50 text-base font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-white/80">
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Report Date</label>
+                            <div class="h-11 flex items-center px-3 rounded-lg border border-gray-200 bg-gray-50 text-sm font-bold text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-white/80">
                                 {{ $report->report_date->format('d M Y') }}
                             </div>
                         </div>
                     @else
                         <div>
-                            <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">Report Date <span class="text-red-500">*</span></label>
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Report Date <span class="text-red-500">*</span></label>
                             <input type="date" name="report_date" value="{{ old('report_date', $report->report_date->toDateString()) }}" required
-                                   class="h-11 w-full rounded-lg border border-gray-300 px-3 text-base dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('report_date') border-red-500 @enderror" />
-                            @error('report_date') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                                   class="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('report_date') border-red-500 @enderror" />
+                            @error('report_date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                        </div>
+                    @endif
+
+                    @if(isset($hasMembers) && $hasMembers)
+                        <div>
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                Member / Officer <span class="text-red-500">*</span>
+                            </label>
+                            <select name="report_type_member_id" required
+                                    class="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm font-semibold dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('report_type_member_id') border-red-500 @enderror">
+                                <option value="">— Select Active Member * —</option>
+                                @foreach($activeMembers as $mem)
+                                    <option value="{{ $mem->id }}" @selected(old('report_type_member_id', $report->report_type_member_id) == $mem->id)>
+                                        👤 {{ $mem->member_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('report_type_member_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                         </div>
                     @endif
 
                     <div>
-                        <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                             Overall Remarks <span class="text-red-500">*</span>
                         </label>
                         <input type="text" name="overall_remarks" required
                                value="{{ old('overall_remarks', $report->overall_remarks) }}"
                                placeholder="Overall inspection summary / remarks (mandatory)..."
-                               class="h-11 w-full rounded-lg border border-gray-300 px-3 text-base dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('overall_remarks') border-red-500 @enderror" />
+                               class="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('overall_remarks') border-red-500 @enderror" />
                         @error('overall_remarks') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
                 </div>

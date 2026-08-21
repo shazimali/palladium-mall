@@ -64,14 +64,21 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3.5 text-center">
-                                    @can('report_types.edit')
-                                        <a href="{{ route('report-types.remarks', $rt) }}"
-                                           class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/70 px-3 py-1.5 text-xs font-bold text-brand-600 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/40 dark:text-brand-400 transition-colors shadow-2xs">
-                                            💬 {{ $rt->remarks->count() }} Remarks
-                                        </a>
-                                    @else
-                                        <span class="text-xs font-bold text-gray-500">💬 {{ $rt->remarks->count() }} Remarks</span>
-                                    @endcan
+                                    <div class="flex flex-col gap-1.5 items-center justify-center">
+                                        @can('report_types.edit')
+                                            <a href="{{ route('report-types.members', $rt) }}"
+                                               class="inline-flex items-center gap-1 rounded-lg border border-indigo-200 bg-indigo-50/70 px-2.5 py-1 text-xs font-bold text-indigo-600 hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-400 transition-colors shadow-2xs">
+                                                👥 {{ $rt->members->count() }} Members
+                                            </a>
+                                            <a href="{{ route('report-types.remarks', $rt) }}"
+                                               class="inline-flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50/70 px-2.5 py-1 text-xs font-bold text-brand-600 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/40 dark:text-brand-400 transition-colors shadow-2xs">
+                                                💬 {{ $rt->remarks->count() }} Remarks
+                                            </a>
+                                        @else
+                                            <span class="text-xs font-bold text-gray-600 dark:text-gray-400">👥 {{ $rt->members->count() }} Members</span>
+                                            <span class="text-xs font-bold text-gray-500">💬 {{ $rt->remarks->count() }} Remarks</span>
+                                        @endcan
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3.5 text-center">
                                     <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold

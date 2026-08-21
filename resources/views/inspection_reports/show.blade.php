@@ -7,11 +7,16 @@
         {{-- Header & Quick Actions --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-gray-200 bg-white p-5 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
             <div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                     <h2 class="text-xl font-extrabold text-gray-800 dark:text-white/90">{{ $reportType->name }} Report</h2>
                     <span class="rounded-full bg-brand-50 px-3 py-0.5 text-xs font-bold text-brand-600 dark:bg-brand-950/40 dark:text-brand-400">
                         {{ $report->report_date->format('d M Y') }}
                     </span>
+                    @if($report->member)
+                        <span class="rounded-full bg-indigo-50 px-3 py-0.5 text-xs font-bold text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                            👤 Member: {{ $report->member->member_name }}
+                        </span>
+                    @endif
                 </div>
                 <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Conducted by <strong class="text-gray-700 dark:text-gray-300">{{ $report->reporter?->name ?? 'System' }}</strong> on {{ $report->created_at->format('d M Y, h:i A') }}

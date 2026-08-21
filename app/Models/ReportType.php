@@ -46,6 +46,21 @@ class ReportType extends Model
         return $this->hasMany(ReportTypeRemark::class)->active()->ordered();
     }
 
+    public function members(): HasMany
+    {
+        return $this->hasMany(ReportTypeMember::class)->ordered();
+    }
+
+    public function activeMembers(): HasMany
+    {
+        return $this->hasMany(ReportTypeMember::class)->active()->ordered();
+    }
+
+    public function hasMembers(): bool
+    {
+        return $this->members()->exists();
+    }
+
     public function reports(): HasMany
     {
         return $this->hasMany(InspectionReport::class);

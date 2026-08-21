@@ -240,6 +240,11 @@
                 Report Date: <span
                     style="font-weight: 900; color: #1d4ed8;">{{ $report->report_date->format('d M Y') }}</span>
             </span>
+            @if($report->member)
+                <span style="font-size: 14px; font-weight: 800; color: #111827;">
+                    Member / Officer: <span style="font-weight: 900; color: #4338ca;">{{ $report->member->member_name }}</span>
+                </span>
+            @endif
             <span style="font-size: 14px; font-weight: 800; color: #111827;">
                 Inspector: <span style="font-weight: 900;">{{ $report->reporter?->name ?? 'Admin Staff' }}</span>
             </span>

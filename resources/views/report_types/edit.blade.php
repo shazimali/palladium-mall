@@ -11,9 +11,13 @@
                     <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Update report identity, daily time-window schedule, and settings.</p>
                 </div>
                 <div class="flex items-center gap-2">
+                    <a href="{{ route('report-types.members', $reportType) }}"
+                       class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-600 hover:bg-indigo-100 dark:border-indigo-900/40 dark:bg-indigo-950/40 dark:text-indigo-400 transition-colors">
+                        👥 Members ({{ $reportType->members->count() }})
+                    </a>
                     <a href="{{ route('report-types.remarks', $reportType) }}"
                        class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-bold text-brand-600 hover:bg-brand-100 dark:border-brand-900/40 dark:bg-brand-950/40 dark:text-brand-400 transition-colors">
-                        💬 Manage Remarks ({{ $reportType->remarks->count() }})
+                        💬 Remarks ({{ $reportType->remarks->count() }})
                     </a>
                     <a href="{{ route('report-types.index') }}"
                        class="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400">

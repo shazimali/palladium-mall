@@ -14,6 +14,7 @@ class InspectionReport extends Model
 
     protected $fillable = [
         'report_type_id',
+        'report_type_member_id',
         'report_date',
         'reported_by',
         'overall_remarks',
@@ -27,6 +28,11 @@ class InspectionReport extends Model
     public function reportType(): BelongsTo
     {
         return $this->belongsTo(ReportType::class);
+    }
+
+    public function member(): BelongsTo
+    {
+        return $this->belongsTo(ReportTypeMember::class, 'report_type_member_id');
     }
 
     public function reporter(): BelongsTo

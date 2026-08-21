@@ -168,16 +168,20 @@ Route::middleware('auth')->group(function () {
         Route::get('report-types/create', [\App\Http\Controllers\ReportTypeController::class, 'create'])->name('report-types.create');
         Route::post('report-types', [\App\Http\Controllers\ReportTypeController::class, 'store'])->name('report-types.store');
         Route::post('report-types/{reportType}/remarks', [\App\Http\Controllers\ReportTypeController::class, 'addRemark'])->name('report-types.remarks.store');
+        Route::post('report-types/{reportType}/members', [\App\Http\Controllers\ReportTypeController::class, 'addMember'])->name('report-types.members.store');
     });
     Route::middleware('permission:report_types.view')->group(function () {
         Route::get('report-types', [\App\Http\Controllers\ReportTypeController::class, 'index'])->name('report-types.index');
         Route::get('report-types/{reportType}', [\App\Http\Controllers\ReportTypeController::class, 'show'])->name('report-types.show');
         Route::get('report-types/{reportType}/remarks', [\App\Http\Controllers\ReportTypeController::class, 'remarks'])->name('report-types.remarks');
+        Route::get('report-types/{reportType}/members', [\App\Http\Controllers\ReportTypeController::class, 'members'])->name('report-types.members');
     });
     Route::middleware('permission:report_types.edit')->group(function () {
         Route::get('report-types/{reportType}/edit', [\App\Http\Controllers\ReportTypeController::class, 'edit'])->name('report-types.edit');
         Route::put('report-types/{reportType}', [\App\Http\Controllers\ReportTypeController::class, 'update'])->name('report-types.update');
         Route::post('report-types/{reportType}/toggle-status', [\App\Http\Controllers\ReportTypeController::class, 'toggleStatus'])->name('report-types.toggle-status');
+        Route::put('report-types/{reportType}/members/{member}', [\App\Http\Controllers\ReportTypeController::class, 'updateMember'])->name('report-types.members.update');
+        Route::post('report-types/{reportType}/members/{member}/toggle-status', [\App\Http\Controllers\ReportTypeController::class, 'toggleMemberStatus'])->name('report-types.members.toggle-status');
     });
     Route::middleware('permission:report_types.delete')->group(function () {
         Route::delete('report-types/{reportType}', [\App\Http\Controllers\ReportTypeController::class, 'destroy'])->name('report-types.destroy');

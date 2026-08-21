@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ReportType;
 use App\Models\ReportTypeRemark;
+use App\Models\ReportTypeMember;
 use App\Models\InspectionHead;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -13,14 +14,14 @@ class ReportTypeController extends Controller
     public function index(Request $request)
     {
         if ($request->wantsJson() || $request->ajax()) {
-            $types = ReportType::with('remarks')->withCount('inspectionHeads')->ordered()->get();
+            $types = ReportType::with(['remarks', 'members'])->withCount(['inspectionHeads', 'members'])->ordered()->get();
             return response()->json([
                 'success' => true,
                 'data'    => $types,
             ]);
         }
 
-        $reportTypes = ReportType::with('remarks')->withCount('inspectionHeads')->ordered()->paginate(20);
+        $reportTypes = ReportType::with(['remarks', 'members'])->withCount(['inspectionHeads', 'members'])->ordered()->paginate(20);
         return view('report_types.index', compact('reportTypes'));
     }
 
@@ -87,13 +88,13 @@ class ReportTypeController extends Controller
 
     public function show(ReportType $reportType)
     {
-        $reportType->load('remarks')->loadCount('inspectionHeads');
+        $reportType->load(['remarks', 'members'])->loadCount(['inspectionHeads', 'members']);
         return view('report_types.show', compact('reportType'));
     }
 
     public function edit(ReportType $reportType)
     {
-        $reportType->load('remarks')->loadCount('inspectionHeads');
+        $reportType->load(['remarks', 'members'])->loadCount(['inspectionHeads', 'members']);
         return view('report_types.edit', compact('reportType'));
     }
 
@@ -231,5 +232,74 @@ class ReportTypeController extends Controller
         }
 
         return redirect()->back()->with('success', 'System remark deleted.');
+    }
+
+    // ── Dedicated Members Management Screen ───────────────────────────────────
+
+    public function members(ReportType $reportType)
+    {
+        $reportType->load('members');
+        return view('report_types.members', compact('reportType'));
+    }
+
+    public function addMember(Request $request, ReportType $reportType)
+    {
+        $validated = $request->validate([
+            'member_name' => 'required|string|max:255',
+            'status'      => 'nullable|boolean',
+            'sort_order'  => 'nullable|integer|min:0',
+        ]);
+
+        $member = $reportType->members()->create([
+            'member_name' => $validated['member_name'],
+            'status'      => $request->boolean('status', true),
+            'sort_order'  => $validated['sort_order'] ?? ($reportType->members()->count() + 1),
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Member added successfully.',
+                'data'    => $member,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Member added successfully.');
+    }
+
+    public function updateMember(Request $request, ReportType $reportType, ReportTypeMember $member)
+    {
+        $validated = $request->validate([
+            'member_name' => 'required|string|max:255',
+            'status'      => 'required|boolean',
+            'sort_order'  => 'nullable|integer|min:0',
+        ]);
+
+        $member->update([
+            'member_name' => $validated['member_name'],
+            'status'      => (bool)$validated['status'],
+            'sort_order'  => $validated['sort_order'] ?? $member->sort_order,
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Member updated successfully.',
+                'data'    => $member,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Member updated successfully.');
+    }
+
+    public function toggleMemberStatus(Request $request, ReportType $reportType, ReportTypeMember $member)
+    {
+        $member->update(['status' => !$member->status]);
+
+        return response()->json([
+            'success' => true,
+            'status'  => $member->status,
+            'message' => 'Member status updated successfully.',
+        ]);
     }
 }

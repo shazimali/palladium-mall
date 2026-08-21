@@ -9,6 +9,8 @@ use App\Models\InspectionPerson;
 use App\Models\InspectionReport;
 use App\Models\InspectionReportItem;
 use App\Models\ReportType;
+use App\Models\ReportTypeRemark;
+use App\Models\ReportTypeMember;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,9 +18,13 @@ use Illuminate\Support\Facades\Storage;
 
 class InspectionReportController extends Controller
 {
-    private function resolveReportType(string $typeKey): ReportType
+    private function resolveReportType(string $type): ReportType
     {
-        return ReportType::where('key', $typeKey)->firstOrFail();
+        $reportType = ReportType::where('key', $type)->first();
+        if (!$reportType) {
+            abort(404, "Report type '{$type}' not found.");
+        }
+        return $reportType;
     }
 
     private function authorizeInspection(string $action, string $type): void
@@ -67,11 +73,14 @@ class InspectionReportController extends Controller
             return view('inspection_reports.flat_index', compact('reportType', 'reports', 'units'));
         }
 
-        $query = InspectionReport::with(['reporter', 'items'])
+        $query = InspectionReport::with(['reporter', 'member', 'items'])
             ->where('report_type_id', $reportType->id)
             ->orderByDesc('report_date')
             ->orderByDesc('created_at');
 
+        if ($request->filled('member_id')) {
+            $query->where('report_type_member_id', $request->member_id);
+        }
         if ($request->filled('date_from')) {
             $query->where('report_date', '>=', $request->date_from);
         }
@@ -84,8 +93,9 @@ class InspectionReportController extends Controller
 
         $reports = $query->paginate(20)->withQueryString();
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
+        $members = $reportType->members;
 
-        return view('inspection_reports.index', compact('reportType', 'reports', 'isWithinWindow'));
+        return view('inspection_reports.index', compact('reportType', 'reports', 'isWithinWindow', 'members'));
     }
 
     public function create(string $type)
@@ -117,8 +127,11 @@ class InspectionReportController extends Controller
                 ->with('error', "{$reportType->name} reports can only be created between {$reportType->time_window_display}.");
         }
 
-        // If daily report mode, check if current user already submitted today's report
-        if ($reportType->is_daily && $reportType->one_per_user_daily) {
+        $hasMembers = $reportType->hasMembers();
+        $activeMembers = $reportType->activeMembers;
+
+        // If daily report mode and NO members, check if current user already submitted today's report
+        if ($reportType->is_daily && $reportType->one_per_user_daily && !$hasMembers) {
             $existing = InspectionReport::where('report_type_id', $reportType->id)
                 ->where('report_date', $today)
                 ->where('reported_by', Auth::id())
@@ -130,10 +143,20 @@ class InspectionReportController extends Controller
             }
         }
 
+        // Track member daily submissions if is_daily = true and hasMembers
+        $todayMemberReportIds = [];
+        if ($reportType->is_daily && $hasMembers) {
+            $todayMemberReportIds = InspectionReport::where('report_type_id', $reportType->id)
+                ->where('report_date', $today)
+                ->whereNotNull('report_type_member_id')
+                ->pluck('id', 'report_type_member_id')
+                ->toArray();
+        }
+
         $heads = InspectionHead::active()->forType($type)->orderBy('sort_order')->orderBy('name')->get();
         $systemRemarks = $reportType->activeRemarks;
 
-        return view('inspection_reports.create', compact('reportType', 'heads', 'systemRemarks', 'today', 'isWithinWindow') + ['report' => null]);
+        return view('inspection_reports.create', compact('reportType', 'heads', 'systemRemarks', 'activeMembers', 'hasMembers', 'todayMemberReportIds', 'today', 'isWithinWindow') + ['report' => null]);
     }
 
     public function store(Request $request, string $type)
@@ -216,10 +239,29 @@ class InspectionReportController extends Controller
                 ->with('error', "{$reportType->name} reports can only be generated between {$reportType->time_window_display}.");
         }
 
-        // Daily 1-Report-per-User check
-        if ($reportType->is_daily && $reportType->one_per_user_daily) {
+        $hasMembers = $reportType->hasMembers();
+        $reportDate = $reportType->is_daily ? now()->toDateString() : $request->report_date;
+
+        // Daily 1-Report-per-Member check (if has members and is_daily)
+        if ($reportType->is_daily && $hasMembers) {
+            $memberId = $request->input('report_type_member_id');
+            if ($memberId) {
+                $exists = InspectionReport::where('report_type_id', $reportType->id)
+                    ->where('report_type_member_id', $memberId)
+                    ->where('report_date', $reportDate)
+                    ->exists();
+
+                if ($exists) {
+                    $member = ReportTypeMember::find($memberId);
+                    $memberName = $member ? $member->member_name : 'Selected member';
+                    return redirect()->route('inspection-reports.index', $type)
+                        ->with('error', "A daily {$reportType->name} report for {$memberName} has already been submitted for today.");
+                }
+            }
+        } elseif ($reportType->is_daily && $reportType->one_per_user_daily && !$hasMembers) {
+            // Daily 1-Report-per-User check (fallback if no members)
             $exists = InspectionReport::where('report_type_id', $reportType->id)
-                ->where('report_date', now()->toDateString())
+                ->where('report_date', $reportDate)
                 ->where('reported_by', Auth::id())
                 ->exists();
 
@@ -240,11 +282,16 @@ class InspectionReportController extends Controller
             'items.*.image'                => 'nullable|image|max:200', // 200 KB
         ];
 
+        if ($hasMembers) {
+            $validationRules['report_type_member_id'] = 'required|exists:report_type_members,id';
+        }
+
         if (!$reportType->is_daily) {
             $validationRules['report_date'] = 'required|date';
         }
 
         $customMessages = [
+            'report_type_member_id.required'         => 'Please select an active member.',
             'overall_remarks.required'               => 'Overall remarks are mandatory.',
             'items.*.status.required'                => 'Status is mandatory for every checklist item.',
             'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
@@ -254,14 +301,13 @@ class InspectionReportController extends Controller
 
         $request->validate($validationRules, $customMessages);
 
-        $reportDate = $reportType->is_daily ? now()->toDateString() : $request->report_date;
-
         $report = InspectionReport::create([
-            'report_type_id'  => $reportType->id,
-            'report_date'     => $reportDate,
-            'reported_by'     => Auth::id(),
-            'overall_remarks' => $request->overall_remarks,
-            'status'          => 'completed',
+            'report_type_id'        => $reportType->id,
+            'report_type_member_id' => $hasMembers ? $request->report_type_member_id : null,
+            'report_date'           => $reportDate,
+            'reported_by'           => Auth::id(),
+            'overall_remarks'       => $request->overall_remarks,
+            'status'                => 'completed',
         ]);
 
         $this->saveItems($report, $request, $type);
@@ -287,7 +333,7 @@ class InspectionReportController extends Controller
             return view('flat_inspection_reports.show', compact('report', 'reportType'));
         }
 
-        $report = InspectionReport::with(['items.head', 'items.systemRemark', 'reporter', 'reportType'])
+        $report = InspectionReport::with(['items.head', 'items.systemRemark', 'reporter', 'reportType', 'member'])
             ->findOrFail($reportId);
 
         return view('inspection_reports.show', compact('reportType', 'report'));
@@ -310,7 +356,7 @@ class InspectionReportController extends Controller
             return view('inspection_reports.flat_edit', compact('reportType', 'report', 'units', 'heads', 'systemRemarks', 'inspectionPersons', 'today', 'existingItems'));
         }
 
-        $report = InspectionReport::findOrFail($reportId);
+        $report = InspectionReport::with(['items', 'member'])->findOrFail($reportId);
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
 
         if ($reportType->is_daily && !$isWithinWindow) {
@@ -321,9 +367,11 @@ class InspectionReportController extends Controller
         $report->load('items');
         $heads = InspectionHead::active()->forType($type)->orderBy('sort_order')->orderBy('name')->get();
         $systemRemarks = $reportType->activeRemarks;
+        $activeMembers = $reportType->activeMembers;
+        $hasMembers = $reportType->hasMembers();
         $existingItems = $report->items->keyBy('inspection_head_id');
 
-        return view('inspection_reports.edit', compact('reportType', 'report', 'heads', 'systemRemarks', 'existingItems', 'isWithinWindow'));
+        return view('inspection_reports.edit', compact('reportType', 'report', 'heads', 'systemRemarks', 'activeMembers', 'hasMembers', 'existingItems', 'isWithinWindow'));
     }
 
     public function update(Request $request, string $type, $reportId)
@@ -418,6 +466,7 @@ class InspectionReportController extends Controller
                 ->with('error', "{$reportType->name} reports can only be edited during the allowed time window ({$reportType->time_window_display}).");
         }
 
+        $hasMembers = $reportType->hasMembers();
         $hasSystemRemarks = $reportType->activeRemarks()->exists();
 
         $validationRules = [
@@ -429,11 +478,16 @@ class InspectionReportController extends Controller
             'items.*.image'                => 'nullable|image|max:200',
         ];
 
+        if ($hasMembers) {
+            $validationRules['report_type_member_id'] = 'required|exists:report_type_members,id';
+        }
+
         if (!$reportType->is_daily) {
             $validationRules['report_date'] = 'required|date';
         }
 
         $customMessages = [
+            'report_type_member_id.required'         => 'Please select an active member.',
             'overall_remarks.required'               => 'Overall remarks are mandatory.',
             'items.*.status.required'                => 'Status is mandatory for every checklist item.',
             'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
@@ -446,6 +500,9 @@ class InspectionReportController extends Controller
         $updateData = [
             'overall_remarks' => $request->overall_remarks,
         ];
+        if ($hasMembers && $request->filled('report_type_member_id')) {
+            $updateData['report_type_member_id'] = $request->report_type_member_id;
+        }
         if (!$reportType->is_daily && $request->filled('report_date')) {
             $updateData['report_date'] = $request->report_date;
         }
@@ -465,7 +522,7 @@ class InspectionReportController extends Controller
         if ($type === 'flat_inspection') {
             $report = FlatInspectionReport::findOrFail($reportId);
             foreach ($report->items as $item) {
-                if ($item->image_path) {
+                if ($item->image_path && Storage::disk('public')->exists($item->image_path)) {
                     Storage::disk('public')->delete($item->image_path);
                 }
             }
@@ -476,11 +533,13 @@ class InspectionReportController extends Controller
         }
 
         $report = InspectionReport::findOrFail($reportId);
+
         foreach ($report->items as $item) {
-            if ($item->image_path) {
+            if ($item->image_path && Storage::disk('public')->exists($item->image_path)) {
                 Storage::disk('public')->delete($item->image_path);
             }
         }
+
         $report->delete();
 
         return redirect()->route('inspection-reports.index', $type)
@@ -508,7 +567,7 @@ class InspectionReportController extends Controller
             ]);
         }
 
-        $report = InspectionReport::with(['items.head', 'items.systemRemark', 'reporter', 'reportType'])
+        $report = InspectionReport::with(['items.head', 'items.systemRemark', 'reporter', 'reportType', 'member'])
             ->findOrFail($reportId);
 
         return view('inspection_reports.print', compact('reportType', 'report'));

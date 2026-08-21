@@ -22,20 +22,20 @@
                   method="POST" enctype="multipart/form-data" class="p-6 space-y-7">
                 @csrf
 
-                {{-- Date & Remarks --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {{-- Date, Member & Remarks --}}
+                <div class="grid grid-cols-1 md:grid-cols-{{ (isset($hasMembers) && $hasMembers) ? '3' : '2' }} gap-5">
                     @if($reportType->is_daily)
                         <div>
-                            <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                                 Report Date <span class="text-red-500">*</span>
-                                <span class="text-xs font-normal text-amber-600 dark:text-amber-400 ml-1">(Locked to Today for Daily Report)</span>
+                                <span class="text-[10px] font-normal text-amber-600 dark:text-amber-400 ml-1">(Today's Daily)</span>
                             </label>
                             <div class="relative">
                                 <input type="text" value="{{ \Carbon\Carbon::parse($today)->format('d M Y') }}" readonly
-                                       class="h-11 w-full rounded-lg border border-gray-300 pl-10 pr-3 text-base bg-gray-100 text-gray-700 cursor-not-allowed font-semibold dark:border-gray-700 dark:bg-gray-800 dark:text-white/80 select-none" />
+                                       class="h-11 w-full rounded-lg border border-gray-300 pl-10 pr-3 text-sm bg-gray-100 text-gray-700 cursor-not-allowed font-bold dark:border-gray-700 dark:bg-gray-800 dark:text-white/80 select-none" />
                                 <input type="hidden" name="report_date" value="{{ $today }}" />
                                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                     </svg>
                                 </span>
@@ -43,23 +43,48 @@
                         </div>
                     @else
                         <div>
-                            <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">Report Date <span class="text-red-500">*</span></label>
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                Report Date <span class="text-red-500">*</span>
+                            </label>
                             <div class="relative">
                                 <input type="date" name="report_date" value="{{ old('report_date', $today) }}" required
-                                       class="h-11 w-full rounded-lg border border-gray-300 px-3 text-base dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('report_date') border-red-500 @enderror" />
+                                       class="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('report_date') border-red-500 @enderror" />
                             </div>
-                            @error('report_date') <p class="mt-1 text-sm text-red-500">{{ $message }}</p> @enderror
+                            @error('report_date') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+                        </div>
+                    @endif
+
+                    @if(isset($hasMembers) && $hasMembers)
+                        <div>
+                            <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                Select Member / Officer <span class="text-red-500">*</span>
+                            </label>
+                            <select name="report_type_member_id" required
+                                    class="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm font-semibold dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('report_type_member_id') border-red-500 @enderror">
+                                <option value="">— Select Active Member * —</option>
+                                @foreach($activeMembers as $mem)
+                                    @php
+                                        $alreadySubmitted = $reportType->is_daily && isset($todayMemberReportIds[$mem->id]);
+                                    @endphp
+                                    <option value="{{ $mem->id }}"
+                                        @selected(old('report_type_member_id') == $mem->id)
+                                        {{ $alreadySubmitted ? 'disabled class=text-gray-400' : '' }}>
+                                        👤 {{ $mem->member_name }} {{ $alreadySubmitted ? '⚠️ (Already logged for today)' : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('report_type_member_id') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                         </div>
                     @endif
 
                     <div>
-                        <label class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
                             Overall Remarks <span class="text-red-500">*</span>
                         </label>
                         <input type="text" name="overall_remarks" required
                                value="{{ old('overall_remarks') }}"
                                placeholder="Overall inspection summary / remarks (mandatory)..."
-                               class="h-11 w-full rounded-lg border border-gray-300 px-3 text-base dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('overall_remarks') border-red-500 @enderror" />
+                               class="h-11 w-full rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 @error('overall_remarks') border-red-500 @enderror" />
                         @error('overall_remarks') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
                     </div>
                 </div>
