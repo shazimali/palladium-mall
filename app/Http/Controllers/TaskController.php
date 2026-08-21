@@ -19,7 +19,7 @@ use Illuminate\View\View;
 class TaskController extends Controller
 {
     /**
-     * Display the Kanban Board view.
+     * Display the Task Table view.
      */
     public function index(Request $request): View
     {
@@ -41,6 +41,10 @@ class TaskController extends Controller
             $query->where('priority', $request->query('priority'));
         }
 
+        if ($request->filled('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
         if ($request->filled('search')) {
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
@@ -51,19 +55,22 @@ class TaskController extends Controller
 
         $allTasks = $query->orderBy('order_column')->orderByDesc('created_at')->get();
 
+        // Always pass kanban counts based on unfiltered totals for summary badges
+        $allForCount = Task::select('status')->get();
         $kanban = [
-            'todo'        => $allTasks->where('status', 'todo')->values(),
-            'in_progress' => $allTasks->where('status', 'in_progress')->values(),
-            'completed'   => $allTasks->where('status', 'completed')->values(),
+            'todo'        => $allForCount->where('status', 'todo')->values(),
+            'in_progress' => $allForCount->where('status', 'in_progress')->values(),
+            'completed'   => $allForCount->where('status', 'completed')->values(),
         ];
 
         $users = User::where('is_active', true)->orderBy('name')->get();
 
         return view('tasks.index', [
-            'title'    => 'Task Management Board',
-            'kanban'   => $kanban,
-            'users'    => $users,
-            'filters'  => $request->only(['assigned_to', 'priority', 'search']),
+            'title'        => 'Task Management',
+            'allTasks'     => $allTasks,
+            'kanban'       => $kanban,
+            'users'        => $users,
+            'filters'      => $request->only(['assigned_to', 'priority', 'search', 'status']),
             'activeTaskId' => $request->query('task_id'),
         ]);
     }

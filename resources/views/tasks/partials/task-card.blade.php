@@ -53,7 +53,7 @@
         <!-- Created Time -->
         <div class="flex items-center justify-between text-gray-400 text-[10px]">
             <span>Created:</span>
-            <span class="font-medium text-gray-600 dark:text-gray-300">{{ $task->created_at->format('M d, Y h:i A') }}</span>
+            <span class="font-medium text-gray-600 dark:text-gray-300">{{ $task->created_at?->format('M d, Y h:i A') ?? '—' }}</span>
         </div>
 
         <!-- Due Time -->
@@ -62,7 +62,7 @@
                 <span>Due:</span>
                 <span class="font-semibold flex items-center gap-1">
                     @if($isOverdue) ⚠️ @endif
-                    {{ $task->due_at->format('M d, Y h:i A') }}
+                    {{ $task->due_at?->format('M d, Y h:i A') ?? '—' }}
                 </span>
             </div>
         @endif
@@ -71,7 +71,7 @@
         @if($task->completed_at)
             <div class="flex items-center justify-between text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
                 <span>Completed:</span>
-                <span>{{ $task->completed_at->format('M d, Y h:i A') }}</span>
+                <span>{{ $task->completed_at?->format('M d, Y h:i A') ?? '—' }}</span>
             </div>
         @endif
     </div>
