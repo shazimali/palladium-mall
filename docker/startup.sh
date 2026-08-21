@@ -52,6 +52,9 @@ elif [ "$CONTAINER_ROLE" = "queue" ]; then
 elif [ "$CONTAINER_ROLE" = "scheduler" ]; then
     echo "🚀 Starting scheduler..."
     exec php artisan schedule:work
+elif [ "$CONTAINER_ROLE" = "reverb" ] || [ "$CONTAINER_ROLE" = "websocket" ]; then
+    echo "🚀 Starting Laravel Reverb WebSocket server..."
+    exec php artisan reverb:start --host=0.0.0.0 --port=${REVERB_SERVER_PORT:-8080}
 else
     echo "❌ Unknown CONTAINER_ROLE: $CONTAINER_ROLE"
     exit 1

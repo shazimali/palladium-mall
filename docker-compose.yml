@@ -42,6 +42,21 @@ services:
       - palladium_mall_cache:/var/www/palladium_mall/bootstrap/cache
       - /var/www/palladium_mall/.env:/var/www/palladium_mall/.env:ro
 
+  palladium_mall_reverb:
+    image: ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG:-latest}
+    container_name: palladium_mall_reverb
+    restart: always
+    ports:
+      - "8085:8080"
+    environment:
+      - CONTAINER_ROLE=reverb
+    networks:
+      - global_network
+    volumes:
+      - palladium_mall_storage:/var/www/palladium_mall/storage
+      - palladium_mall_cache:/var/www/palladium_mall/bootstrap/cache
+      - /var/www/palladium_mall/.env:/var/www/palladium_mall/.env:ro
+
 networks:
   global_network:
     external: true
