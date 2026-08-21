@@ -20,8 +20,13 @@ class TaskPermissionSeeder extends Seeder
             ['name' => 'tasks.delete', 'display_name' => 'Delete Tasks', 'group' => 'Task Management'],
         ];
 
+        $adminGroup = \App\Models\PermissionGroup::where('name', 'admin')->first();
+
         foreach ($permissions as $p) {
-            Permission::firstOrCreate(['name' => $p['name']], $p);
+            if ($adminGroup) {
+                $p['permission_group_id'] = $adminGroup->id;
+            }
+            Permission::updateOrCreate(['name' => $p['name']], $p);
         }
 
         $roles = Role::whereIn('name', ['super-admin', 'administrator'])->get();

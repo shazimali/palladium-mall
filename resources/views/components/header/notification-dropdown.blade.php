@@ -10,10 +10,10 @@
         // Poll every 15 seconds as fallback
         setInterval(() => this.fetchNotifications(), 15000);
 
-        // Listen via Echo if initialized
-        if (window.Echo && {{ auth()->check() ? auth()->id() : 'null' }}) {
-            window.Echo.private('users.{{ auth()->id() }}')
-                .notification((notification) => {
+        // Listen via Echo for real-time notifications
+        const setupEchoListener = () => {
+            if (window.Echo && {{ auth()->check() ? auth()->id() : 'null' }}) {
+                const handleNotification = (notification) => {
                     this.unreadCount++;
                     this.notifications.unshift({
                         id: notification.id || Date.now(),
@@ -31,7 +31,20 @@
                             timer: 4000
                         });
                     }
-                });
+                };
+
+                window.Echo.private('App.Models.User.{{ auth()->id() }}')
+                    .notification(handleNotification);
+
+                window.Echo.private('users.{{ auth()->id() }}')
+                    .notification(handleNotification);
+            }
+        };
+
+        if (window.Echo) {
+            setupEchoListener();
+        } else {
+            setTimeout(setupEchoListener, 500);
         }
     },
 
