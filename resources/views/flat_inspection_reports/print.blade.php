@@ -131,7 +131,14 @@
                                 <span class="badge-na">N/A</span>
                             @endif
                         </td>
-                        <td>{{ $item->remarks ?: '—' }}</td>
+                        <td>
+                            @if($item->systemRemark)
+                                <div style="font-weight:700; color:#111; margin-bottom:2px;">
+                                    🏷️ {{ $item->systemRemark->remark }}
+                                </div>
+                            @endif
+                            <div style="color:#555;">{{ $item->remarks ?: '—' }}</div>
+                        </td>
                         <td style="text-align:center">
                             @if($item->image_path)
                                 <img src="{{ Storage::url($item->image_path) }}" class="img-thumb" />

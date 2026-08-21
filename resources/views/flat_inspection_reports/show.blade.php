@@ -92,7 +92,16 @@
                                     <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-bold text-gray-500 dark:bg-gray-800 dark:text-gray-400">— N/A</span>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400 text-xs">{{ $item->remarks ?: '—' }}</td>
+                            <td class="px-4 py-3 text-xs">
+                                @if($item->systemRemark)
+                                    <div class="font-bold text-gray-900 dark:text-white mb-0.5">
+                                        🏷️ {{ $item->systemRemark->remark }}
+                                    </div>
+                                @endif
+                                <div class="text-gray-600 dark:text-gray-400">
+                                    {{ $item->remarks ?: '—' }}
+                                </div>
+                            </td>
                             <td class="px-4 py-3">
                                 @if($item->image_path)
                                     <a href="{{ Storage::url($item->image_path) }}" target="_blank">

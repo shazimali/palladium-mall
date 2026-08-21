@@ -30,28 +30,79 @@
         </div>
 
         {{-- Filters Bar --}}
-        <form method="GET" action="{{ route('inspection-reports.index', 'flat_inspection') }}"
+        <form method="GET" action="{{ route('inspection-reports.index', 'flat_inspection') }}" id="filterForm"
             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/60">
             
-            {{-- Unit Filter --}}
-            <div>
-                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Unit / Flat</label>
-                <select name="unit_id" onchange="this.form.submit()"
-                    class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none">
-                    <option value="">All Units</option>
+            {{-- Unit Filter (Searchable Combobox) --}}
+            <div x-data="{
+                unitId: '{{ request('unit_id', '') }}',
+                open: false,
+                search: '',
+                options: [
+                    { id: '', unit_number: '', searchLabel: 'all units', display: 'All Units' },
                     @foreach($units as $unit)
-                        <option value="{{ $unit->id }}" {{ request('unit_id') == $unit->id ? 'selected' : '' }}>
-                            Unit {{ $unit->unit_number }}
-                        </option>
+                        {
+                            id: '{{ $unit->id }}',
+                            unit_number: '{{ addslashes($unit->unit_number) }}',
+                            type: '{{ ucfirst($unit->type) }}',
+                            floor: '{{ addslashes($unit->floor ? $unit->floor->name : '') }}',
+                            searchLabel: '{{ strtolower(addslashes("unit " . $unit->unit_number . " " . $unit->type . " " . ($unit->floor ? $unit->floor->name : ""))) }}',
+                            display: 'Unit {{ addslashes($unit->unit_number) }} ({{ ucfirst($unit->type) }}{{ $unit->floor ? ' - ' . addslashes($unit->floor->name) : '' }})'
+                        },
                     @endforeach
-                </select>
+                ],
+                get filteredOptions() {
+                    if (!this.search) return this.options;
+                    let s = this.search.toLowerCase().trim();
+                    return this.options.filter(opt => opt.searchLabel.includes(s));
+                },
+                get selectedOption() {
+                    return this.options.find(opt => String(opt.id) === String(this.unitId)) || this.options[0];
+                },
+                selectOption(opt) {
+                    this.unitId = opt.id;
+                    this.open = false;
+                    this.search = '';
+                    $nextTick(() => {
+                        document.getElementById('filterForm').submit();
+                    });
+                }
+            }" @click.outside="open = false" class="relative">
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Unit / Flat</label>
+                <input type="hidden" name="unit_id" :value="unitId" />
+
+                <button type="button" @click="open = !open; if(open) { $nextTick(() => $refs.unitSearchInput.focus()); }"
+                    class="h-9 w-full rounded-xl border border-gray-300 bg-white px-3 text-left text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white flex items-center justify-between shadow-2xs">
+                    <span x-text="selectedOption.display" class="truncate font-semibold"></span>
+                    <svg class="h-3.5 w-3.5 text-gray-400 shrink-0 ml-1 transition-transform" :class="open ? 'rotate-180' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                <div x-show="open" x-cloak
+                    class="absolute z-50 mt-1 w-64 sm:w-full rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900 overflow-hidden">
+                    <div class="p-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+                        <input type="text" x-ref="unitSearchInput" x-model="search" placeholder="Search unit..."
+                            @keydown.escape="open = false"
+                            class="h-8 w-full rounded-lg border border-gray-300 bg-white px-2.5 text-xs text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-white" />
+                    </div>
+                    <ul class="max-h-56 overflow-y-auto py-1 text-xs">
+                        <template x-for="opt in filteredOptions" :key="opt.id">
+                            <li @click="selectOption(opt)"
+                                class="px-3 py-2 cursor-pointer transition-colors hover:bg-brand-50 dark:hover:bg-brand-900/30"
+                                :class="String(opt.id) === String(unitId) ? 'bg-brand-50 font-bold text-brand-600 dark:bg-brand-900/40 dark:text-brand-400' : 'text-gray-800 dark:text-gray-200'">
+                                <span x-text="opt.display"></span>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
             </div>
 
             {{-- Stage Filter --}}
             <div>
                 <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Inspection Stage</label>
                 <select name="stage" onchange="this.form.submit()"
-                    class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none">
+                    class="h-9 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none font-semibold">
                     <option value="">All Stages</option>
                     <option value="vacant" {{ request('stage') == 'vacant' ? 'selected' : '' }}>🟡 Vacant Inspection</option>
                     <option value="move_in" {{ request('stage') == 'move_in' ? 'selected' : '' }}>🟢 Move-In Inspection</option>
@@ -59,29 +110,81 @@
                 </select>
             </div>
 
-            {{-- Date From --}}
-            <div>
+            {{-- Date From with Flatpickr --}}
+            <div x-data="{
+                initPicker() {
+                    const init = () => {
+                        if (typeof flatpickr !== 'undefined') {
+                            flatpickr(this.$refs.fromPicker, {
+                                dateFormat: 'Y-m-d',
+                                altInput: true,
+                                altFormat: 'd M Y',
+                                defaultDate: '{{ request('date_from') }}',
+                                allowInput: false,
+                                static: true
+                            });
+                        } else {
+                            setTimeout(init, 50);
+                        }
+                    };
+                    this.$nextTick(init);
+                }
+            }" x-init="initPicker()">
                 <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">From Date</label>
-                <input type="date" name="date_from" value="{{ request('date_from') }}" onchange="this.form.submit()"
-                    class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none" />
+                <div class="relative">
+                    <input type="text" x-ref="fromPicker" name="date_from" value="{{ request('date_from') }}"
+                        placeholder="Select from date..."
+                        class="h-9 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 pl-8 pr-2.5 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none" />
+                    <span class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </span>
+                </div>
             </div>
 
-            {{-- Date To --}}
-            <div>
+            {{-- Date To with Flatpickr --}}
+            <div x-data="{
+                initPicker() {
+                    const init = () => {
+                        if (typeof flatpickr !== 'undefined') {
+                            flatpickr(this.$refs.toPicker, {
+                                dateFormat: 'Y-m-d',
+                                altInput: true,
+                                altFormat: 'd M Y',
+                                defaultDate: '{{ request('date_to') }}',
+                                allowInput: false,
+                                static: true
+                            });
+                        } else {
+                            setTimeout(init, 50);
+                        }
+                    };
+                    this.$nextTick(init);
+                }
+            }" x-init="initPicker()">
                 <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">To Date</label>
-                <input type="date" name="date_to" value="{{ request('date_to') }}" onchange="this.form.submit()"
-                    class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none" />
+                <div class="relative">
+                    <input type="text" x-ref="toPicker" name="date_to" value="{{ request('date_to') }}"
+                        placeholder="Select to date..."
+                        class="h-9 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 pl-8 pr-2.5 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none" />
+                    <span class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </span>
+                </div>
             </div>
 
             {{-- Action Buttons --}}
             <div class="flex items-end gap-2">
                 <button type="submit"
-                    class="w-full px-4 py-2 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-xl transition-all">
+                    class="w-full h-9 px-4 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-xl transition-all shadow-2xs">
                     Filter
                 </button>
                 @if(request()->anyFilled(['unit_id', 'stage', 'date_from', 'date_to']))
                     <a href="{{ route('inspection-reports.index', 'flat_inspection') }}"
-                        class="px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center justify-center">
+                        class="h-9 px-3 text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center justify-center">
                         Reset
                     </a>
                 @endif
@@ -202,6 +305,16 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </a>
+
+                                    @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('flat_inspections.edit'))
+                                        <a href="{{ route('inspection-reports.edit', ['type' => 'flat_inspection', 'report' => $rep->id]) }}"
+                                            class="rounded-lg p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                            title="Edit Inspection">
+                                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </a>
+                                    @endif
 
                                     @if(auth()->user()->isSuperAdmin() || auth()->user()->hasPermission('flat_inspections.delete'))
                                         <form action="{{ route('inspection-reports.destroy', ['type' => 'flat_inspection', 'report' => $rep->id]) }}" method="POST"

@@ -62,7 +62,7 @@ class InspectionReportController extends Controller
             ->latest('id');
 
             $reports = $query->paginate(20)->withQueryString();
-            $units = Unit::orderBy('unit_number')->get(['id', 'unit_number', 'type']);
+            $units = Unit::with(['floor', 'block'])->orderBy('unit_number')->get();
 
             return view('inspection_reports.flat_index', compact('reportType', 'reports', 'units'));
         }
@@ -106,9 +106,10 @@ class InspectionReportController extends Controller
                 ->get();
 
             $heads = InspectionHead::active()->flatInspection()->orderBy('sort_order')->orderBy('name')->get();
+            $systemRemarks = $reportType->activeRemarks;
             $inspectionPersons = InspectionPerson::where('is_active', true)->orderBy('name')->get();
 
-            return view('inspection_reports.flat_create', compact('reportType', 'units', 'heads', 'inspectionPersons', 'today'));
+            return view('inspection_reports.flat_create', compact('reportType', 'units', 'heads', 'systemRemarks', 'inspectionPersons', 'today'));
         }
 
         if ($reportType->is_daily && !$isWithinWindow) {
@@ -141,18 +142,34 @@ class InspectionReportController extends Controller
         $reportType = $this->resolveReportType($type);
 
         if ($type === 'flat_inspection') {
-            $request->validate([
-                'unit_id'              => 'required|exists:units,id',
-                'inspected_at'         => 'required|date',
-                'inspection_person_id' => 'nullable|exists:inspection_persons,id',
-                'inspection_member'    => 'nullable|string|max:255',
-                'flat_condition'       => 'nullable|in:good,average,poor',
-                'remarks'              => 'nullable|string|max:2000',
-                'items'                => 'nullable|array',
-                'items.*.status'       => 'nullable|in:pass,fail,na',
-                'items.*.remarks'      => 'nullable|string|max:1000',
-                'items.*.image'        => 'nullable|image|max:200',
-            ]);
+            $hasSystemRemarks = $reportType->activeRemarks()->exists();
+
+            $validationRules = [
+                'unit_id'                       => 'required|exists:units,id',
+                'inspected_at'                  => 'required|date',
+                'inspection_person_id'          => 'required|exists:inspection_persons,id',
+                'inspection_member'             => 'nullable|string|max:255',
+                'flat_condition'                => 'required|in:good,average,poor',
+                'remarks'                       => 'required|string|max:2000',
+                'items'                         => 'required|array|min:1',
+                'items.*.status'                => 'required|in:pass,fail,na,yes,no',
+                'items.*.report_type_remark_id' => $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
+                'items.*.remarks'               => 'required|string|max:1000',
+                'items.*.image'                 => 'nullable|image|max:200',
+            ];
+
+            $customMessages = [
+                'unit_id.required'                       => 'Please select a vacant flat/shop.',
+                'inspection_person_id.required'          => 'Inspection Person / Officer is mandatory.',
+                'flat_condition.required'                => 'Flat condition is mandatory.',
+                'remarks.required'                       => 'Overall inspection remarks are mandatory.',
+                'items.*.status.required'                => 'Status (Pass / Fail / N/A) is mandatory for every checklist item.',
+                'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
+                'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
+                'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
+            ];
+
+            $request->validate($validationRules, $customMessages);
 
             $report = FlatInspectionReport::create([
                 'unit_id'              => $request->unit_id,
@@ -169,9 +186,9 @@ class InspectionReportController extends Controller
 
             foreach ($request->input('items', []) as $headId => $itemData) {
                 $statusVal = match ($itemData['status'] ?? 'na') {
-                    'pass'  => true,
-                    'fail'  => false,
-                    default => null,
+                    'pass', 'yes' => true,
+                    'fail', 'no'  => false,
+                    default       => null,
                 };
 
                 $imagePath = null;
@@ -183,6 +200,7 @@ class InspectionReportController extends Controller
                     'flat_inspection_report_id' => $report->id,
                     'inspection_head_id'        => $headId,
                     'status'                    => $statusVal,
+                    'report_type_remark_id'     => $itemData['report_type_remark_id'] ?? null,
                     'remarks'                   => $itemData['remarks'] ?? null,
                     'image_path'                => $imagePath,
                 ]);
@@ -281,14 +299,15 @@ class InspectionReportController extends Controller
         $reportType = $this->resolveReportType($type);
 
         if ($type === 'flat_inspection') {
-            $report = FlatInspectionReport::with('items')->findOrFail($reportId);
+            $report = FlatInspectionReport::with(['items', 'unit', 'agreement.unit'])->findOrFail($reportId);
             $heads = InspectionHead::active()->flatInspection()->orderBy('sort_order')->orderBy('name')->get();
+            $systemRemarks = $reportType->activeRemarks;
             $inspectionPersons = InspectionPerson::where('is_active', true)->orderBy('name')->get();
             $existingItems = $report->items->keyBy('inspection_head_id');
             $today = $report->inspected_at?->toDateString() ?? now()->toDateString();
-            $units = Unit::orderBy('unit_number')->get();
+            $units = Unit::with(['floor', 'block'])->orderBy('unit_number')->get();
 
-            return view('inspection_reports.flat_create', compact('reportType', 'report', 'units', 'heads', 'inspectionPersons', 'today', 'existingItems'));
+            return view('inspection_reports.flat_edit', compact('reportType', 'report', 'units', 'heads', 'systemRemarks', 'inspectionPersons', 'today', 'existingItems'));
         }
 
         $report = InspectionReport::findOrFail($reportId);
@@ -313,22 +332,80 @@ class InspectionReportController extends Controller
         $reportType = $this->resolveReportType($type);
 
         if ($type === 'flat_inspection') {
-            $report = FlatInspectionReport::findOrFail($reportId);
-            $request->validate([
-                'inspected_at'         => 'required|date',
-                'inspection_person_id' => 'nullable|exists:inspection_persons,id',
-                'inspection_member'    => 'nullable|string|max:255',
-                'flat_condition'       => 'nullable|in:good,average,poor',
-                'remarks'              => 'nullable|string|max:2000',
-            ]);
+            $report = FlatInspectionReport::with('items')->findOrFail($reportId);
+            $hasSystemRemarks = $reportType->activeRemarks()->exists();
 
-            $report->update([
+            $validationRules = [
+                'unit_id'                       => 'required|exists:units,id',
+                'inspected_at'                  => 'required|date',
+                'inspection_person_id'          => 'required|exists:inspection_persons,id',
+                'inspection_member'             => 'nullable|string|max:255',
+                'flat_condition'                => 'required|in:good,average,poor',
+                'remarks'                       => 'required|string|max:2000',
+                'items'                         => 'required|array|min:1',
+                'items.*.status'                => 'required|in:pass,fail,na,yes,no',
+                'items.*.report_type_remark_id' => $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
+                'items.*.remarks'               => 'required|string|max:1000',
+                'items.*.image'                 => 'nullable|image|max:200',
+            ];
+
+            $customMessages = [
+                'unit_id.required'                       => 'Please select a unit/flat.',
+                'inspection_person_id.required'          => 'Inspection Person / Officer is mandatory.',
+                'flat_condition.required'                => 'Flat condition is mandatory.',
+                'remarks.required'                       => 'Overall inspection remarks are mandatory.',
+                'items.*.status.required'                => 'Status (Pass / Fail / N/A) is mandatory for every checklist item.',
+                'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
+                'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
+                'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
+            ];
+
+            $request->validate($validationRules, $customMessages);
+
+            $updateData = [
                 'inspected_at'         => $request->inspected_at,
                 'inspection_person_id' => $request->inspection_person_id,
                 'inspection_member'    => $request->inspection_member,
                 'flat_condition'       => $request->flat_condition,
                 'remarks'              => $request->remarks,
-            ]);
+            ];
+
+            if ($request->filled('unit_id') && !$report->agreement_id) {
+                $updateData['unit_id'] = $request->unit_id;
+            }
+
+            $report->update($updateData);
+
+            foreach ($request->input('items', []) as $headId => $itemData) {
+                $statusVal = match ($itemData['status'] ?? 'na') {
+                    'pass', 'yes' => true,
+                    'fail', 'no'  => false,
+                    default       => null,
+                };
+
+                $existing = $report->items->where('inspection_head_id', $headId)->first();
+                $imagePath = $existing?->image_path;
+
+                if ($request->hasFile("items.{$headId}.image")) {
+                    if ($imagePath && Storage::disk('public')->exists($imagePath)) {
+                        Storage::disk('public')->delete($imagePath);
+                    }
+                    $imagePath = $request->file("items.{$headId}.image")->store('inspection_images/flat', 'public');
+                }
+
+                FlatInspectionReportItem::updateOrCreate(
+                    [
+                        'flat_inspection_report_id' => $report->id,
+                        'inspection_head_id'        => $headId,
+                    ],
+                    [
+                        'status'                => $statusVal,
+                        'report_type_remark_id' => $itemData['report_type_remark_id'] ?? null,
+                        'remarks'               => $itemData['remarks'] ?? null,
+                        'image_path'            => $imagePath,
+                    ]
+                );
+            }
 
             return redirect()->route('inspection-reports.index', 'flat_inspection')
                 ->with('success', 'Flat inspection updated successfully.');

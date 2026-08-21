@@ -9,8 +9,12 @@ use Illuminate\Support\Facades\Storage;
 class FlatInspectionReportItem extends Model
 {
     protected $fillable = [
-        'flat_inspection_report_id', 'inspection_head_id',
-        'status', 'image_path', 'remarks',
+        'flat_inspection_report_id',
+        'inspection_head_id',
+        'status',
+        'report_type_remark_id',
+        'image_path',
+        'remarks',
     ];
 
     protected $casts = [
@@ -25,6 +29,11 @@ class FlatInspectionReportItem extends Model
     public function head(): BelongsTo
     {
         return $this->belongsTo(InspectionHead::class, 'inspection_head_id');
+    }
+
+    public function systemRemark(): BelongsTo
+    {
+        return $this->belongsTo(ReportTypeRemark::class, 'report_type_remark_id');
     }
 
     public function getImageUrlAttribute(): ?string
