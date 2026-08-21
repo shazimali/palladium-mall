@@ -17,9 +17,12 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                     <td class="px-4 py-3 text-gray-400">{{ $tenants->firstItem() + $index }}</td>
                     <td class="px-4 py-3">
-                        @if($tenant->unit)
+                        @php
+                            $unit = $tenant->effective_unit;
+                        @endphp
+                        @if($unit)
                             <span class="unit-badge-lg">
-                                {!! isset($highlight) ? $highlight($tenant->unit->unit_number) : e($tenant->unit->unit_number) !!}
+                                {!! isset($highlight) ? $highlight($unit->unit_number) : e($unit->unit_number) !!}
                             </span>
                         @else
                             <span class="text-gray-400 text-xs">—</span>

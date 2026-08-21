@@ -26,10 +26,13 @@ class TenantController extends Controller
 
     public function index(Request $request)
     {
-        $query = Tenant::with(['unit', 'activeAgreement', 'agreements'])
+        $query = Tenant::with(['unit', 'activeAgreement', 'agreements.unit'])
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->landlord_id, function ($q) use ($request) {
-                $q->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                $q->where(function ($sq) use ($request) {
+                    $sq->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id))
+                       ->orWhereHas('agreements.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                });
             })
             ->when($request->date_from, function ($q) use ($request) {
                 $q->whereHas('agreements', fn($qa) => $qa->where('start_date', '>=', $request->date_from));

@@ -144,6 +144,22 @@ class Tenant extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function getEffectiveUnitAttribute(): ?Unit
+    {
+        if ($this->relationLoaded('unit') && $this->unit) {
+            return $this->unit;
+        }
+        if ($this->unit) {
+            return $this->unit;
+        }
+
+        $latestAgreement = $this->relationLoaded('agreements') 
+            ? $this->agreements->sortByDesc('id')->first()
+            : $this->agreements()->latest('id')->first();
+
+        return $latestAgreement?->unit;
+    }
+
     // -----------------------------------------------------------------------
     // Scopes
     // -----------------------------------------------------------------------
@@ -170,7 +186,8 @@ class Tenant extends Model
                 ->orWhere('cnic', 'like', "%{$term}%")
                 ->orWhere('phone', 'like', "%{$term}%")
                 ->orWhere('email', 'like', "%{$term}%")
-                ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
+                ->orWhereHas('unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"))
+                ->orWhereHas('agreements.unit', fn($u) => $u->where('unit_number', 'like', "%{$term}%"));
         });
     }
 

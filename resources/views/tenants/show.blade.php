@@ -47,10 +47,13 @@
                             <span
                                 class="rounded-full bg-red-100 px-3 py-0.5 text-xs font-semibold text-red-600 dark:bg-red-900/30 dark:text-red-400">Inactive</span>
                         @endif
-                        @if($tenant->unit)
+                        @php
+                            $unit = $tenant->effective_unit;
+                        @endphp
+                        @if($unit)
                             <span
                                 class="rounded-full bg-blue-100 px-3 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                Unit {{ $tenant->unit->unit_number }}
+                                Unit {{ $unit->unit_number }}
                             </span>
                         @endif
                     </div>
