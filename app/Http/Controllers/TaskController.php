@@ -25,13 +25,24 @@ class TaskController extends Controller
     {
         $this->authorizeTaskAccess('view');
 
+        /** @var User $currentUser */
+        $currentUser = auth()->user();
+
         $query = Task::with(['creator', 'assignees', 'comments.user']);
+
+        // Role-based visibility: Super admin sees all, others only see their created or assigned tasks
+        if (!$currentUser->isSuperAdmin()) {
+            $query->where(function ($q) use ($currentUser) {
+                $q->where('created_by', $currentUser->id)
+                  ->orWhereHas('assignees', fn($aq) => $aq->where('users.id', $currentUser->id));
+            });
+        }
 
         // Filters
         if ($request->filled('assigned_to')) {
             $assignedTo = $request->query('assigned_to');
             if ($assignedTo === 'me') {
-                $query->whereHas('assignees', fn($q) => $q->where('users.id', auth()->id()));
+                $query->whereHas('assignees', fn($q) => $q->where('users.id', $currentUser->id));
             } else {
                 $query->whereHas('assignees', fn($q) => $q->where('users.id', $assignedTo));
             }
@@ -55,8 +66,15 @@ class TaskController extends Controller
 
         $allTasks = $query->orderBy('order_column')->orderByDesc('created_at')->get();
 
-        // Always pass kanban counts based on unfiltered totals for summary badges
-        $allForCount = Task::select('status')->get();
+        // Kanban / status summary counts based on user-scoped tasks
+        $countQuery = Task::query();
+        if (!$currentUser->isSuperAdmin()) {
+            $countQuery->where(function ($q) use ($currentUser) {
+                $q->where('created_by', $currentUser->id)
+                  ->orWhereHas('assignees', fn($aq) => $aq->where('users.id', $currentUser->id));
+            });
+        }
+        $allForCount = $countQuery->select('status')->get();
         $kanban = [
             'todo'        => $allForCount->where('status', 'todo')->values(),
             'in_progress' => $allForCount->where('status', 'in_progress')->values(),
@@ -153,7 +171,7 @@ class TaskController extends Controller
      */
     public function edit(Task $task): View
     {
-        $this->authorizeTaskAccess('edit');
+        $this->authorizeTaskAccess('edit', $task);
 
         $users = User::where('is_active', true)->orderBy('name')->get();
 
@@ -169,7 +187,7 @@ class TaskController extends Controller
      */
     public function update(Request $request, Task $task)
     {
-        $this->authorizeTaskAccess('edit');
+        $this->authorizeTaskAccess('edit', $task);
 
         $validated = $request->validate([
             'title'        => 'required|string|max:255',
@@ -222,7 +240,7 @@ class TaskController extends Controller
      */
     public function updateStatus(Request $request, Task $task): JsonResponse
     {
-        $this->authorizeTaskAccess('edit');
+        $this->authorizeTaskAccess('edit', $task);
 
         $validated = $request->validate([
             'status'       => 'required|in:todo,in_progress,completed',
@@ -274,7 +292,7 @@ class TaskController extends Controller
      */
     public function storeComment(Request $request, Task $task): JsonResponse
     {
-        $this->authorizeTaskAccess('view');
+        $this->authorizeTaskAccess('view', $task);
 
         $validated = $request->validate([
             'comment' => 'required|string|max:2000',
@@ -312,7 +330,7 @@ class TaskController extends Controller
      */
     public function destroy(Request $request, Task $task)
     {
-        $this->authorizeTaskAccess('delete');
+        $this->authorizeTaskAccess('delete', $task);
 
         $task->delete();
 
@@ -324,9 +342,9 @@ class TaskController extends Controller
     }
 
     /**
-     * Permission authorization helper.
+     * Permission and task ownership/assignment authorization helper.
      */
-    protected function authorizeTaskAccess(string $action): void
+    protected function authorizeTaskAccess(string $action, ?Task $task = null): void
     {
         /** @var User $user */
         $user = auth()->user();
@@ -342,6 +360,16 @@ class TaskController extends Controller
         $permission = "tasks.{$action}";
         if (!$user->hasPermission($permission)) {
             abort(403, "You do not have permission to {$action} tasks.");
+        }
+
+        // For non-super-admins, ensure they are either the creator or an assignee of the task
+        if ($task) {
+            $isCreator = (int) $task->created_by === (int) $user->id;
+            $isAssignee = $task->assignees->contains('id', $user->id);
+
+            if (!$isCreator && !$isAssignee) {
+                abort(403, "You do not have access to this task.");
+            }
         }
     }
 }
