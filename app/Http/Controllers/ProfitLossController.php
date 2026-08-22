@@ -21,7 +21,7 @@ class ProfitLossController extends Controller
      */
     public function index(Request $request): View
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.view')) {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.profit_loss') && !auth()->user()->hasPermission('reports.view')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -41,7 +41,7 @@ class ProfitLossController extends Controller
      */
     public function exportPdf(Request $request)
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.view')) {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.profit_loss') && !auth()->user()->hasPermission('reports.view')) {
             abort(403, 'Unauthorized action.');
         }
 
@@ -66,7 +66,7 @@ class ProfitLossController extends Controller
      */
     public function exportExcel(Request $request)
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.view')) {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('reports.profit_loss') && !auth()->user()->hasPermission('reports.view')) {
             abort(403, 'Unauthorized action.');
         }
 

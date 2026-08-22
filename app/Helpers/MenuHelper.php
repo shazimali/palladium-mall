@@ -320,7 +320,11 @@ class MenuHelper
             $reportsSubItems[] = ['name' => 'Account Summary', 'path' => '/reports/account-summary'];
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Generated)', 'path' => '/reports?report_type=monthly_matrix'];
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Expected)', 'path' => '/reports?report_type=monthly_matrix_expected'];
+        }
+        if (auth()->check() && ($user->can('reports.profit_loss') || $user->can('reports.view'))) {
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
+        }
+        if (auth()->check() && $user->can('reports.view')) {
             $reportsSubItems[] = ['name' => 'Receivables Report', 'path' => '/reports/receivables'];
             $reportsSubItems[] = ['name' => 'Payables Report', 'path' => '/reports/payables'];
         }

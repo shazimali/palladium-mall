@@ -359,11 +359,12 @@ Route::middleware('auth')->group(function () {
     });
 
     // Profit & Loss Report
-    Route::middleware('permission:reports.view')->group(function () {
+    Route::middleware('permission:reports.view,reports.profit_loss')->group(function () {
         Route::get('reports/profit-loss', [ProfitLossController::class, 'index'])->name('reports.profit-loss');
         Route::get('reports/profit-loss/pdf', [ProfitLossController::class, 'exportPdf'])->name('reports.profit-loss.pdf');
         Route::get('reports/profit-loss/excel', [ProfitLossController::class, 'exportExcel'])->name('reports.profit-loss.excel');
-
+    });
+    Route::middleware('permission:reports.view')->group(function () {
         // Receivables & Payables Reports
         Route::get('reports/receivables', [ReceivablePayableReportController::class, 'receivables'])->name('reports.receivables');
         Route::get('reports/receivables/pdf', [ReceivablePayableReportController::class, 'receivablesPdf'])->name('reports.receivables.pdf');
