@@ -529,6 +529,8 @@ Route::middleware('auth')->group(function () {
             ->name('other-tenants.attach');
         Route::post('other-tenants/{other_tenant}/detach', [\App\Http\Controllers\OtherTenantController::class, 'detach'])
             ->name('other-tenants.detach');
+        Route::put('other-tenants/{other_tenant}/unit-history/{history}', [\App\Http\Controllers\OtherTenantController::class, 'updateUnitHistory'])
+            ->name('other-tenants.update-unit-history');
     });
 
     // Inventory & Stock Management

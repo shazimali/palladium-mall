@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\OtherTenant;
 use App\Models\OtherTenantUnitHistory;
 use App\Models\Payment;
@@ -521,6 +522,17 @@ class OtherTenantController extends Controller
         if ($unit) {
             $unit->update(['breaker_status' => 'on']);
         }
+
+        // Link any unassigned maintenance payment for the attachment month to this tenant
+        $attachDate = $attachedAt ? Carbon::parse($attachedAt) : Carbon::today();
+        Payment::where('unit_id', $unitId)
+            ->where('type', 'maintenance')
+            ->where('month', $attachDate->copy()->startOfMonth()->toDateString())
+            ->whereNull('other_tenant_id')
+            ->update([
+                'other_tenant_id' => $otherTenant->id,
+                'whatsapp_number' => $otherTenant->whatsapp_number ?: null,
+            ]);
     }
 
 
@@ -549,5 +561,56 @@ class OtherTenantController extends Controller
         if ($unit) {
             $unit->update(['breaker_status' => 'off']);
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Update Unit History Dates (Last Detached Only)
+    // -----------------------------------------------------------------------
+
+    public function updateUnitHistory(Request $request, OtherTenant $otherTenant, OtherTenantUnitHistory $history): RedirectResponse
+    {
+        if (!auth()->user()->isSuperAdmin()) {
+            abort(403, 'Unauthorized action. Only super administrators can edit history dates.');
+        }
+
+        if ((int) $history->other_tenant_id !== (int) $otherTenant->id) {
+            abort(404);
+        }
+
+        // Only allow editing the last detached unit history record
+        $lastDetached = OtherTenantUnitHistory::where('other_tenant_id', $otherTenant->id)
+            ->whereNotNull('detached_at')
+            ->orderBy('attached_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (!$lastDetached || (int) $lastDetached->id !== (int) $history->id) {
+            return redirect()
+                ->route('other-tenants.show', $otherTenant)
+                ->with('error', 'Only the last detached unit history dates can be modified.');
+        }
+
+        $request->validate([
+            'attached_at' => ['required', 'date'],
+            'detached_at' => ['required', 'date', 'after_or_equal:attached_at'],
+        ]);
+
+        $oldAttached = $history->attached_at ? $history->attached_at->format('Y-m-d') : null;
+        $oldDetached = $history->detached_at ? $history->detached_at->format('Y-m-d') : null;
+
+        $history->update([
+            'attached_at' => $request->attached_at,
+            'detached_at' => $request->detached_at,
+        ]);
+
+        ActivityLog::log(
+            'other_tenant_history_update',
+            "Updated unit history dates for other tenant {$otherTenant->name} (Unit: {$history->unit?->unit_number}): Attached [{$oldAttached} -> {$request->attached_at}], Detached [{$oldDetached} -> {$request->detached_at}]",
+            $history
+        );
+
+        return redirect()
+            ->route('other-tenants.show', $otherTenant)
+            ->with('success', 'Unit history dates updated successfully.');
     }
 }

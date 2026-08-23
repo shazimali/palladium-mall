@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Agreement;
+use App\Models\OtherTenantUnitHistory;
 use App\Models\Payment;
 use App\Models\PaymentAccount;
 use App\Models\Unit;
@@ -21,6 +22,8 @@ class MatrixService
         $from = $request->date_from ?? $request->from_date;
         $month = $from ? Carbon::parse($from)->startOfMonth() : Carbon::now()->startOfMonth();
         $monthStr = $month->format('Y-m-d');
+        $monthStart = $month->copy()->startOfMonth()->toDateString();
+        $monthEnd = $month->copy()->endOfMonth()->toDateString();
         $unitStatus = $request->unit_status;
         $ownerType = $request->owner_type;
         $unitId = $request->unit_id;
@@ -37,7 +40,20 @@ class MatrixService
         $isActualOnly = $reportType === 'monthly_matrix' || empty($reportType);
         $isMatrixReport = in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected']) || empty($reportType);
 
-        // Include is_self units that EITHER currently have an otherTenant
+        // Active other-tenant histories in the selected month
+        $otherTenantHistories = OtherTenantUnitHistory::where('attached_at', '<=', $monthEnd)
+            ->where(function ($q) use ($monthStart) {
+                $q->whereNull('detached_at')
+                    ->orWhere('detached_at', '>=', $monthStart);
+            })
+            ->with(['otherTenant'])
+            ->orderBy('attached_at', 'desc')
+            ->get()
+            ->groupBy('unit_id');
+
+        $selfUnitsOccupiedInMonth = $otherTenantHistories->keys()->toArray();
+
+        // Include is_self units that EITHER had an other-tenant attached in the month
         // OR had payments generated FOR an other-tenant in the selected month
         $selfUnitsWithPaymentsThisMonth = $isMatrixReport
             ? Payment::where('month', $monthStr)
@@ -57,21 +73,22 @@ class MatrixService
                 ->toArray()
             : [];
 
-        // Merge both sets (current month billed + previous unpaid)
-        $selfUnitsToInclude = array_unique(array_merge($selfUnitsWithPaymentsThisMonth, $selfUnitsWithPrevUnpaid));
+        // Merge all sets
+        $selfUnitsToInclude = array_unique(array_merge(
+            $selfUnitsOccupiedInMonth,
+            $selfUnitsWithPaymentsThisMonth,
+            $selfUnitsWithPrevUnpaid
+        ));
 
         $units = Unit::with(['landlord', 'otherTenant'])
             ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
             ->when($unitId, fn($q) => $q->where('id', $unitId))
             ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
             ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
-            ->when($ownerType === 'other', fn($q) => $q->where('is_self', true)->whereHas('otherTenant'))
+            ->when($ownerType === 'other', fn($q) => $q->where('is_self', true)->whereIn('id', $selfUnitsToInclude))
             ->when(!$ownerType, function ($q) use ($selfUnitsToInclude) {
                 $q->where(function ($sq) use ($selfUnitsToInclude) {
                     $sq->where('is_self', false)
-                        ->orWhere(function ($ssq) {
-                            $ssq->where('is_self', true)->whereHas('otherTenant');
-                        })
                         ->orWhere(function ($ssq) use ($selfUnitsToInclude) {
                             if (!empty($selfUnitsToInclude)) {
                                 $ssq->where('is_self', true)
@@ -125,6 +142,13 @@ class MatrixService
 
         $previousUnpaidBalances = Payment::where('month', '<', $monthStr)
             ->whereIn('status', ['unpaid', 'partial'])
+            ->where(function ($q) {
+                $q->whereHas('unit', fn($qu) => $qu->where('is_self', false))
+                    ->orWhere(function ($qu) {
+                        $qu->whereHas('unit', fn($u) => $u->where('is_self', true))
+                            ->whereNotNull('other_tenant_id');
+                    });
+            })
             ->selectRaw('unit_id, SUM(amount - amount_paid) as prev_unpaid')
             ->groupBy('unit_id')
             ->pluck('prev_unpaid', 'unit_id')
@@ -170,14 +194,18 @@ class MatrixService
             $agreement = $agreements->get($unit->id)?->first();
             $unitPayments = $payments->get($unit->id) ?? collect();
 
-            if ($unit->is_self && !$unit->otherTenant && $unitPayments->isEmpty()) {
+            $activeHistoryInMonth = $otherTenantHistories->get($unit->id)?->first();
+            $activeOtherTenantInMonth = $activeHistoryInMonth?->otherTenant;
+            $hasSelfTenantPayment = $unitPayments->whereNotNull('other_tenant_id')->isNotEmpty();
+            $isOtherOccupiedInMonth = $unit->is_self && ($activeOtherTenantInMonth || $hasSelfTenantPayment);
+
+            if ($unit->is_self && !$isOtherOccupiedInMonth && $unitPayments->isEmpty()) {
                 $unitPayments = collect();
             }
 
             $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
-            $hasSelfTenantPayment = $unitPayments->whereNotNull('other_tenant_id')->isNotEmpty();
 
-            if ($unit->is_self && ($unit->otherTenant || $hasSelfTenantPayment)) {
+            if ($isOtherOccupiedInMonth) {
                 $status = 'OCCUPIED';
             } elseif ($unit->is_self && $prevUnpaid > 0) {
                 $status = 'PREV UNPAID';
@@ -204,14 +232,14 @@ class MatrixService
             // Services (Maintenance)
             $maintPayment = $unitPayments->where('type', 'maintenance')->first();
             if ($maintPayment) {
-                if ($unit->is_self && !$maintPayment->other_tenant_id) {
+                if ($unit->is_self && !$maintPayment->other_tenant_id && !$isOtherOccupiedInMonth) {
                     $serv_due = 0.0;
                 } else {
                     $serv_due = (float) $maintPayment->amount;
                 }
             } elseif (!$isActualOnly && $agreement && $agreement->maintenance_charge > 0) {
                 $serv_due = (float) $agreement->maintenance_charge;
-            } elseif (!$isActualOnly && $unit->is_self && $unit->otherTenant && $unit->default_maintenance_charge > 0) {
+            } elseif (!$isActualOnly && $unit->is_self && $isOtherOccupiedInMonth && $unit->default_maintenance_charge > 0) {
                 $serv_due = (float) $unit->default_maintenance_charge;
             } else {
                 $serv_due = 0.0;
@@ -258,7 +286,7 @@ class MatrixService
                 $dates = $unitAllocationsForUnit->map(fn($a) => $a->voucher_date ? Carbon::parse($a->voucher_date)->format('d/m') : null)->unique()->filter()->toArray();
             } else {
                 $rent_paid = $rentPayment ? (float) $rentPayment->amount_paid : 0.0;
-                $serv_paid = ($maintPayment && (!$unit->is_self || $maintPayment->other_tenant_id)) ? (float) $maintPayment->amount_paid : 0.0;
+                $serv_paid = ($maintPayment && (!$unit->is_self || $maintPayment->other_tenant_id || $isOtherOccupiedInMonth)) ? (float) $maintPayment->amount_paid : 0.0;
                 $sec_paid = $secPayment ? (float) $secPayment->amount_paid : 0.0;
                 $extra_paid = (float) $extraPayments->sum('amount_paid');
                 $total_received = $serv_paid + $extra_paid + $sec_paid + $rent_paid;
@@ -293,9 +321,9 @@ class MatrixService
             $firstPayment = $unitPayments->first();
             if ($unit->is_self) {
                 $prevPaymentForUnit = $prevOtherTenantPayments->get($unit->id)?->first();
-                $tenantName = $unit->otherTenant?->name
+                $tenantName = $activeOtherTenantInMonth?->name
                     ?? $firstPayment?->otherTenant?->name
-                    ?? $prevPaymentForUnit?->otherTenant?->name
+                    ?? ($prevUnpaid > 0 ? $prevPaymentForUnit?->otherTenant?->name : null)
                     ?? '—';
             } else {
                 $tenantName = $agreement?->tenant?->name ?? ($firstPayment?->tenant?->name ?? '—');

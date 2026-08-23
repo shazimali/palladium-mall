@@ -22,7 +22,7 @@ class PaymentController extends Controller
     public function index(Request $request)
     {
         $dateFrom = $request->input('date_from');
-        $dateTo   = $request->input('date_to');
+        $dateTo = $request->input('date_to');
 
         // Base query with tenant constraints for other-owned units
         $baseQuery = Payment::where(function ($q) {
@@ -36,7 +36,7 @@ class PaymentController extends Controller
         // Filter by owner_type
         $ownerType = $request->owner_type;
         $baseQuery->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
-                  ->when($ownerType === 'other',    fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
+            ->when($ownerType === 'other', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
 
         $filterQuery = (clone $baseQuery)
             ->when($request->search, fn($q) => $q->search($request->search))
@@ -61,7 +61,7 @@ class PaymentController extends Controller
                     foreach ($payments as $group) {
                         $query->orWhere(function ($q) use ($group) {
                             $q->where('unit_id', $group->unit_id)
-                              ->where('month', $group->month);
+                                ->where('month', $group->month);
                         });
                     }
                 })
@@ -99,8 +99,9 @@ class PaymentController extends Controller
         $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
 
         $search = $request->input('search');
-        $highlight = function($text) use ($search) {
-            if (empty($text)) return '';
+        $highlight = function ($text) use ($search) {
+            if (empty($text))
+                return '';
             if (empty($search)) {
                 return e($text);
             }
@@ -143,7 +144,7 @@ class PaymentController extends Controller
         // Filter by owner_type
         $ownerType = $request->owner_type;
         $baseQuery->when($ownerType === 'pm_mall', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', false)))
-                  ->when($ownerType === 'other',    fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
+            ->when($ownerType === 'other', fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('is_self', true)));
 
         // Filter by unit_id and year
         $payments = (clone $baseQuery)
@@ -260,11 +261,11 @@ class PaymentController extends Controller
             ->get();
 
         return view('payments.create', [
-            'title'       => 'Add Payment Record',
-            'tenants'     => $tenants,
+            'title' => 'Add Payment Record',
+            'tenants' => $tenants,
             'tenantUnits' => $tenantUnits,
-            'selfUnits'   => $selfUnits,
-            'allUnits'    => $allUnits,
+            'selfUnits' => $selfUnits,
+            'allUnits' => $allUnits,
         ]);
     }
 
@@ -272,7 +273,7 @@ class PaymentController extends Controller
     {
         // ── Extra Payment ──────────────────────────────────────────────────
         if ($request->input('payment_mode') === 'extra') {
-            $unit  = Unit::with(['otherTenant', 'landlord', 'agreements.tenant'])->findOrFail($request->unit_id);
+            $unit = Unit::with(['otherTenant', 'landlord', 'agreements.tenant'])->findOrFail($request->unit_id);
             $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
             $totalAmount = (float) $request->amount;
 
@@ -283,15 +284,15 @@ class PaymentController extends Controller
             // Step 1: Determine the landlord rent share amount
             // If the unit has an Other Tenant with a monthly_rent set, use that.
             // Otherwise fall back to the unit's own default_monthly_rent.
-            $otherTenant  = $unit->otherTenant;
-            $otherRent    = $otherTenant ? (float) $otherTenant->monthly_rent : 0.00;
+            $otherTenant = $unit->otherTenant;
+            $otherRent = $otherTenant ? (float) $otherTenant->monthly_rent : 0.00;
 
             if ($otherRent > 0) {
                 $landlordRent = $otherRent;
-                $landlordId   = $unit->landlord_id;
+                $landlordId = $unit->landlord_id;
             } else {
                 $landlordRent = (float) $unit->default_monthly_rent;
-                $landlordId   = $unit->landlord_id;
+                $landlordId = $unit->landlord_id;
             }
 
             // Step 2: Duplicate landlord-share guard (per unit per month)
@@ -314,39 +315,39 @@ class PaymentController extends Controller
             // Step 3: Create payment(s) with correct split
             if ($landlordId && $landlordRent > 0) {
                 $landlordShare = min($totalAmount, $landlordRent);
-                $pmMallShare   = max(0.00, $totalAmount - $landlordRent);
+                $pmMallShare = max(0.00, $totalAmount - $landlordRent);
 
                 // 1. Create Landlord Share Payment
                 Payment::create([
-                    'tenant_id'       => $tenantId,
+                    'tenant_id' => $tenantId,
                     'other_tenant_id' => $otherTenant?->id,
-                    'unit_id'         => $unit->id,
-                    'agreement_id'    => $agreementId,
-                    'type'            => 'extra_payment',
-                    'month'           => $month,
-                    'amount'          => $landlordShare,
-                    'amount_paid'     => 0,
-                    'status'          => 'unpaid',
-                    'due_date'        => $request->due_date,
-                    'landlord_id'     => $landlordId,
-                    'notes'           => '[Landlord Share] ' . $request->notes,
+                    'unit_id' => $unit->id,
+                    'agreement_id' => $agreementId,
+                    'type' => 'extra_payment',
+                    'month' => $month,
+                    'amount' => $landlordShare,
+                    'amount_paid' => 0,
+                    'status' => 'unpaid',
+                    'due_date' => $request->due_date,
+                    'landlord_id' => $landlordId,
+                    'notes' => '[Landlord Share] ' . $request->notes,
                 ]);
 
                 // 2. Create PM Mall Share Payment (if any)
                 if ($pmMallShare > 0) {
                     Payment::create([
-                        'tenant_id'       => $tenantId,
+                        'tenant_id' => $tenantId,
                         'other_tenant_id' => $otherTenant?->id,
-                        'unit_id'         => $unit->id,
-                        'agreement_id'    => $agreementId,
-                        'type'            => 'extra_payment',
-                        'month'           => $month,
-                        'amount'          => $pmMallShare,
-                        'amount_paid'     => 0,
-                        'status'          => 'unpaid',
-                        'due_date'        => $request->due_date,
-                        'landlord_id'     => null, // PM Mall Share
-                        'notes'           => '[PM Mall Share] ' . $request->notes,
+                        'unit_id' => $unit->id,
+                        'agreement_id' => $agreementId,
+                        'type' => 'extra_payment',
+                        'month' => $month,
+                        'amount' => $pmMallShare,
+                        'amount_paid' => 0,
+                        'status' => 'unpaid',
+                        'due_date' => $request->due_date,
+                        'landlord_id' => null, // PM Mall Share
+                        'notes' => '[PM Mall Share] ' . $request->notes,
                     ]);
                 }
 
@@ -357,18 +358,18 @@ class PaymentController extends Controller
             } else {
                 // No split — single PM Mall payment (no landlord linked)
                 Payment::create([
-                    'tenant_id'       => $tenantId,
+                    'tenant_id' => $tenantId,
                     'other_tenant_id' => $otherTenant?->id,
-                    'unit_id'         => $unit->id,
-                    'agreement_id'    => $agreementId,
-                    'type'            => 'extra_payment',
-                    'month'           => $month,
-                    'amount'          => $totalAmount,
-                    'amount_paid'     => 0,
-                    'status'          => 'unpaid',
-                    'due_date'        => $request->due_date,
-                    'landlord_id'     => null,
-                    'notes'           => $request->notes,
+                    'unit_id' => $unit->id,
+                    'agreement_id' => $agreementId,
+                    'type' => 'extra_payment',
+                    'month' => $month,
+                    'amount' => $totalAmount,
+                    'amount_paid' => 0,
+                    'status' => 'unpaid',
+                    'due_date' => $request->due_date,
+                    'landlord_id' => null,
+                    'notes' => $request->notes,
                 ]);
 
                 $msg = "Extra payment for unit {$unit->unit_number} created successfully.";
@@ -383,14 +384,14 @@ class PaymentController extends Controller
         // ── Self-unit maintenance payment (no tenant / agreement) ──────────
         if ($request->input('payment_mode') === 'self') {
             $request->validate([
-                'unit_id'  => ['required', 'exists:units,id'],
-                'month'    => ['required', 'date'],
-                'amount'   => ['required', 'numeric', 'min:0'],
+                'unit_id' => ['required', 'exists:units,id'],
+                'month' => ['required', 'date'],
+                'amount' => ['required', 'numeric', 'min:0'],
                 'due_date' => ['required', 'date'],
-                'notes'    => ['nullable', 'string', 'max:500'],
+                'notes' => ['nullable', 'string', 'max:500'],
             ]);
 
-            $unit  = Unit::with(['otherTenant', 'landlord'])->findOrFail($request->unit_id);
+            $unit = Unit::with(['otherTenant', 'landlord'])->findOrFail($request->unit_id);
             $month = Carbon::parse($request->month)->startOfMonth()->toDateString();
 
             // Duplicate check
@@ -406,23 +407,23 @@ class PaymentController extends Controller
             }
 
             $otherTenant = $unit->otherTenant;
-            $whatsappNumber = $otherTenant 
-                ? $otherTenant->whatsapp_number 
+            $whatsappNumber = $otherTenant
+                ? $otherTenant->whatsapp_number
                 : $unit->landlord?->phone;
 
             Payment::create([
-                'tenant_id'        => null,
-                'other_tenant_id'  => $otherTenant?->id,
-                'unit_id'          => $unit->id,
-                'agreement_id'     => null,
-                'type'             => 'maintenance',
-                'month'            => $month,
-                'amount'           => $request->amount,
-                'amount_paid'      => 0,
-                'status'           => 'unpaid',
-                'due_date'         => $request->due_date,
-                'notes'            => $request->notes,
-                'whatsapp_number'  => $whatsappNumber,
+                'tenant_id' => null,
+                'other_tenant_id' => $otherTenant?->id,
+                'unit_id' => $unit->id,
+                'agreement_id' => null,
+                'type' => 'maintenance',
+                'month' => $month,
+                'amount' => $request->amount,
+                'amount_paid' => 0,
+                'status' => 'unpaid',
+                'due_date' => $request->due_date,
+                'notes' => $request->notes,
+                'whatsapp_number' => $whatsappNumber,
             ]);
 
             return redirect()
@@ -468,15 +469,15 @@ class PaymentController extends Controller
             ->orderBy('name')
             ->get();
 
-        $selfUnits = Unit::where(function($q) use ($payment) {
+        $selfUnits = Unit::where(function ($q) use ($payment) {
             $q->where('is_self', true);
             if ($payment->unit_id) {
                 $q->orWhere('id', $payment->unit_id);
             }
         })
-        ->with(['floor', 'block', 'landlord'])
-        ->orderBy('unit_number')
-        ->get();
+            ->with(['floor', 'block', 'landlord'])
+            ->orderBy('unit_number')
+            ->get();
 
         return view('payments.edit', [
             'title' => 'Edit Payment',
@@ -555,7 +556,7 @@ class PaymentController extends Controller
         DB::transaction(function () use ($payment, $data, $incrementalAmount, $paymentAccount) {
             $payment->update($data);
 
-            if ($incrementalAmount <= 0 || ! $payment->tenant_id) {
+            if ($incrementalAmount <= 0 || !$payment->tenant_id) {
                 return;
             }
 
@@ -565,15 +566,15 @@ class PaymentController extends Controller
                 : now()->toDateString();
 
             $voucher = \App\Models\ReceivingVoucher::create([
-                'date'               => $voucherDate,
-                'amount'             => $incrementalAmount,
+                'date' => $voucherDate,
+                'amount' => $incrementalAmount,
                 'received_from_type' => 'tenant',
-                'tenant_id'          => $payment->tenant_id,
-                'payment_method'     => $paymentAccount->type,
+                'tenant_id' => $payment->tenant_id,
+                'payment_method' => $paymentAccount->type,
                 'payment_account_id' => $paymentAccount->id,
-                'reference'          => $data['reference'] ?? null,
-                'notes'              => 'Auto-generated from Billings page.',
-                'user_id'            => auth()->id() ?? 1,
+                'reference' => $data['reference'] ?? null,
+                'notes' => 'Auto-generated from Billings page.',
+                'user_id' => auth()->id() ?? 1,
             ]);
 
             // ── Cascade allocation: oldest outstanding payments first ────────
@@ -599,18 +600,18 @@ class PaymentController extends Controller
                     continue; // already paid off (e.g. by the update above)
                 }
 
-                $allocated   = min($remaining, $balanceDue);
-                $newAmtPaid  = (float) $p->amount_paid + $allocated;
+                $allocated = min($remaining, $balanceDue);
+                $newAmtPaid = (float) $p->amount_paid + $allocated;
 
                 // Avoid double-updating the payment that was just saved above
                 if ($p->id !== $payment->id) {
                     $p->update([
-                        'amount_paid'        => $newAmtPaid,
-                        'status'             => Payment::calculateStatus((float) $p->amount, $newAmtPaid),
-                        'paid_at'            => $p->paid_at ?? $voucherDate,
+                        'amount_paid' => $newAmtPaid,
+                        'status' => Payment::calculateStatus((float) $p->amount, $newAmtPaid),
+                        'paid_at' => $p->paid_at ?? $voucherDate,
                         'payment_account_id' => $paymentAccount->id,
-                        'payment_method'     => $paymentAccount->type,
-                        'reference'          => $data['reference'] ?? $p->reference,
+                        'payment_method' => $paymentAccount->type,
+                        'reference' => $data['reference'] ?? $p->reference,
                     ]);
                 }
 
@@ -620,7 +621,7 @@ class PaymentController extends Controller
 
             // If the triggered payment itself was not yet linked (e.g. it is now
             // fully paid and no longer in the outstanding list), attach it.
-            if (! $voucher->payments->contains($payment->id)) {
+            if (!$voucher->payments->contains($payment->id)) {
                 $directAllocation = min($incrementalAmount, (float) $payment->amount);
                 $voucher->payments()->syncWithoutDetaching([
                     $payment->id => ['amount_allocated' => $directAllocation],
@@ -755,22 +756,22 @@ class PaymentController extends Controller
                     }
 
                     $otherTenant = $selfUnit->otherTenant;
-                    $whatsappNumber = $otherTenant 
-                        ? $otherTenant->whatsapp_number 
+                    $whatsappNumber = $otherTenant
+                        ? $otherTenant->whatsapp_number
                         : $selfUnit->landlord?->phone;
 
                     Payment::create([
-                        'tenant_id'        => null,
-                        'other_tenant_id'  => $otherTenant?->id,
-                        'unit_id'          => $selfUnit->id,
-                        'agreement_id'     => null,
-                        'type'             => 'maintenance',
-                        'month'            => $month,
-                        'amount'           => $charge,
-                        'amount_paid'      => 0,
-                        'status'           => 'unpaid',
-                        'due_date'         => $dueDate,
-                        'whatsapp_number'  => $whatsappNumber,
+                        'tenant_id' => null,
+                        'other_tenant_id' => $otherTenant?->id,
+                        'unit_id' => $selfUnit->id,
+                        'agreement_id' => null,
+                        'type' => 'maintenance',
+                        'month' => $month,
+                        'amount' => $charge,
+                        'amount_paid' => 0,
+                        'status' => 'unpaid',
+                        'due_date' => $dueDate,
+                        'whatsapp_number' => $whatsappNumber,
                     ]);
 
                     $created++;
@@ -790,18 +791,18 @@ class PaymentController extends Controller
     public function bulkEdit(Request $request): RedirectResponse
     {
         $request->validate([
-            'source_month'    => ['required', 'date'],
-            'type'            => ['required', 'in:all,rent,maintenance'],
-            'target_month'    => ['nullable', 'date'],
+            'source_month' => ['required', 'date'],
+            'type' => ['required', 'in:all,rent,maintenance'],
+            'target_month' => ['nullable', 'date'],
             'target_due_date' => ['nullable', 'date'],
         ]);
 
         $sourceMonth = Carbon::parse($request->source_month)->startOfMonth()->toDateString();
-        $targetMonth = $request->filled('target_month') 
-            ? Carbon::parse($request->target_month)->startOfMonth()->toDateString() 
+        $targetMonth = $request->filled('target_month')
+            ? Carbon::parse($request->target_month)->startOfMonth()->toDateString()
             : null;
-        $targetDueDate = $request->filled('target_due_date') 
-            ? Carbon::parse($request->target_due_date)->toDateString() 
+        $targetDueDate = $request->filled('target_due_date')
+            ? Carbon::parse($request->target_due_date)->toDateString()
             : null;
 
         if (!$targetMonth && !$targetDueDate) {
@@ -851,45 +852,45 @@ class PaymentController extends Controller
     public function bulkManagementForm(Request $request): View
     {
         return view('payments.bulk_management', [
-            'title'        => 'Bulk Payments Operations & Staging Management',
-            'action'       => old('action', $request->query('action', 'bulk_generate')),
-            'month'        => old('month', $request->query('month', now()->format('Y-m'))),
-            'types'        => old('types', $request->query('types', ['rent', 'maintenance'])),
-            'dueDate'      => old('due_date', $request->query('due_date', now()->startOfMonth()->addDays(9)->format('Y-m-d'))),
-            'newMonth'     => old('new_month', $request->query('new_month', '')),
-            'newDueDate'   => old('new_due_date', $request->query('new_due_date', '')),
-            'newAmount'    => old('new_amount', $request->query('new_amount', '')),
+            'title' => 'Bulk Payments Operations & Staging Management',
+            'action' => old('action', $request->query('action', 'bulk_generate')),
+            'month' => old('month', $request->query('month', now()->format('Y-m'))),
+            'types' => old('types', $request->query('types', ['rent', 'maintenance'])),
+            'dueDate' => old('due_date', $request->query('due_date', now()->startOfMonth()->addDays(9)->format('Y-m-d'))),
+            'newMonth' => old('new_month', $request->query('new_month', '')),
+            'newDueDate' => old('new_due_date', $request->query('new_due_date', '')),
+            'newAmount' => old('new_amount', $request->query('new_amount', '')),
             'stagingItems' => null,
-            'summaryInfo'  => null,
+            'summaryInfo' => null,
         ]);
     }
 
     public function bulkPreview(Request $request): View
     {
         $validated = $request->validate([
-            'action'        => ['required', 'in:bulk_generate,bulk_edit,bulk_delete'],
-            'month'         => ['required', 'date'],
-            'types'         => ['required', 'array', 'min:1'],
-            'types.*'       => ['in:rent,maintenance'],
-            'due_date'      => ['nullable', 'date'],
-            'new_month'     => ['nullable', 'date'],
-            'new_due_date'  => ['nullable', 'date'],
-            'new_amount'    => ['nullable', 'numeric', 'min:0'],
+            'action' => ['required', 'in:bulk_generate,bulk_edit,bulk_delete'],
+            'month' => ['required', 'date'],
+            'types' => ['required', 'array', 'min:1'],
+            'types.*' => ['in:rent,maintenance'],
+            'due_date' => ['nullable', 'date'],
+            'new_month' => ['nullable', 'date'],
+            'new_due_date' => ['nullable', 'date'],
+            'new_amount' => ['nullable', 'numeric', 'min:0'],
         ]);
 
-        $action   = $validated['action'];
-        $parsed   = Carbon::parse($validated['month']);
-        $month    = $parsed->copy()->startOfMonth()->toDateString();
-        $dueDate  = !empty($validated['due_date']) ? Carbon::parse($validated['due_date'])->toDateString() : $parsed->copy()->startOfMonth()->addDays(9)->toDateString();
-        $types    = $validated['types'];
+        $action = $validated['action'];
+        $parsed = Carbon::parse($validated['month']);
+        $month = $parsed->copy()->startOfMonth()->toDateString();
+        $dueDate = !empty($validated['due_date']) ? Carbon::parse($validated['due_date'])->toDateString() : $parsed->copy()->startOfMonth()->addDays(9)->toDateString();
+        $types = $validated['types'];
 
         $stagingItems = [];
-        $summaryInfo  = [
-            'action'       => $action,
-            'month_label'  => $parsed->format('F Y'),
-            'total_count'  => 0,
+        $summaryInfo = [
+            'action' => $action,
+            'month_label' => $parsed->format('F Y'),
+            'total_count' => 0,
             'total_amount' => 0,
-            'types_list'   => implode(', ', array_map('ucfirst', $types)),
+            'types_list' => implode(', ', array_map('ucfirst', $types)),
         ];
 
         if ($action === 'bulk_generate') {
@@ -916,20 +917,20 @@ class PaymentController extends Controller
                         ->exists();
 
                     $stagingItems[] = [
-                        'key'             => "gen_{$ag->id}_{$type}",
-                        'agreement_id'    => $ag->id,
-                        'tenant_id'       => $ag->tenant_id,
-                        'tenant_name'     => $ag->tenant?->name ?? '—',
-                        'unit_id'         => $ag->unit_id,
-                        'unit_number'     => $ag->unit?->unit_number ?? '—',
-                        'type'            => $type,
-                        'month'           => $month,
-                        'current_amount'  => 0,
+                        'key' => "gen_{$ag->id}_{$type}",
+                        'agreement_id' => $ag->id,
+                        'tenant_id' => $ag->tenant_id,
+                        'tenant_name' => $ag->tenant?->name ?? '—',
+                        'unit_id' => $ag->unit_id,
+                        'unit_number' => $ag->unit?->unit_number ?? '—',
+                        'type' => $type,
+                        'month' => $month,
+                        'current_amount' => 0,
                         'proposed_amount' => $amount,
-                        'due_date'        => $dueDate,
-                        'exists'          => $exists,
-                        'status'          => $exists ? 'Already Exists (Will Skip)' : 'Ready to Generate',
-                        'eligible'        => !$exists,
+                        'due_date' => $dueDate,
+                        'exists' => $exists,
+                        'status' => $exists ? 'Already Exists (Will Skip)' : 'Ready to Generate',
+                        'eligible' => !$exists,
                     ];
                 }
             }
@@ -938,26 +939,27 @@ class PaymentController extends Controller
                 $selfUnits = Unit::where('is_self', true)->with(['otherTenant', 'landlord'])->get();
                 foreach ($selfUnits as $sUnit) {
                     $charge = (float) $sUnit->default_maintenance_charge;
-                    if ($charge <= 0) continue;
+                    if ($charge <= 0)
+                        continue;
 
                     $exists = Payment::where('unit_id', $sUnit->id)->where('type', 'maintenance')->where('month', $month)->exists();
 
                     $stagingItems[] = [
-                        'key'             => "gen_self_{$sUnit->id}_maintenance",
-                        'agreement_id'    => null,
-                        'tenant_id'       => null,
+                        'key' => "gen_self_{$sUnit->id}_maintenance",
+                        'agreement_id' => null,
+                        'tenant_id' => null,
                         'other_tenant_id' => $sUnit->otherTenant?->id,
-                        'tenant_name'     => $sUnit->otherTenant?->name ?? ($sUnit->landlord?->name . ' (Landlord)'),
-                        'unit_id'         => $sUnit->id,
-                        'unit_number'     => $sUnit->unit_number,
-                        'type'            => 'maintenance',
-                        'month'           => $month,
-                        'current_amount'  => 0,
+                        'tenant_name' => $sUnit->otherTenant?->name ?? ($sUnit->landlord?->name . ' (Landlord)'),
+                        'unit_id' => $sUnit->id,
+                        'unit_number' => $sUnit->unit_number,
+                        'type' => 'maintenance',
+                        'month' => $month,
+                        'current_amount' => 0,
                         'proposed_amount' => $charge,
-                        'due_date'        => $dueDate,
-                        'exists'          => $exists,
-                        'status'          => $exists ? 'Already Exists (Will Skip)' : 'Ready to Generate',
-                        'eligible'        => !$exists,
+                        'due_date' => $dueDate,
+                        'exists' => $exists,
+                        'status' => $exists ? 'Already Exists (Will Skip)' : 'Ready to Generate',
+                        'eligible' => !$exists,
                     ];
                 }
             }
@@ -976,19 +978,19 @@ class PaymentController extends Controller
             foreach ($payments as $p) {
                 $proposedAmount = $newAmount !== null ? $newAmount : (float) $p->amount;
                 $stagingItems[] = [
-                    'key'             => "edit_{$p->id}",
-                    'payment_id'      => $p->id,
-                    'tenant_name'     => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
-                    'unit_number'     => $p->unit?->unit_number ?? '—',
-                    'type'            => $p->type,
-                    'month'           => $p->month->format('Y-m-d'),
-                    'new_month'       => $newMonth,
-                    'current_amount'  => (float) $p->amount,
+                    'key' => "edit_{$p->id}",
+                    'payment_id' => $p->id,
+                    'tenant_name' => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
+                    'unit_number' => $p->unit?->unit_number ?? '—',
+                    'type' => $p->type,
+                    'month' => $p->month->format('Y-m-d'),
+                    'new_month' => $newMonth,
+                    'current_amount' => (float) $p->amount,
                     'proposed_amount' => $proposedAmount,
-                    'current_due_date'=> $p->due_date->format('Y-m-d'),
-                    'new_due_date'    => $newDueDate,
-                    'status'          => 'Ready to Update',
-                    'eligible'        => true,
+                    'current_due_date' => $p->due_date->format('Y-m-d'),
+                    'new_due_date' => $newDueDate,
+                    'status' => 'Ready to Update',
+                    'eligible' => true,
                 ];
             }
 
@@ -1001,17 +1003,17 @@ class PaymentController extends Controller
 
             foreach ($payments as $p) {
                 $stagingItems[] = [
-                    'key'             => "del_{$p->id}",
-                    'payment_id'      => $p->id,
-                    'tenant_name'     => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
-                    'unit_number'     => $p->unit?->unit_number ?? '—',
-                    'type'            => $p->type,
-                    'month'           => $p->month->format('Y-m-d'),
-                    'current_amount'  => (float) $p->amount,
+                    'key' => "del_{$p->id}",
+                    'payment_id' => $p->id,
+                    'tenant_name' => $p->tenant?->name ?? ($p->otherTenant?->name ?? '—'),
+                    'unit_number' => $p->unit?->unit_number ?? '—',
+                    'type' => $p->type,
+                    'month' => $p->month->format('Y-m-d'),
+                    'current_amount' => (float) $p->amount,
                     'proposed_amount' => 0,
-                    'due_date'        => $p->due_date->format('Y-m-d'),
-                    'status'          => 'Ready to Delete',
-                    'eligible'        => true,
+                    'due_date' => $p->due_date->format('Y-m-d'),
+                    'status' => 'Ready to Delete',
+                    'eligible' => true,
                 ];
             }
         }
@@ -1020,33 +1022,33 @@ class PaymentController extends Controller
         $summaryInfo['total_amount'] = array_sum(array_map(fn($i) => $i['eligible'] ? $i['proposed_amount'] : 0, $stagingItems));
 
         return view('payments.bulk_management', [
-            'title'        => 'Bulk Payments Operations & Staging Management',
-            'action'       => $action,
-            'month'        => $validated['month'],
-            'types'        => $types,
-            'dueDate'      => $dueDate,
-            'newMonth'     => $validated['new_month'] ?? '',
-            'newDueDate'   => $validated['new_due_date'] ?? '',
-            'newAmount'    => $validated['new_amount'] ?? '',
+            'title' => 'Bulk Payments Operations & Staging Management',
+            'action' => $action,
+            'month' => $validated['month'],
+            'types' => $types,
+            'dueDate' => $dueDate,
+            'newMonth' => $validated['new_month'] ?? '',
+            'newDueDate' => $validated['new_due_date'] ?? '',
+            'newAmount' => $validated['new_amount'] ?? '',
             'stagingItems' => $stagingItems,
-            'summaryInfo'  => $summaryInfo,
+            'summaryInfo' => $summaryInfo,
         ]);
     }
 
     public function bulkCommit(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'action'        => ['required', 'in:bulk_generate,bulk_edit,bulk_delete'],
+            'action' => ['required', 'in:bulk_generate,bulk_edit,bulk_delete'],
             'selected_keys' => ['required', 'array', 'min:1'],
-            'payload'       => ['required', 'string'],
+            'payload' => ['required', 'string'],
         ]);
 
-        $action       = $validated['action'];
+        $action = $validated['action'];
         $selectedKeys = array_flip($validated['selected_keys']);
         $stagingItems = json_decode($validated['payload'], true) ?: [];
 
         $committedCount = 0;
-        $totalAmount    = 0;
+        $totalAmount = 0;
 
         DB::transaction(function () use ($action, $selectedKeys, $stagingItems, &$committedCount, &$totalAmount) {
             foreach ($stagingItems as $item) {
@@ -1055,32 +1057,33 @@ class PaymentController extends Controller
                 }
 
                 if ($action === 'bulk_generate') {
-                    if (empty($item['eligible'])) continue;
+                    if (empty($item['eligible']))
+                        continue;
 
                     if (!empty($item['agreement_id'])) {
                         Payment::create([
-                            'tenant_id'    => $item['tenant_id'],
-                            'unit_id'      => $item['unit_id'],
+                            'tenant_id' => $item['tenant_id'],
+                            'unit_id' => $item['unit_id'],
                             'agreement_id' => $item['agreement_id'],
-                            'type'         => $item['type'],
-                            'month'        => $item['month'],
-                            'amount'       => $item['proposed_amount'],
-                            'amount_paid'  => 0,
-                            'status'       => 'unpaid',
-                            'due_date'     => $item['due_date'],
+                            'type' => $item['type'],
+                            'month' => $item['month'],
+                            'amount' => $item['proposed_amount'],
+                            'amount_paid' => 0,
+                            'status' => 'unpaid',
+                            'due_date' => $item['due_date'],
                         ]);
                     } else {
                         Payment::create([
-                            'tenant_id'       => null,
+                            'tenant_id' => null,
                             'other_tenant_id' => $item['other_tenant_id'] ?? null,
-                            'unit_id'         => $item['unit_id'],
-                            'agreement_id'    => null,
-                            'type'            => 'maintenance',
-                            'month'           => $item['month'],
-                            'amount'          => $item['proposed_amount'],
-                            'amount_paid'     => 0,
-                            'status'          => 'unpaid',
-                            'due_date'        => $item['due_date'],
+                            'unit_id' => $item['unit_id'],
+                            'agreement_id' => null,
+                            'type' => 'maintenance',
+                            'month' => $item['month'],
+                            'amount' => $item['proposed_amount'],
+                            'amount_paid' => 0,
+                            'status' => 'unpaid',
+                            'due_date' => $item['due_date'],
                         ]);
                     }
                     $committedCount++;
@@ -1116,10 +1119,10 @@ class PaymentController extends Controller
             }
         });
 
-        $actionWord = match($action) {
+        $actionWord = match ($action) {
             'bulk_generate' => 'generated',
-            'bulk_edit'     => 'updated',
-            'bulk_delete'   => 'deleted',
+            'bulk_edit' => 'updated',
+            'bulk_delete' => 'deleted',
         };
 
         return redirect()->route('payments.index')
@@ -1138,10 +1141,10 @@ class PaymentController extends Controller
             'types.*' => ['in:rent,maintenance,security_deposit,fine,electricity,water,gas,other,extra_payment'],
         ]);
 
-        $parsed     = Carbon::parse($request->month);
+        $parsed = Carbon::parse($request->month);
         $monthStart = $parsed->copy()->startOfMonth()->toDateString(); // e.g. 2026-07-01
-        $monthEnd   = $parsed->copy()->endOfMonth()->toDateString();   // e.g. 2026-07-31
-        $types      = $request->types;
+        $monthEnd = $parsed->copy()->endOfMonth()->toDateString();   // e.g. 2026-07-31
+        $types = $request->types;
 
         $deletedCount = DB::transaction(function () use ($monthStart, $monthEnd, $types) {
             $query = Payment::whereBetween('month', [$monthStart, $monthEnd])
@@ -1178,13 +1181,13 @@ class PaymentController extends Controller
 
         return response()->json([
             'agreement' => [
-                'id'                 => $agreement->id,
-                'monthly_rent'       => $agreement->monthly_rent,
+                'id' => $agreement->id,
+                'monthly_rent' => $agreement->monthly_rent,
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
-                'security_deposit'   => $agreement->security_deposit ?? 0,
-                'unit_id'            => $agreement->unit_id,
-                'unit_number'        => $agreement->unit?->unit_number ?? '—',
-                'landlord_name'      => $agreement->unit?->landlord?->name ?? '—',
+                'security_deposit' => $agreement->security_deposit ?? 0,
+                'unit_id' => $agreement->unit_id,
+                'unit_number' => $agreement->unit?->unit_number ?? '—',
+                'landlord_name' => $agreement->unit?->landlord?->name ?? '—',
             ],
         ]);
     }
@@ -1203,15 +1206,15 @@ class PaymentController extends Controller
 
         return response()->json([
             'agreement' => [
-                'id'                 => $agreement->id,
-                'tenant_id'          => $agreement->tenant_id,
-                'tenant_name'        => $agreement->tenant?->name ?? '—',
-                'monthly_rent'       => $agreement->monthly_rent,
+                'id' => $agreement->id,
+                'tenant_id' => $agreement->tenant_id,
+                'tenant_name' => $agreement->tenant?->name ?? '—',
+                'monthly_rent' => $agreement->monthly_rent,
                 'maintenance_charge' => $agreement->maintenance_charge ?? 0,
-                'security_deposit'   => $agreement->security_deposit ?? 0,
-                'unit_id'            => $agreement->unit_id,
-                'unit_number'        => $agreement->unit?->unit_number ?? '—',
-                'landlord_name'      => $agreement->unit?->landlord?->name ?? '—',
+                'security_deposit' => $agreement->security_deposit ?? 0,
+                'unit_id' => $agreement->unit_id,
+                'unit_number' => $agreement->unit?->unit_number ?? '—',
+                'landlord_name' => $agreement->unit?->landlord?->name ?? '—',
             ],
         ]);
     }
@@ -1353,7 +1356,7 @@ class PaymentController extends Controller
     public function publicPrint(string $hash): View
     {
         $payment = Payment::where('hash', $hash)->firstOrFail();
-        
+
         $payment->load(['tenant', 'unit', 'agreement']);
 
         if (in_array($payment->type, ['maintenance', 'electricity', 'water', 'gas'])) {
@@ -1389,22 +1392,22 @@ class PaymentController extends Controller
                 // For each voucher, revert ALL payments it allocated to
                 foreach ($voucherIds as $voucherId) {
                     $voucher = \App\Models\ReceivingVoucher::with('payments')->find($voucherId);
-                    if (! $voucher) {
+                    if (!$voucher) {
                         continue;
                     }
 
                     foreach ($voucher->payments as $vp) {
-                        $allocated      = (float) $vp->pivot->amount_allocated;
-                        $revertedPaid   = max(0.00, (float) $vp->amount_paid - $allocated);
+                        $allocated = (float) $vp->pivot->amount_allocated;
+                        $revertedPaid = max(0.00, (float) $vp->amount_paid - $allocated);
 
                         $vp->update([
-                            'amount_paid'        => $revertedPaid,
-                            'status'             => $revertedPaid <= 0
-                                                        ? 'unpaid'
-                                                        : Payment::calculateStatus((float) $vp->amount, $revertedPaid),
-                            'paid_at'            => $revertedPaid <= 0 ? null : $vp->paid_at,
+                            'amount_paid' => $revertedPaid,
+                            'status' => $revertedPaid <= 0
+                                ? 'unpaid'
+                                : Payment::calculateStatus((float) $vp->amount, $revertedPaid),
+                            'paid_at' => $revertedPaid <= 0 ? null : $vp->paid_at,
                             'payment_account_id' => $revertedPaid <= 0 ? null : $vp->payment_account_id,
-                            'payment_method'     => $revertedPaid <= 0 ? null : $vp->payment_method,
+                            'payment_method' => $revertedPaid <= 0 ? null : $vp->payment_method,
                         ]);
                     }
 
@@ -1417,7 +1420,7 @@ class PaymentController extends Controller
         } else {
             // ── Mark as paid, one voucher, cascade oldest-first ───────────
             DB::transaction(function () use ($payment) {
-                $account           = \App\Models\PaymentAccount::where('is_active', true)->first();
+                $account = \App\Models\PaymentAccount::where('is_active', true)->first();
                 $incrementalAmount = (float) $payment->amount - (float) $payment->amount_paid;
 
                 if ($incrementalAmount <= 0) {
@@ -1426,14 +1429,14 @@ class PaymentController extends Controller
 
                 // Create a single voucher for the full balance due
                 $voucher = \App\Models\ReceivingVoucher::create([
-                    'date'               => now()->toDateString(),
-                    'amount'             => $incrementalAmount,
+                    'date' => now()->toDateString(),
+                    'amount' => $incrementalAmount,
                     'received_from_type' => 'tenant',
-                    'tenant_id'          => $payment->tenant_id,
-                    'payment_method'     => $account?->type,
+                    'tenant_id' => $payment->tenant_id,
+                    'payment_method' => $account?->type,
                     'payment_account_id' => $account?->id,
-                    'notes'              => 'Auto-generated on status toggle.',
-                    'user_id'            => auth()->id() ?? 1,
+                    'notes' => 'Auto-generated on status toggle.',
+                    'user_id' => auth()->id() ?? 1,
                 ]);
 
                 // ── Cascade: settle oldest unpaid/partial payments first ──
@@ -1457,15 +1460,15 @@ class PaymentController extends Controller
                             continue;
                         }
 
-                        $allocated  = min($remaining, $balanceDue);
+                        $allocated = min($remaining, $balanceDue);
                         $newAmtPaid = (float) $p->amount_paid + $allocated;
 
                         $p->update([
-                            'amount_paid'        => $newAmtPaid,
-                            'status'             => Payment::calculateStatus((float) $p->amount, $newAmtPaid),
-                            'paid_at'            => $p->paid_at ?? now(),
+                            'amount_paid' => $newAmtPaid,
+                            'status' => Payment::calculateStatus((float) $p->amount, $newAmtPaid),
+                            'paid_at' => $p->paid_at ?? now(),
                             'payment_account_id' => $account?->id,
-                            'payment_method'     => $account?->type,
+                            'payment_method' => $account?->type,
                         ]);
 
                         $voucher->payments()->attach($p->id, ['amount_allocated' => $allocated]);
@@ -1474,11 +1477,11 @@ class PaymentController extends Controller
                 } else {
                     // Non-tenant payment (e.g. external owner) — settle directly
                     $payment->update([
-                        'status'             => 'paid',
-                        'amount_paid'        => $payment->amount,
-                        'paid_at'            => now(),
+                        'status' => 'paid',
+                        'amount_paid' => $payment->amount,
+                        'paid_at' => now(),
                         'payment_account_id' => $account?->id,
-                        'payment_method'     => $account?->type,
+                        'payment_method' => $account?->type,
                     ]);
                     $voucher->payments()->attach($payment->id, ['amount_allocated' => $incrementalAmount]);
                 }

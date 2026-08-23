@@ -354,9 +354,9 @@
                                             <td class="px-5 py-4 text-sm font-bold text-gray-500">
                                                 @php
                                                     $end = $history->detached_at ?? now();
-                                                    $diff = $history->attached_at ? $history->attached_at->diffInDays($end) : 0;
+                                                    $diff = $history->attached_at ? round($history->attached_at->diffInDays($end), 1) : 0;
                                                 @endphp
-                                                {{ $diff }} day{{ $diff === 1 ? '' : 's' }}
+                                                {{ $diff }} day{{ $diff == 1 ? '' : 's' }}
                                             </td>
                                             <td class="px-5 py-4 text-right">
                                                 @if($history->other_tenant_id)
