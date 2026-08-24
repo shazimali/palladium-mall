@@ -78,7 +78,39 @@ class PermissionSeeder extends Seeder
                 'display_name' => 'View Activity Logs',
                 'group' => 'System Auditing'
             ],
+            // Employee Performance Module
+            [
+                'name' => 'employees.view',
+                'display_name' => 'View Employees',
+                'group' => 'Employee Performance'
+            ],
+            [
+                'name' => 'employees.manage',
+                'display_name' => 'Manage Employees (Register & Edit)',
+                'group' => 'Employee Performance'
+            ],
+            [
+                'name' => 'performance.tasks.manage',
+                'display_name' => 'Manage Task Templates (Super Admin)',
+                'group' => 'Employee Performance'
+            ],
+            [
+                'name' => 'performance.daily.entry',
+                'display_name' => 'Submit Daily Attendance & Tasks',
+                'group' => 'Employee Performance'
+            ],
+            [
+                'name' => 'performance.reports.view',
+                'display_name' => 'View Performance Reports',
+                'group' => 'Employee Performance'
+            ],
+            [
+                'name' => 'performance.reports.generate',
+                'display_name' => 'Generate Performance Reports',
+                'group' => 'Employee Performance'
+            ],
         ];
+
 
         foreach ($permissions as $permission) {
             Permission::updateOrCreate(

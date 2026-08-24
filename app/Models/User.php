@@ -79,9 +79,44 @@ class User extends Authenticatable
         return $this->belongsToMany(Task::class, 'task_assignees')->withTimestamps();
     }
 
+    // -----------------------------------------------------------------------
+    // Employee Performance relationships
+    // -----------------------------------------------------------------------
+
+    public function employeeProfile()
+    {
+        return $this->hasOne(EmployeeProfile::class);
+    }
+
+    public function performanceTaskTemplates()
+    {
+        return $this->hasMany(PerformanceTaskTemplate::class);
+    }
+
+    public function employeeAttendances()
+    {
+        return $this->hasMany(EmployeeAttendance::class);
+    }
+
+    public function performanceDailyEntries()
+    {
+        return $this->hasMany(PerformanceDailyEntry::class);
+    }
+
+    public function performanceMonthlyReports()
+    {
+        return $this->hasMany(PerformanceMonthlyReport::class);
+    }
+
     /**
-     * Route notifications for the broadcast channel.
+     * Check if this user has been registered as an employee.
      */
+    public function isEmployee(): bool
+    {
+        return $this->employeeProfile()->exists();
+    }
+
+
     public function receivesBroadcastNotificationsOn(): string
     {
         return 'users.' . $this->id;

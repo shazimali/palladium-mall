@@ -134,6 +134,30 @@ class MenuHelper
             ];
         }
 
+        if (auth()->check() && ($user->can('employees.view') || $user->isSuperAdmin())) {
+            $mainItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Employees',
+                'path' => '/employees',
+            ];
+        }
+
+        if (auth()->check() && ($user->can('performance.reports.view') || $user->isSuperAdmin())) {
+            $mainItems[] = [
+                'icon' => 'table',
+                'name' => 'Performance Reports',
+                'path' => '/performance',
+            ];
+        }
+
+        if (auth()->check() && $user->isEmployee()) {
+            $mainItems[] = [
+                'icon' => 'task',
+                'name' => 'Daily Entry',
+                'path' => '/performance/daily',
+            ];
+        }
+
         // 3. People & Directories
         if (auth()->check() && $user->can('owners.view')) {
             $mainItems[] = [

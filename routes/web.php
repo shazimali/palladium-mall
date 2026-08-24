@@ -641,4 +641,44 @@ Route::middleware('auth')->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-as-read');
     Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-as-read');
+
+    // -----------------------------------------------------------------------
+    // Employee Performance Module
+    // -----------------------------------------------------------------------
+
+    // Employee management — static routes MUST come before {employee} wildcard
+    Route::middleware('permission:employees.manage')->group(function () {
+        Route::get('/employees/create', [\App\Http\Controllers\EmployeeController::class, 'create'])->name('employees.create');
+        Route::post('/employees', [\App\Http\Controllers\EmployeeController::class, 'store'])->name('employees.store');
+    });
+
+    Route::middleware('permission:employees.view')->group(function () {
+        Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'index'])->name('employees.index');
+        Route::get('/employees/{employee}', [\App\Http\Controllers\EmployeeController::class, 'show'])->name('employees.show');
+    });
+
+    Route::middleware('permission:employees.manage')->group(function () {
+        Route::get('/employees/{employee}/edit', [\App\Http\Controllers\EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('/employees/{employee}', [\App\Http\Controllers\EmployeeController::class, 'update'])->name('employees.update');
+    });
+
+    // Task templates (super admin only — enforced in controller)
+    Route::get('/employees/{employee}/tasks', [\App\Http\Controllers\EmployeeController::class, 'tasks'])->name('employees.tasks');
+    Route::post('/employees/{employee}/tasks', [\App\Http\Controllers\EmployeeController::class, 'storeTasks'])->name('employees.tasks.store');
+    Route::delete('/employees/{employee}/tasks/{template}', [\App\Http\Controllers\EmployeeController::class, 'destroyTask'])->name('employees.tasks.destroy');
+
+
+    // Daily entry (employee marks own attendance + tasks)
+    Route::get('/performance/daily', [\App\Http\Controllers\PerformanceController::class, 'daily'])->name('performance.daily');
+    Route::post('/performance/daily', [\App\Http\Controllers\PerformanceController::class, 'saveDaily'])->name('performance.daily.save');
+
+    // Reports
+    Route::middleware('permission:performance.reports.view,employees.view')->group(function () {
+        Route::get('/performance', [\App\Http\Controllers\PerformanceController::class, 'index'])->name('performance.index');
+        Route::post('/performance/{employee}/report/generate', [\App\Http\Controllers\PerformanceController::class, 'generateReport'])->name('performance.report.generate');
+    });
+
+    Route::get('/performance/{employee}/report/{year}/{month}', [\App\Http\Controllers\PerformanceController::class, 'report'])->name('performance.report');
+    Route::get('/performance/{employee}/report/{year}/{month}/pdf', [\App\Http\Controllers\PerformanceController::class, 'reportPdf'])->name('performance.report.pdf');
 });
+
