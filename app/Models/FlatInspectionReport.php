@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use App\Traits\LogsActivity;
 
 class FlatInspectionReport extends Model
@@ -22,11 +23,26 @@ class FlatInspectionReport extends Model
         'inspected_at',
         'flat_condition',
         'remarks',
+        'admin_remarks',
+        'admin_rating',
+        'admin_photo',
     ];
 
     protected $casts = [
         'inspected_at' => 'date',
     ];
+
+    protected $appends = [
+        'admin_photo_url',
+    ];
+
+    public function getAdminPhotoUrlAttribute(): ?string
+    {
+        if (!$this->admin_photo) {
+            return null;
+        }
+        return Storage::url($this->admin_photo);
+    }
 
     public function unit(): BelongsTo
     {

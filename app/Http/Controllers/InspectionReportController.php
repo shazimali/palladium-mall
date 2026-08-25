@@ -122,7 +122,7 @@ class InspectionReportController extends Controller
             return view('inspection_reports.flat_create', compact('reportType', 'units', 'heads', 'systemRemarks', 'inspectionPersons', 'today'));
         }
 
-        if ($reportType->is_daily && !$isWithinWindow) {
+        if ($reportType->is_daily && !$isWithinWindow && !Auth::user()->isSuperAdmin()) {
             return redirect()->route('inspection-reports.index', $type)
                 ->with('error', "{$reportType->name} reports can only be created between {$reportType->time_window_display}.");
         }
@@ -163,6 +163,7 @@ class InspectionReportController extends Controller
     {
         $this->authorizeInspection('create', $type);
         $reportType = $this->resolveReportType($type);
+        $isSuperAdmin = Auth::user()?->isSuperAdmin();
 
         if ($type === 'flat_inspection') {
             $hasSystemRemarks = $reportType->activeRemarks()->exists();
@@ -181,6 +182,12 @@ class InspectionReportController extends Controller
                 'items.*.image'                 => 'nullable|image|max:200',
             ];
 
+            if ($isSuperAdmin) {
+                $validationRules['admin_remarks'] = 'nullable|string|max:2000';
+                $validationRules['admin_rating']  = 'nullable|in:good,bad';
+                $validationRules['admin_photo']   = 'nullable|image|max:200';
+            }
+
             $customMessages = [
                 'unit_id.required'                       => 'Please select a vacant flat/shop.',
                 'inspection_person_id.required'          => 'Inspection Person / Officer is mandatory.',
@@ -190,9 +197,15 @@ class InspectionReportController extends Controller
                 'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
                 'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
                 'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
+                'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
             ];
 
             $request->validate($validationRules, $customMessages);
+
+            $adminPhotoPath = null;
+            if ($isSuperAdmin && $request->hasFile('admin_photo')) {
+                $adminPhotoPath = $request->file('admin_photo')->store('inspection_photos', 'public');
+            }
 
             $report = FlatInspectionReport::create([
                 'unit_id'              => $request->unit_id,
@@ -205,6 +218,9 @@ class InspectionReportController extends Controller
                 'inspected_at'         => $request->inspected_at,
                 'flat_condition'       => $request->flat_condition,
                 'remarks'              => $request->remarks,
+                'admin_remarks'        => $isSuperAdmin ? $request->admin_remarks : null,
+                'admin_rating'         => $isSuperAdmin ? $request->admin_rating : null,
+                'admin_photo'          => $adminPhotoPath,
             ]);
 
             foreach ($request->input('items', []) as $headId => $itemData) {
@@ -233,8 +249,8 @@ class InspectionReportController extends Controller
                 ->with('success', 'Vacant Flat Inspection recorded successfully.');
         }
 
-        // Daily Time Window check
-        if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow()) {
+        // Daily Time Window check (bypassed for Super Admin)
+        if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow() && !Auth::user()->isSuperAdmin()) {
             return redirect()->route('inspection-reports.index', $type)
                 ->with('error', "{$reportType->name} reports can only be generated between {$reportType->time_window_display}.");
         }
@@ -282,6 +298,12 @@ class InspectionReportController extends Controller
             'items.*.image'                => 'nullable|image|max:200', // 200 KB
         ];
 
+        if ($isSuperAdmin) {
+            $validationRules['admin_remarks'] = 'nullable|string|max:2000';
+            $validationRules['admin_rating']  = 'nullable|in:good,bad';
+            $validationRules['admin_photo']   = 'nullable|image|max:200';
+        }
+
         if ($hasMembers) {
             $validationRules['report_type_member_id'] = 'required|exists:report_type_members,id';
         }
@@ -297,9 +319,15 @@ class InspectionReportController extends Controller
             'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
             'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
             'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
+            'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
         ];
 
         $request->validate($validationRules, $customMessages);
+
+        $adminPhotoPath = null;
+        if ($isSuperAdmin && $request->hasFile('admin_photo')) {
+            $adminPhotoPath = $request->file('admin_photo')->store('inspection_photos', 'public');
+        }
 
         $report = InspectionReport::create([
             'report_type_id'        => $reportType->id,
@@ -307,6 +335,9 @@ class InspectionReportController extends Controller
             'report_date'           => $reportDate,
             'reported_by'           => Auth::id(),
             'overall_remarks'       => $request->overall_remarks,
+            'admin_remarks'         => $isSuperAdmin ? $request->admin_remarks : null,
+            'admin_rating'          => $isSuperAdmin ? $request->admin_rating : null,
+            'admin_photo'           => $adminPhotoPath,
             'status'                => 'completed',
         ]);
 
@@ -359,7 +390,7 @@ class InspectionReportController extends Controller
         $report = InspectionReport::with(['items', 'member'])->findOrFail($reportId);
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
 
-        if ($reportType->is_daily && !$isWithinWindow) {
+        if ($reportType->is_daily && !$isWithinWindow && !Auth::user()->isSuperAdmin()) {
             return redirect()->route('inspection-reports.show', ['type' => $type, 'report' => $report->id])
                 ->with('error', "{$reportType->name} reports can only be edited during the allowed time window ({$reportType->time_window_display}).");
         }
@@ -378,6 +409,7 @@ class InspectionReportController extends Controller
     {
         $this->authorizeInspection('edit', $type);
         $reportType = $this->resolveReportType($type);
+        $isSuperAdmin = Auth::user()?->isSuperAdmin();
 
         if ($type === 'flat_inspection') {
             $report = FlatInspectionReport::with('items')->findOrFail($reportId);
@@ -397,6 +429,13 @@ class InspectionReportController extends Controller
                 'items.*.image'                 => 'nullable|image|max:200',
             ];
 
+            if ($isSuperAdmin) {
+                $validationRules['admin_remarks']      = 'nullable|string|max:2000';
+                $validationRules['admin_rating']       = 'nullable|in:good,bad';
+                $validationRules['admin_photo']        = 'nullable|image|max:200';
+                $validationRules['remove_admin_photo'] = 'nullable|boolean';
+            }
+
             $customMessages = [
                 'unit_id.required'                       => 'Please select a unit/flat.',
                 'inspection_person_id.required'          => 'Inspection Person / Officer is mandatory.',
@@ -406,6 +445,7 @@ class InspectionReportController extends Controller
                 'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
                 'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
                 'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
+                'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
             ];
 
             $request->validate($validationRules, $customMessages);
@@ -420,6 +460,25 @@ class InspectionReportController extends Controller
 
             if ($request->filled('unit_id') && !$report->agreement_id) {
                 $updateData['unit_id'] = $request->unit_id;
+            }
+
+            if ($isSuperAdmin) {
+                $updateData['admin_remarks'] = $request->admin_remarks;
+                $updateData['admin_rating']  = $request->admin_rating;
+
+                if ($request->boolean('remove_admin_photo')) {
+                    if ($report->admin_photo && Storage::disk('public')->exists($report->admin_photo)) {
+                        Storage::disk('public')->delete($report->admin_photo);
+                    }
+                    $updateData['admin_photo'] = null;
+                }
+
+                if ($request->hasFile('admin_photo')) {
+                    if ($report->admin_photo && Storage::disk('public')->exists($report->admin_photo)) {
+                        Storage::disk('public')->delete($report->admin_photo);
+                    }
+                    $updateData['admin_photo'] = $request->file('admin_photo')->store('inspection_photos', 'public');
+                }
             }
 
             $report->update($updateData);
@@ -461,7 +520,7 @@ class InspectionReportController extends Controller
 
         $report = InspectionReport::findOrFail($reportId);
 
-        if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow()) {
+        if ($reportType->is_daily && !$reportType->isWithinAllowedTimeWindow() && !Auth::user()->isSuperAdmin()) {
             return redirect()->route('inspection-reports.show', ['type' => $type, 'report' => $report->id])
                 ->with('error', "{$reportType->name} reports can only be edited during the allowed time window ({$reportType->time_window_display}).");
         }
@@ -478,6 +537,13 @@ class InspectionReportController extends Controller
             'items.*.image'                => 'nullable|image|max:200',
         ];
 
+        if ($isSuperAdmin) {
+            $validationRules['admin_remarks']      = 'nullable|string|max:2000';
+            $validationRules['admin_rating']       = 'nullable|in:good,bad';
+            $validationRules['admin_photo']        = 'nullable|image|max:200';
+            $validationRules['remove_admin_photo'] = 'nullable|boolean';
+        }
+
         if ($hasMembers) {
             $validationRules['report_type_member_id'] = 'required|exists:report_type_members,id';
         }
@@ -493,6 +559,7 @@ class InspectionReportController extends Controller
             'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
             'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
             'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
+            'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
         ];
 
         $request->validate($validationRules, $customMessages);
@@ -505,6 +572,25 @@ class InspectionReportController extends Controller
         }
         if (!$reportType->is_daily && $request->filled('report_date')) {
             $updateData['report_date'] = $request->report_date;
+        }
+
+        if ($isSuperAdmin) {
+            $updateData['admin_remarks'] = $request->admin_remarks;
+            $updateData['admin_rating']  = $request->admin_rating;
+
+            if ($request->boolean('remove_admin_photo')) {
+                if ($report->admin_photo && Storage::disk('public')->exists($report->admin_photo)) {
+                    Storage::disk('public')->delete($report->admin_photo);
+                }
+                $updateData['admin_photo'] = null;
+            }
+
+            if ($request->hasFile('admin_photo')) {
+                if ($report->admin_photo && Storage::disk('public')->exists($report->admin_photo)) {
+                    Storage::disk('public')->delete($report->admin_photo);
+                }
+                $updateData['admin_photo'] = $request->file('admin_photo')->store('inspection_photos', 'public');
+            }
         }
 
         $report->update($updateData);

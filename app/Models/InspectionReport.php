@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 use App\Traits\LogsActivity;
 
 class InspectionReport extends Model
@@ -18,12 +19,27 @@ class InspectionReport extends Model
         'report_date',
         'reported_by',
         'overall_remarks',
+        'admin_remarks',
+        'admin_rating',
+        'admin_photo',
         'status',
     ];
 
     protected $casts = [
         'report_date' => 'date',
     ];
+
+    protected $appends = [
+        'admin_photo_url',
+    ];
+
+    public function getAdminPhotoUrlAttribute(): ?string
+    {
+        if (!$this->admin_photo) {
+            return null;
+        }
+        return Storage::url($this->admin_photo);
+    }
 
     public function reportType(): BelongsTo
     {

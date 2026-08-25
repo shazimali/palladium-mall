@@ -318,11 +318,40 @@
     {{-- Overall Remarks Box --}}
     @if($report->overall_remarks)
         <div class="remarks-box"
-            style="margin-top: 5px; margin-bottom: 25px; border: 1px solid #e2e8f0; background: #fafafa; border-radius: 6px; padding: 12px;">
+            style="margin-top: 5px; margin-bottom: 20px; border: 1px solid #e2e8f0; background: #fafafa; border-radius: 6px; padding: 12px;">
             <strong
                 style="font-size: 11px; text-transform: uppercase; color: #475569; display: block; margin-bottom: 4px;">Overall
                 Remarks:</strong>
             <p style="font-size: 12px; color: #1e293b; line-height: 1.5;">{{ $report->overall_remarks }}</p>
+        </div>
+    @endif
+
+    {{-- Admin Remarks & Feedback Box --}}
+    @if($report->admin_rating || $report->admin_remarks || $report->admin_photo)
+        <div style="margin-top: 5px; margin-bottom: 25px; border: 1.5px solid #6366f1; background: #f5f7ff; border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <strong style="font-size: 11px; text-transform: uppercase; color: #4338ca;">
+                    👑 Admin Remarks & Evaluation:
+                </strong>
+                @if($report->admin_rating === 'good')
+                    <span style="background: #dcfce7; color: #15803d; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 11px;">
+                        ✨ Satisfactory
+                    </span>
+                @elseif($report->admin_rating === 'bad')
+                    <span style="background: #fee2e2; color: #b91c1c; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 11px;">
+                        ⚠️ Unsatisfactory
+                    </span>
+                @endif
+            </div>
+            @if($report->admin_remarks)
+                <p style="font-size: 12px; color: #1e1b4b; line-height: 1.5; margin-bottom: 8px;">{{ $report->admin_remarks }}</p>
+            @endif
+            @if($report->admin_photo)
+                <div style="margin-top: 8px;">
+                    <span style="font-size: 10px; font-weight: bold; color: #6366f1; text-transform: uppercase; display: block; margin-bottom: 4px;">Attached Admin Photo:</span>
+                    <img src="{{ $report->admin_photo_url }}" alt="Admin Photo" style="max-height: 120px; max-width: 200px; object-fit: cover; border-radius: 4px; border: 1px solid #c7d2fe;" />
+                </div>
+            @endif
         </div>
     @endif
 

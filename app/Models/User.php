@@ -25,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_active',
+        'is_employee',
     ];
 
     /**
@@ -48,6 +49,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
+            'is_employee'       => 'boolean',
         ];
     }
 
@@ -109,11 +111,19 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if this user has been registered as an employee.
+     * Check if this user is marked to work as an employee.
      */
     public function isEmployee(): bool
     {
-        return $this->employeeProfile()->exists();
+        return (bool) $this->is_employee;
+    }
+
+    /**
+     * Scope a query to only include users marked as employees.
+     */
+    public function scopeEmployees($query)
+    {
+        return $query->where('is_employee', true);
     }
 
 

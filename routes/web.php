@@ -77,9 +77,14 @@ Route::middleware('auth')->group(function () {
 
     // Users — admin + super-admin only
     Route::middleware('permission:users.view')->group(function () {
-        Route::resource('users', UserController::class)->except(['show']);
+        Route::resource('users', UserController::class);
         Route::patch('users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::post('users/{user}/send-reset-link', [UserController::class, 'sendResetLink'])->name('users.send-reset-link');
+
+        // Task templates for employees (managed under users)
+        Route::get('users/{user}/tasks', [UserController::class, 'tasks'])->name('users.tasks');
+        Route::post('users/{user}/tasks', [UserController::class, 'storeTasks'])->name('users.tasks.store');
+        Route::delete('users/{user}/tasks/{template}', [UserController::class, 'destroyTask'])->name('users.tasks.destroy');
     });
 
     Route::middleware('permission:roles.view')->group(function () {
@@ -656,26 +661,12 @@ Route::middleware('auth')->group(function () {
     // Employee Performance Module
     // -----------------------------------------------------------------------
 
-    // Employee management — static routes MUST come before {employee} wildcard
-    Route::middleware('permission:employees.manage')->group(function () {
-        Route::get('/employees/create', [\App\Http\Controllers\EmployeeController::class, 'create'])->name('employees.create');
-        Route::post('/employees', [\App\Http\Controllers\EmployeeController::class, 'store'])->name('employees.store');
-    });
-
-    Route::middleware('permission:employees.view')->group(function () {
-        Route::get('/employees', [\App\Http\Controllers\EmployeeController::class, 'index'])->name('employees.index');
-        Route::get('/employees/{employee}', [\App\Http\Controllers\EmployeeController::class, 'show'])->name('employees.show');
-    });
-
-    Route::middleware('permission:employees.manage')->group(function () {
-        Route::get('/employees/{employee}/edit', [\App\Http\Controllers\EmployeeController::class, 'edit'])->name('employees.edit');
-        Route::put('/employees/{employee}', [\App\Http\Controllers\EmployeeController::class, 'update'])->name('employees.update');
-    });
-
-    // Task templates (super admin only — enforced in controller)
-    Route::get('/employees/{employee}/tasks', [\App\Http\Controllers\EmployeeController::class, 'tasks'])->name('employees.tasks');
-    Route::post('/employees/{employee}/tasks', [\App\Http\Controllers\EmployeeController::class, 'storeTasks'])->name('employees.tasks.store');
-    Route::delete('/employees/{employee}/tasks/{template}', [\App\Http\Controllers\EmployeeController::class, 'destroyTask'])->name('employees.tasks.destroy');
+    // Legacy /employees route redirects to /users
+    Route::redirect('/employees', '/users')->name('employees.index');
+    Route::redirect('/employees/create', '/users/create')->name('employees.create');
+    Route::get('/employees/{user}', fn(\App\Models\User $user) => redirect()->route('users.show', $user))->name('employees.show');
+    Route::get('/employees/{user}/edit', fn(\App\Models\User $user) => redirect()->route('users.edit', $user))->name('employees.edit');
+    Route::get('/employees/{user}/tasks', fn(\App\Models\User $user) => redirect()->route('users.tasks', $user))->name('employees.tasks');
 
 
     // Daily entry (employee marks own attendance + tasks)

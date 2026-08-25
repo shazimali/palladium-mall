@@ -59,8 +59,8 @@
         @if($employees->isEmpty())
             <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-10 text-center text-sm text-gray-400 dark:border-gray-800 dark:bg-white/[0.02]">
                 No active employees found.
-                @if(auth()->user()->hasPermission('employees.manage') || auth()->user()->isSuperAdmin())
-                    <a href="{{ route('employees.create') }}" class="text-brand-500 hover:underline ml-1">Register one</a>.
+                @if(auth()->user()->hasPermission('users.create') || auth()->user()->isSuperAdmin())
+                    <a href="{{ route('users.create') }}" class="text-brand-500 hover:underline ml-1">Create an employee user</a>.
                 @endif
             </div>
         @else

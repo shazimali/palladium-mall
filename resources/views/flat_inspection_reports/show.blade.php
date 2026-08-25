@@ -66,6 +66,46 @@
             @endif
         </div>
 
+        {{-- Admin Feedback Card --}}
+        <div class="rounded-xl border border-brand-200 bg-brand-50/40 p-5 dark:border-brand-900/40 dark:bg-brand-950/20">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                <h4 class="text-xs font-black uppercase tracking-wider text-brand-900 dark:text-brand-300 flex items-center gap-2">
+                    👑 Admin Evaluation & Feedback
+                </h4>
+                @if($report->admin_rating === 'good')
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        ✨ Satisfactory
+                    </span>
+                @elseif($report->admin_rating === 'bad')
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                        ⚠️ Unsatisfactory
+                    </span>
+                @else
+                    <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 italic">
+                        Not evaluated yet
+                    </span>
+                @endif
+            </div>
+
+            @if($report->admin_remarks)
+                <p class="text-sm text-gray-800 dark:text-gray-200 font-medium mb-3 whitespace-pre-wrap">{{ $report->admin_remarks }}</p>
+            @elseif(!$report->admin_rating && !$report->admin_photo)
+                <p class="text-xs text-gray-500 dark:text-gray-400 italic">No admin remarks or evaluation recorded for this report.</p>
+            @endif
+
+            @if($report->admin_photo)
+                <div class="mt-3">
+                    <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider block mb-1.5">Attached Admin Photo:</span>
+                    <a href="{{ $report->admin_photo_url }}" target="_blank" class="inline-block group relative rounded-xl overflow-hidden border border-brand-200 dark:border-brand-800">
+                        <img src="{{ $report->admin_photo_url }}" alt="Admin Photo" class="h-32 w-auto object-cover group-hover:scale-105 transition-transform">
+                        <span class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">
+                            🔍 View Full Size
+                        </span>
+                    </a>
+                </div>
+            @endif
+        </div>
+
         {{-- Items Table --}}
         <div class="rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03] overflow-hidden">
             <table class="min-w-full text-sm divide-y divide-gray-100 dark:divide-gray-800">

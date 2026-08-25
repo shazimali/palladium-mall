@@ -29,7 +29,8 @@ class PerformanceController extends Controller
         $employees = User::with(['employeeProfile', 'performanceMonthlyReports' => function ($q) use ($month, $year) {
             $q->where('month', $month)->where('year', $year);
         }])
-            ->whereHas('employeeProfile', fn ($q) => $q->where('is_active', true))
+            ->where('is_employee', true)
+            ->where('is_active', true)
             ->orderBy('name')
             ->get();
 
@@ -168,6 +169,7 @@ class PerformanceController extends Controller
             ->first();
 
         $profile       = $employee->employeeProfile;
+        $gridSheet     = $this->performance->getMonthlyGridSheet($employee, $month, $year);
         $taskBreakdown = $this->performance->getMonthlyTaskBreakdown($employee, $month, $year);
         $monthName     = Carbon::createFromDate($year, $month, 1)->format('F Y');
 
@@ -178,7 +180,7 @@ class PerformanceController extends Controller
             ->get();
 
         return view('performance.report', compact(
-            'employee', 'profile', 'report', 'taskBreakdown',
+            'employee', 'profile', 'report', 'gridSheet', 'taskBreakdown',
             'monthName', 'month', 'year', 'attendances'
         ));
     }
@@ -197,6 +199,7 @@ class PerformanceController extends Controller
             ->firstOrFail();
 
         $profile       = $employee->employeeProfile;
+        $gridSheet     = $this->performance->getMonthlyGridSheet($employee, $month, $year);
         $taskBreakdown = $this->performance->getMonthlyTaskBreakdown($employee, $month, $year);
         $monthName     = Carbon::createFromDate($year, $month, 1)->format('F Y');
         $attendances   = EmployeeAttendance::where('user_id', $employee->id)
@@ -205,9 +208,9 @@ class PerformanceController extends Controller
             ->get();
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('performance.report-pdf', compact(
-            'employee', 'profile', 'report', 'taskBreakdown',
+            'employee', 'profile', 'report', 'gridSheet', 'taskBreakdown',
             'monthName', 'month', 'year', 'attendances'
-        ))->setPaper('a4', 'portrait');
+        ))->setPaper('a4', 'landscape');
 
         $filename = "performance-{$employee->name}-{$monthName}.pdf";
 

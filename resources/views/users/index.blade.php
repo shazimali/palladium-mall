@@ -15,10 +15,31 @@
         </div>
     @endif
 
+    {{-- Type Tabs (All / Employees / Users) --}}
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+        <a href="{{ route('users.index', array_merge(request()->except('type', 'page'), [])) }}"
+            class="px-4 py-2 text-xs font-extrabold rounded-xl border transition-all {{ !request('type') ? 'bg-brand-500 text-white border-brand-500 shadow-xs' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
+            👥 All Users ({{ $counts['total'] }})
+        </a>
+        <a href="{{ route('users.index', array_merge(request()->except('page'), ['type' => 'employees'])) }}"
+            class="px-4 py-2 text-xs font-extrabold rounded-xl border transition-all {{ request('type') === 'employees' ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
+            👔 Employees ({{ $counts['employees'] }})
+        </a>
+        <a href="{{ route('users.index', array_merge(request()->except('page'), ['type' => 'users'])) }}"
+            class="px-4 py-2 text-xs font-extrabold rounded-xl border transition-all {{ request('type') === 'users' ? 'bg-gray-800 text-white border-gray-800 dark:bg-white dark:text-gray-900 shadow-xs' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50' }}">
+            👤 Non-Employees ({{ $counts['users'] }})
+        </a>
+    </div>
+
     <!-- Filters & Search -->
     <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
         <form action="{{ route('users.index') }}" method="GET"
             class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            
+            @if(request('type'))
+                <input type="hidden" name="type" value="{{ request('type') }}">
+            @endif
+
             <div class="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
                 <!-- Search Input -->
                 <div class="relative flex-1 max-w-md">
@@ -29,7 +50,7 @@
                         </svg>
                     </span>
                     <input type="text" name="search" value="{{ request('search') }}"
-                        placeholder="Search by name or email..."
+                        placeholder="Search by name, email, code or designation..."
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
@@ -48,7 +69,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-                @if(request()->anyFilled(['search', 'role']))
+                @if(request()->anyFilled(['search', 'role', 'type']))
                     <a href="{{ route('users.index') }}"
                         class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5">
                         Clear Filters
@@ -62,7 +83,7 @@
                 @can('users.create')
                     <a href="{{ route('users.create') }}"
                         class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600">
-                        Create User
+                        ➕ Create User
                     </a>
                 @endcan
             </div>
@@ -76,50 +97,67 @@
                 <thead>
                     <tr class="border-b border-gray-100 dark:border-gray-800">
                         <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">User Details</p>
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">User & Employee Details</p>
                         </th>
                         <th class="px-5 py-3 text-left sm:px-6">
                             <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Email</p>
                         </th>
                         <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Roles</p>
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Roles & Status</p>
                         </th>
                         <th class="px-5 py-3 text-left sm:px-6">
-                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Status</p>
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Account Status</p>
                         </th>
-                        @canany(['users.edit', 'users.delete'])
-                            <th class="px-5 py-3 text-right sm:px-6">
-                                <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Actions</p>
-                            </th>
-                        @endcanany
+                        <th class="px-5 py-3 text-right sm:px-6">
+                            <p class="font-medium text-gray-500 text-theme-xs dark:text-gray-400">Actions</p>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($users as $user)
-                        <tr class="border-b border-gray-100 last:border-0 dark:border-gray-800">
+                        <tr class="border-b border-gray-100 last:border-0 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                             <!-- User Details -->
                             <td class="px-5 py-4 sm:px-6">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 overflow-hidden rounded-full bg-brand-500 flex items-center justify-center text-white font-semibold text-sm">
+                                    <div class="w-10 h-10 overflow-hidden rounded-full {{ $user->is_employee ? 'bg-indigo-600 ring-2 ring-indigo-300 dark:ring-indigo-800' : 'bg-brand-500' }} flex items-center justify-center text-white font-black text-sm shadow-xs">
                                         {{ strtoupper(substr($user->name, 0, 1)) }}
                                     </div>
                                     <div>
-                                        <span class="block font-semibold text-gray-800 text-theme-sm dark:text-white/90">{{ $user->name }}</span>
-                                        <span class="block text-gray-500 text-theme-xs dark:text-gray-400">ID: #{{ $user->id }}</span>
+                                        <div class="flex items-center gap-2">
+                                            <a href="{{ route('users.show', $user) }}" class="font-bold text-gray-900 text-sm dark:text-white/90 hover:text-brand-600 transition-colors">
+                                                {{ $user->name }}
+                                            </a>
+                                            @if($user->is_employee)
+                                                <span class="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-black text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                                    👔 Employee
+                                                </span>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                            <span>ID: #{{ $user->id }}</span>
+                                            @if($user->is_employee && $user->employeeProfile)
+                                                @if($user->employeeProfile->employee_code)
+                                                    <span>• Code: <strong class="font-mono text-gray-700 dark:text-gray-300">{{ $user->employeeProfile->employee_code }}</strong></span>
+                                                @endif
+                                                @if($user->employeeProfile->designation)
+                                                    <span>• <strong class="text-indigo-600 dark:text-indigo-400">{{ $user->employeeProfile->designation }}</strong></span>
+                                                @endif
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             </td>
 
                             <!-- Email -->
                             <td class="px-5 py-4 sm:px-6">
-                                <span class="text-theme-sm text-gray-700 dark:text-white/90">{{ $user->email }}</span>
+                                <span class="text-sm font-mono text-gray-700 dark:text-gray-300">{{ $user->email }}</span>
                             </td>
 
                             <!-- Roles -->
                             <td class="px-5 py-4 sm:px-6">
                                 <div class="flex flex-wrap gap-1">
                                     @forelse($user->roles as $role)
-                                        <span class="text-[10px] uppercase font-bold rounded-full px-2 py-0.5 {{ $role->name === 'super-admin' ? 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-500' : ($role->name === 'administrator' ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300') }}">
+                                        <span class="text-[10px] uppercase font-bold rounded-full px-2.5 py-0.5 {{ $role->name === 'super-admin' ? 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-500 border border-red-200 dark:border-red-800' : ($role->name === 'administrator' ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400 border border-blue-200 dark:border-blue-800' : 'bg-gray-100 text-gray-700 dark:bg-white/10 dark:text-gray-300') }}">
                                             {{ $role->display_name }}
                                         </span>
                                     @empty
@@ -136,72 +174,75 @@
                                         @method('PATCH')
                                         <button type="submit"
                                             {{ $user->id === auth()->id() ? 'disabled' : '' }}
-                                            class="text-theme-xs inline-block rounded-full px-2.5 py-0.5 font-semibold transition cursor-pointer
-                                                {{ $user->is_active ? 'bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-500 hover:bg-green-100' : 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-500 hover:bg-red-100' }}
+                                            class="text-xs inline-block rounded-full px-2.5 py-0.5 font-bold transition cursor-pointer
+                                                {{ $user->is_active ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-500/15 dark:text-green-500 hover:bg-green-100' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/15 dark:text-red-500 hover:bg-red-100' }}
                                                 {{ $user->id === auth()->id() ? 'opacity-50 cursor-not-allowed' : '' }}">
                                             {{ $user->is_active ? 'Active' : 'Inactive' }}
                                         </button>
                                     </form>
                                 @else
-                                    <span class="text-theme-xs inline-block rounded-full px-2.5 py-0.5 font-semibold
-                                        {{ $user->is_active ? 'bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-500' : 'bg-red-50 text-red-700 dark:bg-red-500/15 dark:text-red-500' }}">
+                                    <span class="text-xs inline-block rounded-full px-2.5 py-0.5 font-bold
+                                        {{ $user->is_active ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-500/15 dark:text-green-500' : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-500/15 dark:text-red-500' }}">
                                         {{ $user->is_active ? 'Active' : 'Inactive' }}
                                     </span>
                                 @endcan
                             </td>
 
                             <!-- Actions -->
-                            @canany(['users.edit', 'users.delete'])
-                                <td class="px-5 py-4 text-right sm:px-6">
-                                    <div class="flex justify-end gap-2">
-                                        @can('users.edit')
-                                             <form action="{{ route('users.send-reset-link', $user) }}" method="POST"
-                                                 onsubmit="return confirm('Are you sure you want to send a password reset email to {{ $user->name }}?')" class="inline">
-                                                 @csrf
-                                                 <button type="submit" title="Send Password Reset Email"
-                                                     class="text-gray-500 hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400">
-                                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                             d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-2.25-1.5a2 2 0 00-2.22 0l-2.25 1.5">
-                                                         </path>
-                                                     </svg>
-                                                 </button>
-                                             </form>
+                            <td class="px-5 py-4 text-right sm:px-6">
+                                <div class="flex items-center justify-end gap-1.5">
+                                    {{-- View Profile --}}
+                                    <a href="{{ route('users.show', $user) }}" title="View User & Performance Profile"
+                                        class="p-1.5 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                    </a>
 
-                                            <a href="{{ route('users.edit', $user) }}"
-                                                class="text-gray-500 hover:text-brand-500 dark:text-gray-400 dark:hover:text-brand-400">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
-                                                    </path>
-                                                </svg>
-                                            </a>
-                                        @endcan
+                                    {{-- Employee Task Templates (Super Admin) --}}
+                                    @if($user->is_employee && auth()->user()->isSuperAdmin())
+                                        <a href="{{ route('users.tasks', $user) }}" title="Manage Employee Daily Task Templates"
+                                            class="p-1.5 rounded-lg text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/50 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                                        </a>
+                                    @endif
 
-                                        @can('users.delete')
-                                            @if($user->id !== auth()->id())
-                                                <form action="{{ route('users.destroy', $user) }}" method="POST"
-                                                    onsubmit="return confirm('Are you sure you want to delete this user?')" class="inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="text-gray-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400">
-                                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
-                                                            </path>
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        @endcan
-                                    </div>
-                                </td>
-                            @endcanany
+                                    @can('users.edit')
+                                        <form action="{{ route('users.send-reset-link', $user) }}" method="POST"
+                                            onsubmit="return confirm('Send a password reset link to {{ $user->name }}?')" class="inline">
+                                            @csrf
+                                            <button type="submit" title="Send Password Reset Email"
+                                                class="p-1.5 rounded-lg text-gray-500 hover:text-amber-600 hover:bg-amber-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-2.25-1.5a2 2 0 00-2.22 0l-2.25 1.5"/></svg>
+                                            </button>
+                                        </form>
+
+                                        <a href="{{ route('users.edit', $user) }}" title="Edit User & Employee Settings"
+                                            class="p-1.5 rounded-lg text-gray-500 hover:text-brand-600 hover:bg-brand-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                        </a>
+                                    @endcan
+
+                                    @can('users.delete')
+                                        @if($user->id !== auth()->id())
+                                            <form action="{{ route('users.destroy', $user) }}" method="POST"
+                                                onsubmit="return confirm('Are you sure you want to delete this user?')" class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" title="Delete User"
+                                                    class="p-1.5 rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                </button>
+                                            </form>
+                                        @endif
+                                    @endcan
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-5 py-6 text-center text-gray-500 sm:px-6">No users found.</td>
+                            <td colspan="5" class="px-5 py-8 text-center text-gray-500 sm:px-6">
+                                <p class="text-3xl mb-2">👤</p>
+                                <p class="font-bold text-sm">No users found matching your criteria.</p>
+                            </td>
                         </tr>
                     @endforelse
                 </tbody>

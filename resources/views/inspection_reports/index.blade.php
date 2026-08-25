@@ -31,7 +31,7 @@
                     </div>
                 @endif
                 @can("{$permPrefix}.create")
-                    @if(!$reportType->is_daily || $isWithinWindow)
+                    @if(!$reportType->is_daily || $isWithinWindow || auth()->user()->isSuperAdmin())
                         <a href="{{ route('inspection-reports.create', $reportType->key) }}"
                            class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -99,6 +99,7 @@
                             <th class="px-4 py-3 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Pass / Clean</th>
                             <th class="px-4 py-3 text-center text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Issues</th>
                             <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Overall Remarks</th>
+                            <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Admin Feedback</th>
                             <th class="px-4 py-3 text-right text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
                         </tr>
                     </thead>
@@ -135,6 +136,32 @@
                                 <td class="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
                                     {{ $report->overall_remarks ?: '—' }}
                                 </td>
+                                <td class="px-4 py-3 text-xs">
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        @if($report->admin_rating === 'good')
+                                            <span class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                                ✨ Satisfactory
+                                            </span>
+                                        @elseif($report->admin_rating === 'bad')
+                                            <span class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                                                ⚠️ Unsatisfactory
+                                            </span>
+                                        @endif
+
+                                        @if($report->admin_photo)
+                                            <a href="{{ $report->admin_photo_url }}" target="_blank" title="View attached admin photo" class="text-brand-500 hover:text-brand-700 inline-flex items-center">
+                                                📷
+                                            </a>
+                                        @endif
+                                    </div>
+                                    @if($report->admin_remarks)
+                                        <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-xs mt-0.5" title="{{ $report->admin_remarks }}">
+                                            {{ $report->admin_remarks }}
+                                        </p>
+                                    @elseif(!$report->admin_rating && !$report->admin_photo)
+                                        <span class="text-gray-300 dark:text-gray-600">—</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3">
                                     <div class="flex items-center justify-end gap-2">
                                         <a href="{{ route('inspection-reports.show', ['type' => $reportType->key, 'report' => $report->id]) }}"
@@ -146,7 +173,7 @@
                                             🖨️ Print
                                         </a>
                                         @can("{$permPrefix}.edit")
-                                            @if(!$reportType->is_daily || $isWithinWindow)
+                                            @if(!$reportType->is_daily || $isWithinWindow || auth()->user()->isSuperAdmin())
                                                 <a href="{{ route('inspection-reports.edit', ['type' => $reportType->key, 'report' => $report->id]) }}"
                                                    class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-600 hover:bg-blue-100 dark:border-blue-800/30 dark:bg-blue-900/20 dark:text-blue-400 transition-colors">
                                                     ✏️ Edit

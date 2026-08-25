@@ -134,14 +134,6 @@ class MenuHelper
             ];
         }
 
-        if (auth()->check() && ($user->can('employees.view') || $user->isSuperAdmin())) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Employees',
-                'path' => '/employees',
-            ];
-        }
-
         if (auth()->check() && ($user->can('performance.reports.view') || $user->isSuperAdmin())) {
             $mainItems[] = [
                 'icon' => 'table',

@@ -48,7 +48,9 @@ class FlatInspectionReportController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $isSuperAdmin = Auth::user()?->isSuperAdmin();
+
+        $validationRules = [
             'agreement_id'         => 'required|exists:agreements,id',
             'type'                 => 'required|in:move_in,move_out',
             'inspected_at'         => 'nullable|date',
@@ -60,22 +62,60 @@ class FlatInspectionReportController extends Controller
             'items.*.status'       => 'nullable|in:pass,fail,na',
             'items.*.remarks'      => 'nullable|string|max:1000',
             'items.*.image'        => 'nullable|image|max:200', // 200 KB
-        ]);
+        ];
+
+        if ($isSuperAdmin) {
+            $validationRules['admin_remarks']      = 'nullable|string|max:2000';
+            $validationRules['admin_rating']       = 'nullable|in:good,bad';
+            $validationRules['admin_photo']        = 'nullable|image|max:200';
+            $validationRules['remove_admin_photo'] = 'nullable|boolean';
+        }
+
+        $request->validate($validationRules);
 
         $agreement = Agreement::findOrFail($request->agreement_id);
+
+        $reportAttributes = [
+            'tenant_id'            => $agreement->tenant_id,
+            'inspected_by'         => Auth::id(),
+            'inspection_member'    => $request->inspection_member,
+            'inspection_person_id' => $request->inspection_person_id,
+            'inspected_at'         => $request->inspected_at,
+            'flat_condition'       => $request->flat_condition,
+            'remarks'              => $request->remarks,
+        ];
+
+        $existingReport = FlatInspectionReport::where('agreement_id', $agreement->id)
+            ->where('type', $request->type)
+            ->first();
+
+        if ($isSuperAdmin) {
+            $reportAttributes['admin_remarks'] = $request->admin_remarks;
+            $reportAttributes['admin_rating']  = $request->admin_rating;
+
+            $adminPhotoPath = $existingReport?->admin_photo;
+
+            if ($request->boolean('remove_admin_photo')) {
+                if ($adminPhotoPath && Storage::disk('public')->exists($adminPhotoPath)) {
+                    Storage::disk('public')->delete($adminPhotoPath);
+                }
+                $adminPhotoPath = null;
+            }
+
+            if ($request->hasFile('admin_photo')) {
+                if ($adminPhotoPath && Storage::disk('public')->exists($adminPhotoPath)) {
+                    Storage::disk('public')->delete($adminPhotoPath);
+                }
+                $adminPhotoPath = $request->file('admin_photo')->store('inspection_photos', 'public');
+            }
+
+            $reportAttributes['admin_photo'] = $adminPhotoPath;
+        }
 
         // Upsert the report
         $report = FlatInspectionReport::updateOrCreate(
             ['agreement_id' => $agreement->id, 'type' => $request->type],
-            [
-                'tenant_id'            => $agreement->tenant_id,
-                'inspected_by'         => Auth::id(),
-                'inspection_member'    => $request->inspection_member,
-                'inspection_person_id' => $request->inspection_person_id,
-                'inspected_at'         => $request->inspected_at,
-                'flat_condition'       => $request->flat_condition,
-                'remarks'              => $request->remarks,
-            ]
+            $reportAttributes
         );
 
         // Process each head's item

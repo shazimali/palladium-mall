@@ -203,6 +203,7 @@
                         <th class="px-4 py-3">Date</th>
                         <th class="px-4 py-3">Inspector / Officer</th>
                         <th class="px-4 py-3 text-center">Results</th>
+                        <th class="px-4 py-3 text-left">Admin Feedback</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
@@ -286,6 +287,34 @@
                                         </span>
                                     @endif
                                 </div>
+                            </td>
+
+                            {{-- Admin Feedback --}}
+                            <td class="px-4 py-3 text-xs">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    @if($rep->admin_rating === 'good')
+                                        <span class="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                            ✨ Satisfactory
+                                        </span>
+                                    @elseif($rep->admin_rating === 'bad')
+                                        <span class="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                                            ⚠️ Unsatisfactory
+                                        </span>
+                                    @endif
+
+                                    @if($rep->admin_photo)
+                                        <a href="{{ $rep->admin_photo_url }}" target="_blank" title="View attached admin photo" class="text-brand-500 hover:text-brand-700 inline-flex items-center">
+                                            📷
+                                        </a>
+                                    @endif
+                                </div>
+                                @if($rep->admin_remarks)
+                                    <p class="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-xs mt-0.5" title="{{ $rep->admin_remarks }}">
+                                        {{ $rep->admin_remarks }}
+                                    </p>
+                                @elseif(!$rep->admin_rating && !$rep->admin_photo)
+                                    <span class="text-gray-300 dark:text-gray-600">—</span>
+                                @endif
                             </td>
 
                             {{-- Actions --}}

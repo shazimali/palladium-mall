@@ -3,211 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Performance Report — {{ $employee->name }} — {{ $monthName }}</title>
+    <title>Worker Daily Working Sheet & Performance — {{ $employee->name }} — {{ $monthName }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11px; color: #1a1a1a; background: #fff; }
+        body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 8px; color: #111; background: #fff; padding: 15px; }
 
-        .header { background: #0f172a; color: #fff; padding: 22px 30px; }
-        .header .title { font-size: 18px; font-weight: bold; letter-spacing: 0.5px; }
-        .header .subtitle { font-size: 11px; color: #94a3b8; margin-top: 3px; }
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        .header-table td { vertical-align: middle; }
+        .title { font-size: 14px; font-weight: bold; color: #0f172a; }
+        .subtitle { font-size: 9px; color: #64748b; margin-top: 2px; }
 
-        .meta { display: flex; justify-content: space-between; align-items: flex-start; padding: 18px 30px; background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
-        .meta-left .name { font-size: 15px; font-weight: bold; }
-        .meta-left .detail { font-size: 10px; color: #64748b; margin-top: 3px; }
-        .meta-right { text-align: right; }
-        .grade-badge { display: inline-block; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .grade-Excellent { background: #dcfce7; color: #15803d; }
-        .grade-Good { background: #dbeafe; color: #1d4ed8; }
-        .grade-Average { background: #fef9c3; color: #a16207; }
-        .grade-Poor { background: #fee2e2; color: #dc2626; }
+        .yellow-box { background: #fff200; border: 2px solid #eab308; padding: 6px 12px; text-align: center; border-radius: 4px; display: inline-block; }
+        .yellow-box .lbl { font-size: 7px; font-weight: bold; text-transform: uppercase; color: #713f12; }
+        .yellow-box .val { font-size: 14px; font-weight: bold; color: #000; font-family: monospace; }
 
-        .stats-row { display: flex; gap: 0; border-bottom: 1px solid #e2e8f0; }
-        .stat-box { flex: 1; padding: 12px 20px; border-right: 1px solid #e2e8f0; }
-        .stat-box:last-child { border-right: none; }
-        .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; }
-        .stat-value { font-size: 16px; font-weight: bold; color: #1e293b; margin-top: 2px; }
-        .stat-sub { font-size: 9px; color: #94a3b8; margin-top: 1px; }
+        .green-box { background: #dcfce7; border: 1.5px solid #22c55e; padding: 6px 12px; text-align: center; border-radius: 4px; display: inline-block; margin-left: 8px; }
+        .green-box .lbl { font-size: 7px; font-weight: bold; text-transform: uppercase; color: #15803d; }
+        .green-box .val { font-size: 14px; font-weight: bold; color: #15803d; font-family: monospace; }
 
-        .section { padding: 20px 30px; }
-        .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 7.5px; }
+        .matrix-table th, .matrix-table td { border: 1px solid #cbd5e1; padding: 3px 2px; text-align: center; }
+        .matrix-table th { background: #f1f5f9; font-weight: bold; color: #334155; }
+        .matrix-table .th-fri { background: #fce5cd !important; color: #7c2d12 !important; font-weight: bold; }
+        .matrix-table .td-fri { background: #fff7ed; }
+        .matrix-table .task-name { text-align: left; padding-left: 5px; font-weight: bold; font-family: sans-serif; white-space: nowrap; max-width: 130px; overflow: hidden; }
 
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #f1f5f9; text-align: left; padding: 8px 10px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: 1px solid #e2e8f0; }
-        td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; font-size: 10px; vertical-align: middle; }
-        tr:last-child td { border-bottom: none; }
-        .tfoot td { background: #f8fafc; font-weight: bold; border-top: 1.5px solid #e2e8f0; }
+        .matrix-table .cell-done { background: #dcfce7; color: #166534; font-weight: bold; }
+        .matrix-table .cell-unsatisfied { background: #fee2e2; color: #dc2626; font-weight: bold; text-decoration: line-through; }
+        .matrix-table .cell-undone { background: #f8fafc; color: #94a3b8; }
+        .matrix-table .cell-na { background: #1e293b; color: transparent; }
 
-        .progress-bar { height: 5px; background: #e2e8f0; border-radius: 3px; width: 60px; display: inline-block; vertical-align: middle; margin-right: 5px; }
-        .progress-fill { height: 100%; border-radius: 3px; }
-        .green { background: #22c55e; }
-        .blue { background: #3b82f6; }
-        .amber { background: #f59e0b; }
-        .red { background: #ef4444; }
+        .matrix-table tfoot td { font-weight: bold; background: #f1f5f9; border-top: 2px solid #94a3b8; }
 
-        .salary-box { max-width: 340px; margin: 0 auto; }
-        .salary-row { display: flex; justify-content: space-between; padding: 9px 16px; border-bottom: 1px solid #f1f5f9; }
-        .salary-row.divider { border-top: 2px solid #e2e8f0; border-bottom: 2px solid #e2e8f0; background: #f8fafc; font-weight: bold; }
-        .salary-row.final { background: #eff6ff; font-size: 13px; font-weight: bold; }
-        .salary-label { color: #475569; }
-        .salary-value { font-weight: 600; color: #1e293b; }
-        .salary-value.accent { color: #2563eb; }
+        .summary-section { width: 100%; margin-top: 15px; border-collapse: collapse; }
+        .summary-section td { vertical-align: top; }
 
-        .footer { margin-top: 30px; padding: 14px 30px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center; font-size: 9px; color: #94a3b8; }
-        .sign-line { border-top: 1px solid #cbd5e1; width: 150px; margin: 40px auto 5px; }
+        .salary-table { width: 100%; border-collapse: collapse; font-size: 8px; }
+        .salary-table th, .salary-table td { border: 1px solid #e2e8f0; padding: 4px 8px; }
+        .salary-table th { background: #f8fafc; text-align: left; }
+        .salary-table .final-row { background: #0f172a; color: #fff; font-weight: bold; font-size: 9px; }
+
+        .footer { margin-top: 15px; font-size: 7.5px; color: #94a3b8; text-align: center; }
     </style>
 </head>
 <body>
 
-    {{-- Header --}}
-    <div class="header">
-        <div class="title">Employee Performance Report</div>
-        <div class="subtitle">{{ $monthName }} &bull; Generated {{ now()->format('d M Y') }}</div>
-    </div>
+    <table class="header-table">
+        <tr>
+            <td style="width: 50%;">
+                <div class="title">{{ $employee->name }} — Worker Daily Working Sheet</div>
+                <div class="subtitle">{{ $profile->designation ?? 'Employee' }} &bull; {{ $monthName }} &bull; Performance: {{ $gridSheet['summary']['performance_percentage'] }}% ({{ $gridSheet['summary']['grade'] }})</div>
+            </td>
+            <td style="width: 50%; text-align: right;">
+                <div class="yellow-box">
+                    <div class="lbl">Total Monthly Max</div>
+                    <div class="val">{{ number_format($gridSheet['summary']['total_monthly_max'], 0) }}</div>
+                </div>
+                <div class="green-box">
+                    <div class="lbl">Total Earned (Payable)</div>
+                    <div class="val">Rs. {{ number_format($gridSheet['summary']['total_earned'], 0) }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
 
-    {{-- Employee Meta --}}
-    <div class="meta">
-        <div class="meta-left">
-            <div class="name">{{ $employee->name }}</div>
-            <div class="detail">{{ $profile->designation ?? '' }} {{ $profile->department ? '&bull; ' . $profile->department : '' }}</div>
-            @if($profile->employee_code)
-                <div class="detail">Code: {{ $profile->employee_code }}</div>
-            @endif
-        </div>
-        <div class="meta-right">
-            @if($report)
-                <div class="grade-badge grade-{{ $report->grade }}">{{ $report->grade }}</div>
-                <div style="font-size:18px;font-weight:bold;margin-top:6px;color:#1e293b;">{{ $report->performance_percentage }}%</div>
-                <div style="font-size:9px;color:#94a3b8;">Performance Score</div>
-            @endif
-        </div>
-    </div>
-
-    {{-- Stats Row --}}
-    @if($report)
-    <div class="stats-row">
-        <div class="stat-box">
-            <div class="stat-label">Points Earned</div>
-            <div class="stat-value">{{ number_format($report->total_earned_points, 0) }}</div>
-            <div class="stat-sub">of {{ number_format($report->total_max_points, 0) }} max</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-label">Days Present</div>
-            <div class="stat-value">{{ $report->days_present }}</div>
-            <div class="stat-sub">of {{ $report->working_days }} working days</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-label">Days Absent</div>
-            <div class="stat-value">{{ $report->days_absent }}</div>
-            <div class="stat-sub">This month</div>
-        </div>
-        <div class="stat-box">
-            <div class="stat-label">Final Salary</div>
-            <div class="stat-value">Rs. {{ number_format($report->final_salary, 0) }}</div>
-            <div class="stat-sub">Take home</div>
-        </div>
-    </div>
-    @endif
-
-    {{-- Task Breakdown --}}
-    <div class="section">
-        <div class="section-title">Task Performance Breakdown</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Task</th>
-                    <th>Monthly Points</th>
-                    <th>Days Done</th>
-                    <th>Points Earned</th>
-                    <th>Achievement</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($taskBreakdown as $i => $row)
-                    @php
-                        $pct = $row['template']->monthly_points > 0
-                            ? round(($row['points_earned'] / $row['template']->monthly_points) * 100, 1)
-                            : 0;
-                        $bc = $pct >= 90 ? 'green' : ($pct >= 75 ? 'blue' : ($pct >= 60 ? 'amber' : 'red'));
-                        $barW = max(0, min(100, $pct));
-                    @endphp
-                    <tr>
-                        <td>{{ $i + 1 }}</td>
-                        <td>{{ $row['template']->name }}</td>
-                        <td>{{ number_format($row['template']->monthly_points, 0) }}</td>
-                        <td>{{ $row['days_done'] }} days</td>
-                        <td><strong>{{ number_format($row['points_earned'], 1) }}</strong></td>
-                        <td>
-                            <div style="display:flex;align-items:center;gap:5px;">
-                                <div class="progress-bar"><div class="progress-fill {{ $bc }}" style="width:{{ $barW }}%"></div></div>
-                                <span style="font-size:10px;color:#64748b;">{{ $pct }}%</span>
-                            </div>
-                        </td>
-                    </tr>
+    {{-- Spreadsheet Matrix --}}
+    <table class="matrix-table">
+        <thead>
+            <tr>
+                <th rowspan="2" style="width: 20px;">SN</th>
+                <th rowspan="2" style="width: 140px; text-align: left; padding-left: 5px;">Days & Works</th>
+                <th rowspan="2" style="width: 45px;">Monthly Amt</th>
+                @foreach($gridSheet['days'] as $dayMeta)
+                    <th class="{{ $dayMeta['is_friday'] ? 'th-fri' : '' }}">{{ $dayMeta['day_name'] }}</th>
                 @endforeach
-            </tbody>
-            <tfoot>
+                <th rowspan="2" style="width: 45px;">Earned</th>
+                <th rowspan="2" style="width: 40px;">Deduct</th>
+            </tr>
+            <tr>
+                @foreach($gridSheet['days'] as $dayMeta)
+                    <th class="{{ $dayMeta['is_friday'] ? 'th-fri' : '' }}">{{ $dayMeta['day'] }}</th>
+                @endforeach
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($gridSheet['rows'] as $idx => $row)
                 <tr>
-                    <td colspan="2" class="tfoot">Total</td>
-                    <td class="tfoot">{{ number_format(collect($taskBreakdown)->sum(fn($r) => $r['template']->monthly_points), 0) }}</td>
-                    <td class="tfoot">—</td>
-                    <td class="tfoot">{{ number_format(collect($taskBreakdown)->sum('points_earned'), 1) }}</td>
-                    <td class="tfoot"></td>
-                </tr>
-            </tfoot>
-        </table>
-    </div>
+                    <td>{{ $idx + 1 }}</td>
+                    <td class="task-name">{{ $row['name'] }}</td>
+                    <td style="font-weight: bold; background: #f8fafc;">{{ number_format($row['monthly_amount'], 0) }}</td>
 
-    {{-- Salary Calculation --}}
+                    @foreach($gridSheet['days'] as $d => $dayMeta)
+                        @php
+                            $cell = $row['days_data'][$d];
+                            $status = $cell['status'];
+                            $earned = $cell['earned'];
+                        @endphp
+                        <td class="@if($status === 'done') cell-done @elseif($status === 'unsatisfied') cell-unsatisfied @elseif($status === 'undone') cell-undone @elseif(!$row['is_daily'] && $status === 'na') cell-na @else {{ $dayMeta['is_friday'] ? 'td-fri' : '' }} @endif">
+                            @if($status === 'done')
+                                {{ round($earned) }}
+                            @elseif($status === 'unsatisfied')
+                                {{ round($row['unit_amount']) }}
+                            @elseif($status === 'undone')
+                                {{ round($row['unit_amount']) }}
+                            @elseif(!$row['is_daily'] && $status === 'na')
+                                &nbsp;
+                            @else
+                                -
+                            @endif
+                        </td>
+                    @endforeach
+
+                    <td style="font-weight: bold; color: #166534; background: #f0fdf4;">{{ number_format($row['total_earned'], 0) }}</td>
+                    <td style="font-weight: bold; color: #dc2626; background: #fef2f2;">
+                        {{ $row['total_deducted'] > 0 ? '-' . number_format($row['total_deducted'], 0) : '0' }}
+                    </td>
+                </tr>
+            @endforeach
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2" style="text-align: left; padding-left: 5px;">Daily Earned Totals</td>
+                <td style="background: #fef08a;">{{ number_format($gridSheet['summary']['total_monthly_max'], 0) }}</td>
+                @foreach($gridSheet['days'] as $d => $dayMeta)
+                    <td class="{{ $dayMeta['is_friday'] ? 'th-fri' : '' }}">{{ round($gridSheet['dailyTotals'][$d]) }}</td>
+                @endforeach
+                <td style="background: #bbf7d0; color: #166534;">{{ number_format($gridSheet['summary']['total_earned'], 0) }}</td>
+                <td style="background: #fecaca; color: #dc2626;">-{{ number_format($gridSheet['summary']['total_deducted'], 0) }}</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    {{-- Bottom Summary Table --}}
     @if($report)
-    <div class="section">
-        <div class="section-title">Salary Calculation</div>
-        <div class="salary-box">
-            <div class="salary-row">
-                <span class="salary-label">Basic Salary</span>
-                <span class="salary-value">Rs. {{ number_format($report->basic_salary, 0) }}</span>
-            </div>
-            <div class="salary-row">
-                <span class="salary-label">Fuel Allowance</span>
-                <span class="salary-value">Rs. {{ number_format($report->fuel_allowance, 0) }}</span>
-            </div>
-            <div class="salary-row">
-                <span class="salary-label">Attendance Incentive</span>
-                <span class="salary-value">Rs. {{ number_format($report->attendance_incentive, 0) }}</span>
-            </div>
-            <div class="salary-row">
-                <span class="salary-label">Collection Incentive ({{ $report->collection_incentive_pct }}%)</span>
-                <span class="salary-value">Rs. {{ number_format($report->collection_incentive_amt, 0) }}</span>
-            </div>
-            <div class="salary-row divider">
-                <span class="salary-label">Total Basic</span>
-                <span class="salary-value">Rs. {{ number_format($report->total_basic, 0) }}</span>
-            </div>
-            <div class="salary-row">
-                <span class="salary-label">Other Works (Task Points)</span>
-                <span class="salary-value accent">Rs. {{ number_format($report->other_works_amount, 0) }}</span>
-            </div>
-            <div class="salary-row final">
-                <span class="salary-label">Final Salary</span>
-                <span class="salary-value accent">Rs. {{ number_format($report->final_salary, 0) }}</span>
-            </div>
-        </div>
-    </div>
+    <table class="summary-section">
+        <tr>
+            <td style="width: 50%; padding-right: 10px;">
+                <div style="font-weight: bold; margin-bottom: 4px; text-transform: uppercase; font-size: 8px;">Attendance & Performance</div>
+                <table class="salary-table">
+                    <tr><td>Total Days in Month</td><td style="text-align:right; font-weight:bold;">{{ $report->working_days }}</td></tr>
+                    <tr><td>Days Present</td><td style="text-align:right; font-weight:bold; color: #166534;">{{ $report->days_present }}</td></tr>
+                    <tr><td>Days Absent</td><td style="text-align:right; font-weight:bold; color: #dc2626;">{{ $report->days_absent }}</td></tr>
+                    <tr><td>Performance Score</td><td style="text-align:right; font-weight:bold;">{{ $report->performance_percentage }}% ({{ $report->grade }})</td></tr>
+                </table>
+            </td>
+            <td style="width: 50%; padding-left: 10px;">
+                <div style="font-weight: bold; margin-bottom: 4px; text-transform: uppercase; font-size: 8px;">Salary Calculation</div>
+                <table class="salary-table">
+                    <tr><td>Basic Salary</td><td style="text-align:right;">Rs. {{ number_format($report->basic_salary, 0) }}</td></tr>
+                    <tr><td>Allowances (Fuel + Attendance)</td><td style="text-align:right;">Rs. {{ number_format($report->fuel_allowance + $report->attendance_incentive, 0) }}</td></tr>
+                    <tr><td>Task Performance Earnings</td><td style="text-align:right; font-weight:bold; color:#166534;">+ Rs. {{ number_format($report->other_works_amount, 0) }}</td></tr>
+                    <tr class="final-row"><td>Final Payable Salary</td><td style="text-align:right;">Rs. {{ number_format($report->final_salary, 0) }}</td></tr>
+                </table>
+            </td>
+        </tr>
+    </table>
     @endif
 
-    {{-- Signature --}}
-    <div style="padding: 10px 30px 0; text-align:right;">
-        <div class="sign-line" style="margin: 30px 0 5px auto;"></div>
-        <div style="font-size:10px;color:#64748b;">Authorized Signature</div>
-    </div>
-
-    {{-- Footer --}}
     <div class="footer">
-        Generated by Palladium Mall Management System &bull; {{ now()->format('d M Y, h:i A') }}
-        @if($report && $report->generatedByUser)
-            &bull; Report by {{ $report->generatedByUser->name }}
-        @endif
+        Generated by Palladium Mall System &bull; {{ now()->format('d M Y, h:i A') }}
     </div>
 
 </body>
