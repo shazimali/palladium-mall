@@ -161,11 +161,19 @@
     <script>
         let ajaxTimeout = null;
 
-        function fetchResults() {
+        function fetchResults(page) {
             const form = document.getElementById('filter-form');
             if (!form) return;
             const formData = new FormData(form);
             const params = new URLSearchParams(formData);
+
+            // Remove ajax flag and reset page when filters change
+            params.delete('ajax');
+            if (page && page > 1) {
+                params.set('page', page);
+            } else {
+                params.delete('page');
+            }
 
             const newUrl = `${window.location.pathname}?${params.toString()}`;
             window.history.pushState({ path: newUrl }, '', newUrl);
@@ -183,9 +191,11 @@
                 }
             }
 
-            params.append('ajax', '1');
+            // Build the AJAX request URL (never stored in browser history)
+            const ajaxParams = new URLSearchParams(params);
+            ajaxParams.set('ajax', '1');
 
-            fetch(`${window.location.pathname}?${params.toString()}`, {
+            fetch(`${window.location.pathname}?${ajaxParams.toString()}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }
@@ -229,7 +239,7 @@
             if (searchInput) {
                 searchInput.addEventListener('input', function () {
                     clearTimeout(ajaxTimeout);
-                    ajaxTimeout = setTimeout(fetchResults, 250);
+                    ajaxTimeout = setTimeout(() => fetchResults(), 250);
                 });
             }
 
@@ -251,6 +261,22 @@
                     onChange: function() { fetchResults(); }
                 });
             }
+
+            // Intercept pagination link clicks inside the dynamic table container
+            // so they trigger an AJAX fetch instead of a full page navigation.
+            document.getElementById('table-container').addEventListener('click', function (e) {
+                const link = e.target.closest('a[href]');
+                if (!link) return;
+
+                // Only intercept links that point to the tenants index with a page param
+                const url = new URL(link.href, window.location.origin);
+                if (url.pathname !== window.location.pathname) return;
+                if (!url.searchParams.has('page')) return;
+
+                e.preventDefault();
+                const page = url.searchParams.get('page');
+                fetchResults(page);
+            });
 
             window.addEventListener('popstate', function () {
                 location.reload();
