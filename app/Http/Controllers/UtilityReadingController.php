@@ -85,6 +85,25 @@ class UtilityReadingController extends Controller
                 return $v->unit_id . '_' . $v->meter_ref_no;
             });
 
+        // Fetch the latest reading prior to the selected month for each meter (to auto-fetch as previous reading)
+        $prevVouchers = MeterReadingVoucher::whereDate('date', '<', $startOfMonth)
+            ->orderBy('date', 'desc')
+            ->get()
+            ->groupBy(function ($v) {
+                return $v->unit_id . '_' . $v->meter_ref_no;
+            })
+            ->map(function ($group) {
+                return $group->first();
+            });
+
+        $prevVouchersByUnit = MeterReadingVoucher::whereDate('date', '<', $startOfMonth)
+            ->orderBy('date', 'desc')
+            ->get()
+            ->groupBy('unit_id')
+            ->map(function ($group) {
+                return $group->first();
+            });
+
         // Format reading rows
         $readings = [];
         $totalUnitsConsumed = 0;
@@ -94,7 +113,8 @@ class UtilityReadingController extends Controller
 
         foreach ($allMeters as $meter) {
             $key = $meter->unit_id . '_' . $meter->meter_ref_no;
-            $voucher = $vouchers->get($key);
+            $voucher     = $vouchers->get($key);
+            $prevVoucher = $prevVouchers->get($key) ?? $prevVouchersByUnit->get($meter->unit_id);
 
             // Fallback voucher matching by unit + type if ref no wasn't exact
             if (!$voucher) {
@@ -103,7 +123,19 @@ class UtilityReadingController extends Controller
                 });
             }
 
-            $currentReading = $voucher ? (float) $voucher->current_reading : 0;
+            // Auto-fetch: Previous month's meter reading (current_reading) becomes this month's prev reading
+            $prevReading = 0.00;
+            if ($prevVoucher && $prevVoucher->current_reading !== null && (float) $prevVoucher->current_reading > 0) {
+                $prevReading = (float) $prevVoucher->current_reading;
+            } elseif ($voucher && $voucher->previous_reading !== null && (float) $voucher->previous_reading > 0) {
+                $prevReading = (float) $voucher->previous_reading;
+            }
+
+            $currentReading = $voucher && $voucher->current_reading !== null ? (float) $voucher->current_reading : 0.00;
+            $unitsConsumed  = ($currentReading > 0 && $currentReading >= $prevReading)
+                ? round($currentReading - $prevReading, 2)
+                : 0.00;
+
             $amount         = $voucher ? (float) $voucher->amount : 0;
             $status         = $voucher ? strtolower($voucher->status ?? 'unpaid') : 'unpaid';
             $voucherId      = $voucher ? $voucher->id : null;
@@ -113,13 +145,15 @@ class UtilityReadingController extends Controller
                 continue;
             }
 
-            $totalUnitsConsumed += $currentReading;
+            $totalUnitsConsumed += $unitsConsumed;
             $totalBilled += $amount;
             if ($status === 'paid') {
                 $totalPaid += $amount;
             } else {
                 $totalUnpaid += $amount;
             }
+
+            $isPaidLocked = ($status === 'paid' && !$user->isSuperAdmin());
 
             $readings[] = [
                 'meter_id'          => $meter->id,
@@ -134,12 +168,16 @@ class UtilityReadingController extends Controller
                 'meter_type_label'  => $meter->getTypeLabelAttribute(),
                 'meter_ref_no'      => $meter->meter_ref_no ?? 'N/A',
                 'meter_consumer_id' => $meter->meter_consumer_id ?? 'N/A',
+                'previous_reading'  => $prevReading,
                 'current_reading'   => $currentReading,
+                'units_consumed'    => $unitsConsumed,
+                'available'         => $voucher->available ?? '',
                 'amount'            => $amount,
                 'status'            => $status,
                 'meter_image_url'   => $meterImage,
                 'notes'             => $voucher->notes ?? '',
                 'is_active'         => (bool) $meter->is_active,
+                'is_paid_locked'    => $isPaidLocked,
             ];
         }
 
@@ -160,6 +198,7 @@ class UtilityReadingController extends Controller
             'totalPaid'          => $totalPaid,
             'totalUnpaid'        => $totalUnpaid,
             'canEdit'            => $canEdit,
+            'isSuperAdmin'       => $user->isSuperAdmin(),
         ]);
     }
 
@@ -224,6 +263,25 @@ class UtilityReadingController extends Controller
                 return $v->unit_id . '_' . $v->meter_ref_no;
             });
 
+        // Fetch prior readings for previous reading calculation
+        $prevVouchers = MeterReadingVoucher::whereDate('date', '<', $startOfMonth)
+            ->orderBy('date', 'desc')
+            ->get()
+            ->groupBy(function ($v) {
+                return $v->unit_id . '_' . $v->meter_ref_no;
+            })
+            ->map(function ($group) {
+                return $group->first();
+            });
+
+        $prevVouchersByUnit = MeterReadingVoucher::whereDate('date', '<', $startOfMonth)
+            ->orderBy('date', 'desc')
+            ->get()
+            ->groupBy('unit_id')
+            ->map(function ($group) {
+                return $group->first();
+            });
+
         $readings = [];
         $totalUnitsConsumed = 0;
         $totalBilled = 0;
@@ -232,7 +290,8 @@ class UtilityReadingController extends Controller
 
         foreach ($allMeters as $meter) {
             $key = $meter->unit_id . '_' . $meter->meter_ref_no;
-            $voucher = $vouchers->get($key);
+            $voucher     = $vouchers->get($key);
+            $prevVoucher = $prevVouchers->get($key) ?? $prevVouchersByUnit->get($meter->unit_id);
 
             if (!$voucher) {
                 $voucher = $vouchers->first(function ($v) use ($meter) {
@@ -240,7 +299,19 @@ class UtilityReadingController extends Controller
                 });
             }
 
-            $currentReading = $voucher ? (float) $voucher->current_reading : 0;
+            // Auto-fetch: Previous month's meter reading becomes this month's prev reading
+            $prevReading = 0.00;
+            if ($prevVoucher && $prevVoucher->current_reading !== null && (float) $prevVoucher->current_reading > 0) {
+                $prevReading = (float) $prevVoucher->current_reading;
+            } elseif ($voucher && $voucher->previous_reading !== null && (float) $voucher->previous_reading > 0) {
+                $prevReading = (float) $voucher->previous_reading;
+            }
+
+            $currentReading = $voucher && $voucher->current_reading !== null ? (float) $voucher->current_reading : 0.00;
+            $unitsConsumed  = ($currentReading > 0 && $currentReading >= $prevReading)
+                ? round($currentReading - $prevReading, 2)
+                : 0.00;
+
             $amount         = $voucher ? (float) $voucher->amount : 0;
             $status         = $voucher ? strtolower($voucher->status ?? 'unpaid') : 'unpaid';
 
@@ -248,7 +319,7 @@ class UtilityReadingController extends Controller
                 continue;
             }
 
-            $totalUnitsConsumed += $currentReading;
+            $totalUnitsConsumed += $unitsConsumed;
             $totalBilled += $amount;
             if ($status === 'paid') {
                 $totalPaid += $amount;
@@ -266,7 +337,10 @@ class UtilityReadingController extends Controller
                 'meter_type_label'  => $meter->getTypeLabelAttribute(),
                 'meter_ref_no'      => $meter->meter_ref_no ?? 'N/A',
                 'meter_consumer_id' => $meter->meter_consumer_id ?? 'N/A',
+                'previous_reading'  => $prevReading,
                 'current_reading'   => $currentReading,
+                'units_consumed'    => $unitsConsumed,
+                'available'         => $voucher->available ?? '',
                 'amount'            => $amount,
                 'status'            => $status,
                 'is_active'         => (bool) $meter->is_active,
@@ -314,12 +388,14 @@ class UtilityReadingController extends Controller
         }
 
         $validated = $request->validate([
-            'meter_id'        => ['required', 'exists:meters,id'],
-            'month'           => ['required', 'string'], // YYYY-MM
-            'current_reading' => ['nullable', 'numeric', 'min:0'],
-            'amount'          => ['nullable', 'numeric', 'min:0'],
-            'status'          => ['required', 'in:paid,unpaid,pending'],
-            'notes'           => ['nullable', 'string', 'max:500'],
+            'meter_id'         => ['required', 'exists:meters,id'],
+            'month'            => ['required', 'string'], // YYYY-MM
+            'previous_reading' => ['nullable', 'numeric', 'min:0'],
+            'current_reading'  => ['nullable', 'numeric', 'min:0'],
+            'available'        => ['nullable', 'string', 'max:255'],
+            'amount'           => ['nullable', 'numeric', 'min:0'],
+            'status'           => ['required', 'in:paid,unpaid,pending'],
+            'notes'            => ['nullable', 'string', 'max:500'],
         ]);
 
         $meter = Meter::with('unit')->findOrFail($validated['meter_id']);
@@ -343,6 +419,14 @@ class UtilityReadingController extends Controller
             ->whereDate('date', '<=', $endOfMonth)
             ->first();
 
+        // Lock enforcement: If existing voucher is Paid, only Super Admin can edit it
+        if ($voucher && strtolower($voucher->status) === 'paid' && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This reading has been marked as Paid. Only Super Admin can modify or edit paid records.',
+            ], 403);
+        }
+
         if (!$voucher) {
             $voucher = new MeterReadingVoucher([
                 'unit_id'      => $meter->unit_id,
@@ -353,21 +437,41 @@ class UtilityReadingController extends Controller
             ]);
         }
 
-        $voucher->current_reading = $validated['current_reading'] ?? 0;
-        $voucher->amount          = $validated['amount'] ?? 0;
-        $voucher->status          = $validated['status'];
-        $voucher->notes           = $validated['notes'] ?? null;
+        // Auto-fetch latest prior reading if previous_reading was not explicitly provided or was 0
+        $prevVoucher = MeterReadingVoucher::where('unit_id', $meter->unit_id)
+            ->whereDate('date', '<', $startOfMonth)
+            ->orderBy('date', 'desc')
+            ->first();
+
+        $prevReading = (float) ($validated['previous_reading'] ?? 0);
+        if ($prevReading <= 0 && $prevVoucher && $prevVoucher->current_reading !== null && (float) $prevVoucher->current_reading > 0) {
+            $prevReading = (float) $prevVoucher->current_reading;
+        }
+
+        $currentReading = (float) ($validated['current_reading'] ?? 0);
+        $unitsConsumed  = max(0.00, $currentReading - $prevReading);
+
+        $voucher->previous_reading = $prevReading;
+        $voucher->current_reading  = $currentReading;
+        $voucher->units_consumed   = $unitsConsumed;
+        $voucher->available        = $validated['available'] ?? null;
+        $voucher->amount           = $validated['amount'] ?? 0;
+        $voucher->status           = $validated['status'];
+        $voucher->notes            = $validated['notes'] ?? null;
         $voucher->save();
 
         return response()->json([
             'success' => true,
             'message' => "Reading for Flat/Shop {$meter->unit->unit_number} ({$meter->getTypeLabelAttribute()}) saved successfully.",
             'data'    => [
-                'voucher_id'      => $voucher->id,
-                'current_reading' => (float) $voucher->current_reading,
-                'amount'          => (float) $voucher->amount,
-                'status'          => strtolower($voucher->status),
-                'meter_image_url' => $voucher->getMeterImageUrlAttribute() ?: ($meter->meter_image ? Storage::disk('public')->url($meter->meter_image) : null),
+                'voucher_id'       => $voucher->id,
+                'previous_reading' => (float) $voucher->previous_reading,
+                'current_reading'  => (float) $voucher->current_reading,
+                'units_consumed'   => (float) $voucher->units_consumed,
+                'available'        => $voucher->available ?? '',
+                'amount'           => (float) $voucher->amount,
+                'status'           => strtolower($voucher->status),
+                'meter_image_url'  => $voucher->getMeterImageUrlAttribute() ?: ($meter->meter_image ? Storage::disk('public')->url($meter->meter_image) : null),
             ],
         ]);
     }

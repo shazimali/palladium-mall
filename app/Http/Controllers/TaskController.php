@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Task;
+use App\Models\TaskCategory;
 use App\Models\TaskComment;
 use App\Models\User;
 use App\Notifications\TaskAssignedNotification;
@@ -14,13 +15,15 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class TaskController extends Controller
 {
-    /**
-     * Display the Task Table view.
-     */
+    // -----------------------------------------------------------------------
+    // Index — Daily Register Table
+    // -----------------------------------------------------------------------
+
     public function index(Request $request): View
     {
         $this->authorizeTaskAccess('view');
@@ -28,9 +31,15 @@ class TaskController extends Controller
         /** @var User $currentUser */
         $currentUser = auth()->user();
 
-        $query = Task::with(['creator', 'assignees', 'comments.user']);
+        // Default date filter = today
+        $date = $request->filled('date')
+            ? Carbon::parse($request->input('date'))->toDateString()
+            : Carbon::today()->toDateString();
 
-        // Role-based visibility: Super admin sees all, others only see their created or assigned tasks
+        $query = Task::with(['category', 'creator', 'assignees'])
+            ->whereDate('due_at', $date);
+
+        // Role-based visibility
         if (!$currentUser->isSuperAdmin()) {
             $query->where(function ($q) use ($currentUser) {
                 $q->where('created_by', $currentUser->id)
@@ -39,8 +48,12 @@ class TaskController extends Controller
         }
 
         // Filters
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->input('category_id'));
+        }
+
         if ($request->filled('assigned_to')) {
-            $assignedTo = $request->query('assigned_to');
+            $assignedTo = $request->input('assigned_to');
             if ($assignedTo === 'me') {
                 $query->whereHas('assignees', fn($q) => $q->where('users.id', $currentUser->id));
             } else {
@@ -48,91 +61,232 @@ class TaskController extends Controller
             }
         }
 
-        if ($request->filled('priority')) {
-            $query->where('priority', $request->query('priority'));
-        }
-
         if ($request->filled('status')) {
-            $query->where('status', $request->query('status'));
+            $query->where('status', $request->input('status'));
         }
 
-        if ($request->filled('search')) {
-            $search = $request->query('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->input('priority'));
         }
 
-        $allTasks = $query->orderBy('order_column')->orderByDesc('created_at')->get();
+        $tasks = $query->orderBy('order_column')->orderByDesc('created_at')->get();
 
-        // Kanban / status summary counts based on user-scoped tasks
-        $countQuery = Task::query();
+        // Count summary for the selected date
+        $counts = [
+            'total'       => $tasks->count(),
+            'todo'        => $tasks->where('status', 'todo')->count(),
+            'in_progress' => $tasks->where('status', 'in_progress')->count(),
+            'completed'   => $tasks->where('status', 'completed')->count(),
+        ];
+
+        $users      = User::where('is_active', true)->orderBy('name')->get();
+        $categories = TaskCategory::orderBy('name')->get();
+
+        return view('tasks.index', [
+            'title'      => 'Daily Tasks',
+            'tasks'      => $tasks,
+            'counts'     => $counts,
+            'users'      => $users,
+            'categories' => $categories,
+            'date'       => $date,
+            'filters'    => $request->only(['category_id', 'assigned_to', 'status', 'priority', 'date']),
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Print View — Daily Tasks Register
+    // -----------------------------------------------------------------------
+
+    public function print(Request $request): View
+    {
+        $this->authorizeTaskAccess('view');
+
+        /** @var User $currentUser */
+        $currentUser = auth()->user();
+
+        // Default date filter = today
+        $date = $request->filled('date')
+            ? Carbon::parse($request->input('date'))->toDateString()
+            : Carbon::today()->toDateString();
+
+        $query = Task::with(['category', 'creator', 'assignees'])
+            ->whereDate('due_at', $date);
+
+        // Role-based visibility
         if (!$currentUser->isSuperAdmin()) {
-            $countQuery->where(function ($q) use ($currentUser) {
+            $query->where(function ($q) use ($currentUser) {
                 $q->where('created_by', $currentUser->id)
                   ->orWhereHas('assignees', fn($aq) => $aq->where('users.id', $currentUser->id));
             });
         }
-        $allForCount = $countQuery->select('status')->get();
-        $kanban = [
-            'todo'        => $allForCount->where('status', 'todo')->values(),
-            'in_progress' => $allForCount->where('status', 'in_progress')->values(),
-            'completed'   => $allForCount->where('status', 'completed')->values(),
+
+        // Filters
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->input('category_id'));
+        }
+
+        if ($request->filled('assigned_to')) {
+            $assignedTo = $request->input('assigned_to');
+            if ($assignedTo === 'me') {
+                $query->whereHas('assignees', fn($q) => $q->where('users.id', $currentUser->id));
+            } else {
+                $query->whereHas('assignees', fn($q) => $q->where('users.id', $assignedTo));
+            }
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->filled('priority')) {
+            $query->where('priority', $request->input('priority'));
+        }
+
+        $tasks = $query->orderBy('order_column')->orderByDesc('created_at')->get();
+
+        $counts = [
+            'total'       => $tasks->count(),
+            'todo'        => $tasks->where('status', 'todo')->count(),
+            'in_progress' => $tasks->where('status', 'in_progress')->count(),
+            'completed'   => $tasks->where('status', 'completed')->count(),
         ];
 
-        $users = User::where('is_active', true)->orderBy('name')->get();
+        $selectedCategory = $request->filled('category_id')
+            ? TaskCategory::find($request->input('category_id'))?->name
+            : 'All Categories';
 
-        return view('tasks.index', [
-            'title'        => 'Task Management',
-            'allTasks'     => $allTasks,
-            'kanban'       => $kanban,
-            'users'        => $users,
-            'filters'      => $request->only(['assigned_to', 'priority', 'search', 'status']),
-            'activeTaskId' => $request->query('task_id'),
+        $selectedAssignee = 'All Assignees';
+        if ($request->filled('assigned_to')) {
+            if ($request->input('assigned_to') === 'me') {
+                $selectedAssignee = auth()->user()->name . ' (My Tasks)';
+            } else {
+                $selectedAssignee = User::find($request->input('assigned_to'))?->name ?? 'All Assignees';
+            }
+        }
+
+        return view('tasks.print', [
+            'title'            => 'Daily Tasks Register Print',
+            'tasks'            => $tasks,
+            'counts'           => $counts,
+            'date'             => $date,
+            'filters'          => $request->only(['category_id', 'assigned_to', 'status', 'priority', 'date']),
+            'selectedCategory' => $selectedCategory,
+            'selectedAssignee' => $selectedAssignee,
         ]);
     }
 
-    /**
-     * Show form to create a new task.
-     */
+    // -----------------------------------------------------------------------
+    // Table Rows — AJAX (returns tbody HTML + counts after create/update)
+    // -----------------------------------------------------------------------
+
+    public function tableRows(Request $request): JsonResponse
+    {
+        $this->authorizeTaskAccess('view');
+
+        /** @var User $currentUser */
+        $currentUser = auth()->user();
+
+        $date = $request->filled('date')
+            ? Carbon::parse($request->input('date'))->toDateString()
+            : Carbon::today()->toDateString();
+
+        $query = Task::with(['category', 'creator', 'assignees'])
+            ->whereDate('due_at', $date);
+
+        if (!$currentUser->isSuperAdmin()) {
+            $query->where(function ($q) use ($currentUser) {
+                $q->where('created_by', $currentUser->id)
+                  ->orWhereHas('assignees', fn($aq) => $aq->where('users.id', $currentUser->id));
+            });
+        }
+
+        if ($request->filled('category_id')) $query->where('category_id', $request->input('category_id'));
+        if ($request->filled('status'))      $query->where('status', $request->input('status'));
+        if ($request->filled('priority'))    $query->where('priority', $request->input('priority'));
+        if ($request->filled('assigned_to')) {
+            $at = $request->input('assigned_to');
+            $at === 'me'
+                ? $query->whereHas('assignees', fn($q) => $q->where('users.id', $currentUser->id))
+                : $query->whereHas('assignees', fn($q) => $q->where('users.id', $at));
+        }
+
+        $tasks  = $query->orderBy('order_column')->orderByDesc('created_at')->get();
+        $counts = [
+            'total'       => $tasks->count(),
+            'todo'        => $tasks->where('status', 'todo')->count(),
+            'in_progress' => $tasks->where('status', 'in_progress')->count(),
+            'completed'   => $tasks->where('status', 'completed')->count(),
+        ];
+
+        return response()->json([
+            'html'   => view('tasks.partials._table_rows', ['tasks' => $tasks, 'date' => $date])->render(),
+            'counts' => $counts,
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Create
+    // -----------------------------------------------------------------------
+
     public function create(): View
     {
         $this->authorizeTaskAccess('create');
 
-        $users = User::where('is_active', true)->orderBy('name')->get();
+        $users      = User::where('is_active', true)->orderBy('name')->get();
+        $categories = TaskCategory::active()->orderBy('name')->get();
 
         return view('tasks.create', [
-            'title' => 'Create New Task',
-            'users' => $users,
+            'title'      => 'Assign Daily Task',
+            'users'      => $users,
+            'categories' => $categories,
         ]);
     }
 
-    /**
-     * Store a newly created task.
-     */
+    // -----------------------------------------------------------------------
+    // Store
+    // -----------------------------------------------------------------------
+
     public function store(Request $request)
     {
         $this->authorizeTaskAccess('create');
 
         $validated = $request->validate([
-            'title'        => 'required|string|max:255',
-            'description'  => 'nullable|string',
-            'priority'     => 'required|in:low,medium,high,urgent',
-            'due_at'       => 'nullable|date',
-            'assignee_ids' => 'required|array|min:1',
-            'assignee_ids.*' => 'exists:users,id',
+            'category_id'      => 'required|exists:task_categories,id',
+            'description'      => 'nullable|string',
+            'creator_remarks'  => 'nullable|string',
+            'creator_rating'   => 'nullable|in:good,bad',
+            'admin_photo'      => ['nullable', 'image', 'max:200'], // Max 200 KB
+            'assignee_remarks' => 'nullable|string',
+            'priority'         => 'required|in:low,medium,high,urgent',
+            'due_at'           => 'required|date',
+            'assignee_ids'     => 'required|array|min:1',
+            'assignee_ids.*'   => 'exists:users,id',
+        ], [
+            'admin_photo.max' => 'Photo size must not exceed 200 KB.',
         ]);
+
+        // Auto-fill title from category name
+        $category = TaskCategory::findOrFail($validated['category_id']);
+
+        $photoPath = null;
+        if ($request->hasFile('admin_photo')) {
+            $photoPath = $request->file('admin_photo')->store('task_photos', 'public');
+        }
 
         DB::beginTransaction();
         try {
             $task = Task::create([
-                'title'       => $validated['title'],
-                'description' => $validated['description'] ?? null,
-                'priority'    => $validated['priority'],
-                'status'      => 'todo',
-                'due_at'      => $validated['due_at'] ? Carbon::parse($validated['due_at']) : null,
-                'created_by'  => auth()->id(),
+                'title'            => $category->name,
+                'category_id'      => $validated['category_id'],
+                'description'      => $validated['description'] ?? null,
+                'creator_remarks'  => $validated['creator_remarks'] ?? null,
+                'creator_rating'   => $validated['creator_rating'] ?? null,
+                'admin_photo'      => $photoPath,
+                'assignee_remarks' => $validated['assignee_remarks'] ?? null,
+                'priority'         => $validated['priority'],
+                'status'           => 'todo',
+                'due_at'           => Carbon::parse($validated['due_at']),
+                'created_by'       => auth()->id(),
             ]);
 
             $task->assignees()->sync($validated['assignee_ids']);
@@ -140,6 +294,9 @@ class TaskController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
+            if ($photoPath && Storage::disk('public')->exists($photoPath)) {
+                Storage::disk('public')->delete($photoPath);
+            }
             if ($request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
@@ -159,57 +316,159 @@ class TaskController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Task created successfully!',
-                'task'    => $task->load(['creator', 'assignees', 'comments.user']),
+                'task'    => $task->load(['category', 'creator', 'assignees']),
             ]);
         }
 
-        return redirect()->route('tasks.index')->with('success', 'Task created and assigned successfully!');
+        return redirect()->route('tasks.index', ['date' => $task->due_at->toDateString()])
+            ->with('success', 'Task created and assigned successfully!');
     }
 
-    /**
-     * Show form to edit an existing task.
-     */
+    // -----------------------------------------------------------------------
+    // Edit
+    // -----------------------------------------------------------------------
+
     public function edit(Task $task): View
     {
         $this->authorizeTaskAccess('edit', $task);
 
-        $users = User::where('is_active', true)->orderBy('name')->get();
+        $currentUser    = auth()->user();
+        $isSuperAdmin   = $currentUser->isSuperAdmin();
+        $isCreator      = (int) $currentUser->id === (int) $task->created_by;
+        $isAssignee     = $task->assignees->contains('id', $currentUser->id);
+        $canEditAll     = $isSuperAdmin || $isCreator;
+        $isAssigneeOnly = $isAssignee && !$canEditAll;
+
+        $users      = User::where('is_active', true)->orderBy('name')->get();
+        $categories = TaskCategory::active()->orderBy('name')->get();
 
         return view('tasks.edit', [
-            'title' => 'Edit Task: ' . $task->title,
-            'task'  => $task->load('assignees'),
-            'users' => $users,
+            'title'          => 'Edit Task',
+            'task'           => $task->load('assignees'),
+            'users'          => $users,
+            'categories'     => $categories,
+            'isAssigneeOnly' => $isAssigneeOnly,
+            'canEditAll'     => $canEditAll,
         ]);
     }
 
-    /**
-     * Update task details.
-     */
+    // -----------------------------------------------------------------------
+    // Update
+    // -----------------------------------------------------------------------
+
     public function update(Request $request, Task $task)
     {
         $this->authorizeTaskAccess('edit', $task);
 
+        $currentUser  = auth()->user();
+        $isSuperAdmin = $currentUser->isSuperAdmin();
+        $isCreator    = (int) $currentUser->id === (int) $task->created_by;
+        $isAssignee   = $task->assignees->contains('id', $currentUser->id);
+
+        // Assignee-only mode: only working on task, not creator or super admin
+        if ($isAssignee && !$isCreator && !$isSuperAdmin) {
+            $validated = $request->validate([
+                'assignee_remarks' => 'nullable|string',
+                'status'           => 'nullable|in:todo,in_progress,completed',
+            ]);
+
+            $newStatus = $validated['status'] ?? $task->status;
+
+            // Restriction: Once completed, only Super Admin can change status back
+            if ($task->status === 'completed' && $newStatus !== 'completed') {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Only Super Admin can change the status of a completed task.',
+                    ], 403);
+                }
+                return back()->with('error', 'Only Super Admin can change the status of a completed task.');
+            }
+
+            $task->update([
+                'assignee_remarks' => $validated['assignee_remarks'] ?? $task->assignee_remarks,
+                'status'           => $newStatus,
+                'completed_at'     => ($newStatus === 'completed' && !$task->completed_at)
+                    ? now()
+                    : ($newStatus !== 'completed' ? null : $task->completed_at),
+            ]);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Task remarks and status updated successfully!',
+                    'task'    => $task->load(['category', 'creator', 'assignees']),
+                ]);
+            }
+
+            return redirect()->route('tasks.index', ['date' => $task->due_at?->toDateString()])
+                ->with('success', 'Task remarks and status updated successfully!');
+        }
+
+        // Full edit mode for Creator or Super Admin:
         $validated = $request->validate([
-            'title'        => 'required|string|max:255',
-            'description'  => 'nullable|string',
-            'status'       => 'nullable|in:todo,in_progress,completed',
-            'priority'     => 'required|in:low,medium,high,urgent',
-            'due_at'       => 'nullable|date',
-            'assignee_ids' => 'required|array|min:1',
-            'assignee_ids.*' => 'exists:users,id',
+            'category_id'        => 'required|exists:task_categories,id',
+            'description'        => 'nullable|string',
+            'creator_remarks'    => 'nullable|string',
+            'creator_rating'     => 'nullable|in:good,bad',
+            'admin_photo'        => ['nullable', 'image', 'max:200'], // Max 200 KB
+            'remove_admin_photo' => 'nullable|boolean',
+            'assignee_remarks'   => 'nullable|string',
+            'status'             => 'nullable|in:todo,in_progress,completed',
+            'priority'           => 'required|in:low,medium,high,urgent',
+            'due_at'             => 'required|date',
+            'assignee_ids'       => 'required|array|min:1',
+            'assignee_ids.*'     => 'exists:users,id',
+        ], [
+            'admin_photo.max' => 'Photo size must not exceed 200 KB.',
         ]);
 
+        $category            = TaskCategory::findOrFail($validated['category_id']);
         $existingAssigneeIds = $task->assignees->pluck('id')->toArray();
-        $newStatus = $validated['status'] ?? $task->status;
+        $newStatus           = $validated['status'] ?? $task->status;
 
-        $task->update([
-            'title'       => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'status'      => $newStatus,
-            'priority'    => $validated['priority'],
-            'due_at'      => $validated['due_at'] ? Carbon::parse($validated['due_at']) : null,
-            'completed_at' => ($newStatus === 'completed' && !$task->completed_at) ? now() : ($newStatus !== 'completed' ? null : $task->completed_at),
-        ]);
+        // Restriction: Once completed, only Super Admin can change status back
+        if ($task->status === 'completed' && $newStatus !== 'completed') {
+            if (!$isSuperAdmin) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Only Super Admin can change the status of a completed task.',
+                    ], 403);
+                }
+                return back()->with('error', 'Only Super Admin can change the status of a completed task.');
+            }
+        }
+
+        $updateData = [
+            'title'            => $category->name,
+            'category_id'      => $validated['category_id'],
+            'description'      => $validated['description'] ?? null,
+            'creator_remarks'  => $validated['creator_remarks'] ?? null,
+            'creator_rating'   => $validated['creator_rating'] ?? null,
+            'assignee_remarks' => $validated['assignee_remarks'] ?? null,
+            'status'           => $newStatus,
+            'priority'         => $validated['priority'],
+            'due_at'           => Carbon::parse($validated['due_at']),
+            'completed_at'     => ($newStatus === 'completed' && !$task->completed_at)
+                ? now()
+                : ($newStatus !== 'completed' ? null : $task->completed_at),
+        ];
+
+        // Handle Admin Photo
+        if ($request->boolean('remove_admin_photo')) {
+            if ($task->admin_photo && Storage::disk('public')->exists($task->admin_photo)) {
+                Storage::disk('public')->delete($task->admin_photo);
+            }
+            $updateData['admin_photo'] = null;
+        } elseif ($request->hasFile('admin_photo')) {
+            if ($task->admin_photo && Storage::disk('public')->exists($task->admin_photo)) {
+                Storage::disk('public')->delete($task->admin_photo);
+            }
+            $updateData['admin_photo'] = $request->file('admin_photo')->store('task_photos', 'public');
+        }
+
+        $task->update($updateData);
 
         $task->assignees()->sync($validated['assignee_ids']);
 
@@ -228,68 +487,109 @@ class TaskController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Task updated successfully!',
-                'task'    => $task->load(['creator', 'assignees', 'comments.user']),
+                'task'    => $task->load(['category', 'creator', 'assignees']),
             ]);
         }
 
-        return redirect()->route('tasks.index')->with('success', 'Task updated successfully!');
+        return redirect()->route('tasks.index', ['date' => $task->due_at?->toDateString()])
+            ->with('success', 'Task updated successfully!');
     }
 
-    /**
-     * Update task status & Kanban order position via AJAX.
-     */
+    // -----------------------------------------------------------------------
+    // Update Status (AJAX)
+    // -----------------------------------------------------------------------
+
     public function updateStatus(Request $request, Task $task): JsonResponse
     {
         $this->authorizeTaskAccess('edit', $task);
 
         $validated = $request->validate([
-            'status'       => 'required|in:todo,in_progress,completed',
-            'order_column' => 'nullable|integer',
+            'status' => 'required|in:todo,in_progress,completed',
         ]);
 
+        $newStatus    = $validated['status'];
+        $isSuperAdmin = auth()->user()->isSuperAdmin();
+
+        // Restriction: Once completed, only Super Admin can revert status
+        if ($task->status === 'completed' && $newStatus !== 'completed') {
+            if (!$isSuperAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only Super Admin can change the status of a completed task.',
+                ], 403);
+            }
+        }
+
         $oldStatus = $task->status;
-        $newStatus = $validated['status'];
+        $task->update([
+            'status'       => $newStatus,
+            'completed_at' => ($newStatus === 'completed' && !$task->completed_at)
+                ? now()
+                : ($newStatus !== 'completed' ? null : $task->completed_at),
+        ]);
 
-        $task->status = $newStatus;
-
-        if (isset($validated['order_column'])) {
-            $task->order_column = $validated['order_column'];
-        }
-
-        if ($newStatus === 'completed' && $oldStatus !== 'completed') {
-            $task->completed_at = now();
-        } elseif ($newStatus !== 'completed') {
-            $task->completed_at = null;
-        }
-
-        $task->save();
-
-        // Notify involved users if status changed
-        if ($oldStatus !== $newStatus) {
-            $involvedUserIds = array_unique(array_merge(
-                [$task->created_by],
-                $task->assignees->pluck('id')->toArray()
-            ));
-
-            $usersToNotify = User::whereIn('id', $involvedUserIds)
-                ->where('id', '!=', auth()->id())
-                ->get();
-
-            if ($usersToNotify->isNotEmpty()) {
-                Notification::send($usersToNotify, new TaskStatusUpdatedNotification($task, auth()->user(), $oldStatus, $newStatus));
+        // Notify creator if status changed by someone else
+        if ($task->created_by && (int)$task->created_by !== (int)auth()->id()) {
+            $creator = User::find($task->created_by);
+            if ($creator) {
+                $creator->notify(new TaskStatusUpdatedNotification($task, auth()->user(), $oldStatus, $newStatus));
             }
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Task status updated!',
-            'task'    => $task->fresh(['creator', 'assignees', 'comments.user']),
+            'message' => 'Status updated to ' . ucfirst(str_replace('_', ' ', $newStatus)),
+            'status'  => $newStatus,
         ]);
     }
 
-    /**
-     * Add a comment to a task.
-     */
+    // -----------------------------------------------------------------------
+    // Get Task Data — for edit modal (AJAX)
+    // -----------------------------------------------------------------------
+
+    public function getData(Task $task): JsonResponse
+    {
+        $this->authorizeTaskAccess('view', $task);
+        $task->load('assignees');
+
+        $currentUser    = auth()->user();
+        $isSuperAdmin   = $currentUser->isSuperAdmin();
+        $isCreator      = (int) $currentUser->id === (int) $task->created_by;
+        $isAssignee     = $task->assignees->contains('id', $currentUser->id);
+        $canEditAll     = $isSuperAdmin || $isCreator;
+        $isAssigneeOnly = $isAssignee && !$canEditAll;
+
+        return response()->json([
+            'task' => [
+                'id'               => $task->id,
+                'category_id'      => $task->category_id,
+                'category_name'    => $task->category?->name ?? $task->title,
+                'description'      => $task->description,
+                'creator_remarks'  => $task->creator_remarks,
+                'creator_rating'   => $task->creator_rating,
+                'admin_photo'      => $task->admin_photo,
+                'admin_photo_url'  => $task->admin_photo_url,
+                'assignee_remarks' => $task->assignee_remarks,
+                'status'           => $task->status,
+                'priority'         => $task->priority,
+                'priority_label'   => ucfirst($task->priority),
+                'due_at'           => $task->due_at?->format('Y-m-d H:i:s'),
+                'formatted_due_at' => $task->due_at?->format('d M Y, h:i A'),
+                'creator_name'     => $task->creator?->name ?? 'Admin',
+                'created_by'       => $task->created_by,
+                'assignee_ids'     => $task->assignees->pluck('id')->toArray(),
+                'is_super_admin'   => $isSuperAdmin,
+                'is_creator'       => $isCreator,
+                'is_assignee_only' => $isAssigneeOnly,
+                'can_edit_all'     => $canEditAll,
+            ],
+        ]);
+    }
+
+    // -----------------------------------------------------------------------
+    // Add Comment
+    // -----------------------------------------------------------------------
+
     public function storeComment(Request $request, Task $task): JsonResponse
     {
         $this->authorizeTaskAccess('view', $task);
@@ -304,30 +604,42 @@ class TaskController extends Controller
             'comment' => $validated['comment'],
         ]);
 
-        // Send notification to involved users (creator + assignees)
-        $involvedUserIds = array_unique(array_merge(
-            [$task->created_by],
-            $task->assignees->pluck('id')->toArray()
-        ));
+        $commenterIsCreator = (int) auth()->id() === (int) $task->created_by;
 
-        $usersToNotify = User::whereIn('id', $involvedUserIds)
-            ->where('id', '!=', auth()->id())
-            ->get();
+        if ($commenterIsCreator) {
+            // Creator commenting → notify all assignees
+            $usersToNotify = $task->assignees->where('id', '!=', auth()->id())->values();
+        } else {
+            // Assignee commenting → notify creator + all other assignees
+            $involvedUserIds = array_unique(array_merge(
+                [$task->created_by],
+                $task->assignees->pluck('id')->toArray()
+            ));
+            $usersToNotify = User::whereIn('id', $involvedUserIds)
+                ->where('id', '!=', auth()->id())
+                ->get();
+        }
 
         if ($usersToNotify->isNotEmpty()) {
             Notification::send($usersToNotify, new TaskCommentAddedNotification($task, $comment, auth()->user()));
         }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Comment posted!',
-            'comment' => $comment->load('user'),
+            'success'  => true,
+            'message'  => 'Comment posted!',
+            'comment'  => [
+                'id'         => $comment->id,
+                'comment'    => $comment->comment,
+                'created_at' => $comment->created_at->diffForHumans(),
+                'user'       => ['name' => auth()->user()->name, 'id' => auth()->id()],
+            ],
         ]);
     }
 
-    /**
-     * Delete a task.
-     */
+    // -----------------------------------------------------------------------
+    // Delete
+    // -----------------------------------------------------------------------
+
     public function destroy(Request $request, Task $task)
     {
         $this->authorizeTaskAccess('delete', $task);
@@ -341,9 +653,10 @@ class TaskController extends Controller
         return redirect()->route('tasks.index')->with('success', 'Task deleted successfully!');
     }
 
-    /**
-     * Permission and task ownership/assignment authorization helper.
-     */
+    // -----------------------------------------------------------------------
+    // Authorization Helper
+    // -----------------------------------------------------------------------
+
     protected function authorizeTaskAccess(string $action, ?Task $task = null): void
     {
         /** @var User $user */
@@ -362,13 +675,12 @@ class TaskController extends Controller
             abort(403, "You do not have permission to {$action} tasks.");
         }
 
-        // For non-super-admins, ensure they are either the creator or an assignee of the task
         if ($task) {
-            $isCreator = (int) $task->created_by === (int) $user->id;
+            $isCreator  = (int) $task->created_by === (int) $user->id;
             $isAssignee = $task->assignees->contains('id', $user->id);
 
             if (!$isCreator && !$isAssignee) {
-                abort(403, "You do not have access to this task.");
+                abort(403, 'You do not have access to this task.');
             }
         }
     }

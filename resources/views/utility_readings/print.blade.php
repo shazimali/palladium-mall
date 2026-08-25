@@ -103,7 +103,10 @@
                         <th class="py-2.5 px-3 border border-gray-300">Consumer ID</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Breaker</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Meter Status</th>
-                        <th class="py-2.5 px-3 border border-gray-300 text-right">Units KV</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-right">Prev Reading</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-right">Meter Reading</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-right">Units Consumed</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-center">Available</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-right">Amount (Rs.)</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Status</th>
                     </tr>
@@ -144,8 +147,17 @@
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-2 px-3 border border-gray-300 text-right font-mono font-bold">
+                            <td class="py-2 px-3 border border-gray-300 text-right font-mono text-gray-600">
+                                {{ number_format($row['previous_reading'], 2) }}
+                            </td>
+                            <td class="py-2 px-3 border border-gray-300 text-right font-mono font-bold text-gray-900">
                                 {{ number_format($row['current_reading'], 2) }}
+                            </td>
+                            <td class="py-2 px-3 border border-gray-300 text-right font-mono font-black text-indigo-900">
+                                {{ number_format($row['units_consumed'], 2) }}
+                            </td>
+                            <td class="py-2 px-3 border border-gray-300 text-center text-xs font-semibold">
+                                {{ $row['available'] ?: '—' }}
                             </td>
                             <td class="py-2 px-3 border border-gray-300 text-right font-mono font-bold">Rs.
                                 {{ number_format($row['amount'], 2) }}
@@ -162,7 +174,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="py-8 text-center text-gray-500 font-bold">
+                            <td colspan="14" class="py-8 text-center text-gray-500 font-bold">
                                 No utility readings found for {{ $selectedMonthName }}.
                             </td>
                         </tr>
@@ -171,10 +183,11 @@
                 <tfoot>
                     {{-- Totals Row --}}
                     <tr class="bg-gray-100 font-black border-t-2 border-gray-400">
-                        <td colspan="8" class="py-3 px-3 text-right uppercase border border-gray-300">Total Summary:</td>
+                        <td colspan="10" class="py-3 px-3 text-right uppercase border border-gray-300">Total Units Consumed:</td>
                         <td class="py-3 px-3 text-right font-mono border border-gray-300 text-blue-900">
                             {{ number_format($totalUnitsConsumed, 2) }}
                         </td>
+                        <td class="py-3 px-3 border border-gray-300"></td>
                         <td class="py-3 px-3 text-right font-mono border border-gray-300 text-gray-900">Rs.
                             {{ number_format($totalBilled, 2) }}
                         </td>

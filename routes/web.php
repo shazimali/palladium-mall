@@ -25,6 +25,7 @@ use App\Http\Controllers\ReceivablePayableReportController;
 use App\Http\Controllers\OwnerDuesController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TaskCategoryController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
@@ -629,13 +630,22 @@ Route::middleware('auth')->group(function () {
 
     // Task Management Routes
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/print', [TaskController::class, 'print'])->name('tasks.print');
     Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+    Route::get('/tasks/rows', [TaskController::class, 'tableRows'])->name('tasks.rows');
     Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+    Route::get('/tasks/{task}/data', [TaskController::class, 'getData'])->name('tasks.data');
     Route::get('/tasks/{task}/edit', [TaskController::class, 'edit'])->name('tasks.edit');
     Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.update-status');
+    Route::get('/tasks/{task}/comments', [TaskController::class, 'getComments'])->name('tasks.comments.index');
     Route::post('/tasks/{task}/comments', [TaskController::class, 'storeComment'])->name('tasks.comments.store');
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+    // Task Category Management Routes
+    Route::get('/task-categories', [TaskCategoryController::class, 'index'])->name('task-categories.index');
+    Route::post('/task-categories', [TaskCategoryController::class, 'store'])->name('task-categories.store');
+    Route::patch('/task-categories/{taskCategory}/toggle', [TaskCategoryController::class, 'toggleStatus'])->name('task-categories.toggle');
 
     // Notification API Routes
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');

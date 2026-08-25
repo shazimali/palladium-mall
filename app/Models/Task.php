@@ -15,7 +15,13 @@ class Task extends Model
 
     protected $fillable = [
         'title',
+        'category_id',
         'description',
+        'remarks',
+        'creator_remarks',
+        'creator_rating',
+        'admin_photo',
+        'assignee_remarks',
         'status',
         'priority',
         'due_at',
@@ -23,6 +29,15 @@ class Task extends Model
         'created_by',
         'order_column',
     ];
+
+    protected $appends = [
+        'admin_photo_url',
+    ];
+
+    public function getAdminPhotoUrlAttribute(): ?string
+    {
+        return $this->admin_photo ? \Illuminate\Support\Facades\Storage::disk('public')->url($this->admin_photo) : null;
+    }
 
     protected function casts(): array
     {
@@ -39,6 +54,14 @@ class Task extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * The category this task belongs to.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(TaskCategory::class, 'category_id');
     }
 
     /**

@@ -19,7 +19,10 @@ class MeterReadingVoucher extends Model
         'date',
         'due_date',
         'meter_ref_no',
+        'previous_reading',
         'current_reading',
+        'units_consumed',
+        'available',
         'amount',
         'meter_image',
         'status',
@@ -28,10 +31,12 @@ class MeterReadingVoucher extends Model
     ];
 
     protected $casts = [
-        'date'            => 'date',
-        'due_date'        => 'date',
-        'amount'          => 'decimal:2',
-        'current_reading' => 'decimal:2',
+        'date'             => 'date',
+        'due_date'         => 'date',
+        'amount'           => 'decimal:2',
+        'previous_reading' => 'decimal:2',
+        'current_reading'  => 'decimal:2',
+        'units_consumed'   => 'decimal:2',
     ];
 
     protected static function booted(): void

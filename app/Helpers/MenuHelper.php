@@ -129,7 +129,7 @@ class MenuHelper
         if (auth()->check() && ($user->can('tasks.view') || $user->isSuperAdmin())) {
             $mainItems[] = [
                 'icon' => 'task',
-                'name' => 'Tasks Board',
+                'name' => 'Daily Tasks',
                 'path' => '/tasks',
             ];
         }
