@@ -51,34 +51,35 @@ class UtilityReadingController extends Controller
 
         // Query active meters
         $metersQuery = Meter::query()
+            ->select('meters.*')
+            ->join('units', 'meters.unit_id', '=', 'units.id')
             ->with(['unit.floor', 'unit.block', 'unit.tenant', 'unit.otherTenant'])
             ->whereHas('unit');
 
         if ($selectedUnitId) {
-            $metersQuery->where('unit_id', $selectedUnitId);
+            $metersQuery->where('meters.unit_id', $selectedUnitId);
         }
 
         if ($selectedType) {
-            $metersQuery->where('type', $selectedType);
+            $metersQuery->where('meters.type', $selectedType);
         }
 
         if (!empty($searchTerm)) {
             $metersQuery->where(function ($q) use ($searchTerm) {
-                $q->where('meter_ref_no', 'like', "%{$searchTerm}%")
-                  ->orWhere('meter_consumer_id', 'like', "%{$searchTerm}%")
-                  ->orWhereHas('unit', function ($u) use ($searchTerm) {
-                      $u->where('unit_number', 'like', "%{$searchTerm}%");
-                  });
+                $q->where('meters.meter_ref_no', 'like', "%{$searchTerm}%")
+                  ->orWhere('meters.meter_consumer_id', 'like', "%{$searchTerm}%")
+                  ->orWhere('units.unit_number', 'like', "%{$searchTerm}%");
             });
         }
 
-        $allMeters = $metersQuery->orderBy('unit_id')->orderBy('type')->get();
+        $allMeters = $metersQuery->orderBy('units.unit_number')->orderBy('meters.type')->get();
 
         // Fetch meter reading vouchers for the selected month
         $startOfMonth = $monthCarbon->copy()->startOfMonth()->format('Y-m-d');
         $endOfMonth   = $monthCarbon->copy()->endOfMonth()->format('Y-m-d');
 
-        $vouchers = MeterReadingVoucher::whereDate('date', '>=', $startOfMonth)
+        $vouchers = MeterReadingVoucher::with('user:id,name')
+            ->whereDate('date', '>=', $startOfMonth)
             ->whereDate('date', '<=', $endOfMonth)
             ->get()
             ->keyBy(function ($v) {
@@ -178,8 +179,19 @@ class UtilityReadingController extends Controller
                 'notes'             => $voucher->notes ?? '',
                 'is_active'         => (bool) $meter->is_active,
                 'is_paid_locked'    => $isPaidLocked,
+                'edited_by'         => $voucher?->user?->name,
+                'last_updated'      => $voucher?->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : null,
             ];
         }
+
+        // Natural sort by unit_number then meter_type
+        usort($readings, function ($a, $b) {
+            $cmp = strnatcasecmp($a['unit_number'] ?? '', $b['unit_number'] ?? '');
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+            return strcmp($a['meter_type'] ?? '', $b['meter_type'] ?? '');
+        });
 
         $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
 
@@ -230,33 +242,34 @@ class UtilityReadingController extends Controller
         $searchTerm     = trim($request->input('search', ''));
 
         $metersQuery = Meter::query()
+            ->select('meters.*')
+            ->join('units', 'meters.unit_id', '=', 'units.id')
             ->with(['unit.floor', 'unit.block', 'unit.tenant', 'unit.otherTenant'])
             ->whereHas('unit');
 
         if ($selectedUnitId) {
-            $metersQuery->where('unit_id', $selectedUnitId);
+            $metersQuery->where('meters.unit_id', $selectedUnitId);
         }
 
         if ($selectedType) {
-            $metersQuery->where('type', $selectedType);
+            $metersQuery->where('meters.type', $selectedType);
         }
 
         if (!empty($searchTerm)) {
             $metersQuery->where(function ($q) use ($searchTerm) {
-                $q->where('meter_ref_no', 'like', "%{$searchTerm}%")
-                  ->orWhere('meter_consumer_id', 'like', "%{$searchTerm}%")
-                  ->orWhereHas('unit', function ($u) use ($searchTerm) {
-                      $u->where('unit_number', 'like', "%{$searchTerm}%");
-                  });
+                $q->where('meters.meter_ref_no', 'like', "%{$searchTerm}%")
+                  ->orWhere('meters.meter_consumer_id', 'like', "%{$searchTerm}%")
+                  ->orWhere('units.unit_number', 'like', "%{$searchTerm}%");
             });
         }
 
-        $allMeters = $metersQuery->orderBy('unit_id')->orderBy('type')->get();
+        $allMeters = $metersQuery->orderBy('units.unit_number')->orderBy('meters.type')->get();
 
         $startOfMonth = $monthCarbon->copy()->startOfMonth()->format('Y-m-d');
         $endOfMonth   = $monthCarbon->copy()->endOfMonth()->format('Y-m-d');
 
-        $vouchers = MeterReadingVoucher::whereDate('date', '>=', $startOfMonth)
+        $vouchers = MeterReadingVoucher::with('user:id,name')
+            ->whereDate('date', '>=', $startOfMonth)
             ->whereDate('date', '<=', $endOfMonth)
             ->get()
             ->keyBy(function ($v) {
@@ -344,8 +357,19 @@ class UtilityReadingController extends Controller
                 'amount'            => $amount,
                 'status'            => $status,
                 'is_active'         => (bool) $meter->is_active,
+                'edited_by'         => $voucher?->user?->name,
+                'last_updated'      => $voucher?->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : null,
             ];
         }
+
+        // Natural sort by unit_number then meter_type
+        usort($readings, function ($a, $b) {
+            $cmp = strnatcasecmp($a['unit_number'] ?? '', $b['unit_number'] ?? '');
+            if ($cmp !== 0) {
+                return $cmp;
+            }
+            return strcmp($a['meter_type'] ?? '', $b['meter_type'] ?? '');
+        });
 
         $activeMeters   = collect($readings)->where('is_active', true)->count();
         $inactiveMeters = collect($readings)->where('is_active', false)->count();
@@ -396,6 +420,9 @@ class UtilityReadingController extends Controller
             'amount'           => ['nullable', 'numeric', 'min:0'],
             'status'           => ['required', 'in:paid,unpaid,pending'],
             'notes'            => ['nullable', 'string', 'max:500'],
+            'meter_image'      => ['nullable', 'image', 'max:200'],
+        ], [
+            'meter_image.max' => 'Meter photo size must not exceed 200 KB.',
         ]);
 
         $meter = Meter::with('unit')->findOrFail($validated['meter_id']);
@@ -437,6 +464,13 @@ class UtilityReadingController extends Controller
             ]);
         }
 
+        if ($request->hasFile('meter_image')) {
+            if ($voucher->meter_image && Storage::disk('public')->exists($voucher->meter_image)) {
+                Storage::disk('public')->delete($voucher->meter_image);
+            }
+            $voucher->meter_image = $request->file('meter_image')->store('meter_readings', 'public');
+        }
+
         // Auto-fetch latest prior reading if previous_reading was not explicitly provided or was 0
         $prevVoucher = MeterReadingVoucher::where('unit_id', $meter->unit_id)
             ->whereDate('date', '<', $startOfMonth)
@@ -458,6 +492,7 @@ class UtilityReadingController extends Controller
         $voucher->amount           = $validated['amount'] ?? 0;
         $voucher->status           = $validated['status'];
         $voucher->notes            = $validated['notes'] ?? null;
+        $voucher->user_id          = $user->id;
         $voucher->save();
 
         return response()->json([
@@ -472,6 +507,8 @@ class UtilityReadingController extends Controller
                 'amount'           => (float) $voucher->amount,
                 'status'           => strtolower($voucher->status),
                 'meter_image_url'  => $voucher->getMeterImageUrlAttribute() ?: ($meter->meter_image ? Storage::disk('public')->url($meter->meter_image) : null),
+                'edited_by'        => $user->name,
+                'last_updated'     => $voucher->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : now()->format('d M Y, h:i A'),
             ],
         ]);
     }
@@ -520,7 +557,10 @@ class UtilityReadingController extends Controller
             if ($voucher->meter_image && Storage::disk('public')->exists($voucher->meter_image)) {
                 Storage::disk('public')->delete($voucher->meter_image);
             }
-            $voucher->update(['meter_image' => $path]);
+            $voucher->update([
+                'meter_image' => $path,
+                'user_id'     => $user->id,
+            ]);
         } else {
             $voucher = MeterReadingVoucher::create([
                 'unit_id'         => $meter->unit_id,
@@ -536,9 +576,11 @@ class UtilityReadingController extends Controller
         }
 
         return response()->json([
-            'success'   => true,
-            'message'   => 'Meter photo uploaded successfully.',
-            'image_url' => Storage::disk('public')->url($path),
+            'success'      => true,
+            'message'      => 'Meter photo uploaded successfully.',
+            'image_url'    => Storage::disk('public')->url($path),
+            'edited_by'    => $user->name,
+            'last_updated' => $voucher->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : now()->format('d M Y, h:i A'),
         ]);
     }
 }

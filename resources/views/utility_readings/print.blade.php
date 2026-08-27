@@ -109,6 +109,7 @@
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Available</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-right">Amount (Rs.)</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Status</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-center">Edited By</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-300 font-semibold text-gray-900">
@@ -171,10 +172,13 @@
                                     <span class="text-amber-700 uppercase">PENDING</span>
                                 @endif
                             </td>
+                            <td class="py-2 px-3 border border-gray-300 text-center text-xs font-bold text-gray-700">
+                                {{ $row['edited_by'] ?? '—' }}
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="14" class="py-8 text-center text-gray-500 font-bold">
+                            <td colspan="15" class="py-8 text-center text-gray-500 font-bold">
                                 No utility readings found for {{ $selectedMonthName }}.
                             </td>
                         </tr>
@@ -191,6 +195,7 @@
                         <td class="py-3 px-3 text-right font-mono border border-gray-300 text-gray-900">Rs.
                             {{ number_format($totalBilled, 2) }}
                         </td>
+                        <td class="py-3 px-3 border border-gray-300"></td>
                         <td class="py-3 px-3 border border-gray-300"></td>
                     </tr>
                 </tfoot>

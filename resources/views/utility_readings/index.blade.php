@@ -121,7 +121,6 @@
                         <tr>
                             <th class="py-3.5 px-4 text-center">Meter Image</th>
                             <th class="py-3.5 px-4">Flat / Shop</th>
-                            <th class="py-3.5 px-4">Type</th>
                             <th class="py-3.5 px-4">Ref Number</th>
                             <th class="py-3.5 px-4">Consumer ID</th>
                             <th class="py-3.5 px-4 text-right">Prev Reading</th>
@@ -131,6 +130,7 @@
                             <th class="py-3.5 px-4 text-right">Bill Amount (Rs.)</th>
                             <th class="py-3.5 px-4 text-center">Status</th>
                             <th class="py-3.5 px-4 text-center">Meter Status</th>
+                            <th class="py-3.5 px-4 text-center">Edited By</th>
                             <th class="py-3.5 px-4 text-center">Action</th>
                         </tr>
                     </thead>
@@ -140,57 +140,45 @@
                                 
                                 {{-- Meter Image Column --}}
                                 <td class="py-3.5 px-4 text-center">
-                                    <div class="flex items-center justify-center gap-2">
-                                        <template x-if="row.meter_image_url">
-                                            <div class="relative group cursor-pointer" x-on:click="openImagePreview(row)">
-                                                <img :src="row.meter_image_url" alt="Meter Photo" class="h-10 w-10 rounded-xl object-cover border-2 border-brand-300 dark:border-brand-800 shadow-xs">
-                                                <div class="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs transition-opacity">
-                                                    🔍
-                                                </div>
+                                    <template x-if="row.meter_image_url">
+                                        <div class="relative group cursor-pointer inline-block" x-on:click="openImagePreview(row)">
+                                            <img :src="row.meter_image_url" alt="Meter Photo" class="h-10 w-10 rounded-xl object-cover border-2 border-brand-300 dark:border-brand-800 shadow-xs">
+                                            <div class="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs transition-opacity">
+                                                🔍
                                             </div>
-                                        </template>
+                                        </div>
+                                    </template>
 
-                                        <template x-if="!row.meter_image_url">
-                                            <div class="h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 text-xs">
-                                                📷
-                                            </div>
-                                        </template>
-
-                                        {{-- File Upload Button (Edit Permission Required) --}}
-                                        <template x-if="canEdit && (!row.is_paid_locked || isSuperAdmin)">
-                                            <label class="cursor-pointer p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-brand-50 hover:border-brand-300 dark:hover:bg-brand-900/30 text-gray-600 dark:text-gray-300 transition-colors" title="Upload / Update Photo (Max 200 KB)">
-                                                <input type="file" accept="image/*" x-on:change="uploadImage(row, $event)" class="hidden">
-                                                <span>📷</span>
-                                            </label>
-                                        </template>
-                                    </div>
+                                    <template x-if="!row.meter_image_url">
+                                        <span class="inline-flex h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 items-center justify-center text-gray-400 text-xs" title="No photo uploaded">
+                                            📷
+                                        </span>
+                                    </template>
                                 </td>
 
                                 {{-- Flat/Shop Column --}}
                                 <td class="py-3.5 px-4">
-                                    <a :href="'/units/' + row.unit_id" class="inline-block hover:opacity-90 transition-opacity">
-                                        <span class="unit-badge-lg text-sm px-2.5 py-0.5 font-black" x-text="row.unit_number"></span>
-                                    </a>
+                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                        <a :href="'/units/' + row.unit_id" class="inline-block hover:opacity-90 transition-opacity">
+                                            <span class="unit-badge-lg text-sm px-2.5 py-0.5 font-black" x-text="row.unit_number"></span>
+                                        </a>
+                                        <template x-if="row.meter_type === 'electricity'">
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40" title="Electricity Meter">
+                                                ⚡ Elect
+                                            </span>
+                                        </template>
+                                        <template x-if="row.meter_type === 'water'">
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40" title="Water Meter">
+                                                💧 Water
+                                            </span>
+                                        </template>
+                                        <template x-if="row.meter_type === 'gas'">
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40" title="Gas Meter">
+                                                🔥 Gas
+                                            </span>
+                                        </template>
+                                    </div>
                                     <span class="text-xs text-gray-400 font-medium block mt-1" x-text="row.floor + (row.block ? ' • ' + row.block : '')"></span>
-                                </td>
-
-                                {{-- Meter Type Column --}}
-                                <td class="py-3.5 px-4">
-                                    <template x-if="row.meter_type === 'electricity'">
-                                        <span class="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
-                                            ⚡ Electricity
-                                        </span>
-                                    </template>
-                                    <template x-if="row.meter_type === 'water'">
-                                        <span class="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40">
-                                            💧 Water
-                                        </span>
-                                    </template>
-                                    <template x-if="row.meter_type === 'gas'">
-                                        <span class="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40">
-                                            🔥 Gas
-                                        </span>
-                                    </template>
                                 </td>
 
                                 {{-- Ref Number Column --}}
@@ -266,6 +254,25 @@
                                     </template>
                                 </td>
 
+                                {{-- Edited By Column --}}
+                                <td class="py-3.5 px-4 text-center">
+                                    <template x-if="row.edited_by">
+                                        <div class="inline-flex flex-col items-center">
+                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-2xs"
+                                                :title="row.last_updated ? 'Last updated: ' + row.last_updated : ''">
+                                                <span class="h-1.5 w-1.5 rounded-full bg-brand-500 inline-block"></span>
+                                                <span x-text="row.edited_by"></span>
+                                            </span>
+                                            <template x-if="row.last_updated">
+                                                <span class="text-[10px] text-gray-400 font-medium mt-0.5" x-text="row.last_updated"></span>
+                                            </template>
+                                        </div>
+                                    </template>
+                                    <template x-if="!row.edited_by">
+                                        <span class="text-xs text-gray-400 font-semibold">—</span>
+                                    </template>
+                                </td>
+
                                 {{-- Action Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="canEdit">
@@ -322,21 +329,30 @@
             {{-- Modal Panel --}}
             <div x-show="modalOpen" x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                 x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
-                class="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-gray-200 dark:bg-gray-900 dark:border-gray-800 z-10 space-y-5">
+                class="relative w-full max-w-4xl rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-gray-200 dark:bg-gray-900 dark:border-gray-800 z-10 space-y-4 my-auto max-h-[95vh] overflow-y-auto">
                 
                 {{-- Header --}}
-                <div class="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
-                    <div class="flex items-center gap-2.5">
-                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400 text-lg">
+                <div class="flex items-start justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+                    <div class="flex items-center gap-3">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-400 text-xl font-bold shrink-0">
                             ⚡
                         </span>
                         <div>
-                            <h3 class="text-base font-extrabold text-gray-900 dark:text-white">
-                                Update Meter Reading
-                            </h3>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
-                                Flat/Shop <span class="font-bold text-gray-800 dark:text-gray-200" x-text="modalForm.unit_number"></span> • <span x-text="modalForm.meter_type_label"></span>
-                            </p>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-base font-extrabold text-gray-900 dark:text-white">
+                                    Update Meter Reading
+                                </h3>
+                                <span class="unit-badge-lg text-xs px-2.5 py-0.5 font-black" x-text="modalForm.unit_number"></span>
+                                <span class="text-xs font-bold text-gray-600 dark:text-gray-300" x-text="modalForm.meter_type_label"></span>
+                            </div>
+                            <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
+                                <span>Ref: <strong class="font-mono text-gray-800 dark:text-gray-200" x-text="modalForm.meter_ref_no"></strong></span>
+                                <span>•</span>
+                                <span>Consumer ID: <strong class="font-mono text-gray-800 dark:text-gray-200" x-text="modalForm.meter_consumer_id"></strong></span>
+                                <template x-if="modalForm.edited_by">
+                                    <span class="text-brand-600 dark:text-brand-400 font-semibold">• Last by: <span x-text="modalForm.edited_by + (modalForm.last_updated ? ' (' + modalForm.last_updated + ')' : '')"></span></span>
+                                </template>
+                            </div>
                         </div>
                     </div>
                     <button type="button" x-on:click="closeEditModal()"
@@ -345,120 +361,156 @@
                     </button>
                 </div>
 
-                {{-- Meter Info Card --}}
-                <div class="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs dark:border-gray-800 dark:bg-gray-800/50 grid grid-cols-2 gap-2">
-                    <div>
-                        <span class="text-gray-500 dark:text-gray-400 block text-[10px] uppercase font-bold">Ref Number:</span>
-                        <span class="font-mono font-bold text-gray-900 dark:text-white" x-text="modalForm.meter_ref_no"></span>
-                    </div>
-                    <div>
-                        <span class="text-gray-500 dark:text-gray-400 block text-[10px] uppercase font-bold">Consumer ID:</span>
-                        <span class="font-mono font-bold text-gray-900 dark:text-white" x-text="modalForm.meter_consumer_id"></span>
-                    </div>
-                </div>
-
-                {{-- Form Fields --}}
-                <form x-on:submit.prevent="saveModalReading()" class="space-y-4">
+                {{-- Form Fields in 2-Column Responsive Layout --}}
+                <form x-on:submit.prevent="saveModalReading()" class="space-y-4 pt-1">
                     
-                    {{-- Readings Inputs (Prev Reading & Current Meter Reading) --}}
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div class="flex items-center justify-between mb-1.5">
-                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300">
-                                    📊 Prev Reading
-                                </label>
-                                <span class="text-[10px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1.5 py-0.5 rounded">
-                                    Auto-fetched
-                                </span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        
+                        {{-- Left Column: Readings & Billing --}}
+                        <div class="space-y-3">
+                            {{-- Readings Inputs (Prev Reading & Current Meter Reading) --}}
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                                            📊 Prev Reading
+                                        </label>
+                                        <span class="text-[9px] font-bold text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30 px-1 rounded">
+                                            Auto
+                                        </span>
+                                    </div>
+                                    <input type="number" step="0.01" min="0" x-model="modalForm.previous_reading"
+                                        :readonly="!isSuperAdmin"
+                                        class="w-full h-10 px-3 font-mono font-bold text-sm bg-gray-100 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none cursor-not-allowed readonly:opacity-90">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                        ⚡ Meter Reading *
+                                    </label>
+                                    <input type="number" step="0.01" min="0" x-model="modalForm.current_reading" required
+                                        placeholder="0.00"
+                                        class="w-full h-10 px-3 font-mono font-bold text-sm bg-white dark:bg-gray-800 border border-brand-400 dark:border-brand-600 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
+                                </div>
                             </div>
-                            <input type="number" step="0.01" min="0" x-model="modalForm.previous_reading"
-                                :readonly="!isSuperAdmin"
-                                class="w-full h-11 px-3 font-mono font-bold text-sm bg-gray-100 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none cursor-not-allowed readonly:opacity-90">
-                            <span class="text-[10px] text-gray-400 block mt-1">Previous month's meter reading</span>
+
+                            {{-- Live Units Consumed Preview Card --}}
+                            <div class="rounded-xl border border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/30 px-3.5 py-2 flex items-center justify-between">
+                                <div>
+                                    <span class="text-xs font-bold text-indigo-900 dark:text-indigo-300 block">Units Consumed (Net):</span>
+                                    <span class="text-[10px] text-indigo-700/80 dark:text-indigo-400 font-medium">
+                                        Current (<span x-text="parseFloat(modalForm.current_reading || 0).toFixed(2)"></span>) — Prev (<span x-text="parseFloat(modalForm.previous_reading || 0).toFixed(2)"></span>)
+                                    </span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-base font-black font-mono text-indigo-600 dark:text-indigo-300"
+                                        x-text="computedUnitsConsumed()"></span>
+                                    <span class="text-xs font-bold text-indigo-900 dark:text-indigo-300 ml-0.5">Units</span>
+                                </div>
+                            </div>
+
+                            {{-- Bill Amount & Status --}}
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                        💰 Bill Amount (Rs.)
+                                    </label>
+                                    <input type="number" step="0.01" min="0" x-model="modalForm.amount"
+                                        placeholder="0.00"
+                                        class="w-full h-10 px-3 font-mono font-extrabold text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                        🏷️ Status *
+                                        <span x-show="modalForm.original_status === 'paid' && !isSuperAdmin" class="text-amber-500 font-normal text-[9px]">
+                                            (🔒 Locked)
+                                        </span>
+                                    </label>
+                                    <select x-model="modalForm.status" required
+                                        :disabled="modalForm.original_status === 'paid' && !isSuperAdmin"
+                                        class="w-full h-10 px-3 text-xs font-bold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                                        <option value="unpaid">Unpaid</option>
+                                        <option value="paid">Paid</option>
+                                        <option value="pending">Pending</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {{-- Available (Manual) --}}
+                            <div>
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                    📦 Available (Manual)
+                                </label>
+                                <input type="text" x-model="modalForm.available"
+                                    placeholder="e.g. Yes, No, Available, etc."
+                                    class="w-full h-10 px-3 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
+                            </div>
                         </div>
 
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                                ⚡ Meter Reading *
-                            </label>
-                            <input type="number" step="0.01" min="0" x-model="modalForm.current_reading" required
-                                placeholder="0.00"
-                                class="w-full h-11 px-3 font-mono font-bold text-sm bg-white dark:bg-gray-800 border border-brand-300 dark:border-brand-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
-                            <span class="text-[10px] text-gray-400 block mt-1">Current month meter reading</span>
-                        </div>
-                    </div>
+                        {{-- Right Column: Photo Upload & Remarks --}}
+                        <div class="space-y-3 flex flex-col justify-between">
+                            {{-- Meter Photo Upload Inside Modal --}}
+                            <div class="rounded-xl border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-800/40">
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
+                                    <span>📷 Meter Photo (Max 200 KB)</span>
+                                    <template x-if="modalForm.new_image_preview || modalForm.meter_image_url">
+                                        <span class="text-[10px] text-brand-600 dark:text-brand-400 font-bold">Photo attached</span>
+                                    </template>
+                                </label>
+                                <div class="flex items-center gap-3">
+                                    {{-- Thumbnail / Preview --}}
+                                    <template x-if="modalForm.new_image_preview || modalForm.meter_image_url">
+                                        <div class="relative group cursor-pointer shrink-0" x-on:click="openImagePreview({meter_image_url: modalForm.new_image_preview || modalForm.meter_image_url, unit_number: modalForm.unit_number, meter_type_label: modalForm.meter_type_label})">
+                                            <img :src="modalForm.new_image_preview || modalForm.meter_image_url" alt="Meter Photo" class="h-14 w-14 rounded-xl object-cover border-2 border-brand-300 dark:border-brand-700 shadow-xs">
+                                            <div class="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs transition-opacity">
+                                                🔍
+                                            </div>
+                                        </div>
+                                    </template>
+                                    <template x-if="!modalForm.new_image_preview && !modalForm.meter_image_url">
+                                        <div class="h-14 w-14 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400 text-base shrink-0">
+                                            📷
+                                        </div>
+                                    </template>
 
-                    {{-- Live Units Consumed Preview Card --}}
-                    <div class="rounded-xl border border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/50 dark:bg-indigo-950/30 p-3.5 flex items-center justify-between">
-                        <div>
-                            <span class="text-xs font-bold text-indigo-900 dark:text-indigo-300 block">Units Consumed (Net):</span>
-                            <span class="text-[11px] text-indigo-700/80 dark:text-indigo-400 font-medium">
-                                Current (<span x-text="parseFloat(modalForm.current_reading || 0).toFixed(2)"></span>) — Prev (<span x-text="parseFloat(modalForm.previous_reading || 0).toFixed(2)"></span>)
-                            </span>
-                        </div>
-                        <div class="text-right">
-                            <span class="text-lg font-black font-mono text-indigo-600 dark:text-indigo-300"
-                                x-text="computedUnitsConsumed()"></span>
-                            <span class="text-xs font-bold text-indigo-900 dark:text-indigo-300 ml-0.5">Units</span>
-                        </div>
-                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <input type="file" id="modal_meter_image_input" accept="image/*" x-on:change="handleModalFileChange($event)" class="hidden">
+                                        <div class="flex items-center gap-2">
+                                            <label for="modal_meter_image_input" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 shadow-2xs transition-colors cursor-pointer">
+                                                <span>📁 Choose Image</span>
+                                            </label>
+                                            <template x-if="modalForm.new_image_file">
+                                                <button type="button" x-on:click="removeModalSelectedFile()" class="text-xs text-red-500 hover:underline font-semibold">
+                                                    ✕ Remove
+                                                </button>
+                                            </template>
+                                        </div>
+                                        <span class="text-[10px] text-gray-400 block mt-1">JPEG, PNG, WEBP (Max 200 KB). Uploads when saved.</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                    {{-- Available & Bill Amount --}}
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                                📦 Available (Manual)
-                            </label>
-                            <input type="text" x-model="modalForm.available"
-                                placeholder="e.g. Yes, No, Available, etc."
-                                class="w-full h-11 px-3 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
-                            <span class="text-[10px] text-gray-400 block mt-1">Admin manual entry</span>
+                            {{-- Notes --}}
+                            <div class="flex-1 flex flex-col">
+                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                    📝 Remarks / Notes (Optional)
+                                </label>
+                                <textarea x-model="modalForm.notes" rows="3" placeholder="Add any notes or details..."
+                                    class="w-full flex-1 min-h-[75px] p-2.5 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none resize-none"></textarea>
+                            </div>
                         </div>
 
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                                💰 Bill Amount (Rs.)
-                            </label>
-                            <input type="number" step="0.01" min="0" x-model="modalForm.amount"
-                                placeholder="0.00"
-                                class="w-full h-11 px-3 font-mono font-extrabold text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
-                        </div>
-                    </div>
-
-                    {{-- Status --}}
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                            🏷️ Status *
-                            <span x-show="modalForm.original_status === 'paid' && !isSuperAdmin" class="text-amber-500 font-normal text-[10px] block">
-                                (🔒 Paid locked)
-                            </span>
-                        </label>
-                        <select x-model="modalForm.status" required
-                            :disabled="modalForm.original_status === 'paid' && !isSuperAdmin"
-                            class="w-full h-11 px-3 text-xs font-bold bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed">
-                            <option value="unpaid">Unpaid</option>
-                            <option value="paid">Paid</option>
-                            <option value="pending">Pending</option>
-                        </select>
-                    </div>
-
-                    {{-- Notes --}}
-                    <div>
-                        <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                            📝 Remarks / Notes (Optional)
-                        </label>
-                        <textarea x-model="modalForm.notes" rows="2" placeholder="Add any notes or details..."
-                            class="w-full p-3 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none resize-none"></textarea>
                     </div>
 
                     {{-- Footer Buttons --}}
                     <div class="flex items-center justify-end gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                         <button type="button" x-on:click="closeEditModal()"
-                            class="px-4 py-2 text-xs font-bold rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                            class="px-4 py-2 text-xs font-bold rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors cursor-pointer">
                             Cancel
                         </button>
                         <button type="submit" :disabled="savingModal"
-                            class="inline-flex items-center gap-2 px-5 py-2 text-xs font-extrabold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md transition-colors disabled:opacity-50 cursor-pointer">
+                            class="inline-flex items-center gap-2 px-6 py-2 text-xs font-extrabold rounded-xl bg-brand-600 hover:bg-brand-700 text-white shadow-md transition-colors disabled:opacity-50 cursor-pointer">
                             <span x-show="!savingModal">💾 Save Reading</span>
                             <span x-show="savingModal" class="flex items-center gap-1">
                                 <svg class="animate-spin h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="none">
@@ -528,6 +580,11 @@
                     original_status: '',
                     is_paid_locked: false,
                     notes: '',
+                    edited_by: '',
+                    last_updated: '',
+                    meter_image_url: '',
+                    new_image_file: null,
+                    new_image_preview: null,
                 },
 
                 openEditModal(row) {
@@ -551,12 +608,44 @@
                         original_status: row.status || 'unpaid',
                         is_paid_locked: !!row.is_paid_locked,
                         notes: row.notes || '',
+                        edited_by: row.edited_by || '',
+                        last_updated: row.last_updated || '',
+                        meter_image_url: row.meter_image_url || '',
+                        new_image_file: null,
+                        new_image_preview: null,
                     };
+                    let fileInput = document.getElementById('modal_meter_image_input');
+                    if (fileInput) fileInput.value = '';
                     this.modalOpen = true;
                 },
 
                 closeEditModal() {
                     this.modalOpen = false;
+                },
+
+                handleModalFileChange(event) {
+                    let file = event.target.files[0];
+                    if (!file) return;
+
+                    if (file.size > 200 * 1024) {
+                        this.showToast('Meter photo file size must not exceed 200 KB.', 'error');
+                        event.target.value = '';
+                        return;
+                    }
+
+                    this.modalForm.new_image_file = file;
+                    let reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.modalForm.new_image_preview = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                },
+
+                removeModalSelectedFile() {
+                    this.modalForm.new_image_file = null;
+                    this.modalForm.new_image_preview = null;
+                    let fileInput = document.getElementById('modal_meter_image_input');
+                    if (fileInput) fileInput.value = '';
                 },
 
                 computedUnitsConsumed() {
@@ -569,23 +658,26 @@
                 async saveModalReading() {
                     this.savingModal = true;
                     try {
+                        let formData = new FormData();
+                        formData.append('meter_id', this.modalForm.meter_id);
+                        formData.append('month', this.month);
+                        formData.append('previous_reading', this.modalForm.previous_reading);
+                        formData.append('current_reading', this.modalForm.current_reading === '' ? 0 : this.modalForm.current_reading);
+                        formData.append('available', this.modalForm.available || '');
+                        formData.append('amount', this.modalForm.amount === '' ? 0 : this.modalForm.amount);
+                        formData.append('status', this.modalForm.status);
+                        formData.append('notes', this.modalForm.notes || '');
+                        formData.append('_token', '{{ csrf_token() }}');
+                        if (this.modalForm.new_image_file) {
+                            formData.append('meter_image', this.modalForm.new_image_file);
+                        }
+
                         let res = await fetch('{{ route('utility-readings.update-row') }}', {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
                                 'Accept': 'application/json'
                             },
-                            body: JSON.stringify({
-                                meter_id: this.modalForm.meter_id,
-                                month: this.month,
-                                previous_reading: this.modalForm.previous_reading,
-                                current_reading: this.modalForm.current_reading === '' ? 0 : this.modalForm.current_reading,
-                                available: this.modalForm.available,
-                                amount: this.modalForm.amount === '' ? 0 : this.modalForm.amount,
-                                status: this.modalForm.status,
-                                notes: this.modalForm.notes,
-                            })
+                            body: formData
                         });
 
                         let data = await res.json();
@@ -603,11 +695,22 @@
                                 if (data.data.meter_image_url) {
                                     target.meter_image_url = data.data.meter_image_url;
                                 }
+                                if (data.data.edited_by) {
+                                    target.edited_by = data.data.edited_by;
+                                }
+                                if (data.data.last_updated) {
+                                    target.last_updated = data.data.last_updated;
+                                }
                             }
                             this.showToast(data.message, 'success');
                             this.closeEditModal();
                         } else {
-                            this.showToast(data.message || 'Error saving reading.', 'error');
+                            let errorMsg = data.message || 'Error saving reading.';
+                            if (data.errors) {
+                                let firstError = Object.values(data.errors)[0];
+                                if (Array.isArray(firstError)) errorMsg = firstError[0];
+                            }
+                            this.showToast(errorMsg, 'error');
                         }
                     } catch (e) {
                         this.showToast('Server error while saving reading.', 'error');
@@ -625,44 +728,6 @@
                     this.previewTitle = `Meter Photo — ${row.unit_number} (${row.meter_type_label})`;
                     this.previewModal = true;
                 },
-
-                async uploadImage(row, event) {
-                    let file = event.target.files[0];
-                    if (!file) return;
-
-                    if (file.size > 200 * 1024) {
-                        this.showToast('Meter photo file size must not exceed 200 KB.', 'error');
-                        event.target.value = '';
-                        return;
-                    }
-
-                    let formData = new FormData();
-                    formData.append('meter_id', row.meter_id);
-                    formData.append('month', this.month);
-                    formData.append('meter_image', file);
-                    formData.append('_token', '{{ csrf_token() }}');
-
-                    try {
-                        let res = await fetch('{{ route('utility-readings.upload-image') }}', {
-                            method: 'POST',
-                            headers: { 'Accept': 'application/json' },
-                            body: formData
-                        });
-                        let data = await res.json();
-                        if (data.success) {
-                            row.meter_image_url = data.image_url;
-                            this.showToast('Meter photo uploaded successfully.', 'success');
-                        } else {
-                            let errorMsg = data.message || 'Failed to upload photo.';
-                            if (data.errors && data.errors.meter_image) {
-                                errorMsg = data.errors.meter_image[0];
-                            }
-                            this.showToast(errorMsg, 'error');
-                        }
-                    } catch (e) {
-                        this.showToast('Server error during photo upload.', 'error');
-                    }
-                }
             };
         }
 
