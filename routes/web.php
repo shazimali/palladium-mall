@@ -211,6 +211,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('inspection-heads/{inspectionHead}', [\App\Http\Controllers\InspectionHeadController::class, 'destroy'])->name('inspection-heads.destroy');
     });
 
+    // Admin Office Reports Summary Module
+    Route::get('admin-office-reports/summary', [\App\Http\Controllers\AdminOfficeReportSummaryController::class, 'index'])->name('admin-office-reports.summary');
+    Route::get('admin-office-reports/summary/print', [\App\Http\Controllers\AdminOfficeReportSummaryController::class, 'print'])->name('admin-office-reports.summary.print');
+
     // Dynamic Inspection Reports & Flat Inspection Reports per Type
     // Static /create and general routes
     Route::get('inspection-reports/{type}/create', [\App\Http\Controllers\InspectionReportController::class, 'create'])->name('inspection-reports.create');
