@@ -51,10 +51,23 @@
         {{-- Filters --}}
         <form method="GET" action="{{ route('inspection-reports.index', $reportType->key) }}"
               class="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-theme-xs dark:border-gray-800 dark:bg-white/[0.03]">
+            {{-- Employee / Reporter Filter --}}
+            <div>
+                <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Employee / Reporter</label>
+                <select name="employee_id" onchange="this.form.submit()" class="h-9 w-48 rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 font-medium">
+                    <option value="">All Employees</option>
+                    @foreach($employees as $emp)
+                        <option value="{{ $emp->id }}" @selected(request('employee_id') == $emp->id || request('reported_by') == $emp->id)>
+                            {{ $emp->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
             @if($reportType->hasMembers())
                 <div>
-                    <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Member</label>
-                    <select name="member_id" class="h-9 w-44 rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 font-medium">
+                    <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">Member</label>
+                    <select name="member_id" onchange="this.form.submit()" class="h-9 w-44 rounded-lg border border-gray-300 px-3 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 font-medium">
                         <option value="">All Members</option>
                         @foreach($members as $mem)
                             <option value="{{ $mem->id }}" @selected(request('member_id') == $mem->id)>
@@ -66,21 +79,21 @@
             @endif
 
             <div>
-                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">From Date</label>
+                <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">From Date</label>
                 <div class="relative">
                     <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="From Date"
                            class="h-9 w-40 rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
             </div>
             <div>
-                <label class="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">To Date</label>
+                <label class="mb-1 block text-xs font-semibold text-gray-600 dark:text-gray-400">To Date</label>
                 <div class="relative">
                     <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="To Date"
                            class="h-9 w-40 rounded-lg border border-gray-300 px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
             </div>
-            <button type="submit" class="h-9 rounded-lg bg-brand-500 px-4 text-sm font-bold text-white hover:bg-brand-600 shadow-sm transition-colors">Filter</button>
-            @if(request()->hasAny(['member_id', 'date_from', 'date_to']))
+            <button type="submit" class="h-9 rounded-lg bg-brand-500 px-4 text-sm font-bold text-white hover:bg-brand-600 shadow-sm transition-colors cursor-pointer">Filter</button>
+            @if(request()->hasAny(['employee_id', 'reported_by', 'member_id', 'date_from', 'date_to']))
                 <a href="{{ route('inspection-reports.index', $reportType->key) }}" class="h-9 flex items-center rounded-lg border border-gray-300 px-4 text-sm text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400">Clear</a>
             @endif
         </form>

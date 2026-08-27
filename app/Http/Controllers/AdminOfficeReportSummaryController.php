@@ -22,18 +22,22 @@ class AdminOfficeReportSummaryController extends Controller
         $this->authorizeAccess();
 
         $reportTypes = ReportType::active()->ordered()->get();
+        $employees   = User::employees()->where('is_active', true)->orderBy('name')->get();
         
-        // Date filtering (Default to Last 7 Days if not specified)
+        // Date & Filter parameters
         $dateFrom = $request->query('date_from', now()->subDays(6)->format('Y-m-d'));
         $dateTo   = $request->query('date_to', now()->format('Y-m-d'));
         $selectedReportType = $request->query('report_type'); // null or key (e.g. 'cleaning', 'flat_inspection')
         $groupBy = $request->query('group_by', 'day'); // 'day' (Day-wise sections) or 'report' (Department-wise sections)
+        $employeeId = $request->query('employee_id');
 
-        $summaryData = $this->buildSummaryData($reportTypes, $selectedReportType, $dateFrom, $dateTo);
+        $summaryData = $this->buildSummaryData($reportTypes, $selectedReportType, $dateFrom, $dateTo, $employeeId ? (int)$employeeId : null);
 
         return view('admin_office_reports.summary', array_merge([
             'title'              => 'Admin Office Reports Summary',
             'reportTypes'        => $reportTypes,
+            'employees'          => $employees,
+            'employeeId'         => $employeeId,
             'selectedReportType' => $selectedReportType,
             'dateFrom'           => $dateFrom,
             'dateTo'             => $dateTo,
@@ -49,16 +53,20 @@ class AdminOfficeReportSummaryController extends Controller
         $this->authorizeAccess();
 
         $reportTypes = ReportType::active()->ordered()->get();
+        $employees   = User::employees()->where('is_active', true)->orderBy('name')->get();
         $dateFrom = $request->query('date_from', now()->subDays(6)->format('Y-m-d'));
         $dateTo   = $request->query('date_to', now()->format('Y-m-d'));
         $selectedReportType = $request->query('report_type');
         $groupBy = $request->query('group_by', 'day');
+        $employeeId = $request->query('employee_id');
 
-        $summaryData = $this->buildSummaryData($reportTypes, $selectedReportType, $dateFrom, $dateTo);
+        $summaryData = $this->buildSummaryData($reportTypes, $selectedReportType, $dateFrom, $dateTo, $employeeId ? (int)$employeeId : null);
 
         return view('admin_office_reports.summary_print', array_merge([
             'title'              => 'Admin Office Reports Summary Statement',
             'reportTypes'        => $reportTypes,
+            'employees'          => $employees,
+            'employeeId'         => $employeeId,
             'selectedReportType' => $selectedReportType,
             'dateFrom'           => $dateFrom,
             'dateTo'             => $dateTo,
@@ -88,7 +96,7 @@ class AdminOfficeReportSummaryController extends Controller
     /**
      * Build aggregated summary data based on selected filters.
      */
-    private function buildSummaryData($reportTypes, ?string $selectedKey, string $dateFrom, string $dateTo): array
+    private function buildSummaryData($reportTypes, ?string $selectedKey, string $dateFrom, string $dateTo, ?int $employeeId = null): array
     {
         try {
             $carbonFrom = Carbon::parse($dateFrom)->startOfDay();
@@ -114,17 +122,17 @@ class AdminOfficeReportSummaryController extends Controller
 
         // Mode 1: Single Selected Report Type
         if ($selectedKey && ($currentReportTypeModel || $selectedKey === 'flat_inspection')) {
-            return $this->buildSingleReportSummary($selectedKey, $currentReportTypeModel, $carbonFrom, $carbonTo, $datesListDesc, $totalDays);
+            return $this->buildSingleReportSummary($selectedKey, $currentReportTypeModel, $carbonFrom, $carbonTo, $datesListDesc, $totalDays, $employeeId);
         }
 
         // Mode 2: All Reports Overview
-        return $this->buildAllReportsSummary($reportTypes, $carbonFrom, $carbonTo, $datesListDesc, $totalDays);
+        return $this->buildAllReportsSummary($reportTypes, $carbonFrom, $carbonTo, $datesListDesc, $totalDays, $employeeId);
     }
 
     /**
      * Aggregation for a specific selected report type.
      */
-    private function buildSingleReportSummary(string $key, ?ReportType $reportType, Carbon $from, Carbon $to, array $datesListDesc, int $totalDays): array
+    private function buildSingleReportSummary(string $key, ?ReportType $reportType, Carbon $from, Carbon $to, array $datesListDesc, int $totalDays, ?int $employeeId = null): array
     {
         if ($key === 'flat_inspection') {
             $reports = FlatInspectionReport::with([
@@ -132,6 +140,12 @@ class AdminOfficeReportSummaryController extends Controller
             ])
             ->whereDate('inspected_at', '>=', $from->format('Y-m-d'))
             ->whereDate('inspected_at', '<=', $to->format('Y-m-d'))
+            ->when($employeeId, function ($q) use ($employeeId) {
+                $q->where(function ($sq) use ($employeeId) {
+                    $sq->where('inspected_by', $employeeId)
+                       ->orWhere('inspection_person_id', $employeeId);
+                });
+            })
             ->orderByDesc('inspected_at')
             ->orderByDesc('id')
             ->get();
@@ -209,6 +223,7 @@ class AdminOfficeReportSummaryController extends Controller
             ->where('report_type_id', $reportType->id)
             ->whereDate('report_date', '>=', $from->format('Y-m-d'))
             ->whereDate('report_date', '<=', $to->format('Y-m-d'))
+            ->when($employeeId, fn($q) => $q->where('reported_by', $employeeId))
             ->orderByDesc('report_date')
             ->orderByDesc('created_at')
             ->get();
@@ -300,12 +315,13 @@ class AdminOfficeReportSummaryController extends Controller
     /**
      * Aggregation for All Reports (Section-wise & Day-wise tables).
      */
-    private function buildAllReportsSummary($reportTypes, Carbon $from, Carbon $to, array $datesListDesc, int $totalDays): array
+    private function buildAllReportsSummary($reportTypes, Carbon $from, Carbon $to, array $datesListDesc, int $totalDays, ?int $employeeId = null): array
     {
         // 1. Fetch standard reports in date range
         $standardReports = InspectionReport::with(['reporter', 'member', 'items', 'reportType'])
             ->whereDate('report_date', '>=', $from->format('Y-m-d'))
             ->whereDate('report_date', '<=', $to->format('Y-m-d'))
+            ->when($employeeId, fn($q) => $q->where('reported_by', $employeeId))
             ->orderByDesc('report_date')
             ->orderByDesc('created_at')
             ->get();
@@ -314,6 +330,12 @@ class AdminOfficeReportSummaryController extends Controller
         $flatReports = FlatInspectionReport::with(['unit', 'tenant', 'inspector', 'items'])
             ->whereDate('inspected_at', '>=', $from->format('Y-m-d'))
             ->whereDate('inspected_at', '<=', $to->format('Y-m-d'))
+            ->when($employeeId, function ($q) use ($employeeId) {
+                $q->where(function ($sq) use ($employeeId) {
+                    $sq->where('inspected_by', $employeeId)
+                       ->orWhere('inspection_person_id', $employeeId);
+                });
+            })
             ->orderByDesc('inspected_at')
             ->orderByDesc('id')
             ->get();
@@ -331,8 +353,8 @@ class AdminOfficeReportSummaryController extends Controller
             $fCount = $sr->failCount();
             $totalPass += $pCount;
             $totalFail += $fCount;
-            if ($sr->admin_rating > 0) {
-                $allRatings[] = $sr->admin_rating;
+            if ($sr->admin_rating !== null && is_numeric($sr->admin_rating) && (float)$sr->admin_rating > 0) {
+                $allRatings[] = (float) $sr->admin_rating;
             }
 
             $rDate = $sr->report_date ? Carbon::parse($sr->report_date)->format('Y-m-d') : '';
@@ -413,7 +435,7 @@ class AdminOfficeReportSummaryController extends Controller
 
             $pCount = array_reduce($matchingForType, fn($c, $i) => $c + $i['pass_count'], 0);
             $fCount = array_reduce($matchingForType, fn($c, $i) => $c + $i['fail_count'], 0);
-            $ratings = array_filter(array_column($matchingForType, 'admin_rating'));
+            $ratings = array_map('floatval', array_filter(array_column($matchingForType, 'admin_rating'), fn($v) => $v !== null && is_numeric($v) && (float)$v > 0));
             $rAvg = count($ratings) > 0 ? round(array_sum($ratings) / count($ratings), 1) : null;
 
             $reportSections[] = [

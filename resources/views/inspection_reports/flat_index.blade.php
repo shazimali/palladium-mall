@@ -110,6 +110,20 @@
                 </select>
             </div>
 
+            {{-- Employee / Inspector Filter --}}
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Inspector / Employee</label>
+                <select name="employee_id" onchange="this.form.submit()"
+                    class="h-9 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-xs text-gray-800 dark:text-white focus:border-brand-500 focus:outline-none font-semibold">
+                    <option value="">All Inspectors</option>
+                    @foreach($employees as $emp)
+                        <option value="{{ $emp->id }}" @selected(request('employee_id') == $emp->id || request('reported_by') == $emp->id)>
+                            {{ $emp->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
             {{-- Date From with Flatpickr --}}
             <div x-data="{
                 initPicker() {
@@ -182,7 +196,7 @@
                     class="w-full h-9 px-4 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-xl transition-all shadow-2xs">
                     Filter
                 </button>
-                @if(request()->anyFilled(['unit_id', 'stage', 'date_from', 'date_to']))
+                @if(request()->anyFilled(['unit_id', 'stage', 'employee_id', 'reported_by', 'date_from', 'date_to']))
                     <a href="{{ route('inspection-reports.index', 'flat_inspection') }}"
                         class="h-9 px-3 text-xs font-bold text-gray-500 hover:text-gray-800 flex items-center justify-center">
                         Reset

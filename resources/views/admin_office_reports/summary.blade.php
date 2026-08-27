@@ -144,6 +144,22 @@
                     </div>
                 </div>
 
+                <!-- Employee Filter -->
+                <div class="w-full sm:w-44 lg:w-48 shrink-0">
+                    <label class="mb-1 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                        Employee / Reporter
+                    </label>
+                    <select name="employee_id" onchange="document.getElementById('report-summary-filter-form').submit()"
+                        class="w-full h-11 rounded-xl border-2 border-gray-300 bg-white px-3 py-2 text-sm sm:text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                        <option value="">All Employees</option>
+                        @foreach($employees as $emp)
+                            <option value="{{ $emp->id }}" @selected(($employeeId ?? '') == $emp->id)>
+                                {{ $emp->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <!-- Date From -->
                 <div class="w-full sm:w-36 lg:w-40 shrink-0">
                     <label class="mb-1 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
@@ -168,7 +184,7 @@
                         class="h-11 inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-5 text-sm sm:text-base font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
                         Filter
                     </button>
-                    @if($selectedReportType || $dateFrom !== now()->subDays(6)->format('Y-m-d') || $dateTo !== now()->format('Y-m-d'))
+                    @if($selectedReportType || $employeeId || $dateFrom !== now()->subDays(6)->format('Y-m-d') || $dateTo !== now()->format('Y-m-d'))
                         <a href="{{ route('admin-office-reports.summary') }}"
                             class="h-11 inline-flex items-center justify-center rounded-xl border-2 border-gray-300 px-3.5 text-sm sm:text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                             Reset

@@ -12,6 +12,7 @@ use App\Models\ReportType;
 use App\Models\ReportTypeRemark;
 use App\Models\ReportTypeMember;
 use App\Models\Unit;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -50,6 +51,9 @@ class InspectionReportController extends Controller
         $this->authorizeInspection('view', $type);
         $reportType = $this->resolveReportType($type);
 
+        $employees = User::employees()->where('is_active', true)->orderBy('name')->get();
+        $employeeId = $request->query('employee_id', $request->query('reported_by'));
+
         if ($type === 'flat_inspection') {
             $query = FlatInspectionReport::with([
                 'unit.floor', 'unit.block',
@@ -64,13 +68,19 @@ class InspectionReportController extends Controller
             ->when($request->filled('stage'), fn($q) => $q->where('type', $request->stage))
             ->when($request->filled('date_from'), fn($q) => $q->where('inspected_at', '>=', $request->date_from))
             ->when($request->filled('date_to'), fn($q) => $q->where('inspected_at', '<=', $request->date_to))
+            ->when(!empty($employeeId), function ($q) use ($employeeId) {
+                $q->where(function ($sq) use ($employeeId) {
+                    $sq->where('inspected_by', $employeeId)
+                       ->orWhere('inspection_person_id', $employeeId);
+                });
+            })
             ->latest('inspected_at')
             ->latest('id');
 
             $reports = $query->paginate(20)->withQueryString();
             $units = Unit::with(['floor', 'block'])->orderBy('unit_number')->get();
 
-            return view('inspection_reports.flat_index', compact('reportType', 'reports', 'units'));
+            return view('inspection_reports.flat_index', compact('reportType', 'reports', 'units', 'employees'));
         }
 
         $query = InspectionReport::with(['reporter', 'member', 'items'])
@@ -87,15 +97,15 @@ class InspectionReportController extends Controller
         if ($request->filled('date_to')) {
             $query->where('report_date', '<=', $request->date_to);
         }
-        if ($request->filled('reported_by')) {
-            $query->where('reported_by', $request->reported_by);
+        if (!empty($employeeId)) {
+            $query->where('reported_by', $employeeId);
         }
 
         $reports = $query->paginate(20)->withQueryString();
         $isWithinWindow = $reportType->isWithinAllowedTimeWindow();
         $members = $reportType->members;
 
-        return view('inspection_reports.index', compact('reportType', 'reports', 'isWithinWindow', 'members'));
+        return view('inspection_reports.index', compact('reportType', 'reports', 'isWithinWindow', 'members', 'employees'));
     }
 
     public function create(string $type)
