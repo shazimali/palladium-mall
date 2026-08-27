@@ -24,6 +24,7 @@ class InspectionPermissionSeeder extends Seeder
             ['name' => 'inspection_heads.delete', 'display_name' => 'Delete Inspection Heads', 'group' => 'Inspection Heads'],
 
             // Services Inspection Reports (Dynamic inspection reports per Report Type)
+            ['name' => 'admin_office_reports_summary.view', 'display_name' => 'View Reports Summary', 'group' => 'Inspection Reports'],
             ['name' => 'inspection_reports.view',   'display_name' => 'View Inspection Reports',   'group' => 'Inspection Reports'],
             ['name' => 'inspection_reports.create', 'display_name' => 'Create Inspection Reports', 'group' => 'Inspection Reports'],
             ['name' => 'inspection_reports.edit',   'display_name' => 'Edit Inspection Reports',   'group' => 'Inspection Reports'],
@@ -49,8 +50,8 @@ class InspectionPermissionSeeder extends Seeder
             );
         }
 
-        $admin = Role::where('name', 'admin')->first();
-        if ($admin) {
+        $adminRoles = Role::whereIn('name', ['admin', 'administrator', 'super-admin'])->get();
+        foreach ($adminRoles as $admin) {
             $admin->permissions()->syncWithoutDetaching(
                 Permission::whereIn('name', array_column($permissions, 'name'))->pluck('id')
             );

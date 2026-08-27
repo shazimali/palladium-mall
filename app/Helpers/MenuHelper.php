@@ -195,7 +195,7 @@ class MenuHelper
             $serviceReportTypes = \App\Models\ReportType::active()->ordered()->get();
             if ($serviceReportTypes->isNotEmpty()) {
                 $serviceReportSubItems = [];
-                if ($user->can('inspection_reports.view') || $user->can('flat_inspections.view') || $user->isSuperAdmin()) {
+                if ($user->can('admin_office_reports_summary.view') || $user->can('inspection_reports.view') || $user->can('flat_inspections.view') || $user->isSuperAdmin()) {
                     $serviceReportSubItems[] = [
                         'name' => '📊 Reports Summary',
                         'path' => '/admin-office-reports/summary',

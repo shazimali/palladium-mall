@@ -76,9 +76,9 @@ class AdminOfficeReportSummaryController extends Controller
             abort(403);
         }
         if ($user->isSuperAdmin() || 
+            $user->can('admin_office_reports_summary.view') ||
             $user->can('inspection_reports.view') || 
-            $user->can('flat_inspections.view') ||
-            $user->can('admin_office_reports.view')) {
+            $user->can('flat_inspections.view')) {
             return;
         }
 
