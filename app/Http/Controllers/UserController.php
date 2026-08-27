@@ -283,6 +283,12 @@ class UserController extends Controller
         foreach ($data['tasks'] as $i => $taskData) {
             $type = $taskData['type'] ?? 'custom';
             $reportTypeId = ($type === 'dynamic_report') ? ($taskData['report_type_id'] ?? null) : null;
+            if ($type === 'dynamic_report' && ! $reportTypeId) {
+                $matched = \App\Models\ReportType::where('name', 'LIKE', trim($taskData['name']))
+                    ->orWhere('key', strtolower(str_replace(' ', '_', trim($taskData['name']))))
+                    ->first();
+                $reportTypeId = $matched?->id;
+            }
             $taskId = ($type === 'task') ? ($taskData['task_id'] ?? null) : null;
 
             $attrs = [

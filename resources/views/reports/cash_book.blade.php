@@ -77,66 +77,66 @@
 
     {{-- Unified Ledger Table --}}
     <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md mb-6">
-        <table class="w-full text-[16px] text-left text-gray-900 dark:text-gray-100 border-collapse">
+        <table class="w-full text-xs sm:text-[13.5px] text-left text-gray-900 dark:text-gray-100 border-collapse">
             <thead
-                class="text-[16px] font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
+                class="text-xs font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
                 <tr>
-                    <th class="px-3.5 py-2.5 text-white">Date</th>
-                    <th class="px-3.5 py-2.5 text-white">Voucher #</th>
-                    <th class="px-3.5 py-2.5 text-white">Type</th>
-                    <th class="px-3.5 py-2.5 text-white">Description / Ref</th>
+                    <th class="px-3 py-2.5 text-white">Date</th>
+                    <th class="px-3 py-2.5 text-white">Voucher #</th>
+                    <th class="px-3 py-2.5 text-white">Type</th>
+                    <th class="px-3 py-2.5 text-white">Description / Ref</th>
                     <th class="px-2 py-2 text-white w-1 whitespace-nowrap text-center">Unit</th>
-                    <th class="px-3.5 py-2.5 text-right text-white">Debit</th>
-                    <th class="px-3.5 py-2.5 text-right text-white">Credit</th>
-                    <th class="px-3.5 py-2.5 text-right text-white">Balance</th>
+                    <th class="px-3 py-2.5 text-right text-white">Debit</th>
+                    <th class="px-3 py-2.5 text-right text-white">Credit</th>
+                    <th class="px-3 py-2.5 text-right text-white">Balance</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-bold">
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-semibold text-xs sm:text-[13px]">
                 @forelse($ledgerEntries as $entry)
                     <tr class="{{ !empty($entry['is_opening']) ? 'bg-purple-50/60 dark:bg-purple-950/20' : 'hover:bg-gray-50 dark:hover:bg-white/[0.02]' }} transition-colors">
-                        <td class="px-3.5 py-2.5 text-[16px] font-mono font-bold whitespace-nowrap">
+                        <td class="px-3 py-2 text-xs sm:text-[13px] font-mono font-bold whitespace-nowrap">
                             {{ $entry['date'] instanceof \Carbon\Carbon ? $entry['date']->format('d M Y') : \Carbon\Carbon::parse($entry['date'])->format('d M Y') }}
-</td>       
-                        <td class="px-3.5 py-2.5 text-[14px] font-black">
+                        </td>       
+                        <td class="px-3 py-2 text-xs sm:text-[13px] font-black">
                             @if(!empty($entry['model_type']) && !empty($entry['model_id']))
                                 @if($entry['model_type'] === 'receiving_voucher')
                                     <a href="{{ route('receiving-vouchers.show', $entry['model_id']) }}"
-                                        class="text-brand-600 hover:underline font-black text-[14px] dark:text-brand-400">
+                                        class="text-brand-600 hover:underline font-black text-xs sm:text-[13px] dark:text-brand-400">
                                         {{ $entry['voucher_no'] }}
                                     </a>
                                 @elseif($entry['model_type'] === 'general_receiving_voucher')
                                     <a href="{{ route('general-receiving-vouchers.show', $entry['model_id']) }}"
-                                        class="text-brand-600 hover:underline font-black text-[14px] dark:text-brand-400">
+                                        class="text-brand-600 hover:underline font-black text-xs sm:text-[13px] dark:text-brand-400">
                                         {{ $entry['voucher_no'] }}
                                     </a>
                                 @elseif($entry['model_type'] === 'payment_voucher')
                                     <a href="{{ route('payment-vouchers.show', $entry['model_id']) }}"
-                                        class="text-brand-600 hover:underline font-black text-[14px] dark:text-brand-400">
+                                        class="text-brand-600 hover:underline font-black text-xs sm:text-[13px] dark:text-brand-400">
                                         {{ $entry['voucher_no'] }}
                                     </a>
                                 @elseif($entry['model_type'] === 'expense')
                                     <a href="{{ route('expenses.show', $entry['model_id']) }}"
-                                        class="text-brand-600 hover:underline font-black text-[14px] dark:text-brand-400">
+                                        class="text-brand-600 hover:underline font-black text-xs sm:text-[13px] dark:text-brand-400">
                                         {{ $entry['voucher_no'] }}
                                     </a>
                                 @elseif($entry['model_type'] === 'withdrawal')
                                     <a href="{{ route('withdrawals.show', $entry['model_id']) }}"
-                                        class="text-brand-600 hover:underline font-black text-[14px] dark:text-brand-400">
+                                        class="text-brand-600 hover:underline font-black text-xs sm:text-[13px] dark:text-brand-400">
                                         {{ $entry['voucher_no'] }}
                                     </a>
                                 @elseif($entry['model_type'] === 'jv_voucher')
                                     <a href="{{ route('jv-vouchers.show', $entry['model_id']) }}"
-                                        class="text-brand-600 hover:underline font-black text-[14px] dark:text-brand-400">
+                                        class="text-brand-600 hover:underline font-black text-xs sm:text-[13px] dark:text-brand-400">
                                         {{ $entry['voucher_no'] }}
                                     </a>
                                 @else
-                                    <span class="text-gray-500 font-bold text-[14px] dark:text-gray-400">{{ $entry['voucher_no'] }}</span>
+                                    <span class="text-gray-500 font-bold text-xs sm:text-[13px] dark:text-gray-400">{{ $entry['voucher_no'] }}</span>
                                 @endif
                             @else
-                                <span class="text-gray-500 font-bold text-[14px] dark:text-gray-400">{{ $entry['voucher_no'] }}</span>
+                                <span class="text-gray-500 font-bold text-xs sm:text-[13px] dark:text-gray-400">{{ $entry['voucher_no'] }}</span>
                             @endif
                         </td>
-                        <td class="px-3.5 py-2.5 text-[14px]">
+                        <td class="px-3 py-2 text-xs">
                             @php
                                 $typeBadge = match (true) {
                                     !empty($entry['is_opening']) || str_contains($entry['type'], 'Opening') => 'bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-300 dark:border-purple-700',
@@ -146,17 +146,17 @@
                                     default => 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800',
                                 };
                             @endphp
-                            <span class="inline-flex items-center rounded-lg px-2.5 py-0.5 text-[14px] font-black {{ $typeBadge }}">
+                            <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-black {{ $typeBadge }}">
                                 {{ $entry['type'] }}
                             </span>
                         </td>
-                        <td class="px-3.5 py-2.5 text-[16px] font-bold">
+                        <td class="px-3 py-2 text-xs sm:text-[13px] font-semibold text-gray-800 dark:text-gray-200">
                             {!! $entry['details'] !!}
                         </td>
-                        <td class="px-2 py-2 text-center font-bold whitespace-nowrap w-1 text-[16px]">
+                        <td class="px-2 py-2 text-center font-bold whitespace-nowrap w-1 text-xs">
                             @if(!empty($entry['unit_number']))
                                 <span
-                                    class="unit-badge-lg px-2.5 py-0.5 text-[16px] font-black rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
+                                    class="unit-badge px-2 py-0.5 text-[11px] font-black rounded-md bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
                                     Unit {{ $entry['unit_number'] }}
                                 </span>
                             @else
@@ -164,21 +164,21 @@
                             @endif
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right font-black text-emerald-600 dark:text-emerald-400 text-[16px]">
+                            class="px-3 py-2 text-right font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-[13.5px] font-mono">
                             {{ $entry['debit'] > 0 ? number_format($entry['debit'], 2) : '—' }}
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right font-black text-rose-600 dark:text-rose-400 text-[16px]">
+                            class="px-3 py-2 text-right font-black text-rose-600 dark:text-rose-400 text-xs sm:text-[13.5px] font-mono">
                             {{ $entry['credit'] > 0 ? number_format($entry['credit'], 2) : '—' }}
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right font-black text-gray-900 dark:text-white text-[16px]">
+                            class="px-3 py-2 text-right font-black text-gray-900 dark:text-white text-xs sm:text-[13.5px] font-mono">
                             {{ number_format($entry['running_balance'], 2) }}
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-[16px] font-bold">
+                        <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
                             No cash transactions logged for this period.
                         </td>
                     </tr>
@@ -186,21 +186,21 @@
             </tbody>
             @if($ledgerEntries->isNotEmpty())
                 <tfoot
-                    class="bg-gray-200/90 dark:bg-gray-800 border-t-2 border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white font-black">
+                    class="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-black text-xs sm:text-sm">
                     <tr>
                         <td colspan="5"
-                            class="px-3.5 py-2.5 text-[16px] uppercase tracking-wider font-black text-gray-900 dark:text-white">
+                            class="px-3 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
                             Total Summary
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-black text-[16px]">
+                            class="px-3 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-black font-mono">
                             {{ number_format($totalInflows, 2) }}
                         </td>
                         <td
-                            class="px-3.5 py-2.5 text-right text-rose-600 dark:text-rose-400 font-black text-[16px]">
+                            class="px-3 py-2.5 text-right text-rose-600 dark:text-rose-400 font-black font-mono">
                             {{ number_format($totalOutflows, 2) }}
                         </td>
-                        <td class="px-3.5 py-2.5 text-right font-black text-[16px] text-gray-900 dark:text-white">
+                        <td class="px-3 py-2.5 text-right font-black text-gray-900 dark:text-white font-mono">
                             {{ number_format($netFlow, 2) }}
                         </td>
                     </tr>

@@ -162,17 +162,37 @@ class EmployeeController extends Controller
         $data = $request->validate([
             'tasks'                  => 'required|array|min:1',
             'tasks.*.id'             => 'nullable|exists:performance_task_templates,id',
+            'tasks.*.type'           => 'nullable|in:custom,dynamic_report,task',
             'tasks.*.name'           => 'required|string|max:255',
+            'tasks.*.report_type_id' => 'nullable|exists:report_types,id',
+            'tasks.*.task_id'        => 'nullable|exists:tasks,id',
             'tasks.*.monthly_points' => 'required|numeric|min:0',
+            'tasks.*.is_daily'       => 'nullable|boolean',
+            'tasks.*.target_count'   => 'nullable|integer|min:1|max:100',
             'tasks.*.sort_order'     => 'nullable|integer|min:0',
             'tasks.*.is_active'      => 'nullable|boolean',
         ]);
 
         foreach ($data['tasks'] as $i => $taskData) {
+            $type = $taskData['type'] ?? 'custom';
+            $reportTypeId = ($type === 'dynamic_report') ? ($taskData['report_type_id'] ?? null) : null;
+            if ($type === 'dynamic_report' && ! $reportTypeId) {
+                $matched = \App\Models\ReportType::where('name', 'LIKE', trim($taskData['name']))
+                    ->orWhere('key', strtolower(str_replace(' ', '_', trim($taskData['name']))))
+                    ->first();
+                $reportTypeId = $matched?->id;
+            }
+            $taskId = ($type === 'task') ? ($taskData['task_id'] ?? null) : null;
+
             $attrs = [
                 'user_id'        => $employee->id,
                 'name'           => $taskData['name'],
+                'type'           => $type,
+                'report_type_id' => $reportTypeId,
+                'task_id'        => $taskId,
                 'monthly_points' => $taskData['monthly_points'],
+                'is_daily'       => isset($taskData['is_daily']) ? (bool) $taskData['is_daily'] : true,
+                'target_count'   => ! empty($taskData['target_count']) ? (int) $taskData['target_count'] : 1,
                 'sort_order'     => $taskData['sort_order'] ?? $i,
                 'is_active'      => isset($taskData['is_active']) ? (bool) $taskData['is_active'] : true,
                 'created_by'     => auth()->id(),

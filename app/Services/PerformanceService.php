@@ -237,7 +237,10 @@ class PerformanceService
             ->groupBy('report_type_id');
 
         // Flat inspections by this user
-        $flatReports = FlatInspectionReport::where('inspected_by', $user->id)
+        $flatReports = FlatInspectionReport::where(function ($q) use ($user) {
+                $q->where('inspected_by', $user->id)
+                  ->orWhere('inspection_person_id', $user->id);
+            })
             ->whereYear('inspected_at', $year)
             ->whereMonth('inspected_at', $month)
             ->get();
@@ -294,7 +297,20 @@ class PerformanceService
 
                 // Check dynamic reports automatic sync & admin rating
                 if ($template->type === 'dynamic_report') {
-                    if ($template->report_type_id == 1) { // Flat Inspection
+                    $rtId = $template->report_type_id;
+                    if (! $rtId && $template->reportType) {
+                        $rtId = $template->reportType->id;
+                    }
+                    if (! $rtId) {
+                        $matchedRt = \App\Models\ReportType::where('name', 'LIKE', trim($template->name))
+                            ->orWhere('key', strtolower(str_replace(' ', '_', trim($template->name))))
+                            ->first();
+                        if ($matchedRt) {
+                            $rtId = $matchedRt->id;
+                        }
+                    }
+
+                    if ($rtId == 1 || stripos($template->name, 'flat') !== false) { // Flat Inspection
                         $dayFlat = $flatReports->filter(fn($r) => Carbon::parse($r->inspected_at)->day === $d)->first();
                         if ($dayFlat) {
                             $rating = $dayFlat->admin_rating;
@@ -306,8 +322,8 @@ class PerformanceService
                                 $earned = $unitAmount;
                             }
                         }
-                    } elseif ($template->report_type_id) {
-                        $typeReports = $reports->get($template->report_type_id, collect());
+                    } elseif ($rtId) {
+                        $typeReports = $reports->get($rtId, collect());
                         $dayReport = $typeReports->filter(fn($r) => Carbon::parse($r->report_date)->day === $d)->first();
                         if ($dayReport) {
                             $rating = $dayReport->admin_rating;

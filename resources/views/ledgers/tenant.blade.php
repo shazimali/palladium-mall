@@ -193,37 +193,37 @@
 
             {{-- Table --}}
             <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
-                <table class="w-full text-sm sm:text-base text-left text-gray-900 dark:text-gray-100">
-                    <thead class="text-xs sm:text-sm font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
+                <table class="w-full text-xs sm:text-[13.5px] text-left text-gray-900 dark:text-gray-100">
+                    <thead class="text-xs font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="px-4 py-3 text-white">Date</th>
-                            <th class="px-4 py-3 text-white">Flat/Shop</th>
-                            <th class="px-4 py-3 text-white">Description</th>
-                            <th class="px-4 py-3 text-white">Ref / Voucher #</th>
-                            <th class="px-4 py-3 text-right text-white">Debit (Charged)</th>
-                            <th class="px-4 py-3 text-right text-white">Credit (Paid)</th>
-                            <th class="px-4 py-3 text-right text-white">Running Balance</th>
+                            <th class="px-3.5 py-2.5 text-white">Date</th>
+                            <th class="px-3.5 py-2.5 text-white">Flat/Shop</th>
+                            <th class="px-3.5 py-2.5 text-white">Description</th>
+                            <th class="px-3.5 py-2.5 text-white">Ref / Voucher #</th>
+                            <th class="px-3.5 py-2.5 text-right text-white">Debit (Charged)</th>
+                            <th class="px-3.5 py-2.5 text-right text-white">Credit (Paid)</th>
+                            <th class="px-3.5 py-2.5 text-right text-white">Running Balance</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-bold">
+                    <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-semibold text-xs sm:text-[13px]">
                         @forelse($ledgerData['entries'] as $entry)
                             <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                <td class="px-4 py-3 text-sm sm:text-base font-mono font-bold whitespace-nowrap">
+                                <td class="px-3.5 py-2 text-xs sm:text-[13px] font-mono font-bold whitespace-nowrap">
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
-                                <td class="px-4 py-3 text-sm sm:text-base font-bold whitespace-nowrap">
+                                <td class="px-3.5 py-2 text-xs sm:text-[13px] font-bold whitespace-nowrap">
                                     @if(!empty($entry['unit_number']))
-                                        <span class="unit-badge-lg px-2.5 py-0.5 text-xs font-black rounded-lg bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
+                                        <span class="unit-badge px-2 py-0.5 text-[11px] font-black rounded-md bg-brand-50 text-brand-700 dark:bg-brand-950/30 dark:text-brand-400 border border-brand-200/60 dark:border-brand-800/40">
                                             Unit {{ $entry['unit_number'] }}
                                         </span>
                                     @else
                                         —
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-sm sm:text-base font-bold">
+                                <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">
                                     <div>{{ $entry['description'] }}</div>
                                 </td>
-                                <td class="px-4 py-3 text-sm sm:text-base font-mono font-black">
+                                <td class="px-3.5 py-2 text-xs sm:text-[13px] font-mono font-black">
                                     @if($entry['type'] === 'voucher' && !empty($entry['id']))
                                         <a href="{{ route('receiving-vouchers.show', $entry['id']) }}" class="text-brand-600 hover:underline font-mono font-black dark:text-brand-400">
                                             {{ $entry['reference'] }}
@@ -240,19 +240,19 @@
                                         <span class="font-mono text-gray-500 font-bold dark:text-gray-400">{{ $entry['reference'] }}</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right font-black text-rose-600 dark:text-rose-400 text-sm sm:text-base font-mono">
+                                <td class="px-3.5 py-2 text-right font-black text-rose-600 dark:text-rose-400 text-xs sm:text-[13.5px] font-mono">
                                     {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-black text-emerald-600 dark:text-emerald-400 text-sm sm:text-base font-mono">
+                                <td class="px-3.5 py-2 text-right font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-[13.5px] font-mono">
                                     {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 2) : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-black text-gray-900 dark:text-white font-mono text-base sm:text-lg">
+                                <td class="px-3.5 py-2 text-right font-black text-gray-900 dark:text-white font-mono text-xs sm:text-[13.5px]">
                                     Rs. {{ number_format($entry['running_balance'], 2) }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-10 text-center text-gray-400 dark:text-gray-600 text-base font-bold">
+                                <td colspan="7" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
                                     No transaction entries found for the selected period.
                                 </td>
                             </tr>
@@ -264,18 +264,18 @@
                             $sumCredit = $ledgerData['entries']->sum('credit');
                             $finalBalance = $ledgerData['entries']->last()['running_balance'] ?? 0;
                         @endphp
-                        <tfoot class="bg-gray-200/90 dark:bg-gray-800 border-t-4 border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white font-black">
+                        <tfoot class="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-black text-xs sm:text-sm">
                             <tr>
-                                <td colspan="4" class="px-4 py-3 text-base sm:text-lg uppercase tracking-wider font-black text-gray-900 dark:text-white">
+                                <td colspan="4" class="px-3.5 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                 </td>
-                                <td class="px-4 py-3 text-right text-rose-600 dark:text-rose-400 font-mono font-black text-base sm:text-lg">
+                                <td class="px-3.5 py-2.5 text-right text-rose-600 dark:text-rose-400 font-mono font-black">
                                     Rs. {{ number_format($sumDebit, 2) }}
                                 </td>
-                                <td class="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400 font-mono font-black text-base sm:text-lg">
+                                <td class="px-3.5 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-mono font-black">
                                     Rs. {{ number_format($sumCredit, 2) }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-mono font-black text-lg sm:text-xl text-gray-900 dark:text-white">
+                                <td class="px-3.5 py-2.5 text-right font-mono font-black text-gray-900 dark:text-white">
                                     Rs. {{ number_format($finalBalance, 2) }}
                                 </td>
                             </tr>
