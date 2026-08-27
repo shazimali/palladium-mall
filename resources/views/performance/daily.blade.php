@@ -129,7 +129,7 @@
                         @php
                             $existing = $existingEntries->get($template->id);
                             $isDone   = $existing ? $existing->is_done : false;
-                            $dailyPts = round($template->monthly_points / cal_days_in_month(CAL_GREGORIAN, now()->month, now()->year), 1);
+                            $dailyPts = round($template->monthly_points / now()->daysInMonth, 1);
                         @endphp
                         <div class="relative rounded-xl border-2 p-4 transition-all cursor-pointer"
                             :class="tasks[{{ $i }}].is_done
@@ -184,7 +184,7 @@ function dailyEntry() {
             'monthly_points'=> (float) $t->monthly_points,
             'is_done'       => (bool) ($existingEntries[$t->id]?->is_done ?? false),
         ])->values()),
-        workingDays: {{ cal_days_in_month(CAL_GREGORIAN, now()->month, now()->year) }},
+        workingDays: {{ now()->daysInMonth }},
 
         get todayPoints() {
             return this.tasks

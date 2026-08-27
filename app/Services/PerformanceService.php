@@ -208,7 +208,7 @@ class PerformanceService
      */
     public function getMonthlyGridSheet(User $user, int $month, int $year): array
     {
-        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $daysInMonth = Carbon::create($year, $month, 1)->daysInMonth;
         $todayStr    = now()->toDateString();
 
         $templates = PerformanceTaskTemplate::where('user_id', $user->id)

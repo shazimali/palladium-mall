@@ -64,7 +64,7 @@ class PerformanceController extends Controller
 
         $month       = Carbon::parse($date)->month;
         $year        = Carbon::parse($date)->year;
-        $workingDays = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $workingDays = Carbon::create($year, $month, 1)->daysInMonth;
 
         // Running total for this month
         $monthScore = $this->performance->calculateMonthlyScore($user, $month, $year);

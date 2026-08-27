@@ -72,7 +72,7 @@ class PerformanceTaskTemplate extends Model
      */
     public function dailyPoints(int $month, int $year): float
     {
-        $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $days = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
         return $days > 0 ? round((float) $this->monthly_points / $days, 10) : 0.0;
     }
 
@@ -82,7 +82,7 @@ class PerformanceTaskTemplate extends Model
     public function unitPoints(int $month, int $year): float
     {
         if ($this->is_daily) {
-            $days = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+            $days = \Carbon\Carbon::create($year, $month, 1)->daysInMonth;
             return $days > 0 ? round((float) $this->monthly_points / $days, 2) : 0.0;
         }
 

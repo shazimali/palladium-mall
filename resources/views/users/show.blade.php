@@ -284,7 +284,7 @@
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                             @foreach($templates as $i => $t)
                                 @php
-                                    $dailyPts = round($t->monthly_points / cal_days_in_month(CAL_GREGORIAN, now()->month, now()->year), 1);
+                                    $dailyPts = round($t->monthly_points / now()->daysInMonth, 1);
                                 @endphp
                                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                     <td class="px-4 py-3 text-gray-400 font-mono">{{ $i + 1 }}</td>
