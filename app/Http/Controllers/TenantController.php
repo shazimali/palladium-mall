@@ -291,128 +291,133 @@ class TenantController extends Controller
             $msg = 'Step 1 saved. Continue with guarantor details.';
         }
 
-        // Initialize draft agreement immediately in Step 1.
-        // IMPORTANT: Only create/update a draft if there is no existing active agreement.
-        // If an active agreement already exists, we must NOT create a new draft row,
-        // as confirming it later would produce a second active agreement for the same tenant.
+        // Initialize draft agreement in Step 1 if creating a new tenancy flow.
+        // If the tenant already has an active agreement, we update that active agreement.
+        // If an existing tenant has only past (expired/terminated) agreements and save_only is clicked,
+        // we do NOT auto-create a draft agreement unless progressing into the wizard or already in draft.
         $hasActiveAgreement = $tenant->agreements()->where('status', 'active')->exists();
         if ($hasActiveAgreement) {
-            // Tenant already has an active agreement — do not create a duplicate draft.
             $agreement = $tenant->agreements()->where('status', 'active')->latest()->first();
         } else {
-            $agreement = $tenant->agreements()->updateOrCreate(
-                ['tenant_id' => $tenant->id, 'status' => 'draft'],
-                ['unit_id' => $tenant->unit_id]
-            );
+            $agreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
+            if (!$agreement && (!$existingTenant || !$request->input('save_only'))) {
+                $agreement = $tenant->agreements()->create([
+                    'tenant_id' => $tenant->id,
+                    'unit_id' => $tenant->unit_id,
+                    'status' => 'draft',
+                ]);
+            }
         }
 
-        // Save emergency contact (replace existing for this agreement)
-        $agreement->emergencyContacts()->delete();
-        $agreement->emergencyContacts()->create([
-            'tenant_id' => $tenant->id, // fallback
-            'name' => $data['ec_name'],
-            'relation' => $data['ec_relation'],
-            'phone' => preg_replace('/[^\d+]/', '', $data['ec_phone']),
-            'address' => null,
-        ]);
+        if ($agreement) {
+            // Save emergency contact (replace existing for this agreement)
+            $agreement->emergencyContacts()->delete();
+            $agreement->emergencyContacts()->create([
+                'tenant_id' => $tenant->id, // fallback
+                'name' => $data['ec_name'],
+                'relation' => $data['ec_relation'],
+                'phone' => preg_replace('/[^\d+]/', '', $data['ec_phone']),
+                'address' => null,
+            ]);
 
-        // Keep track of old partners to preserve or delete their files
-        $oldPartners = $agreement->partners()->get();
-        $oldPartnersMap = $oldPartners->keyBy('cnic');
-        $reusedFiles = [];
+            // Keep track of old partners to preserve or delete their files
+            $oldPartners = $agreement->partners()->get();
+            $oldPartnersMap = $oldPartners->keyBy('cnic');
+            $reusedFiles = [];
 
-        // Save partners
-        $newPartnersData = [];
-        if ($request->input('rented_by_multiple') == 1 && $request->has('partners') && is_array($request->partners)) {
-            foreach ($request->partners as $i => $partnerData) {
-                if (!empty($partnerData['name'])) {
-                    $oldPartner = $oldPartnersMap->get($partnerData['cnic']);
+            // Save partners
+            $newPartnersData = [];
+            if ($request->input('rented_by_multiple') == 1 && $request->has('partners') && is_array($request->partners)) {
+                foreach ($request->partners as $i => $partnerData) {
+                    if (!empty($partnerData['name'])) {
+                        $oldPartner = $oldPartnersMap->get($partnerData['cnic']);
 
-                    $passportPhotoPath = $oldPartner?->passport_photo;
-                    if (!empty($partnerData['delete_passport_photo'])) {
-                        if ($oldPartner?->passport_photo) {
-                            Storage::disk('public')->delete($oldPartner->passport_photo);
+                        $passportPhotoPath = $oldPartner?->passport_photo;
+                        if (!empty($partnerData['delete_passport_photo'])) {
+                            if ($oldPartner?->passport_photo) {
+                                Storage::disk('public')->delete($oldPartner->passport_photo);
+                            }
+                            $passportPhotoPath = null;
+                        } elseif ($request->hasFile("partners.{$i}.passport_photo")) {
+                            if ($oldPartner?->passport_photo) {
+                                Storage::disk('public')->delete($oldPartner->passport_photo);
+                            }
+                            $passportPhotoPath = $request->file("partners.{$i}.passport_photo")->store('tenants/photos', 'public');
                         }
-                        $passportPhotoPath = null;
-                    } elseif ($request->hasFile("partners.{$i}.passport_photo")) {
-                        if ($oldPartner?->passport_photo) {
-                            Storage::disk('public')->delete($oldPartner->passport_photo);
+                        if ($passportPhotoPath) {
+                            $reusedFiles[] = $passportPhotoPath;
                         }
-                        $passportPhotoPath = $request->file("partners.{$i}.passport_photo")->store('tenants/photos', 'public');
-                    }
-                    if ($passportPhotoPath) {
-                        $reusedFiles[] = $passportPhotoPath;
-                    }
 
-                    $cnicFrontPath = $oldPartner?->cnic_front_image;
-                    if (!empty($partnerData['delete_cnic_front_image'])) {
-                        if ($oldPartner?->cnic_front_image) {
-                            Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                        $cnicFrontPath = $oldPartner?->cnic_front_image;
+                        if (!empty($partnerData['delete_cnic_front_image'])) {
+                            if ($oldPartner?->cnic_front_image) {
+                                Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                            }
+                            $cnicFrontPath = null;
+                        } elseif ($request->hasFile("partners.{$i}.cnic_front_image")) {
+                            if ($oldPartner?->cnic_front_image) {
+                                Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                            }
+                            $cnicFrontPath = $request->file("partners.{$i}.cnic_front_image")->store('tenants/documents', 'public');
                         }
-                        $cnicFrontPath = null;
-                    } elseif ($request->hasFile("partners.{$i}.cnic_front_image")) {
-                        if ($oldPartner?->cnic_front_image) {
-                            Storage::disk('public')->delete($oldPartner->cnic_front_image);
+                        if ($cnicFrontPath) {
+                            $reusedFiles[] = $cnicFrontPath;
                         }
-                        $cnicFrontPath = $request->file("partners.{$i}.cnic_front_image")->store('tenants/documents', 'public');
-                    }
-                    if ($cnicFrontPath) {
-                        $reusedFiles[] = $cnicFrontPath;
-                    }
 
-                    $cnicBackPath = $oldPartner?->cnic_back_image;
-                    if (!empty($partnerData['delete_cnic_back_image'])) {
-                        if ($oldPartner?->cnic_back_image) {
-                            Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                        $cnicBackPath = $oldPartner?->cnic_back_image;
+                        if (!empty($partnerData['delete_cnic_back_image'])) {
+                            if ($oldPartner?->cnic_back_image) {
+                                Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                            }
+                            $cnicBackPath = null;
+                        } elseif ($request->hasFile("partners.{$i}.cnic_back_image")) {
+                            if ($oldPartner?->cnic_back_image) {
+                                Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                            }
+                            $cnicBackPath = $request->file("partners.{$i}.cnic_back_image")->store('tenants/documents', 'public');
                         }
-                        $cnicBackPath = null;
-                    } elseif ($request->hasFile("partners.{$i}.cnic_back_image")) {
-                        if ($oldPartner?->cnic_back_image) {
-                            Storage::disk('public')->delete($oldPartner->cnic_back_image);
+                        if ($cnicBackPath) {
+                            $reusedFiles[] = $cnicBackPath;
                         }
-                        $cnicBackPath = $request->file("partners.{$i}.cnic_back_image")->store('tenants/documents', 'public');
-                    }
-                    if ($cnicBackPath) {
-                        $reusedFiles[] = $cnicBackPath;
-                    }
 
-                    $newPartnersData[] = [
-                        'tenant_id' => $tenant->id, // fallback
-                        'name' => $partnerData['name'],
-                        'father_name' => $partnerData['father_name'] ?? null,
-                        'cnic' => $partnerData['cnic'],
-                        'gender' => $partnerData['gender'] ?? null,
-                        'marital_status' => $partnerData['marital_status'] ?? null,
-                        'phone' => preg_replace('/[^\d+]/', '', $partnerData['phone']),
-                        'whatsapp_number' => isset($partnerData['whatsapp_number']) ? preg_replace('/[^\d+]/', '', $partnerData['whatsapp_number']) : null,
-                        'email' => $partnerData['email'] ?? null,
-                        'address' => $partnerData['address'] ?? null,
-                        'occupation' => $partnerData['occupation'] ?? null,
-                        'monthly_income' => $partnerData['monthly_income'] ?? null,
-                        'passport_photo' => $passportPhotoPath,
-                        'cnic_front_image' => $cnicFrontPath,
-                        'cnic_back_image' => $cnicBackPath,
-                    ];
+                        $newPartnersData[] = [
+                            'tenant_id' => $tenant->id, // fallback
+                            'name' => $partnerData['name'],
+                            'father_name' => $partnerData['father_name'] ?? null,
+                            'cnic' => $partnerData['cnic'],
+                            'gender' => $partnerData['gender'] ?? null,
+                            'marital_status' => $partnerData['marital_status'] ?? null,
+                            'phone' => preg_replace('/[^\d+]/', '', $partnerData['phone']),
+                            'whatsapp_number' => isset($partnerData['whatsapp_number']) ? preg_replace('/[^\d+]/', '', $partnerData['whatsapp_number']) : null,
+                            'email' => $partnerData['email'] ?? null,
+                            'address' => $partnerData['address'] ?? null,
+                            'occupation' => $partnerData['occupation'] ?? null,
+                            'monthly_income' => $partnerData['monthly_income'] ?? null,
+                            'passport_photo' => $passportPhotoPath,
+                            'cnic_front_image' => $cnicFrontPath,
+                            'cnic_back_image' => $cnicBackPath,
+                        ];
+                    }
                 }
             }
-        }
 
-        // Delete any old partner files that are not reused
-        foreach ($oldPartners as $oldP) {
-            if ($oldP->passport_photo && !in_array($oldP->passport_photo, $reusedFiles)) {
-                Storage::disk('public')->delete($oldP->passport_photo);
+            // Delete any old partner files that are not reused
+            foreach ($oldPartners as $oldP) {
+                if ($oldP->passport_photo && !in_array($oldP->passport_photo, $reusedFiles)) {
+                    Storage::disk('public')->delete($oldP->passport_photo);
+                }
+                if ($oldP->cnic_front_image && !in_array($oldP->cnic_front_image, $reusedFiles)) {
+                    Storage::disk('public')->delete($oldP->cnic_front_image);
+                }
+                if ($oldP->cnic_back_image && !in_array($oldP->cnic_back_image, $reusedFiles)) {
+                    Storage::disk('public')->delete($oldP->cnic_back_image);
+                }
             }
-            if ($oldP->cnic_front_image && !in_array($oldP->cnic_front_image, $reusedFiles)) {
-                Storage::disk('public')->delete($oldP->cnic_front_image);
-            }
-            if ($oldP->cnic_back_image && !in_array($oldP->cnic_back_image, $reusedFiles)) {
-                Storage::disk('public')->delete($oldP->cnic_back_image);
-            }
-        }
 
-        $agreement->partners()->delete();
-        foreach ($newPartnersData as $np) {
-            $agreement->partners()->create($np);
+            $agreement->partners()->delete();
+            foreach ($newPartnersData as $np) {
+                $agreement->partners()->create($np);
+            }
         }
 
         if ($request->expectsJson()) {
@@ -457,65 +462,8 @@ class TenantController extends Controller
     {
         $data = ['title' => 'Add Tenant — Step ' . $step, 'tenant' => $tenant, 'step' => $step];
         $activeAgreement = $tenant->agreements()->where('status', 'active')->latest()->first();
-
-        if ($activeAgreement) {
-            $draftAgreement = $activeAgreement;
-        } else {
-            $draftAgreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
-
-            // If no draft agreement exists, but there is a latest past agreement, clone it to draft so editing works seamlessly
-            if (!$draftAgreement) {
-                $pastAgreement = $tenant->agreements()->latest()->first();
-
-                if ($pastAgreement) {
-                    \Illuminate\Support\Facades\DB::transaction(function () use ($tenant, $pastAgreement, &$draftAgreement) {
-                        $draftAgreement = $pastAgreement->replicate();
-                        $draftAgreement->status = 'draft';
-                        $draftAgreement->save();
-
-                        // Clone partners
-                        foreach ($pastAgreement->partners as $partner) {
-                            $newPartner = $partner->replicate();
-                            $newPartner->agreement_id = $draftAgreement->id;
-                            $newPartner->save();
-                        }
-
-                        // Clone guarantors
-                        foreach ($pastAgreement->guarantors as $guarantor) {
-                            $newGuarantor = $guarantor->replicate();
-                            $newGuarantor->agreement_id = $draftAgreement->id;
-                            $newGuarantor->save();
-                        }
-
-                        // Clone emergency contacts
-                        foreach ($pastAgreement->emergencyContacts as $contact) {
-                            $newContact = $contact->replicate();
-                            $newContact->agreement_id = $draftAgreement->id;
-                            $newContact->save();
-                        }
-
-                        // Clone document checklist
-                        if ($pastAgreement->documentChecklist) {
-                            $newChecklist = $pastAgreement->documentChecklist->replicate();
-                            $newChecklist->agreement_id = $draftAgreement->id;
-                            $newChecklist->save();
-                        }
-
-                        // Clone checklists
-                        if ($pastAgreement->moveInChecklist) {
-                            $newMoveIn = $pastAgreement->moveInChecklist->replicate();
-                            $newMoveIn->agreement_id = $draftAgreement->id;
-                            $newMoveIn->save();
-                        }
-                        if ($pastAgreement->moveOutChecklist) {
-                            $newMoveOut = $pastAgreement->moveOutChecklist->replicate();
-                            $newMoveOut->agreement_id = $draftAgreement->id;
-                            $newMoveOut->save();
-                        }
-                    });
-                }
-            }
-        }
+        $draftAgreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
+        $displayAgreement = $activeAgreement ?: ($draftAgreement ?: $tenant->agreements()->latest()->first());
 
         return match ($step) {
             1 => view('tenants.wizard.step1', array_merge($data, [
@@ -526,7 +474,7 @@ class TenantController extends Controller
                         })
                     ->orderBy('unit_number')
                     ->get(),
-                'partners' => ($draftAgreement ? $draftAgreement->partners()->get() : collect())->map(fn($p) => [
+                'partners' => ($displayAgreement ? $displayAgreement->partners()->get() : collect())->map(fn($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
                     'father_name' => $p->father_name,
@@ -545,11 +493,11 @@ class TenantController extends Controller
                 ]),
             ])),
             2 => view('tenants.wizard.step2', array_merge($data, [
-                'guarantors' => $draftAgreement ? $draftAgreement->guarantors()->get() : collect(),
-                'emergencyContacts' => $draftAgreement ? $draftAgreement->emergencyContacts : collect(),
+                'guarantors' => $displayAgreement ? $displayAgreement->guarantors()->get() : collect(),
+                'emergencyContacts' => $displayAgreement ? $displayAgreement->emergencyContacts : collect(),
             ])),
             3 => view('tenants.wizard.step3', array_merge($data, [
-                'agreement' => $draftAgreement,
+                'agreement' => $displayAgreement,
                 'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
                 'units' => Unit::where('is_self', false)
                     ->where(function ($q) use ($tenant) {
@@ -560,21 +508,21 @@ class TenantController extends Controller
                     ->get(),
             ])),
             4 => view('tenants.wizard.step4', array_merge($data, [
-                'checklist' => $draftAgreement ? $draftAgreement->documentChecklist : null,
+                'checklist' => $displayAgreement ? $displayAgreement->documentChecklist : null,
             ])),
-            5 => (function() use ($data, $draftAgreement, $tenant) {
+            5 => (function() use ($data, $displayAgreement, $tenant) {
                 $flatReport = null;
                 $prefilledFromVacant = false;
 
-                if ($draftAgreement) {
+                if ($displayAgreement) {
                     $flatReport = FlatInspectionReport::with('items')
-                        ->where('agreement_id', $draftAgreement->id)
+                        ->where('agreement_id', $displayAgreement->id)
                         ->where('type', 'move_in')
                         ->first();
 
-                    if (!$flatReport && $draftAgreement->unit_id) {
+                    if (!$flatReport && $displayAgreement->unit_id) {
                         $vacantReport = FlatInspectionReport::with('items')
-                            ->where('unit_id', $draftAgreement->unit_id)
+                            ->where('unit_id', $displayAgreement->unit_id)
                             ->where('type', 'vacant')
                             ->latest('id')
                             ->first();
@@ -587,27 +535,27 @@ class TenantController extends Controller
                 }
 
                 return view('tenants.wizard.step5', array_merge($data, [
-                    'checklist' => $draftAgreement?->moveInChecklist,
-                    'agreement' => $draftAgreement,
+                    'checklist' => $displayAgreement?->moveInChecklist,
+                    'agreement' => $displayAgreement,
                     'inspectionPersons' => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
-                    'defaultMeterReading' => $draftAgreement?->initial_meter_reading ?? ($tenant->unit?->getLatestMeterReading() ?? ($draftAgreement?->unit_id ? Unit::find($draftAgreement->unit_id)?->getLatestMeterReading() : null)),
+                    'defaultMeterReading' => $displayAgreement?->initial_meter_reading ?? ($tenant->unit?->getLatestMeterReading() ?? ($displayAgreement?->unit_id ? Unit::find($displayAgreement->unit_id)?->getLatestMeterReading() : null)),
                     'inspectionHeads' => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
                     'flatInspectionReport' => $flatReport,
                     'prefilledFromVacant' => $prefilledFromVacant,
                 ]));
             })(),
             6 => view('tenants.wizard.step6', array_merge($data, [
-                'partners' => $draftAgreement ? $draftAgreement->partners()->get() : collect(),
-                'guarantors' => $draftAgreement ? $draftAgreement->guarantors()->get() : collect(),
-                'guarantor' => $draftAgreement ? $draftAgreement->guarantors()->first() : null,
-                'emergencyContacts' => $draftAgreement ? $draftAgreement->emergencyContacts : collect(),
-                'agreement' => $draftAgreement,
-                'docChecklist' => $draftAgreement ? $draftAgreement->documentChecklist : null,
-                'moveInChecklist' => $draftAgreement ? $draftAgreement->moveInChecklist : null,
-                'breakerInspection' => $draftAgreement?->unit?->breakerInspections()->where('breaker_status', 'on')->latest('inspected_at')->first() ?? $draftAgreement?->unit?->latestBreakerInspection,
-                'flatInspectionReport' => $draftAgreement
+                'partners' => $displayAgreement ? $displayAgreement->partners()->get() : collect(),
+                'guarantors' => $displayAgreement ? $displayAgreement->guarantors()->get() : collect(),
+                'guarantor' => $displayAgreement ? $displayAgreement->guarantors()->first() : null,
+                'emergencyContacts' => $displayAgreement ? $displayAgreement->emergencyContacts : collect(),
+                'agreement' => $displayAgreement,
+                'docChecklist' => $displayAgreement ? $displayAgreement->documentChecklist : null,
+                'moveInChecklist' => $displayAgreement ? $displayAgreement->moveInChecklist : null,
+                'breakerInspection' => $displayAgreement?->unit?->breakerInspections()->where('breaker_status', 'on')->latest('inspected_at')->first() ?? $displayAgreement?->unit?->latestBreakerInspection,
+                'flatInspectionReport' => $displayAgreement
                     ? FlatInspectionReport::with('items')
-                        ->where('agreement_id', $draftAgreement->id)
+                        ->where('agreement_id', $displayAgreement->id)
                         ->where('type', 'move_in')
                         ->first()
                     : null,
@@ -833,7 +781,7 @@ class TenantController extends Controller
 
         // Handle govt_document upload
         if ($request->hasFile('govt_document')) {
-            $existing = $tenant->agreements()->latest()->first();
+            $existing = $tenant->agreements()->whereIn('status', ['active', 'draft'])->latest()->first();
             if ($existing?->govt_document) {
                 Storage::disk('public')->delete($existing->govt_document);
             }
@@ -850,9 +798,9 @@ class TenantController extends Controller
                 Unit::find($tenant->unit_id)?->update(['status' => 'vacant']);
             }
 
-            // Flat status should only be 'rented' if govt_document is uploaded (either in this request or previously)
-            $latestAgreement = $tenant->agreements()->latest()->first();
-            $hasGovtDocument = isset($data['govt_document']) || ($latestAgreement && !empty($latestAgreement->govt_document));
+            // Flat status should only be 'rented' if govt_document is uploaded (either in this request or previously in active/draft)
+            $currentAgreement = $tenant->agreements()->whereIn('status', ['active', 'draft'])->latest()->first();
+            $hasGovtDocument = isset($data['govt_document']) || ($currentAgreement && !empty($currentAgreement->govt_document));
 
             if ($hasGovtDocument) {
                 Unit::find($unitId)?->update(['status' => 'rented']);
