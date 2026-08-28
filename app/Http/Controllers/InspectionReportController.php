@@ -193,9 +193,12 @@ class InspectionReportController extends Controller
             ];
 
             if ($isSuperAdmin) {
-                $validationRules['admin_remarks'] = 'nullable|string|max:2000';
-                $validationRules['admin_rating']  = 'nullable|in:good,bad';
-                $validationRules['admin_photo']   = 'nullable|image|max:200';
+                $validationRules['admin_remarks']        = 'nullable|string|max:2000';
+                $validationRules['admin_rating']         = 'nullable|in:good,bad';
+                $validationRules['admin_photo']          = 'nullable|image|max:200';
+                $validationRules['items.*.admin_rating']  = 'nullable|in:good,bad';
+                $validationRules['items.*.admin_remarks'] = 'nullable|string|max:1000';
+                $validationRules['items.*.admin_photo']   = 'nullable|image|max:200';
             }
 
             $customMessages = [
@@ -245,6 +248,11 @@ class InspectionReportController extends Controller
                     $imagePath = $request->file("items.{$headId}.image")->store('inspection_images/flat', 'public');
                 }
 
+                $itemAdminPhoto = null;
+                if ($isSuperAdmin && $request->hasFile("items.{$headId}.admin_photo")) {
+                    $itemAdminPhoto = $request->file("items.{$headId}.admin_photo")->store('inspection_photos/flat/items', 'public');
+                }
+
                 FlatInspectionReportItem::create([
                     'flat_inspection_report_id' => $report->id,
                     'inspection_head_id'        => $headId,
@@ -252,6 +260,9 @@ class InspectionReportController extends Controller
                     'report_type_remark_id'     => $itemData['report_type_remark_id'] ?? null,
                     'remarks'                   => $itemData['remarks'] ?? null,
                     'image_path'                => $imagePath,
+                    'admin_rating'              => $isSuperAdmin ? ($itemData['admin_rating'] ?? null) : null,
+                    'admin_remarks'             => $isSuperAdmin ? ($itemData['admin_remarks'] ?? null) : null,
+                    'admin_photo'               => $itemAdminPhoto,
                 ]);
             }
 
@@ -300,7 +311,7 @@ class InspectionReportController extends Controller
         $hasSystemRemarks = $reportType->activeRemarks()->exists();
 
         $validationRules = [
-            'overall_remarks'              => 'required|string|max:2000',
+            'overall_remarks'              => 'nullable|string|max:2000',
             'items'                        => 'required|array|min:1',
             'items.*.status'               => 'required|in:yes,no,na',
             'items.*.report_type_remark_id'=> $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
@@ -309,9 +320,12 @@ class InspectionReportController extends Controller
         ];
 
         if ($isSuperAdmin) {
-            $validationRules['admin_remarks'] = 'nullable|string|max:2000';
-            $validationRules['admin_rating']  = 'nullable|in:good,bad';
-            $validationRules['admin_photo']   = 'nullable|image|max:200';
+            $validationRules['admin_remarks']        = 'nullable|string|max:2000';
+            $validationRules['admin_rating']         = 'nullable|in:good,bad';
+            $validationRules['admin_photo']          = 'nullable|image|max:200';
+            $validationRules['items.*.admin_rating']  = 'nullable|in:good,bad';
+            $validationRules['items.*.admin_remarks'] = 'nullable|string|max:1000';
+            $validationRules['items.*.admin_photo']   = 'nullable|image|max:200';
         }
 
         if ($hasMembers) {
@@ -324,7 +338,6 @@ class InspectionReportController extends Controller
 
         $customMessages = [
             'report_type_member_id.required'         => 'Please select an active member.',
-            'overall_remarks.required'               => 'Overall remarks are mandatory.',
             'items.*.status.required'                => 'Status is mandatory for every checklist item.',
             'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
             'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
@@ -440,10 +453,13 @@ class InspectionReportController extends Controller
             ];
 
             if ($isSuperAdmin) {
-                $validationRules['admin_remarks']      = 'nullable|string|max:2000';
-                $validationRules['admin_rating']       = 'nullable|in:good,bad';
-                $validationRules['admin_photo']        = 'nullable|image|max:200';
-                $validationRules['remove_admin_photo'] = 'nullable|boolean';
+                $validationRules['admin_remarks']        = 'nullable|string|max:2000';
+                $validationRules['admin_rating']         = 'nullable|in:good,bad';
+                $validationRules['admin_photo']          = 'nullable|image|max:200';
+                $validationRules['remove_admin_photo']   = 'nullable|boolean';
+                $validationRules['items.*.admin_rating']  = 'nullable|in:good,bad';
+                $validationRules['items.*.admin_remarks'] = 'nullable|string|max:1000';
+                $validationRules['items.*.admin_photo']   = 'nullable|image|max:200';
             }
 
             $customMessages = [
@@ -510,6 +526,25 @@ class InspectionReportController extends Controller
                     $imagePath = $request->file("items.{$headId}.image")->store('inspection_images/flat', 'public');
                 }
 
+                $itemAdminRating = $isSuperAdmin ? ($itemData['admin_rating'] ?? null) : $existing?->admin_rating;
+                $itemAdminRemarks = $isSuperAdmin ? ($itemData['admin_remarks'] ?? null) : $existing?->admin_remarks;
+                $itemAdminPhoto = $existing?->admin_photo;
+
+                if ($isSuperAdmin) {
+                    if (!empty($itemData['remove_admin_photo'])) {
+                        if ($itemAdminPhoto && Storage::disk('public')->exists($itemAdminPhoto)) {
+                            Storage::disk('public')->delete($itemAdminPhoto);
+                        }
+                        $itemAdminPhoto = null;
+                    }
+                    if ($request->hasFile("items.{$headId}.admin_photo")) {
+                        if ($itemAdminPhoto && Storage::disk('public')->exists($itemAdminPhoto)) {
+                            Storage::disk('public')->delete($itemAdminPhoto);
+                        }
+                        $itemAdminPhoto = $request->file("items.{$headId}.admin_photo")->store('inspection_photos/flat/items', 'public');
+                    }
+                }
+
                 FlatInspectionReportItem::updateOrCreate(
                     [
                         'flat_inspection_report_id' => $report->id,
@@ -520,6 +555,9 @@ class InspectionReportController extends Controller
                         'report_type_remark_id' => $itemData['report_type_remark_id'] ?? null,
                         'remarks'               => $itemData['remarks'] ?? null,
                         'image_path'            => $imagePath,
+                        'admin_rating'          => $itemAdminRating,
+                        'admin_remarks'         => $itemAdminRemarks,
+                        'admin_photo'           => $itemAdminPhoto,
                     ]
                 );
             }
@@ -539,7 +577,7 @@ class InspectionReportController extends Controller
         $hasSystemRemarks = $reportType->activeRemarks()->exists();
 
         $validationRules = [
-            'overall_remarks'              => 'required|string|max:2000',
+            'overall_remarks'              => 'nullable|string|max:2000',
             'items'                        => 'required|array|min:1',
             'items.*.status'               => 'required|in:yes,no,na',
             'items.*.report_type_remark_id'=> $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
@@ -548,10 +586,13 @@ class InspectionReportController extends Controller
         ];
 
         if ($isSuperAdmin) {
-            $validationRules['admin_remarks']      = 'nullable|string|max:2000';
-            $validationRules['admin_rating']       = 'nullable|in:good,bad';
-            $validationRules['admin_photo']        = 'nullable|image|max:200';
-            $validationRules['remove_admin_photo'] = 'nullable|boolean';
+            $validationRules['admin_remarks']        = 'nullable|string|max:2000';
+            $validationRules['admin_rating']         = 'nullable|in:good,bad';
+            $validationRules['admin_photo']          = 'nullable|image|max:200';
+            $validationRules['remove_admin_photo']   = 'nullable|boolean';
+            $validationRules['items.*.admin_rating']  = 'nullable|in:good,bad';
+            $validationRules['items.*.admin_remarks'] = 'nullable|string|max:1000';
+            $validationRules['items.*.admin_photo']   = 'nullable|image|max:200';
         }
 
         if ($hasMembers) {
@@ -564,7 +605,6 @@ class InspectionReportController extends Controller
 
         $customMessages = [
             'report_type_member_id.required'         => 'Please select an active member.',
-            'overall_remarks.required'               => 'Overall remarks are mandatory.',
             'items.*.status.required'                => 'Status is mandatory for every checklist item.',
             'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
             'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
@@ -686,6 +726,26 @@ class InspectionReportController extends Controller
                 $imagePath = $request->file("items.{$headId}.image")->store("inspection_images/{$type}", 'public');
             }
 
+            $isSuperAdmin = Auth::user()?->isSuperAdmin();
+            $adminRating = $isSuperAdmin ? ($itemData['admin_rating'] ?? null) : $existing?->admin_rating;
+            $adminRemarks = $isSuperAdmin ? ($itemData['admin_remarks'] ?? null) : $existing?->admin_remarks;
+            $adminPhoto = $existing?->admin_photo;
+
+            if ($isSuperAdmin) {
+                if (!empty($itemData['remove_admin_photo'])) {
+                    if ($adminPhoto && Storage::disk('public')->exists($adminPhoto)) {
+                        Storage::disk('public')->delete($adminPhoto);
+                    }
+                    $adminPhoto = null;
+                }
+                if ($request->hasFile("items.{$headId}.admin_photo")) {
+                    if ($adminPhoto && Storage::disk('public')->exists($adminPhoto)) {
+                        Storage::disk('public')->delete($adminPhoto);
+                    }
+                    $adminPhoto = $request->file("items.{$headId}.admin_photo")->store("inspection_photos/{$type}/items", 'public');
+                }
+            }
+
             InspectionReportItem::updateOrCreate(
                 ['inspection_report_id' => $report->id, 'inspection_head_id' => $headId],
                 [
@@ -693,6 +753,9 @@ class InspectionReportController extends Controller
                     'report_type_remark_id' => $itemData['report_type_remark_id'] ?? null,
                     'remarks'               => $itemData['remarks'] ?? null,
                     'image_path'            => $imagePath,
+                    'admin_rating'          => $adminRating,
+                    'admin_remarks'         => $adminRemarks,
+                    'admin_photo'           => $adminPhoto,
                 ]
             );
         }

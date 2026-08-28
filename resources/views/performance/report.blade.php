@@ -172,6 +172,8 @@
                                 <td class="px-1 py-1.5 text-center text-[10px] border-r border-gray-200 dark:border-gray-800 font-bold 
                                     @if($status === 'done')
                                         bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200
+                                    @elseif($status === 'partial')
+                                        bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200
                                     @elseif($status === 'unsatisfied')
                                         bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300
                                     @elseif($status === 'undone')
@@ -182,7 +184,7 @@
                                         text-gray-300 dark:text-gray-600 {{ $isFriday ? 'bg-amber-50/40' : '' }}
                                     @endif"
                                     title="Day {{ $d }}: {{ ucfirst($status) }} (Earned: {{ $earned }} pts) {{ $cell['admin_rating'] ? '· Admin: ' . $cell['admin_rating'] : '' }}">
-                                    @if($status === 'done')
+                                    @if($status === 'done' || $status === 'partial')
                                         {{ round($earned) }}
                                     @elseif($status === 'unsatisfied')
                                         <span class="line-through text-red-500" title="Admin Unsatisfactory: 0 pts">{{ round($row['unit_amount']) }}</span>

@@ -42,15 +42,19 @@ class ReportTypeController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'               => 'required|string|max:255',
-            'key'                => 'nullable|string|max:100|unique:report_types,key',
-            'description'        => 'nullable|string|max:500',
-            'is_daily'           => 'nullable|boolean',
-            'daily_start_time'   => 'nullable|string',
-            'daily_end_time'     => 'nullable|string',
-            'one_per_user_daily' => 'nullable|boolean',
-            'sort_order'         => 'nullable|integer|min:0',
-            'is_active'          => 'nullable|boolean',
+            'name'                        => 'required|string|max:255',
+            'key'                         => 'nullable|string|max:100|unique:report_types,key',
+            'description'                 => 'nullable|string|max:500',
+            'is_daily'                    => 'nullable|boolean',
+            'daily_start_time'            => 'nullable|string',
+            'daily_end_time'              => 'nullable|string',
+            'one_per_user_daily'          => 'nullable|boolean',
+            'satisfactory_threshold_pct'  => 'nullable|numeric|min:0|max:100',
+            'below_threshold_score_pct'   => 'nullable|numeric|min:0|max:100',
+            'satisfactory_score_pct'      => 'nullable|numeric|min:0|max:100',
+            'unsatisfactory_score_pct'    => 'nullable|numeric|min:0|max:100',
+            'sort_order'                  => 'nullable|integer|min:0',
+            'is_active'                   => 'nullable|boolean',
         ]);
 
         $key = $validated['key'] ?? Str::slug($validated['name'], '_');
@@ -65,13 +69,17 @@ class ReportTypeController extends Controller
             $key = $originalKey . '_' . $counter++;
         }
 
-        $validated['key']                = $key;
-        $validated['is_daily']           = $request->boolean('is_daily', false);
-        $validated['daily_start_time']   = $validated['daily_start_time'] ? substr($validated['daily_start_time'], 0, 5) . ':00' : '09:00:00';
-        $validated['daily_end_time']     = $validated['daily_end_time'] ? substr($validated['daily_end_time'], 0, 5) . ':00' : '20:00:00';
-        $validated['one_per_user_daily'] = $request->boolean('one_per_user_daily', true);
-        $validated['is_active']          = $request->boolean('is_active', true);
-        $validated['sort_order']         = $validated['sort_order'] ?? 0;
+        $validated['key']                         = $key;
+        $validated['is_daily']                    = $request->boolean('is_daily', false);
+        $validated['daily_start_time']            = $validated['daily_start_time'] ? substr($validated['daily_start_time'], 0, 5) . ':00' : '09:00:00';
+        $validated['daily_end_time']              = $validated['daily_end_time'] ? substr($validated['daily_end_time'], 0, 5) . ':00' : '20:00:00';
+        $validated['one_per_user_daily']          = $request->boolean('one_per_user_daily', true);
+        $validated['satisfactory_threshold_pct']  = isset($validated['satisfactory_threshold_pct']) && $validated['satisfactory_threshold_pct'] !== '' ? (float) $validated['satisfactory_threshold_pct'] : 50.00;
+        $validated['below_threshold_score_pct']   = isset($validated['below_threshold_score_pct']) && $validated['below_threshold_score_pct'] !== '' ? (float) $validated['below_threshold_score_pct'] : 50.00;
+        $validated['satisfactory_score_pct']      = isset($validated['satisfactory_score_pct']) && $validated['satisfactory_score_pct'] !== '' ? (float) $validated['satisfactory_score_pct'] : 100.00;
+        $validated['unsatisfactory_score_pct']    = isset($validated['unsatisfactory_score_pct']) && $validated['unsatisfactory_score_pct'] !== '' ? (float) $validated['unsatisfactory_score_pct'] : 0.00;
+        $validated['is_active']                   = $request->boolean('is_active', true);
+        $validated['sort_order']                  = $validated['sort_order'] ?? 0;
 
         $reportType = ReportType::create($validated);
 
@@ -101,15 +109,19 @@ class ReportTypeController extends Controller
     public function update(Request $request, ReportType $reportType)
     {
         $validated = $request->validate([
-            'name'               => 'required|string|max:255',
-            'key'                => 'nullable|string|max:100|unique:report_types,key,' . $reportType->id,
-            'description'        => 'nullable|string|max:500',
-            'is_daily'           => 'nullable|boolean',
-            'daily_start_time'   => 'nullable|string',
-            'daily_end_time'     => 'nullable|string',
-            'one_per_user_daily' => 'nullable|boolean',
-            'sort_order'         => 'nullable|integer|min:0',
-            'is_active'          => 'nullable|boolean',
+            'name'                        => 'required|string|max:255',
+            'key'                         => 'nullable|string|max:100|unique:report_types,key,' . $reportType->id,
+            'description'                 => 'nullable|string|max:500',
+            'is_daily'                    => 'nullable|boolean',
+            'daily_start_time'            => 'nullable|string',
+            'daily_end_time'              => 'nullable|string',
+            'one_per_user_daily'          => 'nullable|boolean',
+            'satisfactory_threshold_pct'  => 'nullable|numeric|min:0|max:100',
+            'below_threshold_score_pct'   => 'nullable|numeric|min:0|max:100',
+            'satisfactory_score_pct'      => 'nullable|numeric|min:0|max:100',
+            'unsatisfactory_score_pct'    => 'nullable|numeric|min:0|max:100',
+            'sort_order'                  => 'nullable|integer|min:0',
+            'is_active'                   => 'nullable|boolean',
         ]);
 
         $oldKey = $reportType->key;
@@ -118,13 +130,17 @@ class ReportTypeController extends Controller
             $newKey = $oldKey;
         }
 
-        $validated['key']                = $newKey;
-        $validated['is_daily']           = $request->boolean('is_daily', false);
-        $validated['daily_start_time']   = $validated['daily_start_time'] ? substr($validated['daily_start_time'], 0, 5) . ':00' : '09:00:00';
-        $validated['daily_end_time']     = $validated['daily_end_time'] ? substr($validated['daily_end_time'], 0, 5) . ':00' : '20:00:00';
-        $validated['one_per_user_daily'] = $request->boolean('one_per_user_daily', true);
-        $validated['is_active']          = $request->boolean('is_active');
-        $validated['sort_order']         = $validated['sort_order'] ?? $reportType->sort_order;
+        $validated['key']                         = $newKey;
+        $validated['is_daily']                    = $request->boolean('is_daily', false);
+        $validated['daily_start_time']            = $validated['daily_start_time'] ? substr($validated['daily_start_time'], 0, 5) . ':00' : '09:00:00';
+        $validated['daily_end_time']              = $validated['daily_end_time'] ? substr($validated['daily_end_time'], 0, 5) . ':00' : '20:00:00';
+        $validated['one_per_user_daily']          = $request->boolean('one_per_user_daily', true);
+        $validated['satisfactory_threshold_pct']  = isset($validated['satisfactory_threshold_pct']) && $validated['satisfactory_threshold_pct'] !== '' ? (float) $validated['satisfactory_threshold_pct'] : 50.00;
+        $validated['below_threshold_score_pct']   = isset($validated['below_threshold_score_pct']) && $validated['below_threshold_score_pct'] !== '' ? (float) $validated['below_threshold_score_pct'] : 50.00;
+        $validated['satisfactory_score_pct']      = isset($validated['satisfactory_score_pct']) && $validated['satisfactory_score_pct'] !== '' ? (float) $validated['satisfactory_score_pct'] : 100.00;
+        $validated['unsatisfactory_score_pct']    = isset($validated['unsatisfactory_score_pct']) && $validated['unsatisfactory_score_pct'] !== '' ? (float) $validated['unsatisfactory_score_pct'] : 0.00;
+        $validated['is_active']                   = $request->boolean('is_active');
+        $validated['sort_order']                  = $validated['sort_order'] ?? $reportType->sort_order;
 
         if ($oldKey !== $newKey) {
             $heads = InspectionHead::forType($oldKey)->get();

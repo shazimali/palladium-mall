@@ -18,6 +18,9 @@ class InspectionReportItem extends Model
         'report_type_remark_id',
         'remarks',
         'image_path',
+        'admin_rating',
+        'admin_remarks',
+        'admin_photo',
     ];
 
     public function report(): BelongsTo
@@ -41,5 +44,13 @@ class InspectionReportItem extends Model
             return null;
         }
         return Storage::url($this->image_path);
+    }
+
+    public function getAdminPhotoUrlAttribute(): ?string
+    {
+        if (!$this->admin_photo) {
+            return null;
+        }
+        return Storage::url($this->admin_photo);
     }
 }

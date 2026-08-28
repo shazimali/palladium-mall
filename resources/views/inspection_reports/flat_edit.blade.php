@@ -220,7 +220,7 @@
 
                     <div>
                         <label class="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                            Overall Inspection Remarks <span class="text-red-500">*</span>
+                            Overall Inspection Remarks
                         </label>
                         <input type="text" name="remarks" value="{{ old('remarks', $report->remarks) }}" required
                             placeholder="Overall inspection summary, keys handed over, condition (mandatory)..."
@@ -255,9 +255,14 @@
                                             Remarks <span class="text-red-500">*</span>
                                         @endif
                                     </th>
-                                    <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400" style="min-width:180px">
-                                        Photo <span class="text-xs font-normal text-gray-400">(optional, max 200KB)</span>
+                                    <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400" style="min-width:160px">
+                                        Photo <span class="text-xs font-normal text-gray-400">(optional)</span>
                                     </th>
+                                    @if(auth()->user()->isSuperAdmin())
+                                        <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-50/60 dark:bg-amber-950/30" style="min-width:260px">
+                                            👑 Admin Evaluation
+                                        </th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -268,6 +273,8 @@
                                         $oldStatus = old("items.{$head->id}.status", $initialStatus);
                                         $oldRemarkId = old("items.{$head->id}.report_type_remark_id", $existingItem?->report_type_remark_id);
                                         $oldRemarks = old("items.{$head->id}.remarks", $existingItem?->remarks);
+                                        $curAdminRating = old("items.{$head->id}.admin_rating", $existingItem?->admin_rating ?? '');
+                                        $curAdminRemarks = old("items.{$head->id}.admin_remarks", $existingItem?->admin_remarks ?? '');
                                     @endphp
                                     <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
                                         {{-- Index --}}
@@ -352,10 +359,56 @@
                                             <input type="file" name="items[{{ $head->id }}][image]" accept="image/*"
                                                 class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 dark:file:bg-gray-800 dark:file:text-gray-300" />
                                         </td>
+
+                                        {{-- Super Admin Per-Row Evaluation --}}
+                                        @if(auth()->user()->isSuperAdmin())
+                                            <td class="px-4 py-3.5 bg-amber-50/30 dark:bg-amber-950/10 border-l border-amber-100 dark:border-amber-900/30">
+                                                <div class="space-y-2">
+                                                    {{-- Admin Rating Radio Group --}}
+                                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                                        <label class="inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-[11px] font-bold shadow-2xs">
+                                                            <input type="radio" name="items[{{ $head->id }}][admin_rating]" value="good" class="w-3.5 h-3.5 text-emerald-600 focus:ring-emerald-500"
+                                                                @checked($curAdminRating === 'good')>
+                                                            <span class="text-emerald-700 dark:text-emerald-300">✨ Sat.</span>
+                                                        </label>
+                                                        <label class="inline-flex items-center gap-1 cursor-pointer px-2 py-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-rose-50 text-[11px] font-bold shadow-2xs">
+                                                            <input type="radio" name="items[{{ $head->id }}][admin_rating]" value="bad" class="w-3.5 h-3.5 text-rose-600 focus:ring-rose-500"
+                                                                @checked($curAdminRating === 'bad')>
+                                                            <span class="text-rose-700 dark:text-rose-300">⚠️ Unsat.</span>
+                                                        </label>
+                                                        <label class="inline-flex items-center gap-1 cursor-pointer px-1.5 py-1 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 text-[11px] font-medium text-gray-500 shadow-2xs">
+                                                            <input type="radio" name="items[{{ $head->id }}][admin_rating]" value="" class="w-3.5 h-3.5 text-gray-400 focus:ring-gray-400"
+                                                                @checked(empty($curAdminRating))>
+                                                            <span>None</span>
+                                                        </label>
+                                                    </div>
+
+                                                    {{-- Admin Remarks --}}
+                                                    <input type="text" name="items[{{ $head->id }}][admin_remarks]" value="{{ $curAdminRemarks }}"
+                                                           placeholder="Admin feedback remarks..."
+                                                           class="h-8 w-full rounded-lg border border-amber-200 bg-white px-2.5 text-xs text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 focus:border-brand-500 focus:outline-none" />
+
+                                                    {{-- Admin Photo --}}
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="inline-flex items-center gap-1 cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-[11px] font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                                                            <span>📷 Admin Photo</span>
+                                                            <input type="file" name="items[{{ $head->id }}][admin_photo]" accept="image/*" class="sr-only insp-img-input" />
+                                                        </label>
+                                                        @if(!empty($existingItem?->admin_photo))
+                                                            <a href="{{ $existingItem->admin_photo_url }}" target="_blank" class="text-[11px] text-brand-600 underline font-bold">View</a>
+                                                            <label class="inline-flex items-center gap-1 text-[10px] text-red-500 cursor-pointer">
+                                                                <input type="checkbox" name="items[{{ $head->id }}][remove_admin_photo]" value="1" class="w-3 h-3 text-red-600 rounded">
+                                                                <span>Remove</span>
+                                                            </label>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        @endif
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+                                        <td colspan="{{ auth()->user()->isSuperAdmin() ? 6 : 5 }}" class="px-4 py-8 text-center text-gray-400">
                                             No active inspection heads found for Flat Inspection.
                                         </td>
                                     </tr>
@@ -364,86 +417,6 @@
                         </table>
                     </div>
                 </div>
-
-                {{-- Super Admin Feedback Section --}}
-                @if(auth()->user()->isSuperAdmin())
-                    <div class="rounded-2xl border-2 border-brand-200 bg-brand-50/40 p-5 dark:border-brand-900/40 dark:bg-brand-950/20 space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h4 class="text-xs font-black uppercase tracking-wider text-brand-900 dark:text-brand-300 flex items-center gap-2">
-                                👑 Super Admin Remarks & Feedback
-                            </h4>
-                            <span class="text-[11px] font-bold text-brand-600 bg-brand-100 dark:bg-brand-900/40 dark:text-brand-300 px-2 py-0.5 rounded-full">
-                                Super Admin Only
-                            </span>
-                        </div>
-
-                        {{-- Rating Selection --}}
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
-                                Admin Evaluation / Rating
-                            </label>
-                            <div class="flex items-center gap-3 flex-wrap">
-                                <label class="inline-flex items-center gap-2 cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors shadow-2xs">
-                                    <input type="radio" name="admin_rating" value="good"
-                                        {{ old('admin_rating', $report->admin_rating ?? '') === 'good' ? 'checked' : '' }}
-                                        class="w-4 h-4 text-emerald-600 border-gray-300 dark:border-gray-600 focus:ring-emerald-500">
-                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 text-xs font-black text-emerald-800 dark:text-emerald-300">
-                                        ✨ Satisfactory
-                                    </span>
-                                </label>
-                                <label class="inline-flex items-center gap-2 cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors shadow-2xs">
-                                    <input type="radio" name="admin_rating" value="bad"
-                                        {{ old('admin_rating', $report->admin_rating ?? '') === 'bad' ? 'checked' : '' }}
-                                        class="w-4 h-4 text-rose-600 border-gray-300 dark:border-gray-600 focus:ring-rose-500">
-                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-rose-100 dark:bg-rose-900/40 px-2.5 py-1 text-xs font-black text-rose-800 dark:text-rose-300">
-                                        ⚠️ Unsatisfactory
-                                    </span>
-                                </label>
-                                <label class="inline-flex items-center gap-2 cursor-pointer p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-2xs">
-                                    <input type="radio" name="admin_rating" value=""
-                                        {{ !in_array(old('admin_rating', $report->admin_rating ?? ''), ['good', 'bad']) ? 'checked' : '' }}
-                                        class="w-4 h-4 text-gray-400 border-gray-300 dark:border-gray-600 focus:ring-gray-400">
-                                    <span class="text-xs text-gray-500 dark:text-gray-400 font-bold">None</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {{-- Admin Remarks Textarea --}}
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                                Admin Remarks (Optional)
-                            </label>
-                            <textarea name="admin_remarks" rows="2" placeholder="Enter admin feedback / instructions..."
-                                class="w-full text-xs rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white p-3 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">{{ old('admin_remarks', $report->admin_remarks) }}</textarea>
-                        </div>
-
-                        {{-- Admin Photo Upload (Max 200 KB) --}}
-                        <div>
-                            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                                📷 Attach Admin Feedback Photo (Max 200 KB)
-                            </label>
-
-                            @if($report->admin_photo)
-                                <div class="flex items-center gap-3 p-3 rounded-xl border border-brand-200 bg-white dark:bg-gray-800 mb-2">
-                                    <img src="{{ $report->admin_photo_url }}" alt="Admin photo" class="h-14 w-14 object-cover rounded-lg border border-gray-200">
-                                    <div class="text-xs">
-                                        <p class="font-bold text-gray-800 dark:text-gray-200">Current Photo Attached</p>
-                                        <label class="inline-flex items-center gap-1.5 mt-1 text-xs text-red-600 font-semibold cursor-pointer">
-                                            <input type="checkbox" name="remove_admin_photo" value="1" class="rounded text-red-600 focus:ring-red-500">
-                                            <span>Delete this photo</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            @endif
-
-                            <input type="file" name="admin_photo" accept="image/*" class="w-full text-xs text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-brand-100 file:text-brand-700 hover:file:bg-brand-200 dark:file:bg-brand-900/30 dark:file:text-brand-300">
-                            <span class="text-[10px] text-gray-400 block mt-1">JPEG, PNG, WEBP up to 200 KB</span>
-                            @error('admin_photo')
-                                <span class="text-xs text-red-500 font-bold block mt-1">{{ $message }}</span>
-                            @enderror
-                        </div>
-                    </div>
-                @endif
 
                 {{-- Action Footer --}}
                 <div class="flex justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-800">

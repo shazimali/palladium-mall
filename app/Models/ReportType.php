@@ -20,15 +20,23 @@ class ReportType extends Model
         'daily_start_time',
         'daily_end_time',
         'one_per_user_daily',
+        'satisfactory_threshold_pct',
+        'below_threshold_score_pct',
+        'satisfactory_score_pct',
+        'unsatisfactory_score_pct',
         'is_active',
         'sort_order',
     ];
 
     protected $casts = [
-        'is_daily'           => 'boolean',
-        'one_per_user_daily' => 'boolean',
-        'is_active'          => 'boolean',
-        'sort_order'         => 'integer',
+        'is_daily'                   => 'boolean',
+        'one_per_user_daily'         => 'boolean',
+        'satisfactory_threshold_pct' => 'decimal:2',
+        'below_threshold_score_pct'  => 'decimal:2',
+        'satisfactory_score_pct'     => 'decimal:2',
+        'unsatisfactory_score_pct'   => 'decimal:2',
+        'is_active'                  => 'boolean',
+        'sort_order'                 => 'integer',
     ];
 
     public function inspectionHeads(): HasMany

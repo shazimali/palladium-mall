@@ -115,6 +115,43 @@
         </div>
     </div>
 
+    {{-- Performance Evaluation Scoring Settings Card --}}
+    <div class="p-5 rounded-xl border border-indigo-200 bg-indigo-50/40 dark:border-indigo-900/40 dark:bg-indigo-950/20 space-y-4">
+        <div>
+            <h4 class="text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                <span>🎯 Employee Performance Scoring Threshold</span>
+            </h4>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Configure the passing threshold percentage for checklist evaluations to determine full (100%) vs partial/failing points in the Performance Grid.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 pt-3 border-t border-indigo-200/60 dark:border-indigo-900/40 items-start">
+            <div>
+                <label class="mb-1.5 block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    ✨ Satisfactory Passing Threshold (%) <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input type="number" step="0.5" min="0" max="100" name="satisfactory_threshold_pct"
+                           value="{{ old('satisfactory_threshold_pct', $reportType->satisfactory_threshold_pct ?? 50) }}" required
+                           class="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-white focus:border-brand-500 focus:outline-none"
+                           placeholder="50" />
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400 pointer-events-none">%</span>
+                </div>
+                <span class="text-[11px] text-gray-500 mt-1 block">Default: <strong>50%</strong> (or customize to e.g. 60%).</span>
+                @error('satisfactory_threshold_pct') <p class="mt-1 text-xs text-red-500">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="text-xs text-indigo-900 dark:text-indigo-200 bg-white/80 dark:bg-black/30 p-3.5 rounded-lg border border-indigo-200 dark:border-indigo-900/40 space-y-1.5">
+                <div class="font-bold text-indigo-950 dark:text-indigo-100">💡 Performance Point Rule:</div>
+                <ul class="list-disc list-inside space-y-1 text-gray-700 dark:text-gray-300">
+                    <li><strong>&ge; Threshold %:</strong> Report earns <span class="font-bold text-emerald-600 dark:text-emerald-400">100% of daily points</span> (Satisfied).</li>
+                    <li><strong>&lt; Threshold %:</strong> Report earns <span class="font-bold text-amber-600 dark:text-amber-400">50% of daily points</span> (Unsatisfied).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     {{-- Active Status --}}
     <div class="flex items-center gap-2">
         <input type="checkbox" name="is_active" id="is_active" value="1"

@@ -15,6 +15,9 @@ class FlatInspectionReportItem extends Model
         'report_type_remark_id',
         'image_path',
         'remarks',
+        'admin_rating',
+        'admin_remarks',
+        'admin_photo',
     ];
 
     protected $casts = [
@@ -39,6 +42,11 @@ class FlatInspectionReportItem extends Model
     public function getImageUrlAttribute(): ?string
     {
         return $this->image_path ? Storage::url($this->image_path) : null;
+    }
+
+    public function getAdminPhotoUrlAttribute(): ?string
+    {
+        return $this->admin_photo ? Storage::url($this->admin_photo) : null;
     }
 
     public function getStatusLabelAttribute(): string

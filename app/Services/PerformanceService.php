@@ -229,15 +229,18 @@ class PerformanceService
             ->get()
             ->keyBy(fn($a) => Carbon::parse($a->date)->day);
 
-        // Preload inspection reports by this user for the month
-        $reports = InspectionReport::where('reported_by', $user->id)
+        // Preload all ReportTypes for scoring configuration
+        $allReportTypes = \App\Models\ReportType::all()->keyBy('id');
+
+        // Preload inspection reports with items by this user for the month
+        $reports = InspectionReport::with('items')->where('reported_by', $user->id)
             ->whereYear('report_date', $year)
             ->whereMonth('report_date', $month)
             ->get()
             ->groupBy('report_type_id');
 
-        // Flat inspections by this user
-        $flatReports = FlatInspectionReport::where(function ($q) use ($user) {
+        // Flat inspections with items by this user
+        $flatReports = FlatInspectionReport::with('items')->where(function ($q) use ($user) {
                 $q->where('inspected_by', $user->id)
                   ->orWhere('inspection_person_id', $user->id);
             })
@@ -279,7 +282,7 @@ class PerformanceService
                 $isPastOrToday = $dayMeta['is_past_or_today'];
 
                 $entry  = $templateEntries->get($d);
-                $status = 'undone'; // 'done', 'undone', 'unsatisfied', 'na'
+                $status = 'undone'; // 'done', 'partial', 'undone', 'unsatisfied', 'na'
                 $earned = 0.0;
                 $rating = null;
                 $note   = null;
@@ -295,7 +298,7 @@ class PerformanceService
                     $note = $entry->note;
                 }
 
-                // Check dynamic reports automatic sync & admin rating
+                // Check dynamic reports automatic sync & per-row admin rating evaluation
                 if ($template->type === 'dynamic_report') {
                     $rtId = $template->report_type_id;
                     if (! $rtId && $template->reportType) {
@@ -310,29 +313,99 @@ class PerformanceService
                         }
                     }
 
+                    $currentRt     = $rtId ? $allReportTypes->get($rtId) : null;
+                    $thresholdPct  = $currentRt ? (float) ($currentRt->satisfactory_threshold_pct ?? 50.0) : 50.0;
+                    $belowScorePct = $currentRt ? (float) ($currentRt->below_threshold_score_pct ?? 50.0) : 50.0;
+
                     if ($rtId == 1 || stripos($template->name, 'flat') !== false) { // Flat Inspection
                         $dayFlat = $flatReports->filter(fn($r) => Carbon::parse($r->inspected_at)->day === $d)->first();
                         if ($dayFlat) {
-                            $rating = $dayFlat->admin_rating;
-                            if ($rating === 'bad') {
-                                $status = 'unsatisfied';
-                                $earned = 0.0;
+                            $items = $dayFlat->items;
+                            $totalItems = $items->count();
+
+                            if ($totalItems > 0) {
+                                $satCount = 0;
+
+                                foreach ($items as $itm) {
+                                    if ($itm->admin_rating === 'good') {
+                                        $satCount++;
+                                    } elseif ($itm->admin_rating === 'bad') {
+                                        // Unsat
+                                    } else {
+                                        // Inspector pass/fail status
+                                        $isPass = ($itm->status === true || in_array($itm->status, ['yes', 'pass', 1, '1'], true));
+                                        if ($isPass) {
+                                            $satCount++;
+                                        }
+                                    }
+                                }
+
+                                $actualSatPct = ($satCount / $totalItems) * 100.0;
+
+                                if ($actualSatPct >= $thresholdPct) {
+                                    $earned = $unitAmount;
+                                    $status = 'done';
+                                    $rating = "{$satCount}/{$totalItems} Sat (" . round($actualSatPct) . "%) - Satisfied";
+                                } else {
+                                    $earned = round($unitAmount * ($belowScorePct / 100.0), 2);
+                                    $status = ($belowScorePct > 0) ? 'partial' : 'unsatisfied';
+                                    $rating = "{$satCount}/{$totalItems} Sat (" . round($actualSatPct) . "%) - Unsatisfied";
+                                }
                             } else {
-                                $status = 'done';
-                                $earned = $unitAmount;
+                                if ($dayFlat->admin_rating === 'bad') {
+                                    $earned = round($unitAmount * ($belowScorePct / 100.0), 2);
+                                    $status = ($belowScorePct > 0) ? 'partial' : 'unsatisfied';
+                                } else {
+                                    $status = 'done';
+                                    $earned = $unitAmount;
+                                }
+                                $rating = $dayFlat->admin_rating;
                             }
                         }
                     } elseif ($rtId) {
                         $typeReports = $reports->get($rtId, collect());
                         $dayReport = $typeReports->filter(fn($r) => Carbon::parse($r->report_date)->day === $d)->first();
                         if ($dayReport) {
-                            $rating = $dayReport->admin_rating;
-                            if ($rating === 'bad') {
-                                $status = 'unsatisfied';
-                                $earned = 0.0;
+                            $items = $dayReport->items;
+                            $totalItems = $items->count();
+
+                            if ($totalItems > 0) {
+                                $satCount = 0;
+
+                                foreach ($items as $itm) {
+                                    if ($itm->admin_rating === 'good') {
+                                        $satCount++;
+                                    } elseif ($itm->admin_rating === 'bad') {
+                                        // Unsat
+                                    } else {
+                                        // Inspector pass/fail status
+                                        $isPass = in_array($itm->status, ['yes', 'pass', 1, '1', true], true);
+                                        if ($isPass) {
+                                            $satCount++;
+                                        }
+                                    }
+                                }
+
+                                $actualSatPct = ($satCount / $totalItems) * 100.0;
+
+                                if ($actualSatPct >= $thresholdPct) {
+                                    $earned = $unitAmount;
+                                    $status = 'done';
+                                    $rating = "{$satCount}/{$totalItems} Sat (" . round($actualSatPct) . "%) - Satisfied";
+                                } else {
+                                    $earned = round($unitAmount * ($belowScorePct / 100.0), 2);
+                                    $status = ($belowScorePct > 0) ? 'partial' : 'unsatisfied';
+                                    $rating = "{$satCount}/{$totalItems} Sat (" . round($actualSatPct) . "%) - Unsatisfied";
+                                }
                             } else {
-                                $status = 'done';
-                                $earned = $unitAmount;
+                                if ($dayReport->admin_rating === 'bad') {
+                                    $earned = round($unitAmount * ($belowScorePct / 100.0), 2);
+                                    $status = ($belowScorePct > 0) ? 'partial' : 'unsatisfied';
+                                } else {
+                                    $status = 'done';
+                                    $earned = $unitAmount;
+                                }
+                                $rating = $dayReport->admin_rating;
                             }
                         }
                     }

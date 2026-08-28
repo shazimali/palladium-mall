@@ -115,6 +115,7 @@
                     <th style="width:70px">Status</th>
                     <th>Remarks</th>
                     <th style="width:60px">Image</th>
+                    <th style="width:130px">Admin Evaluation</th>
                 </tr>
             </thead>
             <tbody>
@@ -146,39 +147,22 @@
                                 <span style="color:#ccc">—</span>
                             @endif
                         </td>
+                        <td style="background:#fffbeb; font-size:11px;">
+                            @if($item->admin_rating === 'good')
+                                <strong style="color:#15803d;">✨ Satisfactory</strong>
+                            @elseif($item->admin_rating === 'bad')
+                                <strong style="color:#b91c1c;">⚠️ Unsatisfactory</strong>
+                            @else
+                                <span style="color:#9ca3af;">—</span>
+                            @endif
+                            @if($item->admin_remarks)
+                                <div style="font-size:10px; color:#374151; margin-top:2px;">{{ $item->admin_remarks }}</div>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
-
-        {{-- Super Admin Remarks & Feedback Box --}}
-        @if($report->admin_rating || $report->admin_remarks || $report->admin_photo)
-            <div style="margin-bottom:20px; padding:12px; background:#f5f7ff; border:1.5px solid #6366f1; border-radius:6px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <strong style="font-size:11px; text-transform:uppercase; color:#4338ca;">
-                        👑 Admin Evaluation & Remarks:
-                    </strong>
-                    @if($report->admin_rating === 'good')
-                        <span style="background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:4px; font-weight:800; font-size:10px;">
-                            ✨ SATISFACTORY
-                        </span>
-                    @elseif($report->admin_rating === 'bad')
-                        <span style="background:#fee2e2; color:#b91c1c; padding:3px 8px; border-radius:4px; font-weight:800; font-size:10px;">
-                            ⚠️ UNSATISFACTORY
-                        </span>
-                    @endif
-                </div>
-                @if($report->admin_remarks)
-                    <p style="font-size:11px; color:#1e1b4b; line-height:1.5; margin-bottom:6px;">{{ $report->admin_remarks }}</p>
-                @endif
-                @if($report->admin_photo)
-                    <div style="margin-top:6px;">
-                        <span style="font-size:9px; font-weight:bold; color:#6366f1; text-transform:uppercase; display:block; margin-bottom:4px;">Attached Admin Photo:</span>
-                        <img src="{{ $report->admin_photo_url }}" alt="Admin Photo" style="max-height:100px; max-width:180px; object-fit:cover; border-radius:4px; border:1px solid #c7d2fe;" />
-                    </div>
-                @endif
-            </div>
-        @endif
 
         {{-- Signatures --}}
         <div class="signatures">
