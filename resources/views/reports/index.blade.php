@@ -354,9 +354,15 @@
                     $wRentPaid = $summary['total_rent_paid'] ?? 0;
                     $wRentUnpaid = max(0, $wRentDue - $wRentPaid);
 
-                    $wServDue = ($summary['total_serv'] ?? 0) + ($summary['total_extra'] ?? 0);
-                    $wServPaid = ($summary['total_serv_paid'] ?? 0) + ($summary['total_extra_paid'] ?? 0);
-                    $wServUnpaid = max(0, $wServDue - $wServPaid);
+                    // Services = maintenance only
+                    $wServDue = $summary['total_serv'] ?? 0;
+                    $wServPaid = $summary['total_serv_paid'] ?? 0;
+                    $wServUnpaid = $summary['total_serv_unpaid'] ?? max(0, $wServDue - $wServPaid);
+
+                    // Extra payments (deposit_deduction, extra_payment, etc.)
+                    $wExtraDue = $summary['total_extra'] ?? 0;
+                    $wExtraPaid = $summary['total_extra_paid'] ?? 0;
+                    $wExtraUnpaid = $summary['total_extra_unpaid'] ?? max(0, $wExtraDue - $wExtraPaid);
 
                     $wSecDue = $summary['total_security_deposit'] ?? 0;
                     $wSecPaid = $summary['total_sec_paid'] ?? 0;
@@ -382,28 +388,34 @@
 
                 $historyWidgets = [
                     'grand_total' => [
-                        'label' => 'Grand Total Summary',
+                        'label'    => 'Grand Total Summary',
                         'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
-                        'icon' => '📊',
-                        'due' => $wGrandDue, 'paid' => $wGrandPaid, 'unpaid' => $wGrandUnpaid,
+                        'icon'     => '📊',
+                        'due'      => $wGrandDue, 'paid' => $wGrandPaid, 'unpaid' => $wGrandUnpaid,
                     ],
                     'rent' => [
-                        'label' => 'Rent Summary',
+                        'label'    => 'Rent Summary',
                         'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
-                        'icon' => '🔑',
-                        'due' => $wRentDue, 'paid' => $wRentPaid, 'unpaid' => $wRentUnpaid,
+                        'icon'     => '🔑',
+                        'due'      => $wRentDue, 'paid' => $wRentPaid, 'unpaid' => $wRentUnpaid,
                     ],
                     'services' => [
-                        'label' => 'Services Summary',
+                        'label'    => 'Services Summary',
                         'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
-                        'icon' => '🛠️',
-                        'due' => $wServDue, 'paid' => $wServPaid, 'unpaid' => $wServUnpaid,
+                        'icon'     => '🛠️',
+                        'due'      => $wServDue, 'paid' => $wServPaid, 'unpaid' => $wServUnpaid,
+                    ],
+                    'extra_payments' => [
+                        'label'    => 'Extra Payments',
+                        'gradient' => 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+                        'icon'     => '➕',
+                        'due'      => $wExtraDue, 'paid' => $wExtraPaid, 'unpaid' => $wExtraUnpaid,
                     ],
                     'security_deposit' => [
-                        'label' => 'Security Deposit',
+                        'label'    => 'Security Deposit',
                         'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
-                        'icon' => '🛡️',
-                        'due' => $wSecDue, 'paid' => $wSecPaid, 'unpaid' => $wSecUnpaid,
+                        'icon'     => '🛡️',
+                        'due'      => $wSecDue, 'paid' => $wSecPaid, 'unpaid' => $wSecUnpaid,
                     ],
                 ];
             @endphp
@@ -438,7 +450,7 @@
                 </div>
             @else
                 <!-- Dynamic Billing History Style Widgets -->
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
                     @foreach($historyWidgets as $wKey => $cfg)
                         <div class="group relative overflow-hidden rounded-2xl p-4 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                             style="background: {{ $cfg['gradient'] }}; min-height: 140px;">

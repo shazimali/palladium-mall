@@ -65,50 +65,63 @@ class DashboardController extends Controller
         $matrixEntries = $matrixService->buildMatrixEntries($matrixReq);
         $matrixSummary = $matrixService->buildMatrixSummary($matrixEntries);
 
-        $rentDue = (float) $matrixSummary['total_rent'];
+        $rentDue  = (float) $matrixSummary['total_rent'];
         $rentPaid = (float) $matrixSummary['total_rent_paid'];
 
-        $servicesDue = (float) ($matrixSummary['total_serv'] + $matrixSummary['total_extra']);
-        $servicesPaid = (float) ($matrixSummary['total_serv_paid'] + $matrixSummary['total_extra_paid']);
+        // Services = maintenance only (excludes extra payment types)
+        $servicesDue  = (float) $matrixSummary['total_serv'];
+        $servicesPaid = (float) $matrixSummary['total_serv_paid'];
 
-        $depositDue = (float) $matrixSummary['total_security_deposit'];
+        // Extra Payments (deposit_deduction, extra_payment, etc.)
+        $extraDue  = (float) $matrixSummary['total_extra'];
+        $extraPaid = (float) $matrixSummary['total_extra_paid'];
+
+        $depositDue  = (float) $matrixSummary['total_security_deposit'];
         $depositPaid = (float) $matrixSummary['total_sec_paid'];
 
-        $grandDue = (float) $matrixSummary['total_amount'];
+        $grandDue  = (float) $matrixSummary['total_amount'];
         $grandPaid = (float) $matrixSummary['total_received'];
 
         $financialWidgets = [
             'grand_total' => [
-                'label' => 'Grand Total Summary',
-                'due' => $grandDue,
-                'paid' => $grandPaid,
-                'unpaid' => $grandDue - $grandPaid,
+                'label'    => 'Grand Total Summary',
+                'due'      => $grandDue,
+                'paid'     => $grandPaid,
+                'unpaid'   => $grandDue - $grandPaid,
                 'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
-                'icon' => '📊',
+                'icon'     => '📊',
             ],
             'rent' => [
-                'label' => 'Rent Summary',
-                'due' => $rentDue,
-                'paid' => $rentPaid,
-                'unpaid' => $rentDue - $rentPaid,
+                'label'    => 'Rent Summary',
+                'due'      => $rentDue,
+                'paid'     => $rentPaid,
+                'unpaid'   => $rentDue - $rentPaid,
                 'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
-                'icon' => '🔑',
+                'icon'     => '🔑',
             ],
             'services' => [
-                'label' => 'Services Summary',
-                'due' => $servicesDue,
-                'paid' => $servicesPaid,
-                'unpaid' => $servicesDue - $servicesPaid,
+                'label'    => 'Services Summary',
+                'due'      => $servicesDue,
+                'paid'     => $servicesPaid,
+                'unpaid'   => max(0.0, $servicesDue - $servicesPaid),
                 'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
-                'icon' => '🛠️',
+                'icon'     => '🛠️',
+            ],
+            'extra_payments' => [
+                'label'    => 'Extra Payments',
+                'due'      => $extraDue,
+                'paid'     => $extraPaid,
+                'unpaid'   => max(0.0, $extraDue - $extraPaid),
+                'gradient' => 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+                'icon'     => '➕',
             ],
             'security_deposit' => [
-                'label' => 'Security Deposit',
-                'due' => $depositDue,
-                'paid' => $depositPaid,
-                'unpaid' => $depositDue - $depositPaid,
+                'label'    => 'Security Deposit',
+                'due'      => $depositDue,
+                'paid'     => $depositPaid,
+                'unpaid'   => $depositDue - $depositPaid,
                 'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
-                'icon' => '🛡️',
+                'icon'     => '🛡️',
             ],
         ];
 

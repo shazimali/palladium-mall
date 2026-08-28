@@ -85,15 +85,20 @@ class PaymentController extends Controller
             'overdue_count' => (clone $summaryQuery)->whereIn('status', ['unpaid', 'partial'])->where('due_date', '<', now())->count(),
         ];
 
-        $paymentTypes = ['rent', 'maintenance', 'fine', 'electricity', 'water', 'gas', 'other', 'security_deposit'];
+        $paymentTypes = ['rent', 'maintenance', 'fine', 'electricity', 'water', 'gas', 'other', 'security_deposit', 'extra_payment', 'deposit_deduction'];
         foreach ($paymentTypes as $t) {
             $typeQuery = (clone $summaryQuery)->where('type', $t);
-            $due = (float) (clone $typeQuery)->sum('amount');
+            $due  = (float) (clone $typeQuery)->sum('amount');
             $paid = (float) (clone $typeQuery)->sum('amount_paid');
-            $summary[$t . '_due'] = $due;
-            $summary[$t . '_paid'] = $paid;
+            $summary[$t . '_due']    = $due;
+            $summary[$t . '_paid']   = $paid;
             $summary[$t . '_unpaid'] = $due - $paid;
         }
+
+        // Aggregate extra bucket (all types not in rent/maintenance/deposit core list)
+        $summary['extra_due']    = ($summary['extra_payment_due'] ?? 0) + ($summary['deposit_deduction_due'] ?? 0);
+        $summary['extra_paid']   = ($summary['extra_payment_paid'] ?? 0) + ($summary['deposit_deduction_paid'] ?? 0);
+        $summary['extra_unpaid'] = max(0, $summary['extra_due'] - $summary['extra_paid']);
 
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
         $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
@@ -166,21 +171,26 @@ class PaymentController extends Controller
         $grouped = $grouped->sortKeysDesc();
 
         foreach ($grouped as $monthStr => $monthPayments) {
-            $rentPayments = $monthPayments->where('type', 'rent');
+            $rentPayments    = $monthPayments->where('type', 'rent');
             $depositPayments = $monthPayments->where('type', 'security_deposit');
-            $servicePayments = $monthPayments->whereNotIn('type', ['rent', 'security_deposit']);
+            $servicePayments = $monthPayments->whereIn('type', ['maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other']);
+            $extraPayments   = $monthPayments->whereNotIn('type', ['rent', 'security_deposit', 'maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other']);
 
             // Rent sums
-            $rentDue = (float) $rentPayments->sum('amount');
+            $rentDue  = (float) $rentPayments->sum('amount');
             $rentPaid = (float) $rentPayments->sum('amount_paid');
 
             // Security Deposit sums
-            $depositDue = (float) $depositPayments->sum('amount');
+            $depositDue  = (float) $depositPayments->sum('amount');
             $depositPaid = (float) $depositPayments->sum('amount_paid');
 
-            // Services sums (maintenance, utilities, fine, other combined)
-            $servicesDue = (float) $servicePayments->sum('amount');
+            // Services sums (maintenance only)
+            $servicesDue  = (float) $servicePayments->sum('amount');
             $servicesPaid = (float) $servicePayments->sum('amount_paid');
+
+            // Extra Payments sums (deposit_deduction, extra_payment, etc.)
+            $extraDue  = (float) $extraPayments->sum('amount');
+            $extraPaid = (float) $extraPayments->sum('amount_paid');
 
             // Grand Total sums
             $grandDue = (float) $monthPayments->sum('amount');
@@ -191,29 +201,35 @@ class PaymentController extends Controller
 
             $monthlySummaries[$monthStr] = [
                 'display_month' => $displayMonth,
-                'widgets' => [
+                'widgets'       => [
                     'grand_total' => [
-                        'label' => 'Grand Total Summary',
-                        'due' => $grandDue,
-                        'paid' => $grandPaid,
+                        'label'  => 'Grand Total Summary',
+                        'due'    => $grandDue,
+                        'paid'   => $grandPaid,
                         'unpaid' => $grandDue - $grandPaid,
                     ],
                     'rent' => [
-                        'label' => 'Rent Summary',
-                        'due' => $rentDue,
-                        'paid' => $rentPaid,
+                        'label'  => 'Rent Summary',
+                        'due'    => $rentDue,
+                        'paid'   => $rentPaid,
                         'unpaid' => $rentDue - $rentPaid,
                     ],
                     'services' => [
-                        'label' => 'Services Summary',
-                        'due' => $servicesDue,
-                        'paid' => $servicesPaid,
-                        'unpaid' => $servicesDue - $servicesPaid,
+                        'label'  => 'Services Summary',
+                        'due'    => $servicesDue,
+                        'paid'   => $servicesPaid,
+                        'unpaid' => max(0, $servicesDue - $servicesPaid),
+                    ],
+                    'extra_payments' => [
+                        'label'  => 'Extra Payments',
+                        'due'    => $extraDue,
+                        'paid'   => $extraPaid,
+                        'unpaid' => max(0, $extraDue - $extraPaid),
                     ],
                     'security_deposit' => [
-                        'label' => 'Security Deposit',
-                        'due' => $depositDue,
-                        'paid' => $depositPaid,
+                        'label'  => 'Security Deposit',
+                        'due'    => $depositDue,
+                        'paid'   => $depositPaid,
                         'unpaid' => $depositDue - $depositPaid,
                     ],
                 ]

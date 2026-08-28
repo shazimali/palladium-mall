@@ -4,7 +4,7 @@
             <span>📅</span> {{ $summary['display_month'] }}
         </h3>
 
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             @php
                 $historyWidgets = [
                     'grand_total' => [
@@ -21,6 +21,11 @@
                         'label' => 'Services Summary',
                         'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
                         'icon' => '🛠️',
+                    ],
+                    'extra_payments' => [
+                        'label' => 'Extra Payments',
+                        'gradient' => 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+                        'icon' => '➕',
                     ],
                     'security_deposit' => [
                         'label' => 'Security Deposit',

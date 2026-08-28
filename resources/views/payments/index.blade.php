@@ -51,53 +51,63 @@
         @php
             $monthLabel = request('month') ? Carbon\Carbon::parse(request('month'))->format('F Y') : 'This Month';
         @endphp
-        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             @php
                 $historyWidgets = [
                     'grand_total' => [
-                        'label' => 'Grand Total Summary',
+                        'label'    => 'Grand Total Summary',
                         'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
-                        'icon' => '📊',
+                        'icon'     => '📊',
                     ],
                     'rent' => [
-                        'label' => 'Rent Summary',
+                        'label'    => 'Rent Summary',
                         'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
-                        'icon' => '🔑',
+                        'icon'     => '🔑',
                     ],
                     'services' => [
-                        'label' => 'Services Summary',
+                        'label'    => 'Services Summary',
                         'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
-                        'icon' => '🛠️',
+                        'icon'     => '🛠️',
+                    ],
+                    'extra_payments' => [
+                        'label'    => 'Extra Payments',
+                        'gradient' => 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+                        'icon'     => '➕',
                     ],
                     'security_deposit' => [
-                        'label' => 'Security Deposit',
+                        'label'    => 'Security Deposit',
                         'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
-                        'icon' => '🛡️',
+                        'icon'     => '🛡️',
                     ],
                 ];
 
                 $widgetData = [
                     'grand_total' => [
-                        'due' => $summary['total_due'] ?? 0,
-                        'paid' => $summary['total_paid'] ?? 0,
+                        'due'    => $summary['total_due'] ?? 0,
+                        'paid'   => $summary['total_paid'] ?? 0,
                         'unpaid' => ($summary['total_due'] ?? 0) - ($summary['total_paid'] ?? 0),
                     ],
                     'rent' => [
-                        'due' => $summary['rent_due'] ?? 0,
-                        'paid' => $summary['rent_paid'] ?? 0,
+                        'due'    => $summary['rent_due'] ?? 0,
+                        'paid'   => $summary['rent_paid'] ?? 0,
                         'unpaid' => $summary['rent_unpaid'] ?? 0,
                     ],
                     'services' => [
-                        'due' => ($summary['maintenance_due'] ?? 0) + ($summary['fine_due'] ?? 0) + ($summary['electricity_due'] ?? 0) + ($summary['water_due'] ?? 0) + ($summary['gas_due'] ?? 0) + ($summary['other_due'] ?? 0),
+                        'due'  => ($summary['maintenance_due'] ?? 0) + ($summary['fine_due'] ?? 0) + ($summary['electricity_due'] ?? 0) + ($summary['water_due'] ?? 0) + ($summary['gas_due'] ?? 0) + ($summary['other_due'] ?? 0),
                         'paid' => ($summary['maintenance_paid'] ?? 0) + ($summary['fine_paid'] ?? 0) + ($summary['electricity_paid'] ?? 0) + ($summary['water_paid'] ?? 0) + ($summary['gas_paid'] ?? 0) + ($summary['other_paid'] ?? 0),
                     ],
+                    'extra_payments' => [
+                        'due'    => $summary['extra_due'] ?? 0,
+                        'paid'   => $summary['extra_paid'] ?? 0,
+                        'unpaid' => $summary['extra_unpaid'] ?? 0,
+                    ],
                     'security_deposit' => [
-                        'due' => $summary['security_deposit_due'] ?? 0,
-                        'paid' => $summary['security_deposit_paid'] ?? 0,
+                        'due'    => $summary['security_deposit_due'] ?? 0,
+                        'paid'   => $summary['security_deposit_paid'] ?? 0,
                         'unpaid' => $summary['security_deposit_unpaid'] ?? 0,
                     ],
                 ];
-                $widgetData['services']['unpaid'] = $widgetData['services']['due'] - $widgetData['services']['paid'];
+                $widgetData['services']['unpaid'] = max(0, $widgetData['services']['due'] - $widgetData['services']['paid']);
             @endphp
             @foreach($historyWidgets as $key => $cfg)
                 @php

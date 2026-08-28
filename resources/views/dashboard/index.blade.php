@@ -106,7 +106,7 @@
                 <span>📅</span> Billing & Recovery Summary — <span class="text-brand-500">{{ $currentMonthLabel }}</span>
             </h3>
 
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
                 @foreach($financialWidgets as $wKey => $data)
                     <div class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: {{ $data['gradient'] }}; min-height: 150px;">
@@ -120,13 +120,13 @@
                         <div class="relative mt-2 space-y-1.5">
                             <div class="flex justify-between items-baseline">
                                 <span class="text-xs font-bold uppercase text-white/90">Expected Total</span>
-                                <span class="font-extrabold text-white text-xl text-1xl">
+                                <span class="font-bold text-white text-sm">
                                     Rs. {{ number_format($data['due']) }}
                                 </span>
                             </div>
                             <div class="flex justify-between items-baseline">
                                 <span class="text-xs font-bold uppercase text-white/90">Received</span>
-                                <span class="font-extrabold text-white text-xl text-1xl">
+                                <span class="font-bold text-white text-sm">
                                     Rs. {{ number_format($data['paid']) }}
                                 </span>
                             </div>
