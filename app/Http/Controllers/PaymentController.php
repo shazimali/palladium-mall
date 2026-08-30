@@ -95,9 +95,9 @@ class PaymentController extends Controller
             $summary[$t . '_unpaid'] = $due - $paid;
         }
 
-        // Aggregate extra bucket (all types not in rent/maintenance/deposit core list)
-        $summary['extra_due']    = ($summary['extra_payment_due'] ?? 0) + ($summary['deposit_deduction_due'] ?? 0);
-        $summary['extra_paid']   = ($summary['extra_payment_paid'] ?? 0) + ($summary['deposit_deduction_paid'] ?? 0);
+        // Aggregate extra bucket (strictly extra_payment)
+        $summary['extra_due']    = (float) ($summary['extra_payment_due'] ?? 0);
+        $summary['extra_paid']   = (float) ($summary['extra_payment_paid'] ?? 0);
         $summary['extra_unpaid'] = max(0, $summary['extra_due'] - $summary['extra_paid']);
 
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
@@ -174,7 +174,7 @@ class PaymentController extends Controller
             $rentPayments    = $monthPayments->where('type', 'rent');
             $depositPayments = $monthPayments->where('type', 'security_deposit');
             $servicePayments = $monthPayments->whereIn('type', ['maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other']);
-            $extraPayments   = $monthPayments->whereNotIn('type', ['rent', 'security_deposit', 'maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other']);
+            $extraPayments   = $monthPayments->whereNotIn('type', ['rent', 'security_deposit', 'maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other', 'deposit_deduction']);
 
             // Rent sums
             $rentDue  = (float) $rentPayments->sum('amount');

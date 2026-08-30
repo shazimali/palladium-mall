@@ -262,8 +262,8 @@ class MatrixService
                 $sec_due = 0.0;
             }
 
-            // Extra
-            $extraPayments = $unitPayments->whereNotIn('type', ['rent', 'maintenance', 'security_deposit']);
+            // Extra (strictly extra_payment and other fees, excluding deposit_deduction)
+            $extraPayments = $unitPayments->whereNotIn('type', ['rent', 'maintenance', 'security_deposit', 'deposit_deduction']);
             $extra_due = (float) $extraPayments->sum('amount');
 
             $total_due = $serv_due + $extra_due + $sec_due + $rent_due;
@@ -274,7 +274,7 @@ class MatrixService
                 $rent_paid = (float) $unitAllocationsForUnit->where('type', 'rent')->sum('amount_allocated');
                 $serv_paid = (float) $unitAllocationsForUnit->where('type', 'maintenance')->sum('amount_allocated');
                 $sec_paid = (float) $unitAllocationsForUnit->where('type', 'security_deposit')->sum('amount_allocated');
-                $extra_paid = (float) $unitAllocationsForUnit->whereNotIn('type', ['rent', 'maintenance', 'security_deposit'])->sum('amount_allocated');
+                $extra_paid = (float) $unitAllocationsForUnit->whereNotIn('type', ['rent', 'maintenance', 'security_deposit', 'deposit_deduction'])->sum('amount_allocated');
                 $total_received = (float) $unitAllocationsForUnit->sum('amount_allocated');
 
                 $accountsBreakdown = [];
