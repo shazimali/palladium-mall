@@ -149,10 +149,9 @@ class MatrixService
                             ->whereNotNull('other_tenant_id');
                     });
             })
-            ->selectRaw('unit_id, SUM(amount - amount_paid) as prev_unpaid')
-            ->groupBy('unit_id')
-            ->pluck('prev_unpaid', 'unit_id')
-            ->map(fn($val) => (float) $val);
+            ->selectRaw('unit_id, type, SUM(amount - amount_paid) as prev_unpaid')
+            ->groupBy('unit_id', 'type')
+            ->get();
 
         $existingSecurityDepositAgreementIds = Payment::where('type', 'security_deposit')
             ->pluck('agreement_id')
@@ -203,7 +202,12 @@ class MatrixService
                 $unitPayments = collect();
             }
 
-            $prevUnpaid = $previousUnpaidBalances->get($unit->id) ?? 0.0;
+            $unitPrevUnpaids = $previousUnpaidBalances->where('unit_id', $unit->id);
+            $prevRent = (float) $unitPrevUnpaids->where('type', 'rent')->sum('prev_unpaid');
+            $prevServ = (float) $unitPrevUnpaids->where('type', 'maintenance')->sum('prev_unpaid');
+            $prevSec = (float) $unitPrevUnpaids->where('type', 'security_deposit')->sum('prev_unpaid');
+            $prevExtra = (float) $unitPrevUnpaids->whereNotIn('type', ['rent', 'maintenance', 'security_deposit', 'deposit_deduction'])->sum('prev_unpaid');
+            $prevUnpaid = $prevRent + $prevServ + $prevSec + $prevExtra;
 
             if ($isOtherOccupiedInMonth) {
                 $status = 'OCCUPIED';
@@ -348,6 +352,10 @@ class MatrixService
                 'total_amount' => $total_due,
                 'received' => $total_received,
                 'payment_accounts' => $accountsBreakdown,
+                'prev_rent' => $prevRent,
+                'prev_serv' => $prevServ,
+                'prev_sec' => $prevSec,
+                'prev_extra' => $prevExtra,
                 'prev_unpaid' => $prevUnpaid,
                 'pending' => $pending,
                 'is_self' => (bool) $unit->is_self,
@@ -391,36 +399,78 @@ class MatrixService
             });
         }
 
-        $totalExtra     = $matrixEntries->sum('extra');
-        $totalExtraPaid = $matrixEntries->sum('extra_paid');
-        $totalServ      = $matrixEntries->sum('serv');
-        $totalServPaid  = $matrixEntries->sum('serv_paid');
+        $totalRent        = (float) $matrixEntries->sum('rent');
+        $totalRentPaid    = (float) $matrixEntries->sum('rent_paid');
+        $totalRentPrev    = (float) $matrixEntries->sum('prev_rent');
+        $totalRentDue     = $totalRent + $totalRentPrev;
+        $totalRentUnpaid  = max(0.0, $totalRentDue - $totalRentPaid);
+
+        $totalServ        = (float) $matrixEntries->sum('serv');
+        $totalServPaid    = (float) $matrixEntries->sum('serv_paid');
+        $totalServPrev    = (float) $matrixEntries->sum('prev_serv');
+        $totalServDue     = $totalServ + $totalServPrev;
+        $totalServUnpaid  = max(0.0, $totalServDue - $totalServPaid);
+
+        $totalExtra       = (float) $matrixEntries->sum('extra');
+        $totalExtraPaid   = (float) $matrixEntries->sum('extra_paid');
+        $totalExtraPrev   = (float) $matrixEntries->sum('prev_extra');
+        $totalExtraDue    = $totalExtra + $totalExtraPrev;
+        $totalExtraUnpaid = max(0.0, $totalExtraDue - $totalExtraPaid);
+
+        $totalSec         = (float) $matrixEntries->sum('security_deposit');
+        $totalSecPaid     = (float) $matrixEntries->sum('sec_paid');
+        $totalSecPrev     = (float) $matrixEntries->sum('prev_sec');
+        $totalSecDue      = $totalSec + $totalSecPrev;
+        $totalSecUnpaid   = max(0.0, $totalSecDue - $totalSecPaid);
+
+        $totalAmount      = (float) $matrixEntries->sum('total_amount');
+        $totalReceived    = (float) $matrixEntries->sum('received');
+        $totalPrevUnpaid  = (float) $matrixEntries->sum('prev_unpaid');
+        $totalAmountDue   = $totalAmount + $totalPrevUnpaid;
+        $totalPending     = (float) $matrixEntries->sum('pending');
 
         return [
             // Services (maintenance only)
-            'total_serv'             => $totalServ,
-            'total_serv_paid'        => $totalServPaid,
-            'total_serv_unpaid'      => max(0.0, $totalServ - $totalServPaid),
+            'total_serv'              => $totalServDue,
+            'total_serv_curr'         => $totalServ,
+            'total_serv_paid'         => $totalServPaid,
+            'total_serv_unpaid'       => $totalServUnpaid,
+            'total_serv_prev_unpaid'  => $totalServPrev,
 
             // Extra payments (all non-rent/maintenance/security_deposit)
-            'total_extra'            => $totalExtra,
-            'total_extra_paid'       => $totalExtraPaid,
-            'total_extra_unpaid'     => max(0.0, $totalExtra - $totalExtraPaid),
+            'total_extra'             => $totalExtraDue,
+            'total_extra_curr'        => $totalExtra,
+            'total_extra_paid'        => $totalExtraPaid,
+            'total_extra_unpaid'      => $totalExtraUnpaid,
+            'total_extra_prev_unpaid' => $totalExtraPrev,
 
-            'total_rent'             => $matrixEntries->sum('rent'),
-            'total_rent_paid'        => $matrixEntries->sum('rent_paid'),
-            'total_security_deposit' => $matrixEntries->sum('security_deposit'),
-            'total_sec_paid'         => $matrixEntries->sum('sec_paid'),
-            'total_amount'           => $matrixEntries->sum('total_amount'),
-            'total_received'         => $matrixEntries->sum('received'),
-            'accounts_total'         => $accountsTotal,
-            'total_prev_unpaid'      => $matrixEntries->sum('prev_unpaid'),
-            'total_pending'          => $matrixEntries->sum('pending'),
-            'count'                  => $matrixEntries->count(),
-            'rent_count'             => $matrixEntries->where('rent_paid', '>', 0)->count(),
-            'serv_count'             => $matrixEntries->where('serv_paid', '>', 0)->count(),
-            'sec_count'              => $matrixEntries->where('sec_paid', '>', 0)->count(),
-            'extra_count'            => $matrixEntries->where('extra_paid', '>', 0)->count(),
+            // Rent
+            'total_rent'              => $totalRentDue,
+            'total_rent_curr'         => $totalRent,
+            'total_rent_paid'         => $totalRentPaid,
+            'total_rent_unpaid'       => $totalRentUnpaid,
+            'total_rent_prev_unpaid'  => $totalRentPrev,
+
+            // Security Deposit
+            'total_security_deposit'  => $totalSecDue,
+            'total_sec_curr'          => $totalSec,
+            'total_sec_paid'          => $totalSecPaid,
+            'total_sec_unpaid'        => $totalSecUnpaid,
+            'total_sec_prev_unpaid'   => $totalSecPrev,
+
+            // Grand Total
+            'total_amount'            => $totalAmountDue,
+            'total_amount_curr'       => $totalAmount,
+            'total_received'          => $totalReceived,
+            'total_prev_unpaid'       => $totalPrevUnpaid,
+            'total_pending'           => $totalPending,
+
+            'accounts_total'          => $accountsTotal,
+            'count'                   => $matrixEntries->count(),
+            'rent_count'              => $matrixEntries->where('rent_paid', '>', 0)->count(),
+            'serv_count'              => $matrixEntries->where('serv_paid', '>', 0)->count(),
+            'sec_count'               => $matrixEntries->where('sec_paid', '>', 0)->count(),
+            'extra_count'             => $matrixEntries->where('extra_paid', '>', 0)->count(),
         ];
     }
 }
