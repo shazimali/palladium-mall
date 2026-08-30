@@ -63,7 +63,7 @@ class ReportController extends Controller
                 $summary = $this->buildPotentialRevenueSummary($entries);
             } else {
                 $entries = $this->buildEntries($request);
-                $summary = $this->buildSummary($entries);
+                $summary = $this->buildSummary($entries, $request);
             }
         }
 
@@ -109,7 +109,7 @@ class ReportController extends Controller
             $summary = $this->buildPotentialRevenueSummary($entries);
         } else {
             $entries = $this->buildEntries($request);
-            $summary = $this->buildSummary($entries);
+            $summary = $this->buildSummary($entries, $request);
         }
         $label = $this->reportLabel($request);
         $filename = 'report-' . str($label)->slug() . '-' . now()->format('Y-m-d') . '.xlsx';
@@ -142,7 +142,7 @@ class ReportController extends Controller
             $summary = $this->buildPotentialRevenueSummary($entries);
         } else {
             $entries = $this->buildEntries($request);
-            $summary = $this->buildSummary($entries);
+            $summary = $this->buildSummary($entries, $request);
         }
         $label = $this->reportLabel($request);
         $filters = $request->only([
@@ -205,7 +205,7 @@ class ReportController extends Controller
             $summary = $this->buildPotentialRevenueSummary($entries);
         } else {
             $entries = $this->buildEntries($request);
-            $summary = $this->buildSummary($entries);
+            $summary = $this->buildSummary($entries, $request);
         }
         $label = $this->reportLabel($request);
         $filters = $request->only([
@@ -542,7 +542,7 @@ class ReportController extends Controller
     // Summary totals
     // -------------------------------------------------------------------------
 
-    private function buildSummary(Collection $entries): array
+    private function buildSummary(Collection $entries, ?Request $request = null): array
     {
         $rentCollected = $entries->where('type', 'rent')->sum('amount_paid');
         $maintenanceCollected = $entries->where('type', 'maintenance')->sum('amount_paid');
@@ -555,16 +555,107 @@ class ReportController extends Controller
             ->filter(fn($total, $account) => $account !== '—' && $total > 0)
             ->toArray();
 
+        $prevUnpaidRent = 0.0;
+        $prevUnpaidServ = 0.0;
+        $prevUnpaidSec = 0.0;
+        $prevUnpaidExtra = 0.0;
+        $prevUnpaidTotal = 0.0;
+
+        if ($request && $request->filled('date_from')) {
+            $reportType = $request->report_type ?? 'all';
+            $from = $request->date_from;
+            $unitId = $request->unit_id;
+            $tenantId = $request->tenant_id;
+            $landlordId = $request->landlord_id;
+            $paymentMethod = $request->payment_method;
+            $paymentAccountId = $request->payment_account_id;
+            $unitStatus = $request->unit_status;
+            $ownerType = $request->owner_type;
+
+            $prevQuery = Payment::where('month', '<', $from)
+                ->whereRaw('amount > amount_paid')
+                ->when($unitId, fn($q) => $q->where('unit_id', $unitId))
+                ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+                ->when($paymentMethod, fn($q) => $q->where('payment_method', $paymentMethod))
+                ->when($paymentAccountId, fn($q) => $q->where('payment_account_id', $paymentAccountId))
+                ->when($landlordId, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('landlord_id', $landlordId)))
+                ->when($unitStatus, fn($q) => $q->whereHas('unit', fn($qu) => $qu->where('status', $unitStatus)));
+
+            if ($ownerType === 'pm_mall') {
+                $prevQuery->whereHas('unit', fn($qu) => $qu->where('is_self', false));
+            } elseif ($ownerType === 'other') {
+                $prevQuery->whereHas('unit', fn($qu) => $qu->where('is_self', true));
+            }
+
+            if ($reportType === 'occupied' || $reportType === 'occupide') {
+                $prevQuery->whereHas('unit', fn($qu) => $qu->where('is_self', true)->whereHas('otherTenant'));
+            } elseif ($reportType === 'non_occupied' || $reportType === 'non_occupide') {
+                $prevQuery->whereHas('unit', fn($qu) => $qu->where('is_self', true)->whereDoesntHave('otherTenant'));
+            } elseif ($reportType === 'other_owned') {
+                $prevQuery->whereHas('unit', fn($qu) => $qu->where('is_self', true));
+            } else {
+                if (!$ownerType) {
+                    $prevQuery->where(function ($sq) {
+                        $sq->whereHas('unit', function ($qu) {
+                            $qu->where('is_self', true)->whereHas('otherTenant');
+                        })->orWhereHas('unit', function ($qu) {
+                            $qu->where('is_self', false);
+                        });
+                    });
+                }
+            }
+
+            if ($reportType === 'rent') {
+                $prevQuery->where('type', 'rent');
+            } elseif ($reportType === 'fines') {
+                $prevQuery->where('type', 'fine');
+            } elseif ($reportType === 'utilities') {
+                $prevQuery->whereIn('type', ['electricity', 'water', 'gas']);
+            } elseif ($reportType === 'maintinance' || $reportType === 'maintenance') {
+                $prevQuery->where('type', 'maintenance');
+            } elseif ($reportType === 'security_deposit') {
+                $prevQuery->where('type', 'security_deposit');
+            } elseif ($reportType === 'extra_payments') {
+                $prevQuery->whereIn('type', ['extra_payment', 'other', 'fine']);
+            }
+
+            $prevPayments = $prevQuery->get();
+            foreach ($prevPayments as $pp) {
+                $diff = (float)$pp->amount - (float)$pp->amount_paid;
+                if ($diff > 0) {
+                    $prevUnpaidTotal += $diff;
+                    if ($pp->type === 'rent') {
+                        $prevUnpaidRent += $diff;
+                    } elseif (in_array($pp->type, ['maintenance', 'utility', 'electricity', 'water', 'gas'])) {
+                        $prevUnpaidServ += $diff;
+                    } elseif ($pp->type === 'security_deposit') {
+                        $prevUnpaidSec += $diff;
+                    } else {
+                        $prevUnpaidExtra += $diff;
+                    }
+                }
+            }
+        }
+
+        $totalDue = $entries->sum('amount_due') + $prevUnpaidTotal;
+        $totalPaid = $entries->sum('amount_paid');
+        $outstanding = $totalDue - $totalPaid;
+
         return [
-            'total_due' => $entries->sum('amount_due'),
-            'total_paid' => $entries->sum('amount_paid'),
-            'outstanding' => $entries->sum('amount_due') - $entries->sum('amount_paid'),
+            'total_due' => $totalDue,
+            'total_paid' => $totalPaid,
+            'outstanding' => $outstanding,
             'count' => $entries->count(),
             'rent_collected' => $rentCollected,
             'maintenance_collected' => $maintenanceCollected,
             'utilities_paid' => $utilitiesPaid,
             'fines_collected' => $finesCollected,
             'accounts_summary' => $accountSummaries,
+            'prev_unpaid_rent' => $prevUnpaidRent,
+            'prev_unpaid_serv' => $prevUnpaidServ,
+            'prev_unpaid_sec' => $prevUnpaidSec,
+            'prev_unpaid_extra' => $prevUnpaidExtra,
+            'prev_unpaid_total' => $prevUnpaidTotal,
         ];
     }
 

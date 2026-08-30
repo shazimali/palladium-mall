@@ -343,6 +343,7 @@
                 $wGrandDue = 0; $wGrandPaid = 0; $wGrandUnpaid = 0;
                 $wRentDue = 0; $wRentPaid = 0; $wRentUnpaid = 0;
                 $wServDue = 0; $wServPaid = 0; $wServUnpaid = 0;
+                $wExtraDue = 0; $wExtraPaid = 0; $wExtraUnpaid = 0;
                 $wSecDue = 0;  $wSecPaid = 0;  $wSecUnpaid = 0;
 
                 if ($isMatrix) {
@@ -352,7 +353,7 @@
 
                     $wRentDue = $summary['total_rent'] ?? 0;
                     $wRentPaid = $summary['total_rent_paid'] ?? 0;
-                    $wRentUnpaid = max(0, $wRentDue - $wRentPaid);
+                    $wRentUnpaid = $summary['total_rent_unpaid'] ?? max(0, $wRentDue - $wRentPaid);
 
                     // Services = maintenance only
                     $wServDue = $summary['total_serv'] ?? 0;
@@ -366,22 +367,32 @@
 
                     $wSecDue = $summary['total_security_deposit'] ?? 0;
                     $wSecPaid = $summary['total_sec_paid'] ?? 0;
-                    $wSecUnpaid = max(0, $wSecDue - $wSecPaid);
+                    $wSecUnpaid = $summary['total_sec_unpaid'] ?? max(0, $wSecDue - $wSecPaid);
                 } elseif (isset($entries) && $entries instanceof \Illuminate\Support\Collection) {
                     $wGrandDue = $summary['total_due'] ?? 0;
                     $wGrandPaid = $summary['total_paid'] ?? 0;
                     $wGrandUnpaid = $summary['outstanding'] ?? 0;
 
-                    $wRentDue = $entries->where('type', 'rent')->sum('amount_due');
+                    $prevRent = $summary['prev_unpaid_rent'] ?? 0;
+                    $prevServ = $summary['prev_unpaid_serv'] ?? 0;
+                    $prevExtra = $summary['prev_unpaid_extra'] ?? 0;
+                    $prevSec = $summary['prev_unpaid_sec'] ?? 0;
+
+                    $wRentDue = $entries->where('type', 'rent')->sum('amount_due') + $prevRent;
                     $wRentPaid = $entries->where('type', 'rent')->sum('amount_paid');
                     $wRentUnpaid = max(0, $wRentDue - $wRentPaid);
 
                     $servTypes = ['maintenance', 'utility', 'fine', 'other'];
-                    $wServDue = $entries->whereIn('type', $servTypes)->sum('amount_due');
+                    $wServDue = $entries->whereIn('type', $servTypes)->sum('amount_due') + $prevServ;
                     $wServPaid = $entries->whereIn('type', $servTypes)->sum('amount_paid');
                     $wServUnpaid = max(0, $wServDue - $wServPaid);
 
-                    $wSecDue = $entries->where('type', 'security_deposit')->sum('amount_due');
+                    $extraTypes = ['extra_payment', 'deposit_deduction'];
+                    $wExtraDue = $entries->whereIn('type', $extraTypes)->sum('amount_due') + $prevExtra;
+                    $wExtraPaid = $entries->whereIn('type', $extraTypes)->sum('amount_paid');
+                    $wExtraUnpaid = max(0, $wExtraDue - $wExtraPaid);
+
+                    $wSecDue = $entries->where('type', 'security_deposit')->sum('amount_due') + $prevSec;
                     $wSecPaid = $entries->where('type', 'security_deposit')->sum('amount_paid');
                     $wSecUnpaid = max(0, $wSecDue - $wSecPaid);
                 }
