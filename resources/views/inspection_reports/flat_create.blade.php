@@ -225,7 +225,7 @@
                             📋 Flat Inspection Checklist Items
                             <span class="text-sm font-normal text-gray-400">({{ $heads->count() }} heads)</span>
                         </h4>
-                        <span class="text-xs text-red-500 font-medium">* Status, System Remark, and Additional Remarks are all mandatory</span>
+                        <span class="text-xs text-gray-500 font-medium">* Status is mandatory (Remarks are optional)</span>
                     </div>
 
                     <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
@@ -239,9 +239,9 @@
                                     </th>
                                     <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400" style="min-width:280px">
                                         @if(isset($systemRemarks) && $systemRemarks->isNotEmpty())
-                                            System Remark <span class="text-red-500">*</span> & Additional Remarks <span class="text-red-500">*</span>
+                                            System Remark & Additional Remarks <span class="text-xs font-normal text-gray-400">(optional)</span>
                                         @else
-                                            Remarks <span class="text-red-500">*</span>
+                                            Remarks <span class="text-xs font-normal text-gray-400">(optional)</span>
                                         @endif
                                     </th>
                                     <th class="px-4 py-3 text-left text-xs font-extrabold uppercase tracking-wider text-gray-500 dark:text-gray-400" style="min-width:160px">
@@ -312,13 +312,13 @@
                                             </div>
                                         </td>
 
-                                        {{-- System Remarks Dropdown & Mandatory Additional Remarks --}}
+                                        {{-- System Remarks Dropdown & Additional Remarks --}}
                                         <td class="px-4 py-3.5 space-y-2">
                                             @if(isset($systemRemarks) && $systemRemarks->isNotEmpty())
                                                 <div>
-                                                    <select name="items[{{ $head->id }}][report_type_remark_id]" required
+                                                    <select name="items[{{ $head->id }}][report_type_remark_id]"
                                                             class="h-9 w-full rounded-lg border border-gray-300 px-2.5 text-xs font-medium text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 focus:border-brand-500 focus:outline-none">
-                                                        <option value="">— Select System Remark * —</option>
+                                                        <option value="">— Select System Remark (optional) —</option>
                                                         @foreach($systemRemarks as $rem)
                                                             <option value="{{ $rem->id }}" @selected($oldRemarkId == $rem->id)>
                                                                 {{ $rem->remark }}
@@ -327,9 +327,9 @@
                                                     </select>
                                                 </div>
                                             @endif
-                                            <input type="text" name="items[{{ $head->id }}][remarks]" required
+                                            <input type="text" name="items[{{ $head->id }}][remarks]"
                                                    value="{{ $oldRemarks }}"
-                                                   placeholder="{{ isset($systemRemarks) && $systemRemarks->isNotEmpty() ? 'Additional remarks / details (mandatory) *...' : 'Enter inspection remarks (mandatory) *...' }}"
+                                                   placeholder="{{ isset($systemRemarks) && $systemRemarks->isNotEmpty() ? 'Additional remarks / details (optional)...' : 'Enter inspection remarks (optional)...' }}"
                                                    class="h-9 w-full rounded-lg border border-gray-200 px-2.5 text-xs dark:border-gray-700 dark:bg-gray-900 dark:text-white/80 focus:border-brand-500 focus:outline-none" />
                                         </td>
 

@@ -187,8 +187,8 @@ class InspectionReportController extends Controller
                 'remarks'                       => 'required|string|max:2000',
                 'items'                         => 'required|array|min:1',
                 'items.*.status'                => 'required|in:pass,fail,na,yes,no',
-                'items.*.report_type_remark_id' => $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
-                'items.*.remarks'               => 'required|string|max:1000',
+                'items.*.report_type_remark_id' => 'nullable|exists:report_type_remarks,id',
+                'items.*.remarks'               => 'nullable|string|max:1000',
                 'items.*.image'                 => 'nullable|image|max:200',
             ];
 
@@ -207,8 +207,6 @@ class InspectionReportController extends Controller
                 'flat_condition.required'                => 'Flat condition is mandatory.',
                 'remarks.required'                       => 'Overall inspection remarks are mandatory.',
                 'items.*.status.required'                => 'Status (Pass / Fail / N/A) is mandatory for every checklist item.',
-                'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
-                'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
                 'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
                 'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
             ];
@@ -314,8 +312,8 @@ class InspectionReportController extends Controller
             'overall_remarks'              => 'nullable|string|max:2000',
             'items'                        => 'required|array|min:1',
             'items.*.status'               => 'required|in:yes,no,na',
-            'items.*.report_type_remark_id'=> $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
-            'items.*.remarks'              => 'required|string|max:1000',
+            'items.*.report_type_remark_id'=> 'nullable|exists:report_type_remarks,id',
+            'items.*.remarks'              => 'nullable|string|max:1000',
             'items.*.image'                => 'nullable|image|max:200', // 200 KB
         ];
 
@@ -339,8 +337,6 @@ class InspectionReportController extends Controller
         $customMessages = [
             'report_type_member_id.required'         => 'Please select an active member.',
             'items.*.status.required'                => 'Status is mandatory for every checklist item.',
-            'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
-            'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
             'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
             'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
         ];
@@ -447,8 +443,8 @@ class InspectionReportController extends Controller
                 'remarks'                       => 'required|string|max:2000',
                 'items'                         => 'required|array|min:1',
                 'items.*.status'                => 'required|in:pass,fail,na,yes,no',
-                'items.*.report_type_remark_id' => $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
-                'items.*.remarks'               => 'required|string|max:1000',
+                'items.*.report_type_remark_id' => 'nullable|exists:report_type_remarks,id',
+                'items.*.remarks'               => 'nullable|string|max:1000',
                 'items.*.image'                 => 'nullable|image|max:200',
             ];
 
@@ -468,8 +464,6 @@ class InspectionReportController extends Controller
                 'flat_condition.required'                => 'Flat condition is mandatory.',
                 'remarks.required'                       => 'Overall inspection remarks are mandatory.',
                 'items.*.status.required'                => 'Status (Pass / Fail / N/A) is mandatory for every checklist item.',
-                'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
-                'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
                 'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
                 'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
             ];
@@ -580,8 +574,8 @@ class InspectionReportController extends Controller
             'overall_remarks'              => 'nullable|string|max:2000',
             'items'                        => 'required|array|min:1',
             'items.*.status'               => 'required|in:yes,no,na',
-            'items.*.report_type_remark_id'=> $hasSystemRemarks ? 'required|exists:report_type_remarks,id' : 'nullable',
-            'items.*.remarks'              => 'required|string|max:1000',
+            'items.*.report_type_remark_id'=> 'nullable|exists:report_type_remarks,id',
+            'items.*.remarks'              => 'nullable|string|max:1000',
             'items.*.image'                => 'nullable|image|max:200',
         ];
 
@@ -606,8 +600,6 @@ class InspectionReportController extends Controller
         $customMessages = [
             'report_type_member_id.required'         => 'Please select an active member.',
             'items.*.status.required'                => 'Status is mandatory for every checklist item.',
-            'items.*.report_type_remark_id.required' => 'System remark selection is mandatory for every checklist item.',
-            'items.*.remarks.required'               => 'Additional remarks are mandatory for every checklist item.',
             'items.*.image.max'                      => 'Each photo must not exceed 200 KB.',
             'admin_photo.max'                        => 'Admin feedback photo must not exceed 200 KB.',
         ];
