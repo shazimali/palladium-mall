@@ -64,11 +64,23 @@
         {{-- ── Filters ── --}}
         <form id="task-filter-form" method="GET" action="{{ route('tasks.index') }}"
             class="mb-5 flex flex-wrap gap-3 rounded-xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-white/[0.02]">
+            {{-- From Date --}}
             <div class="flex items-center gap-2">
-                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">📅 Date</label>
-                <input type="date" name="date" id="task-date-filter" value="{{ $date }}"
-                    onchange="this.form.submit()"
-                    class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">📅 From</label>
+                <input type="text" name="date_from" id="task-date-from"
+                    value="{{ $dateFrom }}"
+                    placeholder="Start date…"
+                    readonly
+                    class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 cursor-pointer w-32">
+            </div>
+            {{-- To Date --}}
+            <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-gray-600 dark:text-gray-400 whitespace-nowrap">To</label>
+                <input type="text" name="date_to" id="task-date-to"
+                    value="{{ $dateTo }}"
+                    placeholder="End date…"
+                    readonly
+                    class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 cursor-pointer w-32">
             </div>
             <select name="category_id" onchange="this.form.submit()"
                 class="h-9 rounded-lg border border-gray-300 bg-white px-3 text-xs font-medium text-gray-800 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
@@ -128,7 +140,7 @@
                         </tr>
                     </thead>
                     <tbody id="task-table-body" class="divide-y divide-gray-100 dark:divide-gray-800">
-                        @include('tasks.partials._table_rows', ['tasks' => $tasks, 'date' => $date])
+                        @include('tasks.partials._table_rows', ['tasks' => $tasks, 'date' => $dateFrom ?? ''])
                     </tbody>
                 </table>
             </div>
@@ -138,8 +150,21 @@
                 class="border-t border-gray-100 dark:border-gray-800 px-4 py-2.5 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between"
                 @if($tasks->count() === 0) style="display:none" @endif>
                 <span>
-                    Showing <strong class="text-gray-700 dark:text-gray-300" x-text="counts.total">{{ $tasks->count() }}</strong>
-                    task(s) for <strong class="text-gray-700 dark:text-gray-300">{{ \Carbon\Carbon::parse($date)->format('l, d M Y') }}</strong>
+                    Showing <strong class="text-gray-700 dark:text-gray-300" x-text="counts.total">{{ $tasks->count() }}</strong> task(s)
+                    @if($dateFrom || $dateTo)
+                        for
+                        <strong class="text-gray-700 dark:text-gray-300">
+                            @if($dateFrom && $dateTo)
+                                {{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }} &ndash; {{ \Carbon\Carbon::parse($dateTo)->format('d M Y') }}
+                            @elseif($dateFrom)
+                                from {{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }}
+                            @else
+                                until {{ \Carbon\Carbon::parse($dateTo)->format('d M Y') }}
+                            @endif
+                        </strong>
+                    @else
+                        (all dates)
+                    @endif
                 </span>
                 <span x-show="counts.completed > 0" class="text-emerald-600 font-semibold">
                     <span x-text="counts.completed"></span>/<span x-text="counts.total"></span> completed
@@ -158,12 +183,41 @@
 </div>
 @endsection
 
+@push('styles')
+<style>.flatpickr-calendar { z-index: 999999 !important; }</style>
+@endpush
+
 @push('scripts')
 <script>
+    // ── Date Filter Flatpickr ──
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof flatpickr !== 'undefined') {
+            flatpickr('#task-date-from', {
+                dateFormat:    'Y-m-d',
+                altInput:      true,
+                altFormat:     'M j, Y',
+                disableMobile: true,
+                defaultDate:   '{{ $dateFrom }}' || null,
+                onChange: function () {
+                    document.getElementById('task-filter-form').submit();
+                }
+            });
+            flatpickr('#task-date-to', {
+                dateFormat:    'Y-m-d',
+                altInput:      true,
+                altFormat:     'M j, Y',
+                disableMobile: true,
+                defaultDate:   '{{ $dateTo }}' || null,
+                onChange: function () {
+                    document.getElementById('task-filter-form').submit();
+                }
+            });
+        }
+    });
+
     const CSRF        = '{{ csrf_token() }}';
     const CURRENT_UID = {{ auth()->id() }};
-    const FILTER_DATE = '{{ $date }}';
-    const FILTER_QS   = '{{ http_build_query(request()->only(['date','category_id','status','priority','assigned_to'])) }}';
+    const FILTER_QS   = '{{ http_build_query(request()->only(["date_from","date_to","category_id","status","priority","assigned_to"])) }}';
 
     function dailyTasksApp() {
         return {
@@ -307,7 +361,8 @@
                     this.$refs.adminPhotoInput.value = '';
                 }
 
-                const defaultDue = FILTER_DATE + ' 18:00:00';
+                const today = new Date().toISOString().slice(0, 10);
+                const defaultDue = today + ' 18:00:00';
                 this.taskInfo = { category_name: '', formatted_due_at: '', creator_name: '' };
                 this.taskForm = {
                     category_id:      '',

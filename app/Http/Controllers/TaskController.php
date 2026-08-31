@@ -31,13 +31,23 @@ class TaskController extends Controller
         /** @var User $currentUser */
         $currentUser = auth()->user();
 
-        // Default date filter = today
-        $date = $request->filled('date')
-            ? Carbon::parse($request->input('date'))->toDateString()
-            : Carbon::today()->toDateString();
+        // Date-range filter (both optional — no date = show all tasks)
+        $dateFrom = $request->filled('date_from')
+            ? Carbon::parse($request->input('date_from'))->startOfDay()
+            : null;
+        $dateTo = $request->filled('date_to')
+            ? Carbon::parse($request->input('date_to'))->endOfDay()
+            : null;
 
-        $query = Task::with(['category', 'creator', 'assignees'])
-            ->whereDate('due_at', $date);
+        $query = Task::with(['category', 'creator', 'assignees']);
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('due_at', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->where('due_at', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->where('due_at', '<=', $dateTo);
+        }
 
         // Role-based visibility
         if (!$currentUser->isSuperAdmin()) {
@@ -71,7 +81,6 @@ class TaskController extends Controller
 
         $tasks = $query->orderBy('order_column')->orderByDesc('created_at')->get();
 
-        // Count summary for the selected date
         $counts = [
             'total'       => $tasks->count(),
             'todo'        => $tasks->where('status', 'todo')->count(),
@@ -88,8 +97,9 @@ class TaskController extends Controller
             'counts'     => $counts,
             'users'      => $users,
             'categories' => $categories,
-            'date'       => $date,
-            'filters'    => $request->only(['category_id', 'assigned_to', 'status', 'priority', 'date']),
+            'dateFrom'   => $request->input('date_from', ''),
+            'dateTo'     => $request->input('date_to', ''),
+            'filters'    => $request->only(['category_id', 'assigned_to', 'status', 'priority', 'date_from', 'date_to']),
         ]);
     }
 
@@ -104,13 +114,23 @@ class TaskController extends Controller
         /** @var User $currentUser */
         $currentUser = auth()->user();
 
-        // Default date filter = today
-        $date = $request->filled('date')
-            ? Carbon::parse($request->input('date'))->toDateString()
-            : Carbon::today()->toDateString();
+        // Date-range filter (both optional)
+        $dateFrom = $request->filled('date_from')
+            ? Carbon::parse($request->input('date_from'))->startOfDay()
+            : null;
+        $dateTo = $request->filled('date_to')
+            ? Carbon::parse($request->input('date_to'))->endOfDay()
+            : null;
 
-        $query = Task::with(['category', 'creator', 'assignees'])
-            ->whereDate('due_at', $date);
+        $query = Task::with(['category', 'creator', 'assignees']);
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('due_at', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->where('due_at', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->where('due_at', '<=', $dateTo);
+        }
 
         // Role-based visibility
         if (!$currentUser->isSuperAdmin()) {
@@ -164,12 +184,23 @@ class TaskController extends Controller
             }
         }
 
+        $dateRangeLabel = 'All Dates';
+        if ($dateFrom && $dateTo) {
+            $dateRangeLabel = $dateFrom->format('d M Y') . ' – ' . $dateTo->format('d M Y');
+        } elseif ($dateFrom) {
+            $dateRangeLabel = 'From ' . $dateFrom->format('d M Y');
+        } elseif ($dateTo) {
+            $dateRangeLabel = 'Until ' . $dateTo->format('d M Y');
+        }
+
         return view('tasks.print', [
             'title'            => 'Daily Tasks Register Print',
             'tasks'            => $tasks,
             'counts'           => $counts,
-            'date'             => $date,
-            'filters'          => $request->only(['category_id', 'assigned_to', 'status', 'priority', 'date']),
+            'dateFrom'         => $request->input('date_from', ''),
+            'dateTo'           => $request->input('date_to', ''),
+            'dateRangeLabel'   => $dateRangeLabel,
+            'filters'          => $request->only(['category_id', 'assigned_to', 'status', 'priority', 'date_from', 'date_to']),
             'selectedCategory' => $selectedCategory,
             'selectedAssignee' => $selectedAssignee,
         ]);
@@ -186,12 +217,23 @@ class TaskController extends Controller
         /** @var User $currentUser */
         $currentUser = auth()->user();
 
-        $date = $request->filled('date')
-            ? Carbon::parse($request->input('date'))->toDateString()
-            : Carbon::today()->toDateString();
+        // Date-range filter (both optional)
+        $dateFrom = $request->filled('date_from')
+            ? Carbon::parse($request->input('date_from'))->startOfDay()
+            : null;
+        $dateTo = $request->filled('date_to')
+            ? Carbon::parse($request->input('date_to'))->endOfDay()
+            : null;
 
-        $query = Task::with(['category', 'creator', 'assignees'])
-            ->whereDate('due_at', $date);
+        $query = Task::with(['category', 'creator', 'assignees']);
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('due_at', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->where('due_at', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->where('due_at', '<=', $dateTo);
+        }
 
         if (!$currentUser->isSuperAdmin()) {
             $query->where(function ($q) use ($currentUser) {
@@ -219,7 +261,7 @@ class TaskController extends Controller
         ];
 
         return response()->json([
-            'html'   => view('tasks.partials._table_rows', ['tasks' => $tasks, 'date' => $date])->render(),
+            'html'   => view('tasks.partials._table_rows', ['tasks' => $tasks, 'date' => $dateFrom?->toDateString() ?? ''])->render(),
             'counts' => $counts,
         ]);
     }
