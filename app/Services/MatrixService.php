@@ -402,31 +402,31 @@ class MatrixService
         $totalRent        = (float) $matrixEntries->sum('rent');
         $totalRentPaid    = (float) $matrixEntries->sum('rent_paid');
         $totalRentPrev    = (float) $matrixEntries->sum('prev_rent');
-        $totalRentDue     = $totalRent + $totalRentPrev;
+        $totalRentDue     = $totalRent;
         $totalRentUnpaid  = max(0.0, $totalRentDue - $totalRentPaid);
 
         $totalServ        = (float) $matrixEntries->sum('serv');
         $totalServPaid    = (float) $matrixEntries->sum('serv_paid');
         $totalServPrev    = (float) $matrixEntries->sum('prev_serv');
-        $totalServDue     = $totalServ + $totalServPrev;
+        $totalServDue     = $totalServ;
         $totalServUnpaid  = max(0.0, $totalServDue - $totalServPaid);
 
         $totalExtra       = (float) $matrixEntries->sum('extra');
         $totalExtraPaid   = (float) $matrixEntries->sum('extra_paid');
         $totalExtraPrev   = (float) $matrixEntries->sum('prev_extra');
-        $totalExtraDue    = $totalExtra + $totalExtraPrev;
+        $totalExtraDue    = $totalExtra;
         $totalExtraUnpaid = max(0.0, $totalExtraDue - $totalExtraPaid);
 
         $totalSec         = (float) $matrixEntries->sum('security_deposit');
         $totalSecPaid     = (float) $matrixEntries->sum('sec_paid');
         $totalSecPrev     = (float) $matrixEntries->sum('prev_sec');
-        $totalSecDue      = $totalSec + $totalSecPrev;
+        $totalSecDue      = $totalSec;
         $totalSecUnpaid   = max(0.0, $totalSecDue - $totalSecPaid);
 
         $totalAmount      = (float) $matrixEntries->sum('total_amount');
         $totalReceived    = (float) $matrixEntries->sum('received');
         $totalPrevUnpaid  = (float) $matrixEntries->sum('prev_unpaid');
-        $totalAmountDue   = $totalAmount + $totalPrevUnpaid;
+        $totalAmountDue   = $totalAmount;
         $totalPending     = (float) $matrixEntries->sum('pending');
 
         return [

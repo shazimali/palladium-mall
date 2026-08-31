@@ -347,27 +347,32 @@
                 $wSecDue = 0;  $wSecPaid = 0;  $wSecUnpaid = 0;
 
                 if ($isMatrix) {
-                    $wGrandDue = $summary['total_amount'] ?? 0;
-                    $wGrandPaid = $summary['total_received'] ?? 0;
-                    $wGrandUnpaid = $summary['total_pending'] ?? 0;
+                    $wGrandDue    = $summary['total_amount'] ?? 0;
+                    $wGrandPaid   = $summary['total_received'] ?? 0;
+                    $wGrandPrev   = (float) ($summary['total_prev_unpaid'] ?? 0);
+                    $wGrandUnpaid = $summary['total_pending'] ?? 0;  // already includes prev per-row
 
-                    $wRentDue = $summary['total_rent'] ?? 0;
-                    $wRentPaid = $summary['total_rent_paid'] ?? 0;
-                    $wRentUnpaid = $summary['total_rent_unpaid'] ?? max(0, $wRentDue - $wRentPaid);
+                    $wRentDue    = $summary['total_rent'] ?? 0;
+                    $wRentPaid   = $summary['total_rent_paid'] ?? 0;
+                    $wRentPrev   = (float) ($summary['total_rent_prev_unpaid'] ?? 0);
+                    $wRentUnpaid = max(0, $wRentDue - $wRentPaid) + $wRentPrev;
 
                     // Services = maintenance only
-                    $wServDue = $summary['total_serv'] ?? 0;
-                    $wServPaid = $summary['total_serv_paid'] ?? 0;
-                    $wServUnpaid = $summary['total_serv_unpaid'] ?? max(0, $wServDue - $wServPaid);
+                    $wServDue    = $summary['total_serv'] ?? 0;
+                    $wServPaid   = $summary['total_serv_paid'] ?? 0;
+                    $wServPrev   = (float) ($summary['total_serv_prev_unpaid'] ?? 0);
+                    $wServUnpaid = max(0, $wServDue - $wServPaid) + $wServPrev;
 
                     // Extra payments (deposit_deduction, extra_payment, etc.)
-                    $wExtraDue = $summary['total_extra'] ?? 0;
-                    $wExtraPaid = $summary['total_extra_paid'] ?? 0;
-                    $wExtraUnpaid = $summary['total_extra_unpaid'] ?? max(0, $wExtraDue - $wExtraPaid);
+                    $wExtraDue    = $summary['total_extra'] ?? 0;
+                    $wExtraPaid   = $summary['total_extra_paid'] ?? 0;
+                    $wExtraPrev   = (float) ($summary['total_extra_prev_unpaid'] ?? 0);
+                    $wExtraUnpaid = max(0, $wExtraDue - $wExtraPaid) + $wExtraPrev;
 
-                    $wSecDue = $summary['total_security_deposit'] ?? 0;
-                    $wSecPaid = $summary['total_sec_paid'] ?? 0;
-                    $wSecUnpaid = $summary['total_sec_unpaid'] ?? max(0, $wSecDue - $wSecPaid);
+                    $wSecDue    = $summary['total_security_deposit'] ?? 0;
+                    $wSecPaid   = $summary['total_sec_paid'] ?? 0;
+                    $wSecPrev   = (float) ($summary['total_sec_prev_unpaid'] ?? 0);
+                    $wSecUnpaid = max(0, $wSecDue - $wSecPaid) + $wSecPrev;
                 } elseif (isset($entries) && $entries instanceof \Illuminate\Support\Collection) {
                     $wGrandDue = $summary['total_due'] ?? 0;
                     $wGrandPaid = $summary['total_paid'] ?? 0;
@@ -402,31 +407,41 @@
                         'label'    => 'Grand Total Summary',
                         'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
                         'icon'     => '📊',
-                        'due'      => $wGrandDue, 'paid' => $wGrandPaid, 'unpaid' => $wGrandUnpaid,
+                        'due'    => $wGrandDue,  'paid' => $wGrandPaid,
+                        'prev'   => $wGrandPrev ?? 0,
+                        'unpaid' => $wGrandUnpaid,
                     ],
                     'rent' => [
                         'label'    => 'Rent Summary',
                         'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
                         'icon'     => '🔑',
-                        'due'      => $wRentDue, 'paid' => $wRentPaid, 'unpaid' => $wRentUnpaid,
+                        'due'    => $wRentDue,  'paid' => $wRentPaid,
+                        'prev'   => $wRentPrev ?? 0,
+                        'unpaid' => $wRentUnpaid,
                     ],
                     'services' => [
                         'label'    => 'Services Summary',
                         'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
                         'icon'     => '🛠️',
-                        'due'      => $wServDue, 'paid' => $wServPaid, 'unpaid' => $wServUnpaid,
+                        'due'    => $wServDue,  'paid' => $wServPaid,
+                        'prev'   => $wServPrev ?? 0,
+                        'unpaid' => $wServUnpaid,
                     ],
                     'extra_payments' => [
                         'label'    => 'Extra Payments',
                         'gradient' => 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
                         'icon'     => '➕',
-                        'due'      => $wExtraDue, 'paid' => $wExtraPaid, 'unpaid' => $wExtraUnpaid,
+                        'due'    => $wExtraDue,  'paid' => $wExtraPaid,
+                        'prev'   => $wExtraPrev ?? 0,
+                        'unpaid' => $wExtraUnpaid,
                     ],
                     'security_deposit' => [
                         'label'    => 'Security Deposit',
                         'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
                         'icon'     => '🛡️',
-                        'due'      => $wSecDue, 'paid' => $wSecPaid, 'unpaid' => $wSecUnpaid,
+                        'due'    => $wSecDue,  'paid' => $wSecPaid,
+                        'prev'   => $wSecPrev ?? 0,
+                        'unpaid' => $wSecUnpaid,
                     ],
                 ];
             @endphp
@@ -460,11 +475,12 @@
                     </div>
                 </div>
             @else
-                <!-- Dynamic Billing History Style Widgets -->
+    <!-- Dynamic Billing History Style Widgets -->
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
                     @foreach($historyWidgets as $wKey => $cfg)
+                        @php $wPrev = (float) ($cfg['prev'] ?? 0); @endphp
                         <div class="group relative overflow-hidden rounded-2xl p-4 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
-                            style="background: {{ $cfg['gradient'] }}; min-height: 140px;">
+                            style="background: {{ $cfg['gradient'] }}; min-height: {{ $wPrev > 0 ? '170px' : '140px' }};">
                             <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
                             <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10 bg-white"></div>
 
@@ -485,6 +501,14 @@
                                         Rs. {{ number_format($cfg['paid']) }}
                                     </span>
                                 </div>
+                                @if($wPrev > 0)
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-[10px] uppercase text-white/70">Prev. Unpaid</span>
+                                    <span class="font-semibold text-yellow-300 text-sm sm:text-base">
+                                        Rs. {{ number_format($wPrev) }}
+                                    </span>
+                                </div>
+                                @endif
                                 <div class="flex justify-between items-baseline border-t border-white/10 pt-1.5 mt-1">
                                     <span class="text-[10px] uppercase text-white/70">Pending</span>
                                     <span class="font-bold text-rose-300 text-sm sm:text-base">
