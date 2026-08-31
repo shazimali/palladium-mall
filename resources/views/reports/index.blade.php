@@ -127,6 +127,7 @@
                         <option value="non_occupied" {{ ($filters['report_type'] ?? '') === 'non_occupied' || ($filters['report_type'] ?? '') === 'non_occupide' ? 'selected' : '' }}>Vacant (Ext)</option>
                         <option value="monthly_matrix" {{ ($filters['report_type'] ?? '') === 'monthly_matrix' ? 'selected' : '' }}>Monthly Matrix (Generated Billings)</option>
                         <option value="monthly_matrix_expected" {{ ($filters['report_type'] ?? '') === 'monthly_matrix_expected' ? 'selected' : '' }}>Monthly Matrix (Expected Revenue)</option>
+                        <option value="security_deposit_matrix" {{ ($filters['report_type'] ?? '') === 'security_deposit_matrix' ? 'selected' : '' }}>Security Deposit Matrix (Per Flat/Shop)</option>
                         <option value="potential_revenue" {{ ($filters['report_type'] ?? '') === 'potential_revenue' ? 'selected' : '' }}>Fully Rented Forecast</option>
                     </select>
                 </div>
@@ -451,7 +452,39 @@
                 ];
             @endphp
 
-            @if(($filters['report_type'] ?? '') === 'potential_revenue')
+            @if(($filters['report_type'] ?? '') === 'security_deposit_matrix')
+                @if(($filters['owner_type'] ?? '') === 'other')
+                    <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/30 dark:text-amber-300 flex items-center gap-3">
+                        <span class="text-base">ℹ️</span>
+                        <div>
+                            <strong>Filter Notice (Other Owners):</strong> You are filtering by <em>Other Owners (External Private Landlords)</em>. In PM Mall, external private landlords handle security deposits directly with their tenants. PM Mall managed security deposits belong to <strong>PM Mall Owners</strong> (select <em>PM Mall Owners</em> or leave <em>Owner Type</em> empty to view PM Mall security deposits).
+                        </div>
+                    </div>
+                @endif
+                <!-- Security Deposit Matrix Summary Grid -->
+                <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 mb-6">
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-indigo-500">Required Deposit</p>
+                        <h4 class="mt-2 text-2xl font-bold text-indigo-700 dark:text-indigo-400">Rs. {{ number_format($summary['total_required'] ?? 0) }}</h4>
+                    </div>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-emerald-500">Collected Deposit</p>
+                        <h4 class="mt-2 text-2xl font-bold text-emerald-600">Rs. {{ number_format($summary['total_collected'] ?? 0) }}</h4>
+                    </div>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-rose-500">Pending Deposit</p>
+                        <h4 class="mt-2 text-2xl font-bold text-rose-600">Rs. {{ number_format($summary['total_pending'] ?? 0) }}</h4>
+                    </div>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-amber-500">Deductions / Damage</p>
+                        <h4 class="mt-2 text-2xl font-bold text-amber-600">Rs. {{ number_format($summary['total_deductions'] ?? 0) }}</h4>
+                    </div>
+                    <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-purple-500">Net Refundable</p>
+                        <h4 class="mt-2 text-2xl font-bold text-purple-600">Rs. {{ number_format($summary['total_net_refundable'] ?? 0) }}</h4>
+                    </div>
+                </div>
+            @elseif(($filters['report_type'] ?? '') === 'potential_revenue')
                 <!-- Potential Revenue Grid -->
                 <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6 mb-6">
                     <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
@@ -459,23 +492,23 @@
                         <h4 class="mt-2 text-2xl font-bold text-gray-800 dark:text-white leading-tight">{{ number_format($summary['count']) }}</h4>
                     </div>
                     <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Potential Rent</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-blue-400">Potential Rent</p>
                         <h4 class="mt-2 text-2xl font-bold text-blue-600">Rs. {{ number_format($summary['total_rent']) }}</h4>
                     </div>
                     <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Potential Maint.</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-purple-400">Potential Maint.</p>
                         <h4 class="mt-2 text-2xl font-bold text-purple-600">Rs. {{ number_format($summary['total_maintenance']) }}</h4>
                     </div>
                     <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Combined Potential</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-emerald-400">Combined Potential</p>
                         <h4 class="mt-2 text-2xl font-bold text-emerald-600">Rs. {{ number_format($summary['total_combined']) }}</h4>
                     </div>
                     <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Rented (Agreement)</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-brand-400">Rented (Agreement)</p>
                         <h4 class="mt-2 text-2xl font-bold text-brand-600">{{ number_format($summary['rented_count']) }}</h4>
                     </div>
                     <div class="rounded-xl border border-gray-100 bg-white p-5 shadow-xs dark:border-gray-800 dark:bg-white/[0.03]">
-                        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Vacant/Other (Default)</p>
+                        <p class="text-xs font-semibold uppercase tracking-wider text-orange-400">Vacant/Other (Default)</p>
                         <h4 class="mt-2 text-2xl font-bold text-orange-500">{{ number_format($summary['vacant_count']) }}</h4>
                     </div>
                 </div>
@@ -530,8 +563,8 @@
         {{-- Data Table --}}
         <div class="mt-4">
             <x-common.component-card
-                title="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? (($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix (Generated Billings) - ' . $selectedMonth : 'Monthly Matrix (Expected Revenue) - ' . $selectedMonth) : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Fully Rented Potential Revenue Forecast' : 'Report Results') }}"
-                desc="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? 'Grid matrix for flat status and collections' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Potential monthly revenue snapshot for all flats and shops' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found') }}">
+                title="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? (($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix (Generated Billings) - ' . $selectedMonth : 'Monthly Matrix (Expected Revenue) - ' . $selectedMonth) : (($filters['report_type'] ?? '') === 'security_deposit_matrix' ? 'Security Deposit Matrix (Per Flat/Shop)' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Fully Rented Potential Revenue Forecast' : 'Report Results')) }}"
+                desc="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? 'Grid matrix for flat status and collections' : (($filters['report_type'] ?? '') === 'security_deposit_matrix' ? 'Per-unit security deposit status: required, collected, pending & refunds' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Potential monthly revenue snapshot for all flats and shops' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found')) }}">
 
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4 mb-4">
                     <div>
@@ -567,6 +600,8 @@
 
                     @if(in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']))
                         @include('reports.partials.matrix_table')
+                    @elseif(($filters['report_type'] ?? '') === 'security_deposit_matrix')
+                        @include('reports.partials.security_deposit_matrix_table')
                     @elseif(($filters['report_type'] ?? '') === 'potential_revenue')
                         @include('reports.partials.potential_revenue_table')
                     @else

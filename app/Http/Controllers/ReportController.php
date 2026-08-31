@@ -58,6 +58,9 @@ class ReportController extends Controller
             if (in_array($request->report_type, ['monthly_matrix', 'monthly_matrix_expected'])) {
                 $entries = $this->buildMatrixEntries($request);
                 $summary = $this->buildMatrixSummary($entries);
+            } elseif ($request->report_type === 'security_deposit_matrix') {
+                $entries = $this->matrixService->buildSecurityDepositMatrixEntries($request);
+                $summary = $this->matrixService->buildSecurityDepositMatrixSummary($entries);
             } elseif ($request->report_type === 'potential_revenue') {
                 $entries = $this->buildPotentialRevenueEntries($request);
                 $summary = $this->buildPotentialRevenueSummary($entries);
@@ -104,6 +107,9 @@ class ReportController extends Controller
         if (in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
+        } elseif ($reportType === 'security_deposit_matrix') {
+            $entries = $this->matrixService->buildSecurityDepositMatrixEntries($request);
+            $summary = $this->matrixService->buildSecurityDepositMatrixSummary($entries);
         } elseif ($reportType === 'potential_revenue') {
             $entries = $this->buildPotentialRevenueEntries($request);
             $summary = $this->buildPotentialRevenueSummary($entries);
@@ -137,6 +143,9 @@ class ReportController extends Controller
         if (in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
+        } elseif ($reportType === 'security_deposit_matrix') {
+            $entries = $this->matrixService->buildSecurityDepositMatrixEntries($request);
+            $summary = $this->matrixService->buildSecurityDepositMatrixSummary($entries);
         } elseif ($reportType === 'potential_revenue') {
             $entries = $this->buildPotentialRevenueEntries($request);
             $summary = $this->buildPotentialRevenueSummary($entries);
@@ -197,9 +206,12 @@ class ReportController extends Controller
         $this->prepareMatrixDate($request);
 
         $reportType = $request->report_type ?? 'all';
-        if ($reportType === 'monthly_matrix') {
+        if (in_array($reportType, ['monthly_matrix', 'monthly_matrix_expected'])) {
             $entries = $this->buildMatrixEntries($request);
             $summary = $this->buildMatrixSummary($entries);
+        } elseif ($reportType === 'security_deposit_matrix') {
+            $entries = $this->matrixService->buildSecurityDepositMatrixEntries($request);
+            $summary = $this->matrixService->buildSecurityDepositMatrixSummary($entries);
         } elseif ($reportType === 'potential_revenue') {
             $entries = $this->buildPotentialRevenueEntries($request);
             $summary = $this->buildPotentialRevenueSummary($entries);
@@ -763,6 +775,7 @@ class ReportController extends Controller
             'utilities' => 'Utilities Paid',
             'monthly_matrix' => 'Monthly Matrix (Generated Billings)',
             'monthly_matrix_expected' => 'Monthly Matrix (Expected Revenue)',
+            'security_deposit_matrix' => 'Security Deposit Matrix',
             'potential_revenue' => 'Fully Rented Forecast',
             'maintinance', 'maintenance' => 'Maintenance',
             'other_owned' => 'Other Owned Payments',

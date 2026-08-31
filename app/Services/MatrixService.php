@@ -473,4 +473,102 @@ class MatrixService
             'extra_count'             => $matrixEntries->where('extra_paid', '>', 0)->count(),
         ];
     }
+    /**
+     * Build Security Deposit matrix entries for all units / shops.
+     */
+    public function buildSecurityDepositMatrixEntries(Request $request): Collection
+    {
+        $unitId     = $request->unit_id;
+        $unitStatus = $request->unit_status;
+        $landlordId = $request->landlord_id;
+        $ownerType  = $request->owner_type;
+        $tenantId   = $request->tenant_id;
+
+        $units = Unit::orderBy('unit_number')
+            ->when($unitId, fn($q) => $q->where('id', $unitId))
+            ->when($unitStatus, fn($q) => $q->where('status', $unitStatus))
+            ->when($landlordId, fn($q) => $q->where('landlord_id', $landlordId))
+            ->when($ownerType === 'pm_mall', fn($q) => $q->where('is_self', false))
+            ->when($ownerType === 'other', fn($q) => $q->where('is_self', true))
+            ->with(['landlord', 'activeAgreement.tenant', 'otherTenant'])
+            ->get();
+
+        // Fetch security deposit payments per unit
+        $secPayments = Payment::where('type', 'security_deposit')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->get()
+            ->groupBy('unit_id');
+
+        // Fetch deposit deduction payments per unit
+        $deductionPayments = Payment::where('type', 'deposit_deduction')
+            ->when($tenantId, fn($q) => $q->where('tenant_id', $tenantId))
+            ->get()
+            ->groupBy('unit_id');
+
+        $entries = collect();
+
+        foreach ($units as $index => $unit) {
+            $agreement = $unit->activeAgreement;
+            $tenantName = $agreement?->tenant?->name ?? ($unit->otherTenant?->name ?? '—');
+
+            if ($tenantId && ($agreement?->tenant_id != $tenantId && $unit->otherTenant?->id != $tenantId)) {
+                continue;
+            }
+
+            $unitSecPayments = $secPayments->get($unit->id) ?? collect();
+            $unitDeductions  = $deductionPayments->get($unit->id) ?? collect();
+
+            $agSec            = (float) ($agreement?->security_deposit ?? 0);
+            $paySec           = (float) $unitSecPayments->sum('amount');
+            $requiredDeposit  = max($agSec, $paySec);
+            $collectedDeposit = (float) $unitSecPayments->sum('amount_paid');
+            $pendingDeposit   = max(0.0, $requiredDeposit - $collectedDeposit);
+            $deductionDeposit = (float) $unitDeductions->sum('amount_paid');
+            $netRefundable    = max(0.0, $collectedDeposit - $deductionDeposit);
+
+            if ($agreement) {
+                $status = $unit->status === 'sp' ? 'SP' : 'RENTED';
+            } elseif ($unit->otherTenant) {
+                $status = 'OCCUPIED';
+            } else {
+                $status = match ($unit->status) {
+                    'self'  => 'SELF',
+                    'sp'    => 'SP',
+                    default => 'VACANT',
+                };
+            }
+
+            $entries->push([
+                'sr'                => $index + 1,
+                'unit_id'           => $unit->id,
+                'flat_no'           => $unit->unit_number,
+                'owner'             => $unit->is_self ? ($unit->landlord?->name ?? 'Other Owner') : 'PM Mall',
+                'tenant'            => $tenantName,
+                'status'            => $status,
+                'is_self'           => (bool) $unit->is_self,
+                'required_deposit'  => $requiredDeposit,
+                'collected_deposit' => $collectedDeposit,
+                'pending_deposit'   => $pendingDeposit,
+                'deduction_deposit' => $deductionDeposit,
+                'net_refundable'    => $netRefundable,
+            ]);
+        }
+
+        return $entries;
+    }
+
+    /**
+     * Summary metrics for Security Deposit Matrix Report.
+     */
+    public function buildSecurityDepositMatrixSummary(Collection $entries): array
+    {
+        return [
+            'total_required'       => (float) $entries->sum('required_deposit'),
+            'total_collected'      => (float) $entries->sum('collected_deposit'),
+            'total_pending'        => (float) $entries->sum('pending_deposit'),
+            'total_deductions'     => (float) $entries->sum('deduction_deposit'),
+            'total_net_refundable' => (float) $entries->sum('net_refundable'),
+            'count'                => $entries->count(),
+        ];
+    }
 }

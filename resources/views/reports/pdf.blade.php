@@ -432,6 +432,63 @@
                 </tr>
             </tfoot>
         </table>
+    @elseif($reportType === 'security_deposit_matrix')
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align:center;">SR</th>
+                    <th>Flat / Shop</th>
+                    <th>Owner</th>
+                    <th>Tenant</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Required Deposit</th>
+                    <th style="text-align:right;">Collected Deposit</th>
+                    <th style="text-align:right;">Pending Deposit</th>
+                    <th style="text-align:right;">Deductions / Damage</th>
+                    <th style="text-align:right;">Net Refundable</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($entries as $entry)
+                    @php
+                        $isVacant = $entry['status'] === 'VACANT';
+                        $isPending = $entry['pending_deposit'] > 0;
+                    @endphp
+                    <tr style="{{ $isVacant ? 'background-color: #F8FAFF; color: #94A3B8; font-style: italic;' : '' }}">
+                        <td style="text-align:center;">{{ $entry['sr'] }}</td>
+                        <td style="font-weight:600;">{{ $entry['flat_no'] }}</td>
+                        <td>{{ $entry['owner'] }}</td>
+                        <td>{{ $entry['tenant'] }}</td>
+                        <td>
+                            <span class="badge {{ $entry['status'] === 'RENTED' || $entry['status'] === 'OCCUPIED' ? 'badge-paid' : ($entry['status'] === 'VACANT' ? 'badge-unpaid' : 'badge-pending') }}">
+                                {{ $entry['status'] }}
+                            </span>
+                        </td>
+                        <td style="text-align:right;font-weight:600;color:#3730A3;">Rs. {{ number_format($entry['required_deposit'], 2) }}</td>
+                        <td style="text-align:right;font-weight:600;color:#059669;">Rs. {{ number_format($entry['collected_deposit'], 2) }}</td>
+                        <td style="text-align:right;font-weight:700;color:{{ $isPending ? '#DC2626' : '#94A3B8' }};">Rs. {{ number_format($entry['pending_deposit'], 2) }}</td>
+                        <td style="text-align:right;font-weight:600;color:#D97706;">Rs. {{ number_format($entry['deduction_deposit'], 2) }}</td>
+                        <td style="text-align:right;font-weight:700;color:#7C3AED;">Rs. {{ number_format($entry['net_refundable'], 2) }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="10" style="text-align:center;padding:16px;color:#94A3B8;">
+                            No records found.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="5" style="color:#1D3461;text-align:right;font-weight:bold;">Totals</td>
+                    <td style="text-align:right;color:#3730A3;font-weight:bold;">Rs. {{ number_format($summary['total_required'] ?? 0, 2) }}</td>
+                    <td style="text-align:right;color:#059669;font-weight:bold;">Rs. {{ number_format($summary['total_collected'] ?? 0, 2) }}</td>
+                    <td style="text-align:right;color:#DC2626;font-weight:bold;">Rs. {{ number_format($summary['total_pending'] ?? 0, 2) }}</td>
+                    <td style="text-align:right;color:#D97706;font-weight:bold;">Rs. {{ number_format($summary['total_deductions'] ?? 0, 2) }}</td>
+                    <td style="text-align:right;color:#7C3AED;font-weight:bold;">Rs. {{ number_format($summary['total_net_refundable'] ?? 0, 2) }}</td>
+                </tr>
+            </tfoot>
+        </table>
     @elseif($reportType === 'potential_revenue')
         <table>
             <thead>

@@ -65,6 +65,21 @@ class ReportExport implements
             });
         }
 
+        if ($this->reportType === 'security_deposit_matrix') {
+            return $this->entries->map(fn($e) => [
+                'SR' => $e['sr'],
+                'Flat/Shop' => $e['flat_no'],
+                'Owner' => $e['owner'],
+                'Tenant' => $e['tenant'],
+                'Status' => $e['status'],
+                'Required Deposit (PKR)' => number_format((float) $e['required_deposit'], 2),
+                'Collected Deposit (PKR)' => number_format((float) $e['collected_deposit'], 2),
+                'Pending Deposit (PKR)' => number_format((float) $e['pending_deposit'], 2),
+                'Deductions / Damage (PKR)' => number_format((float) $e['deduction_deposit'], 2),
+                'Net Refundable (PKR)' => number_format((float) $e['net_refundable'], 2),
+            ]);
+        }
+
         if ($this->reportType === 'potential_revenue') {
             return $this->entries->map(fn($e) => [
                 'Flat/Shop' => $e['unit_number'],
@@ -100,6 +115,21 @@ class ReportExport implements
 
     public function headings(): array
     {
+        if ($this->reportType === 'security_deposit_matrix') {
+            return [
+                'SR',
+                'Flat/Shop',
+                'Owner',
+                'Tenant',
+                'Status',
+                'Required Deposit (PKR)',
+                'Collected Deposit (PKR)',
+                'Pending Deposit (PKR)',
+                'Deductions / Damage (PKR)',
+                'Net Refundable (PKR)',
+            ];
+        }
+
         if ($this->reportType === 'potential_revenue') {
             return [
                 'Flat/Shop',
