@@ -376,6 +376,7 @@
                 } elseif (isset($entries) && $entries instanceof \Illuminate\Support\Collection) {
                     $wGrandDue = $summary['total_due'] ?? 0;
                     $wGrandPaid = $summary['total_paid'] ?? 0;
+                    $wGrandPrev = $summary['prev_unpaid_total'] ?? 0;
                     $wGrandUnpaid = $summary['outstanding'] ?? 0;
 
                     $prevRent = $summary['prev_unpaid_rent'] ?? 0;
@@ -383,23 +384,27 @@
                     $prevExtra = $summary['prev_unpaid_extra'] ?? 0;
                     $prevSec = $summary['prev_unpaid_sec'] ?? 0;
 
-                    $wRentDue = $entries->where('type', 'rent')->sum('amount_due') + $prevRent;
+                    $wRentDue = $entries->where('type', 'rent')->sum('amount_due');
                     $wRentPaid = $entries->where('type', 'rent')->sum('amount_paid');
-                    $wRentUnpaid = max(0, $wRentDue - $wRentPaid);
+                    $wRentPrev = $prevRent;
+                    $wRentUnpaid = max(0, $wRentDue - $wRentPaid) + $wRentPrev;
 
                     $servTypes = ['maintenance', 'utility', 'fine', 'other'];
-                    $wServDue = $entries->whereIn('type', $servTypes)->sum('amount_due') + $prevServ;
+                    $wServDue = $entries->whereIn('type', $servTypes)->sum('amount_due');
                     $wServPaid = $entries->whereIn('type', $servTypes)->sum('amount_paid');
-                    $wServUnpaid = max(0, $wServDue - $wServPaid);
+                    $wServPrev = $prevServ;
+                    $wServUnpaid = max(0, $wServDue - $wServPaid) + $wServPrev;
 
                     $extraTypes = ['extra_payment', 'deposit_deduction'];
-                    $wExtraDue = $entries->whereIn('type', $extraTypes)->sum('amount_due') + $prevExtra;
+                    $wExtraDue = $entries->whereIn('type', $extraTypes)->sum('amount_due');
                     $wExtraPaid = $entries->whereIn('type', $extraTypes)->sum('amount_paid');
-                    $wExtraUnpaid = max(0, $wExtraDue - $wExtraPaid);
+                    $wExtraPrev = $prevExtra;
+                    $wExtraUnpaid = max(0, $wExtraDue - $wExtraPaid) + $wExtraPrev;
 
-                    $wSecDue = $entries->where('type', 'security_deposit')->sum('amount_due') + $prevSec;
+                    $wSecDue = $entries->where('type', 'security_deposit')->sum('amount_due');
                     $wSecPaid = $entries->where('type', 'security_deposit')->sum('amount_paid');
-                    $wSecUnpaid = max(0, $wSecDue - $wSecPaid);
+                    $wSecPrev = $prevSec;
+                    $wSecUnpaid = max(0, $wSecDue - $wSecPaid) + $wSecPrev;
                 }
 
                 $historyWidgets = [

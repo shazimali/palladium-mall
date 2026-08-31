@@ -637,9 +637,9 @@ class ReportController extends Controller
             }
         }
 
-        $totalDue = $entries->sum('amount_due') + $prevUnpaidTotal;
+        $totalDue = $entries->sum('amount_due');
         $totalPaid = $entries->sum('amount_paid');
-        $outstanding = $totalDue - $totalPaid;
+        $outstanding = max(0.0, $totalDue - $totalPaid) + $prevUnpaidTotal;
 
         return [
             'total_due' => $totalDue,
@@ -780,6 +780,12 @@ class ReportController extends Controller
             $request->merge([
                 'date_from' => \Carbon\Carbon::now()->startOfMonth()->toDateString(),
                 'date_to' => \Carbon\Carbon::now()->endOfMonth()->toDateString(),
+            ]);
+        }
+
+        if ($request->filled('date_from') && !$request->filled('date_to')) {
+            $request->merge([
+                'date_to' => \Carbon\Carbon::parse($request->date_from)->endOfMonth()->toDateString(),
             ]);
         }
 
