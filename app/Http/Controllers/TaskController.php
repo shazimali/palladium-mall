@@ -186,17 +186,27 @@ class TaskController extends Controller
 
         $dateRangeLabel = 'All Dates';
         if ($dateFrom && $dateTo) {
-            $dateRangeLabel = $dateFrom->format('d M Y') . ' – ' . $dateTo->format('d M Y');
+            if ($dateFrom->toDateString() === $dateTo->toDateString()) {
+                $dateRangeLabel = $dateFrom->format('d M Y');
+            } else {
+                $dateRangeLabel = $dateFrom->format('d M Y') . ' – ' . $dateTo->format('d M Y');
+            }
         } elseif ($dateFrom) {
             $dateRangeLabel = 'From ' . $dateFrom->format('d M Y');
         } elseif ($dateTo) {
             $dateRangeLabel = 'Until ' . $dateTo->format('d M Y');
         }
 
+        $date = $request->input('date')
+            ?? $request->input('date_from')
+            ?? $request->input('date_to')
+            ?? now()->toDateString();
+
         return view('tasks.print', [
             'title'            => 'Daily Tasks Register Print',
             'tasks'            => $tasks,
             'counts'           => $counts,
+            'date'             => $date,
             'dateFrom'         => $request->input('date_from', ''),
             'dateTo'           => $request->input('date_to', ''),
             'dateRangeLabel'   => $dateRangeLabel,

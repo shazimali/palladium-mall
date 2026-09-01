@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Daily Tasks Register - {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }} - PALLADIUM MALL</title>
+    <title>Daily Tasks Register - {{ $dateRangeLabel ?? (isset($date) ? \Carbon\Carbon::parse($date)->format('d/m/Y') : '') }} - PALLADIUM MALL</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -54,7 +54,7 @@
         <div class="flex items-center gap-2">
             <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Tasks Register Print View</span>
             <span class="text-xs bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full font-extrabold">
-                Date: {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}
+                Date: {{ $dateRangeLabel ?? (isset($date) ? \Carbon\Carbon::parse($date)->format('d/m/Y') : '') }}
             </span>
         </div>
         <div class="flex items-center gap-3">
@@ -87,9 +87,13 @@
                 <div class="inline-block px-3 py-1 bg-red-50 border border-red-200 rounded-lg">
                     <span class="text-xs font-bold text-red-600 uppercase">Date: </span>
                     <strong class="text-sm font-black text-gray-900 ml-1">
-                        {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}
+                        {{ $dateRangeLabel ?? (isset($date) ? \Carbon\Carbon::parse($date)->format('d/m/Y') : '') }}
                     </strong>
-                    <span class="text-xs text-gray-500 ml-1 font-semibold">({{ \Carbon\Carbon::parse($date)->format('l') }})</span>
+                    @if(isset($date) && empty($dateFrom) && empty($dateTo))
+                        <span class="text-xs text-gray-500 ml-1 font-semibold">({{ \Carbon\Carbon::parse($date)->format('l') }})</span>
+                    @elseif(!empty($dateFrom) && !empty($dateTo) && $dateFrom === $dateTo)
+                        <span class="text-xs text-gray-500 ml-1 font-semibold">({{ \Carbon\Carbon::parse($dateFrom)->format('l') }})</span>
+                    @endif
                 </div>
             </div>
         </div>
@@ -99,7 +103,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <div>
                     <span class="text-gray-500 block text-[10px] uppercase font-bold">Register Date:</span>
-                    <span class="font-extrabold text-gray-900">{{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}</span>
+                    <span class="font-extrabold text-gray-900">{{ $dateRangeLabel ?? (isset($date) ? \Carbon\Carbon::parse($date)->format('d/m/Y') : '') }}</span>
                 </div>
                 <div>
                     <span class="text-gray-500 block text-[10px] uppercase font-bold">Category Filter:</span>
@@ -290,7 +294,7 @@
                     @empty
                         <tr>
                             <td colspan="7" class="py-8 text-center text-gray-500 font-bold">
-                                No tasks recorded for {{ \Carbon\Carbon::parse($date)->format('d/m/Y') }}.
+                                No tasks recorded for {{ $dateRangeLabel ?? (isset($date) ? \Carbon\Carbon::parse($date)->format('d/m/Y') : '') }}.
                             </td>
                         </tr>
                     @endforelse
