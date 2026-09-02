@@ -421,8 +421,8 @@
                         <h3 class="mb-1 text-lg font-black text-gray-900 dark:text-white">Bulk Edit Billings</h3>
                         <p class="mb-5 text-sm font-semibold text-gray-500">Correct the Month/Year or Due Date of bulk billings in one batch.</p>
 
-                        <form action="{{ route('payments.bulk-edit') }}" method="POST"
-                            onsubmit="return confirm('Are you sure you want to bulk edit matching unpaid billings?')">
+                        <form id="bulk-edit-form" action="{{ route('payments.bulk-edit') }}" method="POST"
+                            onsubmit="event.preventDefault(); confirmBulkEdit(this);">
                             @csrf
                             <div class="space-y-5">
                                 <div>
@@ -589,6 +589,52 @@
     @push('scripts')
         <script>
             let ajaxTimeout = null;
+
+            function confirmBulkEdit(form) {
+                Swal.fire({
+                    title: 'Bulk Edit Billings?',
+                    text: 'Are you sure you want to bulk edit matching unpaid billings?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3b82f6',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Yes, Update Billings'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            }
+
+            function confirmBulkDelete() {
+                const form = document.querySelector('form[action="{{ route('payments.bulk-delete') }}"]');
+                if (!form) return;
+
+                const checkboxes = form.querySelectorAll('input[name="types[]"]:checked');
+                if (checkboxes.length === 0) {
+                    Swal.fire({
+                        title: 'No Types Selected',
+                        text: 'Please select at least one billing type to delete.',
+                        icon: 'warning',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Bulk Delete Unpaid Payments?',
+                    text: 'Are you sure you want to delete unpaid payments for the selected types? (Paid and partial payments are protected).',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#ef4444',
+                    cancelButtonColor: '#6b7280',
+                    confirmButtonText: 'Yes, Delete Unpaid'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            }
 
             function fetchResults() {
                 const form = document.getElementById('filter-form');

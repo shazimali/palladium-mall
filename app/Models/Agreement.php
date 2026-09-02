@@ -20,14 +20,19 @@ class Agreement extends Model
     protected static function booted()
     {
         static::saved(function ($agreement) {
+            // Lock agreements started before August 1, 2026 from auto creating/updating security deposit payment records
+            if ($agreement->start_date && \Carbon\Carbon::parse($agreement->start_date)->lt('2026-08-01')) {
+                return;
+            }
+
             if ($agreement->status === 'active' && (float) $agreement->security_deposit > 0) {
                 $secPayment = Payment::where('agreement_id', $agreement->id)
                     ->where('type', 'security_deposit')
                     ->first();
 
                 if (!$secPayment && $agreement->tenant_id) {
-                    $month = $agreement->start_date->copy()->startOfMonth()->toDateString();
-                    $dueDate = $agreement->start_date->toDateString();
+                    $month = $agreement->start_date ? $agreement->start_date->copy()->startOfMonth()->toDateString() : now()->startOfMonth()->toDateString();
+                    $dueDate = $agreement->start_date ? $agreement->start_date->toDateString() : now()->toDateString();
 
                     Payment::create([
                         'tenant_id' => $agreement->tenant_id,
@@ -42,8 +47,8 @@ class Agreement extends Model
                     ]);
                 } else if ($secPayment) {
                     if ($secPayment->status === 'unpaid') {
-                        $month = $agreement->start_date->copy()->startOfMonth()->toDateString();
-                        $dueDate = $agreement->start_date->toDateString();
+                        $month = $agreement->start_date ? $agreement->start_date->copy()->startOfMonth()->toDateString() : now()->startOfMonth()->toDateString();
+                        $dueDate = $agreement->start_date ? $agreement->start_date->toDateString() : now()->toDateString();
 
                         $secPayment->update([
                             'amount' => $agreement->security_deposit,

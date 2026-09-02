@@ -196,7 +196,7 @@
                                         @endif
 
                                         @if(auth()->user()->hasPermission('payments.delete') || auth()->user()->isSuperAdmin())
-                                            <form action="{{ route('payments.destroy', $payment) }}" method="POST" x-data @submit.prevent="if(confirm('Delete this payment record?')) $el.submit()">
+                                            <form action="{{ route('payments.destroy', $payment) }}" method="POST" x-data @submit.prevent="Swal.fire({ title: 'Delete payment record?', text: 'Are you sure you want to delete this payment record?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444', cancelButtonColor: '#6b7280', confirmButtonText: 'Yes, delete it!' }).then((result) => { if (result.isConfirmed) $el.submit(); })">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="inline-flex items-center rounded-lg p-1 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Delete">

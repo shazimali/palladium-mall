@@ -88,16 +88,16 @@ class PaymentController extends Controller
         $paymentTypes = ['rent', 'maintenance', 'fine', 'electricity', 'water', 'gas', 'other', 'security_deposit', 'extra_payment', 'deposit_deduction'];
         foreach ($paymentTypes as $t) {
             $typeQuery = (clone $summaryQuery)->where('type', $t);
-            $due  = (float) (clone $typeQuery)->sum('amount');
+            $due = (float) (clone $typeQuery)->sum('amount');
             $paid = (float) (clone $typeQuery)->sum('amount_paid');
-            $summary[$t . '_due']    = $due;
-            $summary[$t . '_paid']   = $paid;
+            $summary[$t . '_due'] = $due;
+            $summary[$t . '_paid'] = $paid;
             $summary[$t . '_unpaid'] = $due - $paid;
         }
 
         // Aggregate extra bucket (strictly extra_payment)
-        $summary['extra_due']    = (float) ($summary['extra_payment_due'] ?? 0);
-        $summary['extra_paid']   = (float) ($summary['extra_payment_paid'] ?? 0);
+        $summary['extra_due'] = (float) ($summary['extra_payment_due'] ?? 0);
+        $summary['extra_paid'] = (float) ($summary['extra_payment_paid'] ?? 0);
         $summary['extra_unpaid'] = max(0, $summary['extra_due'] - $summary['extra_paid']);
 
         $paymentAccounts = \App\Models\PaymentAccount::where('is_active', true)->orderBy('name')->get();
@@ -171,25 +171,25 @@ class PaymentController extends Controller
         $grouped = $grouped->sortKeysDesc();
 
         foreach ($grouped as $monthStr => $monthPayments) {
-            $rentPayments    = $monthPayments->where('type', 'rent');
+            $rentPayments = $monthPayments->where('type', 'rent');
             $depositPayments = $monthPayments->where('type', 'security_deposit');
             $servicePayments = $monthPayments->whereIn('type', ['maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other']);
-            $extraPayments   = $monthPayments->whereNotIn('type', ['rent', 'security_deposit', 'maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other', 'deposit_deduction']);
+            $extraPayments = $monthPayments->whereNotIn('type', ['rent', 'security_deposit', 'maintenance', 'utility', 'electricity', 'water', 'gas', 'fine', 'other', 'deposit_deduction']);
 
             // Rent sums
-            $rentDue  = (float) $rentPayments->sum('amount');
+            $rentDue = (float) $rentPayments->sum('amount');
             $rentPaid = (float) $rentPayments->sum('amount_paid');
 
             // Security Deposit sums
-            $depositDue  = (float) $depositPayments->sum('amount');
+            $depositDue = (float) $depositPayments->sum('amount');
             $depositPaid = (float) $depositPayments->sum('amount_paid');
 
             // Services sums (maintenance only)
-            $servicesDue  = (float) $servicePayments->sum('amount');
+            $servicesDue = (float) $servicePayments->sum('amount');
             $servicesPaid = (float) $servicePayments->sum('amount_paid');
 
             // Extra Payments sums (deposit_deduction, extra_payment, etc.)
-            $extraDue  = (float) $extraPayments->sum('amount');
+            $extraDue = (float) $extraPayments->sum('amount');
             $extraPaid = (float) $extraPayments->sum('amount_paid');
 
             // Grand Total sums
@@ -201,35 +201,35 @@ class PaymentController extends Controller
 
             $monthlySummaries[$monthStr] = [
                 'display_month' => $displayMonth,
-                'widgets'       => [
+                'widgets' => [
                     'grand_total' => [
-                        'label'  => 'Grand Total Summary',
-                        'due'    => $grandDue,
-                        'paid'   => $grandPaid,
+                        'label' => 'Grand Total Summary',
+                        'due' => $grandDue,
+                        'paid' => $grandPaid,
                         'unpaid' => $grandDue - $grandPaid,
                     ],
                     'rent' => [
-                        'label'  => 'Rent Summary',
-                        'due'    => $rentDue,
-                        'paid'   => $rentPaid,
+                        'label' => 'Rent Summary',
+                        'due' => $rentDue,
+                        'paid' => $rentPaid,
                         'unpaid' => $rentDue - $rentPaid,
                     ],
                     'services' => [
-                        'label'  => 'Services Summary',
-                        'due'    => $servicesDue,
-                        'paid'   => $servicesPaid,
+                        'label' => 'Services Summary',
+                        'due' => $servicesDue,
+                        'paid' => $servicesPaid,
                         'unpaid' => max(0, $servicesDue - $servicesPaid),
                     ],
                     'extra_payments' => [
-                        'label'  => 'Extra Payments',
-                        'due'    => $extraDue,
-                        'paid'   => $extraPaid,
+                        'label' => 'Extra Payments',
+                        'due' => $extraDue,
+                        'paid' => $extraPaid,
                         'unpaid' => max(0, $extraDue - $extraPaid),
                     ],
                     'security_deposit' => [
-                        'label'  => 'Security Deposit',
-                        'due'    => $depositDue,
-                        'paid'   => $depositPaid,
+                        'label' => 'Security Deposit',
+                        'due' => $depositDue,
+                        'paid' => $depositPaid,
                         'unpaid' => $depositDue - $depositPaid,
                     ],
                 ]
@@ -684,9 +684,9 @@ class PaymentController extends Controller
                     continue;
                 }
 
-                // Auto-generate Security Deposit if new agreement starts in selected month
+                // Auto-generate Security Deposit if new agreement starts in selected month (August 2026 or later)
                 $agreementStartMonth = Carbon::parse($agreement->start_date)->startOfMonth()->toDateString();
-                if ($agreementStartMonth === $month && $agreement->security_deposit > 0) {
+                if ($agreementStartMonth === $month && $agreement->security_deposit > 0 && Carbon::parse($agreement->start_date)->gte('2026-08-01')) {
                     $secExists = Payment::where('agreement_id', $agreement->id)
                         ->where('type', 'security_deposit')
                         ->exists();
@@ -918,6 +918,10 @@ class PaymentController extends Controller
                 ->get();
 
             foreach ($agreements as $ag) {
+                if ($ag->start_date && Carbon::parse($ag->start_date)->lt('2026-08-01')) {
+                    continue;
+                }
+
                 foreach ($types as $type) {
                     if (!in_array($type, ['rent', 'maintenance'])) {
                         continue;

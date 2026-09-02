@@ -72,15 +72,15 @@ class GenerateMonthlyRentPayments implements ShouldQueue
 
                 if (!$rentExists) {
                     Payment::create([
-                        'tenant_id'    => $tenant->id,
-                        'unit_id'      => $tenant->unit_id,
+                        'tenant_id' => $tenant->id,
+                        'unit_id' => $tenant->unit_id,
                         'agreement_id' => $agreement->id,
-                        'type'         => 'rent',
-                        'month'        => $monthStr,
-                        'amount'       => $agreement->monthly_rent,
-                        'amount_paid'  => 0,
-                        'status'       => 'unpaid',
-                        'due_date'     => $dueDate,
+                        'type' => 'rent',
+                        'month' => $monthStr,
+                        'amount' => $agreement->monthly_rent,
+                        'amount_paid' => 0,
+                        'status' => 'unpaid',
+                        'due_date' => $dueDate,
                     ]);
                     $createdCount++;
                 }
@@ -95,15 +95,15 @@ class GenerateMonthlyRentPayments implements ShouldQueue
 
                     if (!$maintExists) {
                         Payment::create([
-                            'tenant_id'    => $tenant->id,
-                            'unit_id'      => $tenant->unit_id,
+                            'tenant_id' => $tenant->id,
+                            'unit_id' => $tenant->unit_id,
                             'agreement_id' => $agreement->id,
-                            'type'         => 'maintenance',
-                            'month'        => $monthStr,
-                            'amount'       => $agreement->maintenance_charge,
-                            'amount_paid'  => 0,
-                            'status'       => 'unpaid',
-                            'due_date'     => $dueDate,
+                            'type' => 'maintenance',
+                            'month' => $monthStr,
+                            'amount' => $agreement->maintenance_charge,
+                            'amount_paid' => 0,
+                            'status' => 'unpaid',
+                            'due_date' => $dueDate,
                         ]);
                         $createdCount++;
                     }
@@ -118,13 +118,13 @@ class GenerateMonthlyRentPayments implements ShouldQueue
             ->get();
 
         // Determine a shared due date for self-unit maintenance (10th of month)
-        $selfDueDay   = 10;
-        $daysInMonth  = $billingMonth->copy()->daysInMonth;
-        $selfDueDate  = $billingMonth->copy()->day(min($selfDueDay, $daysInMonth))->toDateString();
+        $selfDueDay = 10;
+        $daysInMonth = $billingMonth->copy()->daysInMonth;
+        $selfDueDate = $billingMonth->copy()->day(min($selfDueDay, $daysInMonth))->toDateString();
 
         foreach ($selfUnits as $selfUnit) {
             // Only generate maintenance for other-owned units if occupied by an other tenant
-            if (! $selfUnit->otherTenant) {
+            if (!$selfUnit->otherTenant) {
                 continue;
             }
 
@@ -139,24 +139,24 @@ class GenerateMonthlyRentPayments implements ShouldQueue
                 ->where('month', $monthStr)
                 ->exists();
 
-            if (! $exists) {
+            if (!$exists) {
                 $otherTenant = $selfUnit->otherTenant;
-                $whatsappNumber = $otherTenant 
-                    ? $otherTenant->whatsapp_number 
+                $whatsappNumber = $otherTenant
+                    ? $otherTenant->whatsapp_number
                     : $selfUnit->landlord?->phone;
 
                 Payment::create([
-                    'tenant_id'        => null,
-                    'other_tenant_id'  => $otherTenant?->id,
-                    'unit_id'          => $selfUnit->id,
-                    'agreement_id'     => null,
-                    'type'             => 'maintenance',
-                    'month'            => $monthStr,
-                    'amount'           => $charge,
-                    'amount_paid'      => 0,
-                    'status'           => 'unpaid',
-                    'due_date'         => $selfDueDate,
-                    'whatsapp_number'  => $whatsappNumber,
+                    'tenant_id' => null,
+                    'other_tenant_id' => $otherTenant?->id,
+                    'unit_id' => $selfUnit->id,
+                    'agreement_id' => null,
+                    'type' => 'maintenance',
+                    'month' => $monthStr,
+                    'amount' => $charge,
+                    'amount_paid' => 0,
+                    'status' => 'unpaid',
+                    'due_date' => $selfDueDate,
+                    'whatsapp_number' => $whatsappNumber,
                 ]);
                 $createdCount++;
             }

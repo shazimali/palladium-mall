@@ -217,7 +217,7 @@ class="space-y-6">
                     <p class="text-base font-bold mt-2">No matching payment records found for the selected criteria.</p>
                 </div>
             @else
-                <form action="{{ route('payments.bulk-commit') }}" method="POST" onsubmit="return confirm('Are you sure you want to commit these selected operations to the database?')">
+                <form id="bulk-commit-form" action="{{ route('payments.bulk-commit') }}" method="POST" onsubmit="event.preventDefault(); confirmBulkCommit(this);">
                     @csrf
                     <input type="hidden" name="action" value="{{ $action }}">
                     <input type="hidden" name="payload" value="{{ json_encode($stagingItems) }}">
@@ -357,6 +357,22 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+function confirmBulkCommit(form) {
+    Swal.fire({
+        title: 'Commit Operations?',
+        text: 'Are you sure you want to commit these selected operations to the database?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#3b82f6',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Yes, Commit Operations'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+}
 </script>
 @endpush
 @endonce
