@@ -233,36 +233,81 @@ class ProfitLossController extends Controller
             $incomeBreakdown['other'] = $unallocatedTenantIncome;
         }
 
+        // Previous Unpaid balances carried over prior to date range
+        $prevRentPmMall = (float) DB::table('payments')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
+            ->whereNull('payments.deleted_at')
+            ->where('payments.month', '<', $from)
+            ->whereIn('payments.status', ['unpaid', 'partial'])
+            ->where('units.is_self', false)
+            ->where('payments.type', 'rent')
+            ->sum(DB::raw('payments.amount - payments.amount_paid'));
+
+        $prevMaintPmMall = (float) DB::table('payments')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
+            ->whereNull('payments.deleted_at')
+            ->where('payments.month', '<', $from)
+            ->whereIn('payments.status', ['unpaid', 'partial'])
+            ->where('payments.type', 'maintenance')
+            ->where(function ($q) {
+                $q->where('units.is_self', false)
+                    ->orWhereNotNull('payments.other_tenant_id');
+            })
+            ->sum(DB::raw('payments.amount - payments.amount_paid'));
+
+        $prevMaintOtherOwned = (float) DB::table('payments')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
+            ->whereNull('payments.deleted_at')
+            ->where('payments.month', '<', $from)
+            ->whereIn('payments.status', ['unpaid', 'partial'])
+            ->where('payments.type', 'maintenance')
+            ->where('units.is_self', true)
+            ->whereNull('payments.other_tenant_id')
+            ->sum(DB::raw('payments.amount - payments.amount_paid'));
+
+        $prevExtraPmMall = (float) DB::table('payments')
+            ->join('units', 'payments.unit_id', '=', 'units.id')
+            ->whereNull('payments.deleted_at')
+            ->where('payments.month', '<', $from)
+            ->whereIn('payments.status', ['unpaid', 'partial'])
+            ->whereIn('payments.type', ['extra_payment', 'fine'])
+            ->sum(DB::raw('payments.amount - payments.amount_paid'));
+
         $incomeDetailed = [
             'rent_pm_mall' => [
                 'label' => '🏠 Rent (PM Mall Units)',
+                'prev_unpaid' => $prevRentPmMall,
                 'billed' => $billedRentPmMall,
                 'collected' => $rentPmMall,
-                'unpaid' => max(0.0, $billedRentPmMall - $rentPmMall),
+                'unpaid' => $prevRentPmMall + max(0.0, $billedRentPmMall - $rentPmMall),
             ],
             'maint_pm_mall' => [
                 'label' => '🛠️ Maintenance Charges (PM Mall & Rented Other-Owned Units)',
+                'prev_unpaid' => $prevMaintPmMall,
                 'billed' => $billedMaintPmMall,
                 'collected' => $maintPmMall,
-                'unpaid' => max(0.0, $billedMaintPmMall - $maintPmMall),
+                'unpaid' => $prevMaintPmMall + max(0.0, $billedMaintPmMall - $maintPmMall),
             ],
             'maint_other_owned' => [
                 'label' => '🛠️ Maintenance Charges (Other-Owned Units without Attached Tenant)',
+                'prev_unpaid' => $prevMaintOtherOwned,
                 'billed' => $billedMaintOtherOwned,
                 'collected' => $maintOtherOwned,
-                'unpaid' => max(0.0, $billedMaintOtherOwned - $maintOtherOwned),
+                'unpaid' => $prevMaintOtherOwned + max(0.0, $billedMaintOtherOwned - $maintOtherOwned),
             ],
             'extra_pm_mall' => [
                 'label' => '💵 Extra Payments (PM Mall Units)',
+                'prev_unpaid' => $prevExtraPmMall,
                 'billed' => $billedExtraPmMall,
                 'collected' => $extraPmMall,
-                'unpaid' => max(0.0, $billedExtraPmMall - $extraPmMall),
+                'unpaid' => $prevExtraPmMall + max(0.0, $billedExtraPmMall - $extraPmMall),
             ],
         ];
 
         if ($unallocatedTenantIncome > 0) {
             $incomeDetailed['other'] = [
                 'label' => '📑 Other Tenant Receipts (Unallocated Vouchers)',
+                'prev_unpaid' => 0.0,
                 'billed' => 0.0,
                 'collected' => $unallocatedTenantIncome,
                 'unpaid' => 0.0,
@@ -270,6 +315,7 @@ class ProfitLossController extends Controller
         }
 
         $totalBilledIncome = array_sum(array_column($incomeDetailed, 'billed'));
+        $totalPrevUnpaid = array_sum(array_column($incomeDetailed, 'prev_unpaid'));
         $totalUnpaidIncome = array_sum(array_column($incomeDetailed, 'unpaid'));
 
         // 2. Expenses (Direct Expenses + JV Vouchers)
@@ -327,6 +373,7 @@ class ProfitLossController extends Controller
             'incomeBreakdown' => $incomeBreakdown,
             'incomeDetailed' => $incomeDetailed,
             'totalBilledIncome' => $totalBilledIncome,
+            'totalPrevUnpaid' => $totalPrevUnpaid,
             'totalUnpaidIncome' => $totalUnpaidIncome,
             'miscIncome' => $miscIncome,
             'totalIncome' => $totalIncome,

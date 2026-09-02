@@ -56,20 +56,22 @@
     <thead>
         <tr style="background-color: #1D3461; color: #FFFFFF;">
             <th style="font-weight: bold; width: 300px;">Income Breakdown</th>
+            <th style="font-weight: bold; width: 150px; text-align: right;">Prev. Unpaid (Rs.)</th>
             <th style="font-weight: bold; width: 150px; text-align: right;">Billed (Rs.)</th>
             <th style="font-weight: bold; width: 150px; text-align: right;">Collected (Rs.)</th>
-            <th style="font-weight: bold; width: 150px; text-align: right;">Unpaid (Rs.)</th>
+            <th style="font-weight: bold; width: 150px; text-align: right;">Total Outstanding (Rs.)</th>
         </tr>
     </thead>
     <tbody>
         @if(!empty($incomeDetailed))
             @foreach($incomeDetailed as $type => $item)
-                @if(($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
+                @if(($item['prev_unpaid'] ?? 0) > 0 || ($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
                     <tr>
                         <td>{{ str_replace(['🏠 ', '🛠️ ', '💵 ', '📑 '], '', $item['label']) }}</td>
+                        <td style="text-align: right; font-weight: bold; color: #B45309;">{{ $item['prev_unpaid'] ?? 0 }}</td>
                         <td style="text-align: right;">{{ $item['billed'] }}</td>
                         <td style="text-align: right; font-weight: bold; color: #047857;">{{ $item['collected'] }}</td>
-                        <td style="text-align: right; font-weight: bold; color: #D97706;">{{ $item['unpaid'] }}</td>
+                        <td style="text-align: right; font-weight: bold; color: #B91C1C;">{{ $item['unpaid'] }}</td>
                     </tr>
                 @endif
             @endforeach
@@ -78,6 +80,7 @@
                 @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
                     <tr>
                         <td>{{ ucfirst(str_replace('_', ' ', $type)) }}</td>
+                        <td style="text-align: right; color: #B45309;">0</td>
                         <td style="text-align: right;">0</td>
                         <td style="text-align: right; font-weight: bold; color: #047857;">{{ $amount }}</td>
                         <td style="text-align: right;">0</td>
@@ -87,9 +90,10 @@
         @endif
         <tr style="background-color: #F1F5F9;">
             <td style="font-weight: bold;">Total Revenue</td>
+            <td style="text-align: right; font-weight: bold; color: #B45309;">{{ $totalPrevUnpaid ?? 0 }}</td>
             <td style="text-align: right; font-weight: bold;">{{ $totalBilledIncome ?? $totalIncome }}</td>
             <td style="text-align: right; font-weight: bold; color: #047857;">{{ $totalIncome }}</td>
-            <td style="text-align: right; font-weight: bold; color: #D97706;">{{ $totalUnpaidIncome ?? 0 }}</td>
+            <td style="text-align: right; font-weight: bold; color: #B91C1C;">{{ $totalUnpaidIncome ?? 0 }}</td>
         </tr>
     </tbody>
 </table>

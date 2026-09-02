@@ -299,18 +299,22 @@
                     <thead class="text-[11px] uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                         <tr>
                             <th class="px-3 py-2.5">Revenue Category</th>
+                            <th class="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400">Prev. Unpaid (Rs.)</th>
                             <th class="px-3 py-2.5 text-right">Billed (Rs.)</th>
                             <th class="px-3 py-2.5 text-right text-emerald-700 dark:text-emerald-400">Collected (Rs.)</th>
-                            <th class="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400">Unpaid (Rs.)</th>
+                            <th class="px-3 py-2.5 text-right text-rose-700 dark:text-rose-400">Total Outstanding (Rs.)</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @if(!empty($incomeDetailed))
                             @foreach($incomeDetailed as $type => $item)
-                                @if(($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
+                                @if(($item['prev_unpaid'] ?? 0) > 0 || ($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
                                     <tr class="hover:bg-gray-50/50 dark:hover:bg-white/[0.01]">
                                         <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300 font-medium">
                                             {{ $item['label'] }}
+                                        </td>
+                                        <td class="px-3 py-2.5 text-right font-semibold text-amber-700 dark:text-amber-400">
+                                            {{ ($item['prev_unpaid'] ?? 0) > 0 ? number_format($item['prev_unpaid'], 2) : '—' }}
                                         </td>
                                         <td class="px-3 py-2.5 text-right text-gray-600 dark:text-gray-400">
                                             {{ number_format($item['billed'], 2) }}
@@ -318,7 +322,7 @@
                                         <td class="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-400">
                                             {{ number_format($item['collected'], 2) }}
                                         </td>
-                                        <td class="px-3 py-2.5 text-right font-semibold text-amber-700 dark:text-amber-400">
+                                        <td class="px-3 py-2.5 text-right font-semibold text-rose-600 dark:text-rose-400">
                                             {{ number_format($item['unpaid'], 2) }}
                                         </td>
                                     </tr>
@@ -331,10 +335,11 @@
                                         <td class="px-3 py-2.5 text-gray-700 dark:text-gray-300 font-medium">
                                             {{ ucfirst(str_replace('_', ' ', $type)) }}
                                         </td>
+                                        <td class="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400">—</td>
                                         <td class="px-3 py-2.5 text-right text-gray-600">—</td>
                                         <td class="px-3 py-2.5 text-right font-bold text-emerald-700 dark:text-emerald-400">
                                             {{ number_format($amount, 2) }}</td>
-                                        <td class="px-3 py-2.5 text-right text-amber-700 dark:text-amber-400">—</td>
+                                        <td class="px-3 py-2.5 text-right text-rose-600 dark:text-rose-400">—</td>
                                     </tr>
                                 @endif
                             @endforeach
@@ -344,11 +349,13 @@
                         <tr class="border-t-2 border-gray-300 dark:border-gray-600 bg-emerald-50 dark:bg-emerald-900/20">
                             <td class="px-3 py-3 text-sm font-black text-gray-900 dark:text-white tracking-wide uppercase">
                                 Total Revenue:</td>
+                            <td class="px-3 py-3 text-right text-sm font-extrabold text-amber-600 dark:text-amber-400">Rs.
+                                {{ number_format($totalPrevUnpaid ?? 0, 2) }}</td>
                             <td class="px-3 py-3 text-right text-sm font-extrabold text-gray-700 dark:text-gray-200">Rs.
                                 {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
                             <td class="px-3 py-3 text-right text-base font-black text-emerald-700 dark:text-emerald-400">Rs.
                                 {{ number_format($totalIncome, 2) }}</td>
-                            <td class="px-3 py-3 text-right text-sm font-extrabold text-amber-600 dark:text-amber-400">Rs.
+                            <td class="px-3 py-3 text-right text-sm font-extrabold text-rose-600 dark:text-rose-400">Rs.
                                 {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
                         </tr>
                     </tfoot>

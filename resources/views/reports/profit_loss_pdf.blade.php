@@ -195,20 +195,22 @@
             <thead>
                 <tr>
                     <th>Revenue Category</th>
+                    <th class="text-right">Prev. Unpaid (Rs.)</th>
                     <th class="text-right">Billed (Rs.)</th>
                     <th class="text-right">Collected (Rs.)</th>
-                    <th class="text-right">Unpaid (Rs.)</th>
+                    <th class="text-right">Total Outstanding (Rs.)</th>
                 </tr>
             </thead>
             <tbody>
                 @if(!empty($incomeDetailed))
                     @foreach($incomeDetailed as $type => $item)
-                        @if(($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
+                        @if(($item['prev_unpaid'] ?? 0) > 0 || ($item['billed'] ?? 0) > 0 || ($item['collected'] ?? 0) > 0)
                             <tr>
                                 <td>{{ str_replace(['🏠 ', '🛠️ ', '💵 ', '📑 '], '', $item['label']) }}</td>
+                                <td class="text-right font-medium" style="color: #b45309;">{{ ($item['prev_unpaid'] ?? 0) > 0 ? number_format($item['prev_unpaid'], 2) : '—' }}</td>
                                 <td class="text-right">{{ number_format($item['billed'], 2) }}</td>
                                 <td class="text-right font-medium" style="color: #047857;">{{ number_format($item['collected'], 2) }}</td>
-                                <td class="text-right font-medium" style="color: #D97706;">{{ number_format($item['unpaid'], 2) }}</td>
+                                <td class="text-right font-medium" style="color: #dc2626;">{{ number_format($item['unpaid'], 2) }}</td>
                             </tr>
                         @endif
                     @endforeach
@@ -217,9 +219,10 @@
                         @if($amount > 0 || in_array($type, ['rent_pm_mall', 'maint_pm_mall']))
                             <tr>
                                 <td>{{ ucfirst(str_replace('_', ' ', $type)) }}</td>
+                                <td class="text-right" style="color: #b45309;">—</td>
                                 <td class="text-right">—</td>
                                 <td class="text-right font-medium" style="color: #047857;">{{ number_format($amount, 2) }}</td>
-                                <td class="text-right" style="color: #D97706;">—</td>
+                                <td class="text-right" style="color: #dc2626;">—</td>
                             </tr>
                         @endif
                     @endforeach
@@ -228,9 +231,10 @@
             <tfoot>
                 <tr>
                     <td>Total Revenue:</td>
+                    <td class="text-right" style="color: #b45309;">Rs. {{ number_format($totalPrevUnpaid ?? 0, 2) }}</td>
                     <td class="text-right">Rs. {{ number_format($totalBilledIncome ?? $totalIncome, 2) }}</td>
                     <td class="text-right" style="color: #047857;">Rs. {{ number_format($totalIncome, 2) }}</td>
-                    <td class="text-right" style="color: #D97706;">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
+                    <td class="text-right" style="color: #dc2626;">Rs. {{ number_format($totalUnpaidIncome ?? 0, 2) }}</td>
                 </tr>
             </tfoot>
         </table>
