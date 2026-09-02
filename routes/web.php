@@ -415,6 +415,12 @@ Route::middleware('auth')->group(function () {
         Route::post('ledgers/party/dues', [\App\Http\Controllers\PartyLedgerController::class, 'storeDue'])->name('ledgers.party.dues.store');
         Route::delete('ledgers/party/dues/{due}', [\App\Http\Controllers\PartyLedgerController::class, 'destroyDue'])->name('ledgers.party.dues.destroy');
         Route::get('ledgers/party/print', [\App\Http\Controllers\PartyLedgerController::class, 'print'])->name('ledgers.party.print');
+
+        // Flat / Shop Ledger Routes
+        Route::get('ledgers/flat-shop', [\App\Http\Controllers\FlatShopLedgerController::class, 'index'])->name('ledgers.flat_shop.index');
+        Route::get('ledgers/flat-shop/print', [\App\Http\Controllers\FlatShopLedgerController::class, 'print'])->name('ledgers.flat_shop.print');
+        Route::get('ledgers/flat-shop/export', [\App\Http\Controllers\FlatShopLedgerController::class, 'export'])->name('ledgers.flat_shop.export');
+        Route::get('ledgers/flat-shop/statement/{unit}', [\App\Http\Controllers\FlatShopLedgerController::class, 'statement'])->name('ledgers.flat_shop.statement');
     });
 
 

@@ -299,6 +299,7 @@ class MenuHelper
         // 5. Ledgers
         $ledgerSubItems = [];
         if (auth()->check() && $user->can('ledgers.view')) {
+            $ledgerSubItems[] = ['name' => 'Flat/Shop Ledger', 'path' => '/ledgers/flat-shop'];
             $ledgerSubItems[] = ['name' => 'Tenant Ledger', 'path' => '/ledgers/tenant'];
             $ledgerSubItems[] = ['name' => 'Owner Ledger', 'path' => '/ledgers/owner'];
             $ledgerSubItems[] = ['name' => 'Landlord Ledger', 'path' => '/landlord-ledgers'];
