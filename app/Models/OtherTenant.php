@@ -57,6 +57,22 @@ class OtherTenant extends Model
         return $this->hasMany(Payment::class)->orderBy('month', 'desc');
     }
 
+    public function getEffectiveUnitAttribute(): ?Unit
+    {
+        if ($this->relationLoaded('unit') && $this->unit) {
+            return $this->unit;
+        }
+        if ($this->unit) {
+            return $this->unit;
+        }
+
+        $latestHistory = $this->relationLoaded('unitHistory')
+            ? $this->unitHistory->sortByDesc('id')->first()
+            : $this->unitHistory()->with('unit')->latest('id')->first();
+
+        return $latestHistory?->unit;
+    }
+
     // -----------------------------------------------------------------------
     // Scopes
     // -----------------------------------------------------------------------

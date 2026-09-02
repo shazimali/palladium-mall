@@ -93,19 +93,16 @@ class ReportExport implements
             ]);
         }
 
-        return $this->entries->map(fn($e) => [
-            'Created Date' => $e['created_date']?->format('d M Y') ?? '—',
-            'Voucher #' => $e['voucher_number'] ?? '—',
+        return $this->entries->values()->map(fn($e, $i) => [
+            'SR #' => $i + 1,
             'Flat/Shop' => $e['unit'] ?? '—',
-            'Type' => ucfirst($e['type'] ?? ''),
-            'Landlord' => $e['landlord'] ?? '—',
             'Tenant' => $e['tenant'] ?? '—',
             'Amount Due' => number_format((float) $e['amount_due'], 2),
             'Amount Paid' => number_format((float) $e['amount_paid'], 2),
-            'Balance' => number_format((float) $e['balance'], 2),
-            'Payment Status' => ucfirst($e['status'] ?? ''),
-            'Paid At' => $e['paid_at'] ? $e['paid_at']->format('d M Y') : '—',
+            'Payment Method' => $e['payment_method'] ?? '—',
             'Payment Account' => $e['payment_account'] ?? '—',
+            'Paid At' => $e['paid_at'] ? $e['paid_at']->format('d M Y') : '—',
+            'Balance' => number_format((float) $e['balance'], 2),
         ]);
     }
 
@@ -173,18 +170,15 @@ class ReportExport implements
         }
 
         return [
-            'Created Date',
-            'Voucher #',
+            'SR #',
             'Flat/Shop',
-            'Type',
-            'Landlord',
             'Tenant',
-            'Amount Due (Rs.)',
-            'Amount Paid (Rs.)',
-            'Balance (Rs.)',
-            'Payment Status',
-            'Paid At',
+            'Amount Due',
+            'Amount Paid',
+            'Payment Method',
             'Payment Account',
+            'Paid At',
+            'Balance',
         ];
     }
 

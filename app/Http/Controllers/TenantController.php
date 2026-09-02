@@ -1744,12 +1744,20 @@ class TenantController extends Controller
      */
     private function getUnifiedActiveOccupantsData(Request $request): \Illuminate\Support\Collection
     {
-        // 1. Fetch Active Standard Tenants
-        $tenantsQuery = Tenant::with(['unit.landlord', 'activeAgreement', 'emergencyContacts'])
-            ->where('status', 'active')
+        $status = $request->status;
+
+        // 1. Fetch Standard Tenants
+        $tenantsQuery = Tenant::with(['unit.landlord', 'activeAgreement', 'agreements.unit.landlord', 'emergencyContacts'])
+            ->when($status === 'active', fn($q) => $q->active())
+            ->when($status === 'inactive', fn($q) => $q->inactive())
+            ->when($status === 'draft', fn($q) => $q->draft())
+            ->when(empty($status) && !$request->anyFilled(['search', 'landlord_id', 'date_from', 'date_to', 'expiring_days']), fn($q) => $q->active())
             ->when($request->search, fn($q) => $q->search($request->search))
             ->when($request->landlord_id, function ($q) use ($request) {
-                $q->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                $q->where(function ($sq) use ($request) {
+                    $sq->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id))
+                       ->orWhereHas('agreements.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                });
             })
             ->when($request->date_from, function ($q) use ($request) {
                 $q->whereHas('agreements', fn($qa) => $qa->where('start_date', '>=', $request->date_from));
@@ -1774,48 +1782,60 @@ class TenantController extends Controller
                 ? $emContact->name . ($emContact->phone ? ' (' . $emContact->phone . ')' : '')
                 : '—';
 
+            $effUnit = $t->effective_unit;
+            $agreement = $t->activeAgreement ?: $t->agreements->sortByDesc('id')->first();
+
             return [
-                'unit_number' => $t->unit->unit_number ?? '—',
+                'unit_number' => $effUnit?->unit_number ?? '—',
                 'tenant_name' => $t->name,
                 'phone' => $t->phone ?? '—',
                 'emergency_contact' => $emContactStr,
-                'landlord_name' => $t->unit->landlord->name ?? '—',
-                'start_date' => $t->activeAgreement?->start_date ? $t->activeAgreement->start_date->format('d M Y') : '—',
+                'landlord_name' => $effUnit?->landlord?->name ?? $t->unit?->landlord?->name ?? '—',
+                'start_date' => $agreement?->start_date ? $agreement->start_date->format('d M Y') : '—',
                 'photo_url' => $t->passport_photo_url,
-                'monthly_rent' => (float) ($t->activeAgreement->monthly_rent ?? 0),
-                'security_deposit' => (float) ($t->activeAgreement->security_deposit ?? 0),
+                'monthly_rent' => (float) ($agreement?->monthly_rent ?? 0),
+                'security_deposit' => (float) ($agreement?->security_deposit ?? 0),
                 'is_other_owned' => false,
             ];
         });
 
-        // 2. Fetch Active Other-Owned Tenants
-        $otherTenantsQuery = \App\Models\OtherTenant::with(['unit.landlord', 'unitHistory'])
-            ->where('status', 'active')
-            ->whereNotNull('unit_id')
-            ->when($request->search, fn($q) => $q->search($request->search))
-            ->when($request->landlord_id, function ($q) use ($request) {
-                $q->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+        // 2. Fetch Other-Owned Tenants (Only if status is not inactive)
+        $otherOccupants = collect();
+        if ($status !== 'inactive') {
+            $otherTenantsQuery = \App\Models\OtherTenant::with(['unit.landlord', 'unitHistory.unit.landlord'])
+                ->when($status === 'active', fn($q) => $q->where('status', 'active'))
+                ->when($status === 'draft', fn($q) => $q->where('status', 'draft'))
+                ->when(empty($status) && !$request->anyFilled(['search', 'landlord_id', 'date_from', 'date_to', 'expiring_days']), fn($q) => $q->where('status', 'active'))
+                ->when($request->search, fn($q) => $q->search($request->search))
+                ->when($request->landlord_id, function ($q) use ($request) {
+                    $q->where(function ($sq) use ($request) {
+                        $sq->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id))
+                           ->orWhereHas('unitHistory.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                    });
+                });
+
+            $otherOccupants = $otherTenantsQuery->get()->map(function ($ot) {
+                $emContactStr = $ot->whatsapp_number ? 'WhatsApp: ' . $ot->whatsapp_number : '—';
+                $startDate = $ot->unitHistory->first()?->attached_at
+                    ? $ot->unitHistory->first()->attached_at->format('d M Y')
+                    : ($ot->created_at ? $ot->created_at->format('d M Y') : '—');
+
+                $effUnit = $ot->effective_unit;
+
+                return [
+                    'unit_number' => $effUnit?->unit_number ?? '—',
+                    'tenant_name' => $ot->name,
+                    'phone' => $ot->phone ?? '—',
+                    'emergency_contact' => $emContactStr,
+                    'landlord_name' => $effUnit?->landlord?->name ?? $ot->unit?->landlord?->name ?? '—',
+                    'start_date' => $startDate,
+                    'photo_url' => $ot->photo_url,
+                    'monthly_rent' => (float) ($ot->monthly_rent ?? $effUnit?->rent_amount ?? 0),
+                    'security_deposit' => 0.0,
+                    'is_other_owned' => true,
+                ];
             });
-
-        $otherOccupants = $otherTenantsQuery->get()->map(function ($ot) {
-            $emContactStr = $ot->whatsapp_number ? 'WhatsApp: ' . $ot->whatsapp_number : '—';
-            $startDate = $ot->unitHistory->first()?->attached_at
-                ? $ot->unitHistory->first()->attached_at->format('d M Y')
-                : ($ot->created_at ? $ot->created_at->format('d M Y') : '—');
-
-            return [
-                'unit_number' => $ot->unit->unit_number ?? '—',
-                'tenant_name' => $ot->name,
-                'phone' => $ot->phone ?? '—',
-                'emergency_contact' => $emContactStr,
-                'landlord_name' => $ot->unit->landlord->name ?? '—',
-                'start_date' => $startDate,
-                'photo_url' => $ot->photo_url,
-                'monthly_rent' => (float) ($ot->monthly_rent ?? $ot->unit->rent_amount ?? 0),
-                'security_deposit' => 0.0,
-                'is_other_owned' => true,
-            ];
-        });
+        }
 
         // Merge and sort naturally by unit_number
         return $standardOccupants->concat($otherOccupants)->sortBy(function ($item) {

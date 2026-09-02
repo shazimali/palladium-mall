@@ -155,9 +155,13 @@ class Tenant extends Model
 
         $latestAgreement = $this->relationLoaded('agreements') 
             ? $this->agreements->sortByDesc('id')->first()
-            : $this->agreements()->latest('id')->first();
+            : $this->agreements()->with('unit')->latest('id')->first();
 
-        return $latestAgreement?->unit;
+        if ($latestAgreement?->unit) {
+            return $latestAgreement->unit;
+        }
+
+        return null;
     }
 
     // -----------------------------------------------------------------------

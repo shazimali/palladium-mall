@@ -178,12 +178,12 @@ class ReceivablePayableReportController extends Controller
             if (!empty($categories)) {
                 $duesOnlyPayments = $duesOnlyPayments->filter(function ($p) use ($categories) {
                     $cat = match ($p->type) {
-                        'rent'                  => 'Tenant Rent',
-                        'maintenance'           => 'Tenant Maintenance',
+                        'rent' => 'Tenant Rent',
+                        'maintenance' => 'Tenant Maintenance',
                         'extra_payment', 'other' => 'Tenant Extra',
-                        'fine'                  => 'Tenant Fine',
+                        'fine' => 'Tenant Fine',
                         'electricity', 'water', 'gas' => 'Tenant Utilities',
-                        default                 => 'Tenant Other',
+                        default => 'Tenant Other',
                     };
                     return in_array($cat, $categories);
                 });
@@ -226,8 +226,8 @@ class ReceivablePayableReportController extends Controller
                     // Other tab    → is_self=true WITHOUT active otherTenant on unit (self-owned vacant units)
                     $isOtherReceivable = $isSelf && !$hasActiveOtherTenant;
 
-                    $pendingTypes = $group->filter(fn($p) => ((float)$p->amount - (float)$p->amount_paid) > 0.01)
-                        ->map(fn($p) => match($p->type) {
+                    $pendingTypes = $group->filter(fn($p) => ((float) $p->amount - (float) $p->amount_paid) > 0.01)
+                        ->map(fn($p) => match ($p->type) {
                             'rent' => 'Rent',
                             'maintenance' => 'Maintenance',
                             'extra_payment', 'other' => 'Extra Payments',

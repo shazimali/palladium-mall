@@ -1,66 +1,73 @@
 @extends('layouts.app')
 
 @section('content')
-<style>
-    @media print {
-        .no-print,
-        nav,
-        aside,
-        header,
-        .sticky,
-        .page-breadcrumb,
-        #report-filter-form {
-            display: none !important;
-        }
-        body {
-            background-color: white !important;
-            color: black !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            font-size: 15px !important;
-        }
-        .print-container {
-            padding: 15px !important;
-        }
-        table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            font-size: 14px !important;
-        }
-        th {
-            font-size: 13px !important;
-            font-weight: 900 !important;
-            border: 1px solid #9ca3af !important;
-            padding: 8px 10px !important;
-            color: black !important;
-        }
-        td {
-            border: 1px solid #9ca3af !important;
-            padding: 8px 10px !important;
-            color: black !important;
-            font-size: 14px !important;
-        }
-        tfoot tr td {
-            font-weight: 900 !important;
-            font-size: 15px !important;
-            background-color: #f3f4f6 !important;
-        }
-    }
-</style>
+    <style>
+        @media print {
 
-{{-- Printable Header --}}
-<div class="hidden print:block mb-6 text-center border-b-2 border-black pb-4">
-    <h1 class="text-3xl font-black uppercase tracking-wider text-black">PALLADIUM MALL</h1>
-    <p class="text-sm font-bold text-gray-700 uppercase">Management Office — Islamabad</p>
-    <h2 class="text-xl font-black uppercase text-black mt-2">
-        {{ $receivableScope === 'other' ? 'Other Receivables Report (Not Managed by PM Mall)' : 'PM Mall Receivables Report' }}
-    </h2>
-    <p class="text-base font-bold text-black mt-1">
-        Statement Period: {{ !empty($dateFrom) ? date('d M Y', strtotime($dateFrom)) : 'Beginning' }} —
-        {{ !empty($dateTo) ? date('d M Y', strtotime($dateTo)) : 'Present' }}
-    </p>
-    <p class="text-xs text-gray-600 mt-0.5">Printed on: {{ now()->format('d M Y, h:i A') }}</p>
-</div>
+            .no-print,
+            nav,
+            aside,
+            header,
+            .sticky,
+            .page-breadcrumb,
+            #report-filter-form {
+                display: none !important;
+            }
+
+            body {
+                background-color: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-size: 15px !important;
+            }
+
+            .print-container {
+                padding: 15px !important;
+            }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 14px !important;
+            }
+
+            th {
+                font-size: 13px !important;
+                font-weight: 900 !important;
+                border: 1px solid #9ca3af !important;
+                padding: 8px 10px !important;
+                color: black !important;
+            }
+
+            td {
+                border: 1px solid #9ca3af !important;
+                padding: 8px 10px !important;
+                color: black !important;
+                font-size: 14px !important;
+            }
+
+            tfoot tr td {
+                font-weight: 900 !important;
+                font-size: 15px !important;
+                background-color: #f3f4f6 !important;
+            }
+        }
+    </style>
+
+    {{-- Printable Header --}}
+    <div class="hidden print:block mb-6 text-center border-b-2 border-black pb-4">
+        <h1 class="text-3xl font-black uppercase tracking-wider text-black">PALLADIUM MALL</h1>
+        <p class="text-sm font-bold text-gray-700 uppercase">Management Office — Islamabad</p>
+        <h2 class="text-xl font-black uppercase text-black mt-2">
+            {{ $receivableScope === 'other' ? 'Other Receivables Report (Not Managed by PM Mall)' : 'PM Mall Receivables Report' }}
+        </h2>
+        <p class="text-base font-bold text-black mt-1">
+            Statement Period: {{ !empty($dateFrom) ? date('d M Y', strtotime($dateFrom)) : 'Beginning' }} —
+            {{ !empty($dateTo) ? date('d M Y', strtotime($dateTo)) : 'Present' }}
+        </p>
+        <p class="text-xs text-gray-600 mt-0.5">Printed on: {{ now()->format('d M Y, h:i A') }}</p>
+    </div>
 
     <div class="no-print">
         <x-common.page-breadcrumb pageTitle="Receivables Report" />
@@ -111,15 +118,15 @@
             @endphp
 
             <div x-data="{
-                selected: @js(empty($categories) ? array_keys($catMap) : $categories),
-                options: @js($catMap),
-                selectAll() {
-                    this.selected = Object.keys(this.options);
-                },
-                clearAll() {
-                    this.selected = [];
-                }
-            }" class="flex flex-wrap items-center gap-3 w-full">
+                    selected: @js(empty($categories) ? array_keys($catMap) : $categories),
+                    options: @js($catMap),
+                    selectAll() {
+                        this.selected = Object.keys(this.options);
+                    },
+                    clearAll() {
+                        this.selected = [];
+                    }
+                }" class="flex flex-wrap items-center gap-3 w-full">
 
                 {{-- Date From --}}
                 <input type="text" id="date_from" name="date_from" value="{{ $dateFrom }}" placeholder="From Date"
@@ -135,10 +142,11 @@
                 {{-- Inline Category Checkboxes --}}
                 <div class="flex flex-wrap items-center gap-1.5">
                     <template x-for="(label, val) in options" :key="val">
-                        <label class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none"
+                        <label
+                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-semibold cursor-pointer transition-all select-none"
                             :class="selected.includes(val) 
-                                ? 'border-brand-300 bg-brand-50/70 text-brand-700 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300 shadow-2xs' 
-                                : 'border-gray-200 bg-gray-50/50 text-gray-600 dark:border-gray-700/80 dark:bg-gray-900/50 dark:text-gray-400 hover:bg-gray-100'">
+                                    ? 'border-brand-300 bg-brand-50/70 text-brand-700 dark:border-brand-800 dark:bg-brand-950/40 dark:text-brand-300 shadow-2xs' 
+                                    : 'border-gray-200 bg-gray-50/50 text-gray-600 dark:border-gray-700/80 dark:bg-gray-900/50 dark:text-gray-400 hover:bg-gray-100'">
                             <input type="checkbox" name="categories[]" :value="val" x-model="selected"
                                 class="h-3.5 w-3.5 rounded border-gray-300 text-brand-600 focus:ring-brand-500">
                             <span x-text="label"></span>
@@ -148,11 +156,13 @@
 
                 {{-- Select All / Clear Shortcuts --}}
                 <div class="flex items-center gap-1 text-xs font-semibold shrink-0">
-                    <button type="button" @click="selectAll()" class="text-brand-600 hover:text-brand-700 dark:text-brand-400 cursor-pointer text-[11px]">
+                    <button type="button" @click="selectAll()"
+                        class="text-brand-600 hover:text-brand-700 dark:text-brand-400 cursor-pointer text-[11px]">
                         All
                     </button>
                     <span class="text-gray-300 dark:text-gray-700">&bull;</span>
-                    <button type="button" @click="clearAll()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 cursor-pointer text-[11px]">
+                    <button type="button" @click="clearAll()"
+                        class="text-gray-400 hover:text-gray-600 dark:text-gray-500 cursor-pointer text-[11px]">
                         None
                     </button>
                 </div>
@@ -181,7 +191,8 @@
                 {{-- Print Button --}}
                 <button type="button" onclick="window.print()"
                     class="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:border-gray-700 h-9 px-4 text-xs font-bold text-gray-700 dark:text-gray-200 transition-colors shadow-xs cursor-pointer shrink-0">
-                    <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg class="h-4 w-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                     </svg>
@@ -245,7 +256,8 @@
                                 <td class="px-5 py-4 text-gray-950 dark:text-gray-300 font-bold text-base">
                                     {{ $row['unit'] ?: '—' }}
                                 </td>
-                                <td class="px-5 py-4 text-right font-black text-green-600 dark:text-green-400 font-mono text-base">
+                                <td
+                                    class="px-5 py-4 text-right font-black text-green-600 dark:text-green-400 font-mono text-base">
                                     Rs. {{ number_format($row['net'], 2) }}
                                 </td>
                             </tr>

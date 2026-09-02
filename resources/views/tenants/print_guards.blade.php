@@ -5,66 +5,214 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $pageTitle }} — Palladium Mall</title>
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        html { font-size: 18px; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; color: #000; background: #fff; padding: 20px 24px; line-height: 1.4; font-weight: 800; }
-        .pm-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 4px solid #111827; padding-bottom: 12px; margin-bottom: 16px; }
-        .pm-header-left { display: flex; align-items: center; gap: 12px; }
-        .pm-logo-icon { width: 44px; height: 44px; background: #111827; border-radius: 8px; display: flex; align-items: flex-end; justify-content: center; gap: 3px; padding: 6px; }
-        .pm-logo-icon span { display: block; background: #fff; border-radius: 2px; width: 6px; }
-        .pm-logo-icon span:nth-child(1) { height: 100%; }
-        .pm-logo-icon span:nth-child(2) { height: 70%; opacity: .9; }
-        .pm-logo-icon span:nth-child(3) { height: 82%; opacity: .7; }
-        .pm-name { font-size: 2.2rem; font-weight: 900; color: #000; letter-spacing: -.5px; }
-        .pm-header-right { text-align: right; }
-        .pm-header-right .doc-title { font-size: 1.8rem; font-weight: 900; color: #000; }
-        .pm-header-right .doc-date { font-size: 1.1rem; font-weight: 800; color: #111827; margin-top: 2px; }
-        
-        table { width: 100%; border-collapse: collapse; font-size: 1.1rem; font-weight: 800; }
-        thead tr { background: #111827; color: #fff; }
-        thead th { padding: 12px 14px; text-align: left; font-weight: 900; font-size: 1.1rem; text-transform: uppercase; letter-spacing: .05em; color: #fff; border-bottom: 3px solid #000; white-space: nowrap; }
-        tbody tr { border-bottom: 2px solid #e5e7eb; }
-        tbody td { padding: 10px 14px; color: #000; font-weight: 800; vertical-align: middle; }
-        
-        .tenant-img { width: 65px; height: 65px; object-fit: cover; border-radius: 10px; border: 2px solid #111827; background: #f3f4f6; }
-        .no-photo { width: 65px; height: 65px; border-radius: 10px; border: 2px dashed #9ca3af; background: #f3f4f6; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #6b7280; font-weight: 900; }
-        
-        .unit-badge { display: inline-block; background: #111827; color: #fff; font-weight: 900; font-size: 1.2rem; padding: 4px 10px; border-radius: 8px; font-family: monospace; }
-        .other-badge { display: inline-block; background: #8b5cf6; color: #fff; font-weight: 900; font-size: .75rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; text-transform: uppercase; }
-        
-        .contact-box { display: flex; flex-direction: column; gap: 3px; }
-        .primary-phone { font-family: monospace; font-size: 1.15rem; font-weight: 900; color: #111827; }
-        .emergency-contact { font-size: .95rem; font-weight: 800; color: #dc2626; }
-        
-        .pm-footer { margin-top: 24px; border-top: 3px solid #000; padding-top: 10px; display: flex; justify-content: space-between; font-size: 1.1rem; font-weight: 900; color: #111827; }
-        .no-print { text-align: center; margin-bottom: 20px; }
-        .print-btn { display: inline-flex; align-items: center; gap: 8px; background: #111827; color: #fff; border: none; border-radius: 10px; padding: 12px 28px; font-size: 1.2rem; font-weight: 900; cursor: pointer; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: DejaVu Sans, ui-sans-serif, system-ui, -apple-system, sans-serif;
+            font-size: 12px;
+            color: #0F172A;
+            line-height: 1.4;
+            padding: 16px 24px;
+            background: #fff;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #0F172A;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 900;
+            color: #0F172A;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .header p {
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            text-align: center;
+        }
+
+        .inline-summary-container {
+            padding: 0 12px;
+            margin-bottom: 16px;
+            font-size: 11px;
+            color: #1E293B;
+            line-height: 1.6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+        }
+
+        thead tr {
+            background: #F1F5F9;
+            color: #0F172A;
+            border-bottom: 2px solid #334155;
+        }
+
+        thead th {
+            padding: 9px 10px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #0F172A;
+            border: 1px solid #CBD5E1;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #F8FAFC;
+        }
+
+        tbody td {
+            padding: 8px 10px;
+            border: 1px solid #E2E8F0;
+            font-size: 11px;
+            color: #0F172A;
+            vertical-align: middle;
+        }
+
+        .tenant-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #CBD5E1;
+            background: #f8fafc;
+        }
+
+        .no-photo {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            border: 1px dashed #cbd5e1;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #94a3b8;
+        }
+
+        .unit-badge {
+            display: inline-block;
+            background: #0F172A;
+            color: #fff;
+            font-weight: 900;
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+
+        .other-badge {
+            display: inline-block;
+            background: #8b5cf6;
+            color: #fff;
+            font-weight: 800;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            text-transform: uppercase;
+        }
+
+        .contact-box {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .primary-phone {
+            font-family: monospace;
+            font-size: 11px;
+            font-weight: 900;
+            color: #0F172A;
+        }
+
+        .emergency-contact {
+            font-size: 10px;
+            font-weight: 800;
+            color: #dc2626;
+        }
+
+        .footer {
+            margin-top: 18px;
+            font-size: 10px;
+            font-weight: 600;
+            color: #64748B;
+            text-align: center;
+            border-top: 1px solid #CBD5E1;
+            padding-top: 10px;
+        }
+
+        .no-print {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .print-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #0F172A;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 13px;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
         @media print {
             @page {
-                size: A4;
-                margin: 0.5cm;
+                size: landscape;
+                margin: 8mm;
             }
             .no-print {
                 display: none !important;
             }
             body {
-                background-color: white !important;
+                background: white !important;
                 color: black !important;
+                font-size: 12px !important;
                 padding: 0 !important;
-                margin: 0 !important;
-                font-weight: bold !important;
-                zoom: 0.8;
             }
-            .max-w-3xl, .max-w-5xl, .max-w-6xl {
-                max-width: 100% !important;
-                padding: 5px !important;
-                margin: 0 !important;
-                border: none !important;
-                box-shadow: none !important;
+            .header {
+                background: transparent !important;
+                border-bottom: 2px solid #000 !important;
+                padding-bottom: 8px !important;
             }
-            .print-border {
-                border-width: 1px !important;
-                border-color: #d1d5db !important;
+            .header h1 {
+                color: black !important;
+                font-size: 22px !important;
+                font-weight: 900 !important;
+            }
+            .header p {
+                color: #222 !important;
+                font-size: 11px !important;
+            }
+            thead th {
+                background: #f1f5f9 !important;
+                color: black !important;
+                font-size: 11px !important;
+                font-weight: 900 !important;
+                border: 1px solid #94a3b8 !important;
+            }
+            tbody td {
+                font-size: 11px !important;
+                color: black !important;
+                border: 1px solid #cbd5e1 !important;
             }
         }
     </style>
@@ -74,21 +222,30 @@
         <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
     </div>
 
-    <div class="pm-header">
-        <div class="pm-header-left">
-            <div class="pm-logo-icon"><span></span><span></span><span></span></div>
-            <span class="pm-name">Palladium Mall</span>
-        </div>
-        <div class="pm-header-right">
-            <div class="doc-title">Active Tenants Directory (For Guards)</div>
-            <div class="doc-date">Printed: {{ now()->format('d M Y, h:i A') }}</div>
+    {{-- Centered Header --}}
+    <div class="header">
+        <h1>Palladium Mall Management System</h1>
+        <p>
+            {{ $pageTitle }} &bull; Generated: {{ now()->format('d M Y, H:i') }}
+        </p>
+    </div>
+
+    {{-- Clean Inline Metadata & Summary Section --}}
+    <div class="inline-summary-container">
+        <div>
+            <span style="font-weight: bold; color: #64748B;">Directory Type:</span> <span style="font-weight: 800; color: #0F172A;">{{ $pageTitle }}</span>
+            <span style="margin: 0 6px; color: #94A3B8;">&bull;</span>
+            <span style="font-weight: bold; color: #64748B;">Total Active Occupants:</span> <span style="font-weight: 800; color: #0F172A;">{{ number_format(count($occupants)) }}</span>
+            <span style="margin: 0 6px; color: #94A3B8;">&bull;</span>
+            <span style="font-weight: bold; color: #64748B;">Printed On:</span> <span style="font-weight: 800; color: #0F172A;">{{ now()->format('d M Y, H:i') }}</span>
         </div>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th style="width: 75px;">Photo</th>
+                <th style="width: 45px; text-align: center;">Sr #</th>
+                <th style="width: 60px;">Photo</th>
                 <th>Flat / Shop</th>
                 <th>Tenant Name</th>
                 <th>Contact Details</th>
@@ -97,8 +254,9 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($occupants as $occupant)
+            @forelse($occupants as $index => $occupant)
                 <tr>
+                    <td style="text-align: center; font-weight: 800; color: #475569;">{{ $index + 1 }}</td>
                     <td>
                         @if(!empty($occupant['photo_url']))
                             <img src="{{ $occupant['photo_url'] }}" alt="{{ $occupant['tenant_name'] }}" class="tenant-img">
@@ -109,7 +267,7 @@
                     <td>
                         <span class="unit-badge">{{ $occupant['unit_number'] }}</span>
                     </td>
-                    <td style="font-size: 1.2rem; font-weight: 900;">
+                    <td style="font-weight: 900;">
                         {{ $occupant['tenant_name'] }}
                         @if($occupant['is_other_owned'])
                             <span class="other-badge">Other-Owned</span>
@@ -132,17 +290,16 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 40px; font-size: 1.3rem; font-weight: 900; color: #6b7280;">
-                        No active tenants found.
+                    <td colspan="7" style="text-align: center; padding: 30px; font-size: 12px; font-weight: 800; color: #64748B;">
+                        No active occupants found matching current filters.
                     </td>
                 </tr>
             @endforelse
         </tbody>
     </table>
 
-    <div class="pm-footer">
-        <span>Palladium Mall Security & Gate Control</span>
-        <span>Total Active Occupants: {{ count($occupants) }}</span>
+    <div class="footer">
+        Palladium Mall Security & Gate Control &bull; {{ $pageTitle }} &bull; Printed on {{ now()->format('d M Y, H:i') }}
     </div>
 
     <script>

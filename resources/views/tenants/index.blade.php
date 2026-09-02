@@ -23,10 +23,10 @@
             {{-- Stats strip --}}
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 @php
-                    $total    = $counts['total'];
-                    $active   = $counts['active'];
+                    $total = $counts['total'];
+                    $active = $counts['active'];
                     $inactive = $counts['inactive'];
-                    $draft    = $counts['draft'];
+                    $draft = $counts['draft'];
                 @endphp
                 <button type="button" onclick="setStatFilter('status', '')"
                     class="inline-flex items-center gap-2 rounded-xl bg-gray-100 px-4 py-2.5 text-sm sm:text-base font-extrabold text-gray-700 dark:bg-gray-800 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all cursor-pointer">
@@ -58,15 +58,23 @@
                     class="rounded-xl border-2 border-gray-300 px-5 py-2.5 text-sm font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors cursor-pointer {{ $hasActiveFilters ? '' : 'hidden' }}">
                     Clear
                 </button>
-                <a href="{{ route('tenants.printGuards', request()->all()) }}"
-                    onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
-                    class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
-                    🛡️ For Guards
-                </a>
-                <a href="{{ route('tenants.printStaff', request()->all()) }}"
+                <a href="{{ route('tenants.printStaff', request()->all()) }}" id="print-filtered-btn"
+                    data-base-url="{{ route('tenants.printStaff') }}"
                     onclick="window.open(this.href,'_blank','width=1200,height=800,scrollbars=yes'); return false;"
                     class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
-                    💼 For Staff
+                    Print
+                </a>
+                <a href="{{ route('tenants.printGuards', request()->all()) }}" id="print-guards-btn"
+                    data-base-url="{{ route('tenants.printGuards') }}"
+                    onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
+                    class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
+                    Guards
+                </a>
+                <a href="{{ route('tenants.printStaff', request()->all()) }}" id="print-staff-btn"
+                    data-base-url="{{ route('tenants.printStaff') }}"
+                    onclick="window.open(this.href,'_blank','width=1200,height=800,scrollbars=yes'); return false;"
+                    class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-800 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
+                    Staff
                 </a>
                 @if(auth()->user()->hasPermission('tenants.create') || auth()->user()->isSuperAdmin())
                     <a href="{{ route('tenants.create') }}"
@@ -74,7 +82,7 @@
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        Register New Tenant
+                        Register
                     </a>
                 @endif
             </div>
@@ -106,7 +114,8 @@
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="">All Statuses</option>
                         <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
-                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive / Terminated</option>
+                        <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive /
+                            Terminated</option>
                         <option value="draft" {{ request('status') === 'draft' ? 'selected' : '' }}>Draft</option>
                     </select>
                 </div>
@@ -116,9 +125,12 @@
                     <select name="expiring_days" onchange="fetchResults()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 rounded-lg border border-gray-300 bg-transparent px-4 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90">
                         <option value="">Agreement Expiry</option>
-                        <option value="30" {{ request('expiring_days') == '30' ? 'selected' : '' }}>Expiring in 30 days</option>
-                        <option value="60" {{ request('expiring_days') == '60' ? 'selected' : '' }}>Expiring in 60 days</option>
-                        <option value="90" {{ request('expiring_days') == '90' ? 'selected' : '' }}>Expiring in 90 days</option>
+                        <option value="30" {{ request('expiring_days') == '30' ? 'selected' : '' }}>Expiring in 30 days
+                        </option>
+                        <option value="60" {{ request('expiring_days') == '60' ? 'selected' : '' }}>Expiring in 60 days
+                        </option>
+                        <option value="90" {{ request('expiring_days') == '90' ? 'selected' : '' }}>Expiring in 90 days
+                        </option>
                     </select>
                 </div>
 
@@ -141,8 +153,8 @@
                         placeholder="From Date" autocomplete="off" onchange="fetchResults()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-32 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                     <span class="text-gray-400">-</span>
-                    <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}"
-                        placeholder="To Date" autocomplete="off" onchange="fetchResults()"
+                    <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="To Date"
+                        autocomplete="off" onchange="fetchResults()"
                         class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-32 rounded-lg border border-gray-300 bg-transparent px-3 py-2 text-sm text-gray-800 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                 </div>
 
@@ -190,6 +202,17 @@
                     clearBtn.classList.add('hidden');
                 }
             }
+
+            // Dynamically update print buttons URLs with active filters
+            const filterQueryStr = params.toString();
+            ['print-filtered-btn', 'print-guards-btn', 'print-staff-btn'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    const baseUrl = btn.dataset.baseUrl || btn.href.split('?')[0];
+                    btn.dataset.baseUrl = baseUrl;
+                    btn.href = filterQueryStr ? `${baseUrl}?${filterQueryStr}` : baseUrl;
+                }
+            });
 
             // Build the AJAX request URL (never stored in browser history)
             const ajaxParams = new URLSearchParams(params);
@@ -250,7 +273,7 @@
                     altFormat: 'd M Y',
                     allowInput: true,
                     disableMobile: true,
-                    onChange: function() { fetchResults(); }
+                    onChange: function () { fetchResults(); }
                 });
                 flatpickr('#date_to', {
                     dateFormat: 'Y-m-d',
@@ -258,7 +281,7 @@
                     altFormat: 'd M Y',
                     allowInput: true,
                     disableMobile: true,
-                    onChange: function() { fetchResults(); }
+                    onChange: function () { fetchResults(); }
                 });
             }
 

@@ -103,7 +103,7 @@
     @endphp
 
     <!-- Filters Panel -->
-    <div class="mb-6 rounded-2xl bg-white p-6 shadow-sm border border-gray-100 dark:bg-gray-900 dark:border-gray-800">
+    <div class="sticky top-0 z-30 mb-6 rounded-2xl bg-white/95 p-6 shadow-md border border-gray-200 dark:bg-gray-900/95 dark:border-gray-800 backdrop-blur-md">
         <form method="GET" action="{{ route('reports.index') }}" id="reportForm">
             <input type="hidden" name="no_sidebar" value="1">
 
@@ -562,30 +562,7 @@
 
         {{-- Data Table --}}
         <div class="mt-4">
-            <x-common.component-card
-                title="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? (($filters['report_type'] ?? '') === 'monthly_matrix' ? 'Monthly Matrix (Generated Billings) - ' . $selectedMonth : 'Monthly Matrix (Expected Revenue) - ' . $selectedMonth) : (($filters['report_type'] ?? '') === 'security_deposit_matrix' ? 'Security Deposit Matrix (Per Flat/Shop)' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Fully Rented Potential Revenue Forecast' : 'Report Results')) }}"
-                desc="{{ in_array(($filters['report_type'] ?? ''), ['monthly_matrix', 'monthly_matrix_expected']) ? 'Grid matrix for flat status and collections' : (($filters['report_type'] ?? '') === 'security_deposit_matrix' ? 'Per-unit security deposit status: required, collected, pending & refunds' : (($filters['report_type'] ?? '') === 'potential_revenue' ? 'Potential monthly revenue snapshot for all flats and shops' : $summary['count'] . ' ' . Str::plural('record', $summary['count']) . ' found')) }}">
-
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-gray-100 dark:border-gray-800 pb-4 mb-4">
-                    <div>
-                        @if(count($appliedFilters) > 0)
-                            <div class="flex flex-wrap items-center gap-2">
-                                @foreach($appliedFilters as $filterBadge)
-                                    {!! $filterBadge !!}
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-sm text-gray-500 dark:text-gray-400">
-                                Showing all records (No filters applied)
-                            </p>
-                        @endif
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <a href="{{ route('dashboard') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-white/[0.05] transition-colors shadow-xs">
-                            ✕ Exit
-                        </a>
-                    </div>
-                </div>
+            <x-common.component-card>
 
                 @if($entries->isEmpty())
                     <div class="py-12 text-center text-gray-400">
@@ -609,20 +586,15 @@
                             <table id="reportTable" class="w-full text-sm text-left text-gray-600 dark:text-gray-400">
                                 <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-white">
                                     <tr>
-                                        <th class="px-4 py-3">#</th>
-                                        <th class="px-4 py-3">Month</th>
+                                        <th class="px-4 py-3">Sr #</th>
                                         <th class="px-4 py-3">Flat/Shop</th>
                                         <th class="px-4 py-3">Tenant</th>
-                                        <th class="px-4 py-3">Landlord</th>
-                                        <th class="px-4 py-3">Type</th>
-                                        <th class="px-4 py-3">Payment Method</th>
-                                        <th class="px-4 py-3">Payment Account</th>
-                                        <th class="px-4 py-3">Security Deposit</th>
                                         <th class="px-4 py-3">Amount Due</th>
                                         <th class="px-4 py-3">Amount Paid</th>
-                                        <th class="px-4 py-3">Balance</th>
-                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3">Payment Method</th>
+                                        <th class="px-4 py-3">Payment Account</th>
                                         <th class="px-4 py-3">Paid At</th>
+                                        <th class="px-4 py-3">Balance</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -630,12 +602,8 @@
                                         <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                             <td class="px-4 py-3 text-gray-400 text-xs">{{ $i + 1 }}</td>
 
-                                            <td data-order="{{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->toDateString() : '' }}" class="px-4 py-3 text-xs font-medium text-gray-700 dark:text-gray-300">
-                                                {{ $entry['month'] instanceof \Carbon\Carbon ? $entry['month']->format('M Y') : '—' }}
-                                            </td>
-
                                             <td class="px-4 py-3">
-                                                <span class="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                                <span class="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-black text-gray-900 dark:bg-gray-800 dark:text-white border border-gray-300/80 dark:border-gray-700">
                                                     {{ $entry['unit'] }}
                                                 </span>
                                             </td>
@@ -644,25 +612,12 @@
                                                 {{ $entry['tenant'] }}
                                             </td>
 
-                                            <td class="px-4 py-3 text-gray-700 dark:text-white/80">
-                                                {{ $entry['landlord'] }}
+                                            <td data-order="{{ $entry['amount_due'] }}" class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
+                                                {{ number_format($entry['amount_due']) }}
                                             </td>
 
-                                            <td class="px-4 py-3">
-                                                @php
-                                                    $typeClass = match($entry['type']) {
-                                                        'rent'        => 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-                                                        'fine'        => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-                                                        'electricity' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                                        'water'       => 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-                                                        'gas'         => 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-                                                        'maintenance' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-                                                        default       => 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-                                                    };
-                                                @endphp
-                                                <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $typeClass }}">
-                                                    {{ ucfirst($entry['type']) }}
-                                                </span>
+                                            <td data-order="{{ $entry['amount_paid'] }}" class="px-4 py-3 font-medium text-green-600">
+                                                {{ number_format($entry['amount_paid']) }}
                                             </td>
 
                                             <td class="px-4 py-3 text-gray-700 dark:text-white/80">
@@ -673,63 +628,31 @@
                                                 {{ $entry['payment_account'] }}
                                             </td>
 
-                                            <td data-order="{{ $entry['security_deposit'] }}" class="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400 text-xs">
-                                                {{ $entry['security_deposit'] > 0 ? ('Rs. ' . number_format($entry['security_deposit'])) : '—' }}
-                                            </td>
-
-                                            <td data-order="{{ $entry['amount_due'] }}" class="px-4 py-3 font-medium text-gray-800 dark:text-white/90">
-                                                Rs. {{ number_format($entry['amount_due']) }}
-                                            </td>
-
-                                            <td data-order="{{ $entry['amount_paid'] }}" class="px-4 py-3 font-medium text-green-600">
-                                                Rs. {{ number_format($entry['amount_paid']) }}
+                                            <td data-order="{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->toDateString() : '0000-00-00' }}" class="px-4 py-3 text-xs text-gray-500">
+                                                {{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->format('d M Y') : '—' }}
                                             </td>
 
                                             <td data-order="{{ $entry['balance'] }}" class="px-4 py-3 font-semibold {{ $entry['balance'] > 0 ? 'text-red-500' : 'text-green-600' }}">
-                                                Rs. {{ number_format($entry['balance']) }}
-                                            </td>
-
-                                            <td class="px-4 py-3">
-                                                <div class="flex flex-col gap-1 items-start">
-                                                    @php
-                                                        $statusClass = match($entry['status']) {
-                                                            'paid'    => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                                            'partial' => 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-                                                            default   => 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
-                                                        };
-                                                    @endphp
-                                                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium {{ $statusClass }}">
-                                                        {{ ucfirst($entry['status']) }}
-                                                    </span>
-                                                    @if(!empty($entry['is_self']))
-                                                        <span class="inline-flex items-center gap-0.5 rounded-md bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                                                            Other-Owned
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            </td>
-
-                                            <td data-order="{{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->toDateString() : '0000-00-00' }}" class="px-4 py-3 text-xs text-gray-500">
-                                                {{ $entry['paid_at'] instanceof \Carbon\Carbon ? $entry['paid_at']->format('d M Y') : '—' }}
+                                                {{ number_format($entry['balance']) }}
                                             </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                                 <tfoot>
                                     <tr class="bg-gray-50 dark:bg-gray-800 font-semibold text-sm">
-                                        <td colspan="9" class="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                        <td colspan="3" class="px-4 py-3 text-gray-700 dark:text-gray-300">
                                             Totals ({{ $summary['count'] }} records)
                                         </td>
                                         <td class="px-4 py-3 text-gray-800 dark:text-white">
-                                            Rs. {{ number_format($summary['total_due']) }}
+                                            {{ number_format($summary['total_due']) }}
                                         </td>
                                         <td class="px-4 py-3 text-green-600">
-                                            Rs. {{ number_format($summary['total_paid']) }}
+                                            {{ number_format($summary['total_paid']) }}
                                         </td>
+                                        <td colspan="3"></td>
                                         <td class="px-4 py-3 {{ $summary['outstanding'] > 0 ? 'text-red-500' : 'text-green-600' }}">
-                                            Rs. {{ number_format($summary['outstanding']) }}
+                                            {{ number_format($summary['outstanding']) }}
                                         </td>
-                                        <td colspan="2"></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -776,55 +699,69 @@ document.addEventListener('DOMContentLoaded', function () {
     if (table) {
         const headers = table.querySelectorAll('thead th');
         const tbody = table.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
 
-        if (rows.length > 0) {
+        if (tbody) {
             headers.forEach((header, index) => {
-                // Skip the serial number column
-                if (index === 0) return;
-
                 header.style.cursor = 'pointer';
-                header.classList.add('select-none', 'hover:bg-gray-100', 'dark:hover:bg-gray-800/50');
-                
+                header.classList.add('select-none', 'hover:bg-gray-100', 'dark:hover:bg-gray-800/50', 'transition-colors');
+
+                // Append initial sort indicator if not present
+                if (!header.querySelector('.sort-icon')) {
+                    const icon = document.createElement('span');
+                    icon.className = 'sort-icon inline-block ml-1 text-gray-400 opacity-60 text-[10px]';
+                    icon.innerHTML = ' ↕';
+                    header.appendChild(icon);
+                }
+
                 let asc = true;
 
                 header.addEventListener('click', () => {
-                    // Remove indicators from all headers
+                    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.querySelector('td[colspan]'));
+                    if (rows.length === 0) return;
+
+                    // Reset all headers' icons
                     headers.forEach((h) => {
-                        const arrow = h.querySelector('.sort-arrow');
-                        if (arrow) arrow.remove();
+                        const icon = h.querySelector('.sort-icon');
+                        if (icon) {
+                            icon.innerHTML = ' ↕';
+                            icon.className = 'sort-icon inline-block ml-1 text-gray-400 opacity-60 text-[10px]';
+                        }
                     });
 
-                    // Append sorting direction indicator to active header
-                    const arrow = document.createElement('span');
-                    arrow.className = 'sort-arrow ml-1 text-gray-400 font-bold';
-                    arrow.textContent = asc ? ' ▲' : ' ▼';
-                    header.appendChild(arrow);
+                    // Update active header indicator
+                    const activeIcon = header.querySelector('.sort-icon');
+                    if (activeIcon) {
+                        activeIcon.innerHTML = asc ? ' ▲' : ' ▼';
+                        activeIcon.className = 'sort-icon inline-block ml-1 text-brand-600 dark:text-brand-400 font-bold text-[10px] opacity-100';
+                    }
 
                     // Sort row elements
                     const sortedRows = rows.sort((a, b) => {
-                        const cellA = a.cells[index]?.innerText || a.cells[index]?.textContent || '';
-                        const cellB = b.cells[index]?.innerText || b.cells[index]?.textContent || '';
+                        const cellA = a.cells[index];
+                        const cellB = b.cells[index];
+
+                        const rawA = cellA ? (cellA.getAttribute('data-order') ?? cellA.innerText ?? cellA.textContent ?? '').trim() : '';
+                        const rawB = cellB ? (cellB.getAttribute('data-order') ?? cellB.innerText ?? cellB.textContent ?? '').trim() : '';
 
                         const cleanNum = (str) => {
-                            let s = str.replace(/[^\d.-]/g, '');
-                            return s ? parseFloat(s) : NaN;
+                            if (str === null || str === undefined || str === '') return NaN;
+                            let s = String(str).replace(/[^\d.-]/g, '');
+                            return s !== '' && !isNaN(s) ? parseFloat(s) : NaN;
                         };
 
-                        const valA = cleanNum(cellA);
-                        const valB = cleanNum(cellB);
+                        const valA = cleanNum(rawA);
+                        const valB = cleanNum(rawB);
 
                         if (!isNaN(valA) && !isNaN(valB)) {
                             return asc ? valA - valB : valB - valA;
                         }
 
                         return asc 
-                            ? cellA.localeCompare(cellB, undefined, { numeric: true, sensitivity: 'base' })
-                            : cellB.localeCompare(cellA, undefined, { numeric: true, sensitivity: 'base' });
+                            ? rawA.localeCompare(rawB, undefined, { numeric: true, sensitivity: 'base' })
+                            : rawB.localeCompare(rawA, undefined, { numeric: true, sensitivity: 'base' });
                     });
 
                     // Re-append sorted rows to body
-                    tbody.innerHTML = '';
                     sortedRows.forEach(row => tbody.appendChild(row));
 
                     // Re-index the SR column
