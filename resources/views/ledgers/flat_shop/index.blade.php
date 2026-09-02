@@ -35,26 +35,26 @@
             
             {{-- From Date --}}
             <div class="flex-1 min-w-[140px]">
-                <label class="block text-[11px] font-black uppercase text-gray-500 mb-1 tracking-wider">From Date</label>
+                <label class="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">From Date</label>
                 <div class="relative">
                     <input type="text" id="date_from" name="date_from" value="{{ $date_from }}" placeholder="YYYY-MM-DD"
-                        class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-semibold px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
+                        class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold px-3.5 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
                 </div>
             </div>
 
             {{-- To Date --}}
             <div class="flex-1 min-w-[140px]">
-                <label class="block text-[11px] font-black uppercase text-gray-500 mb-1 tracking-wider">To Date</label>
+                <label class="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">To Date</label>
                 <div class="relative">
                     <input type="text" id="date_to" name="date_to" value="{{ $date_to }}" placeholder="YYYY-MM-DD"
-                        class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-semibold px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
+                        class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold px-3.5 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
                 </div>
             </div>
 
             {{-- Owner Type --}}
-            <div class="flex-1 min-w-[130px]">
-                <label class="block text-[11px] font-black uppercase text-gray-500 mb-1 tracking-wider">Owner Type</label>
-                <select name="owner_type" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-semibold px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
+            <div class="flex-1 min-w-[140px]">
+                <label class="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Owner Type</label>
+                <select name="owner_type" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold px-3.5 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
                     <option value="">All Owners</option>
                     <option value="pm_mall" {{ request('owner_type') === 'pm_mall' ? 'selected' : '' }}>PM Mall</option>
                     <option value="other_owned" {{ request('owner_type') === 'other_owned' ? 'selected' : '' }}>Other Owned</option>
@@ -62,9 +62,9 @@
             </div>
 
             {{-- Occupancy --}}
-            <div class="flex-1 min-w-[140px]">
-                <label class="block text-[11px] font-black uppercase text-gray-500 mb-1 tracking-wider">Occupancy</label>
-                <select name="occupancy_status" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-semibold px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
+            <div class="flex-1 min-w-[150px]">
+                <label class="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Occupancy</label>
+                <select name="occupancy_status" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold px-3.5 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
                     <option value="">All Occupancy</option>
                     <option value="pm_rented" {{ request('occupancy_status') === 'pm_rented' ? 'selected' : '' }}>PM Mall Rented</option>
                     <option value="other_occupied" {{ request('occupancy_status') === 'other_occupied' ? 'selected' : '' }}>Other Occupied</option>
@@ -74,9 +74,9 @@
             </div>
 
             {{-- Billing Type --}}
-            <div class="flex-1 min-w-[140px]">
-                <label class="block text-[11px] font-black uppercase text-gray-500 mb-1 tracking-wider">Billing Type</label>
-                <select name="billing_type" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-semibold px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
+            <div class="flex-1 min-w-[150px]">
+                <label class="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Billing Type</label>
+                <select name="billing_type" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold px-3.5 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
                     <option value="all" {{ request('billing_type') === 'all' || !request('billing_type') ? 'selected' : '' }}>All Billings</option>
                     <option value="rent" {{ request('billing_type') === 'rent' ? 'selected' : '' }}>Rent</option>
                     <option value="maintenance" {{ request('billing_type') === 'maintenance' ? 'selected' : '' }}>Maintenance</option>
@@ -86,9 +86,9 @@
             </div>
 
             {{-- Payment Status --}}
-            <div class="flex-1 min-w-[130px]">
-                <label class="block text-[11px] font-black uppercase text-gray-500 mb-1 tracking-wider">Payment Status</label>
-                <select name="payment_status" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-semibold px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
+            <div class="flex-1 min-w-[140px]">
+                <label class="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Payment Status</label>
+                <select name="payment_status" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold px-3.5 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
                     <option value="all" {{ request('payment_status') === 'all' || !request('payment_status') ? 'selected' : '' }}>All Statuses</option>
                     <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Paid</option>
                     <option value="unpaid" {{ request('payment_status') === 'unpaid' ? 'selected' : '' }}>Unpaid</option>
@@ -97,9 +97,9 @@
             </div>
 
             {{-- Flat / Shop Select --}}
-            <div class="flex-1 min-w-[120px]">
-                <label class="block text-[11px] font-black uppercase text-gray-500 mb-1 tracking-wider">Unit #</label>
-                <select name="unit_id" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xs font-semibold px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
+            <div class="flex-1 min-w-[130px]">
+                <label class="block text-xs font-black uppercase text-gray-500 mb-1 tracking-wider">Unit #</label>
+                <select name="unit_id" class="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-bold px-3.5 py-2.5 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 shadow-sm transition-all">
                     <option value="">All Units</option>
                     @foreach($units as $u)
                         <option value="{{ $u->id }}" {{ (string)request('unit_id') === (string)$u->id ? 'selected' : '' }}>
@@ -111,10 +111,10 @@
 
             {{-- Action Buttons Inline --}}
             <div class="flex items-center gap-2 pt-5">
-                <a href="{{ route('ledgers.flat_shop.index') }}" class="rounded-xl border border-gray-300 px-4 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-all">
+                <a href="{{ route('ledgers.flat_shop.index') }}" class="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 transition-all">
                     Reset
                 </a>
-                <button type="submit" class="rounded-xl bg-brand-600 px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-brand-700 transition-all">
+                <button type="submit" class="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-brand-700 transition-all">
                     Filter
                 </button>
             </div>
@@ -238,13 +238,13 @@
                     </tbody>
                     @if($rows->isNotEmpty())
                     <tfoot>
-                        <tr class="bg-gray-50 dark:bg-gray-800 font-black text-xs text-gray-900 dark:text-white uppercase border-t-2 border-gray-200 dark:border-gray-700">
-                            <td colspan="5" class="px-4 py-4">Total ({{ $summary['total_records'] }} Units)</td>
-                            <td class="px-4 py-4 text-right text-indigo-700 dark:text-indigo-300">Rs. {{ number_format($summary['total_required'] ?? 0) }}</td>
-                            <td class="px-4 py-4 text-right text-emerald-600">Rs. {{ number_format($summary['total_collected'] ?? 0) }}</td>
-                            <td class="px-4 py-4 text-right text-rose-600">Rs. {{ number_format($summary['total_pending'] ?? 0) }}</td>
-                            <td class="px-4 py-4 text-right text-amber-600">Rs. {{ number_format($summary['total_deductions'] ?? 0) }}</td>
-                            <td class="px-4 py-4 text-right text-purple-600">Rs. {{ number_format($summary['total_net_refundable'] ?? 0) }}</td>
+                        <tr class="bg-gray-100 dark:bg-gray-800 font-black text-sm text-gray-900 dark:text-white uppercase border-t-2 border-b-2 border-gray-300 dark:border-gray-700 tracking-wider">
+                            <td colspan="5" class="px-4 py-4.5 text-sm font-black">Total ({{ $summary['total_records'] }} Units)</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-indigo-700 dark:text-indigo-300">Rs. {{ number_format($summary['total_required'] ?? 0) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-emerald-600">Rs. {{ number_format($summary['total_collected'] ?? 0) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-rose-600">Rs. {{ number_format($summary['total_pending'] ?? 0) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-amber-600">Rs. {{ number_format($summary['total_deductions'] ?? 0) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-purple-600">Rs. {{ number_format($summary['total_net_refundable'] ?? 0) }}</td>
                         </tr>
                     </tfoot>
                     @endif
@@ -322,13 +322,13 @@
                     </tbody>
                     @if($rows->isNotEmpty())
                     <tfoot>
-                        <tr class="bg-gray-50 dark:bg-gray-800 font-black text-xs text-gray-900 dark:text-white uppercase border-t-2 border-gray-200 dark:border-gray-700">
-                            <td colspan="4" class="px-4 py-4">Total ({{ $summary['total_records'] }} Records)</td>
-                            <td class="px-4 py-4 text-right text-amber-600">Rs. {{ number_format($summary['total_prev_unpaid']) }}</td>
-                            <td class="px-4 py-4 text-right">Rs. {{ number_format($summary['total_amount_due']) }}</td>
-                            <td class="px-4 py-4 text-right text-green-600">Rs. {{ number_format($summary['total_amount_paid']) }}</td>
+                        <tr class="bg-gray-100 dark:bg-gray-800 font-black text-sm text-gray-900 dark:text-white uppercase border-t-2 border-b-2 border-gray-300 dark:border-gray-700 tracking-wider">
+                            <td colspan="4" class="px-4 py-4.5 text-sm font-black">Total ({{ $summary['total_records'] }} Records)</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-amber-600">Rs. {{ number_format($summary['total_prev_unpaid']) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-gray-900 dark:text-white">Rs. {{ number_format($summary['total_amount_due']) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-green-600">Rs. {{ number_format($summary['total_amount_paid']) }}</td>
                             <td colspan="3"></td>
-                            <td class="px-4 py-4 text-right text-brand-600">Rs. {{ number_format($summary['total_balance']) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-brand-600">Rs. {{ number_format($summary['total_balance']) }}</td>
                         </tr>
                     </tfoot>
                     @endif

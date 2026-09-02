@@ -208,13 +208,13 @@
                 @endforeach
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; background: #e2e8f0;">
-                    <td colspan="5">Total ({{ $summary['total_records'] }} Units)</td>
-                    <td class="text-right" style="color: #1d4ed8;">{{ number_format($summary['total_required'], 2) }}</td>
-                    <td class="text-right" style="color: #047857;">{{ number_format($summary['total_collected'], 2) }}</td>
-                    <td class="text-right" style="color: #e11d48;">{{ number_format($summary['total_pending'], 2) }}</td>
-                    <td class="text-right" style="color: #b45309;">{{ number_format($summary['total_deductions'], 2) }}</td>
-                    <td class="text-right" style="color: #7e22ce;">{{ number_format($summary['total_net_refundable'], 2) }}</td>
+                <tr style="font-weight: 900; font-size: 12px; background: #cbd5e1; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a;">
+                    <td colspan="5" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #0f172a;">Total ({{ $summary['total_records'] }} Units)</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #1d4ed8;">{{ number_format($summary['total_required'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #047857;">{{ number_format($summary['total_collected'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #e11d48;">{{ number_format($summary['total_pending'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #b45309;">{{ number_format($summary['total_deductions'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #7e22ce;">{{ number_format($summary['total_net_refundable'], 2) }}</td>
                 </tr>
             </tfoot>
         </table>
@@ -302,13 +302,13 @@
                 @endforeach
             </tbody>
             <tfoot>
-                <tr style="font-weight: bold; background: #e2e8f0;">
-                    <td colspan="4">Total ({{ $summary['total_records'] }} Records)</td>
-                    <td class="text-right" style="color: #d97706;">{{ number_format($summary['total_prev_unpaid'], 2) }}</td>
-                    <td class="text-right">{{ number_format($summary['total_amount_due'], 2) }}</td>
-                    <td class="text-right" style="color: #059669;">{{ number_format($summary['total_amount_paid'], 2) }}</td>
+                <tr style="font-weight: 900; font-size: 12px; background: #cbd5e1; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a;">
+                    <td colspan="4" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #0f172a;">Total ({{ $summary['total_records'] }} Records)</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #d97706;">{{ number_format($summary['total_prev_unpaid'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #0f172a;">{{ number_format($summary['total_amount_due'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #059669;">{{ number_format($summary['total_amount_paid'], 2) }}</td>
                     <td colspan="3"></td>
-                    <td class="text-right" style="color: #1d3461;">{{ number_format($summary['total_balance'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #1d3461;">{{ number_format($summary['total_balance'], 2) }}</td>
                 </tr>
             </tfoot>
         </table>

@@ -73,18 +73,47 @@ class FlatShopLedgerService
         $isSecurityDeposit = ($billingType === 'security_deposit');
 
         if ($isSecurityDeposit) {
-            $secPayments = Payment::where('type', 'security_deposit')->get()->groupBy('unit_id');
-            $deductionPayments = Payment::where('type', 'deposit_deduction')->get()->groupBy('unit_id');
+            $secPayments = Payment::where('type', 'security_deposit')
+                ->where('month', '>=', $dateFrom->toDateString())
+                ->where('month', '<=', $dateTo->toDateString())
+                ->get()
+                ->groupBy('unit_id');
+
+            $deductionPayments = Payment::where('type', 'deposit_deduction')
+                ->where('month', '>=', $dateFrom->toDateString())
+                ->where('month', '<=', $dateTo->toDateString())
+                ->get()
+                ->groupBy('unit_id');
 
             $rows = collect();
             $sr = 1;
 
             foreach ($units as $unit) {
-                $agreement = $unit->activeAgreement;
-                $tenantName = $agreement?->tenant?->name ?? ($unit->otherTenant?->name ?? '—');
-
                 $unitSecPayments = $secPayments->get($unit->id) ?? collect();
                 $unitDeductions  = $deductionPayments->get($unit->id) ?? collect();
+
+                $agreement = $unit->agreements()
+                    ->where('start_date', '>=', $dateFrom->toDateString())
+                    ->where('start_date', '<=', $dateTo->toDateString())
+                    ->orderBy('start_date', 'desc')
+                    ->first();
+
+                if (!$agreement && $unit->activeAgreement) {
+                    $ag = $unit->activeAgreement;
+                    if ($ag->start_date && $ag->start_date->gte($dateFrom) && $ag->start_date->lte($dateTo)) {
+                        $agreement = $ag;
+                    }
+                }
+
+                // Strictly filter units to those having security deposit payments, deductions, or agreements matching date range
+                if ($unitSecPayments->isEmpty() && $unitDeductions->isEmpty() && !$agreement) {
+                    continue;
+                }
+
+                $tenantName = $agreement?->tenant?->name 
+                    ?? $unitSecPayments->first()?->tenant?->name 
+                    ?? $unitSecPayments->first()?->otherTenant?->name 
+                    ?? ($unit->otherTenant?->name ?? '—');
 
                 $agSec            = (float) ($agreement?->security_deposit ?? 0);
                 $paySec           = (float) $unitSecPayments->sum('amount');
