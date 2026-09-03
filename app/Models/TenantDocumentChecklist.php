@@ -99,11 +99,6 @@ class TenantDocumentChecklist extends Model
             'nikah_nama',
             'frc_form_b',
             'police_verification',
-            'tenant_application_form',
-            'tenancy_agreement_copy',
-            'rules_acknowledgment',
-            'inspection_report',
-            'property_handover_form',
             'security_deposit_receipt',
             'meter_picture',
             'emergency_contacts_added',
@@ -178,4 +173,36 @@ class TenantDocumentChecklist extends Model
     public function getOldTenantVerificationFileUrlAttribute(): ?string { return $this->getFileUrl('old_tenant_verification_file'); }
     public function getBusinessLicenseFileUrlAttribute(): ?string { return $this->getFileUrl('business_license_file'); }
     public function getUtilityBillsClearanceFileUrlAttribute(): ?string { return $this->getFileUrl('utility_bills_clearance_file'); }
+
+    public function getFileUrlForField(string $field): ?string
+    {
+        $fileAttr = $this->getFilePathForField($field);
+        return $fileAttr ? $this->getFileUrl($fileAttr) : null;
+    }
+
+    public function getFilePathForField(string $field): ?string
+    {
+        $map = [
+            'cnic_copy_tenant_front' => 'cnic_front_image',
+            'cnic_copy_tenant_back' => 'cnic_back_image',
+            'cnic_copy_father' => 'cnic_copy_father_file',
+            'cnic_copy_guarantor' => 'cnic_copy_guarantor_file',
+            'passport_photo' => 'passport_photo_file',
+            'nikah_nama' => 'nikah_nama_file',
+            'frc_form_b' => 'frc_form_b_file',
+            'police_verification' => 'police_verification_file',
+            'security_deposit_receipt' => 'bank_voucher',
+            'meter_picture' => 'meter_picture_file',
+            'emergency_contacts_added' => 'emergency_contacts_added_file',
+            'guarantor_info_added' => 'guarantor_info_added_file',
+            'guarantor_business_card' => 'guarantor_business_card_file',
+            'tenant_business_card' => 'tenant_business_card_file',
+            'property_advisor_card' => 'property_advisor_card_file',
+            'old_tenant_verification' => 'old_tenant_verification_file',
+            'business_license' => 'business_license_file',
+            'utility_bills_clearance' => 'utility_bills_clearance_file',
+        ];
+
+        return $map[$field] ?? null;
+    }
 }

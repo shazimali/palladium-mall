@@ -57,15 +57,7 @@
                 ['field' => 'police_verification', 'file' => 'police_verification_file', 'url' => $cl?->police_verification_file_url, 'label' => 'Police Verification Certificate'],
             ];
 
-            $applicationAgreement = [
-                ['field' => 'tenant_application_form', 'file' => 'tenant_application_form_file', 'url' => $cl?->tenant_application_form_file_url, 'label' => 'Tenant Application Form'],
-                ['field' => 'tenancy_agreement_copy', 'file' => 'signed_agreement_scan', 'url' => $cl?->signed_agreement_scan_url, 'label' => 'Tenancy Agreement Scan'],
-                ['field' => 'rules_acknowledgment', 'file' => 'rules_acknowledgment_file', 'url' => $cl?->rules_acknowledgment_file_url, 'label' => 'Rules Acknowledgment Signed'],
-            ];
-
             $propertySecurity = [
-                ['field' => 'inspection_report', 'file' => 'inspection_report_file', 'url' => $cl?->inspection_report_file_url, 'label' => 'Inspection Report'],
-                ['field' => 'property_handover_form', 'file' => 'property_handover_form_file', 'url' => $cl?->property_handover_form_file_url, 'label' => 'Property Handover Form'],
                 ['field' => 'security_deposit_receipt', 'file' => 'bank_voucher', 'url' => $cl?->bank_voucher_url, 'label' => 'Security Deposit / Voucher'],
                 ['field' => 'meter_picture', 'file' => 'meter_picture_file', 'url' => $cl?->meter_picture_file_url, 'label' => 'Meter Picture'],
             ];
@@ -80,20 +72,21 @@
             ];
 
             $commercialUnits = [
-                ['field' => 'business_license', 'file' => 'business_license_file', 'url' => $cl?->business_license_file_url, 'label' => 'Business License'],
-                ['field' => 'utility_bills_clearance', 'file' => 'utility_bills_clearance_file', 'url' => $cl?->utility_bills_clearance_file_url, 'label' => 'Utility Bills Clearance'],
+                ['field' => 'business_license', 'file' => 'business_license_file', 'url' => $cl?->business_license_file_url, 'label' => 'Tenant Utility Bill'],
+                ['field' => 'utility_bills_clearance', 'file' => 'utility_bills_clearance_file', 'url' => $cl?->utility_bills_clearance_file_url, 'label' => 'Palladium Mall Utility Bill'],
             ];
             @endphp
 
             {{-- Helper function to render a section's items --}}
             @php
-            $renderChecklistGroup = function($items) use ($checkboxClass, $cl) {
+            $renderChecklistGroup = function($items) use ($checkboxClass, $cl, $errors) {
                 echo '<div class="grid grid-cols-1 gap-4 md:grid-cols-2">';
                 foreach ($items as $item) {
                     $isChecked = old($item['field'], $cl?->{$item['field']} ?? false);
                     $fileUrl = $item['url'];
+                    $fileError = $errors->first($item['file']);
 
-                    echo '<div class="flex flex-col justify-between gap-3 p-4 rounded-xl border border-gray-200 bg-white shadow-theme-xs dark:border-gray-800 dark:bg-gray-900/40">';
+                    echo '<div class="flex flex-col justify-between gap-3 p-4 rounded-xl border ' . ($fileError ? 'border-red-300 bg-red-50/20 dark:border-red-800 dark:bg-red-900/10' : 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900/40') . ' shadow-theme-xs">';
                     
                     // Top: Checkbox & Label (fully visible, wraps naturally)
                     echo '    <div class="flex items-start gap-3">';
@@ -124,9 +117,12 @@
                         echo '            </span>';
                     }
                     echo '        </div>';
-                    echo '        <div class="relative">';
+                    echo '        <div class="relative flex-1">';
                     echo '            <input type="file" name="' . $item['file'] . '" accept="image/jpeg,image/png,application/pdf"';
-                    echo '                   class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-gray-800 dark:file:text-gray-300">';
+                    echo '                   class="w-full text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100 dark:file:bg-gray-800 dark:file:text-gray-300' . ($fileError ? ' border-red-400' : '') . '">';
+                    if ($fileError) {
+                        echo '            <p class="mt-1 text-xs font-semibold text-red-500 dark:text-red-400">' . htmlspecialchars($fileError) . '</p>';
+                    }
                     echo '        </div>';
                     echo '    </div>';
                     
@@ -142,11 +138,7 @@
                 @php $renderChecklistGroup($basicIdentity); @endphp
             </div>
 
-            {{-- ── Application & Agreement ──────────────────────────────── --}}
-            <div class="{{ $sectionClass }}">
-                <h4 class="{{ $sectionTitle }}">Application & Agreement</h4>
-                @php $renderChecklistGroup($applicationAgreement); @endphp
-            </div>
+
 
             {{-- ── Property & Security ──────────────────────────────────── --}}
             <div class="{{ $sectionClass }}">

@@ -34,14 +34,15 @@
     </style>
 </head>
 <body onload="window.print()">
-    <div class="header">
-        <div class="header-info {{ $tenant->passport_photo ? '' : 'centered' }}">
-            <h1>Tenant & Emergency Contacts Information</h1>
-            <p>Palladium Mall Tenant Management System</p>
-        </div>
+    <div style="position: relative; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #111; padding-bottom: 12px; min-height: 65px;">
         @if($tenant->passport_photo)
-            <img src="{{ $tenant->passport_photo_url }}" class="tenant-photo" alt="Tenant Photo">
+            <img src="{{ $tenant->passport_photo_url }}" alt="{{ $tenant->name }}" style="position: absolute; right: 0; top: 0; width: 65px; height: 65px; object-fit: cover; border-radius: 6px; border: 1.5px solid #111;">
         @endif
+        <h2 style="margin: 0 0 4px; font-size: 24px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: #111;">PALLADIUM MALL</h2>
+        <h1 style="margin: 0 0 8px; font-size: 18px; font-weight: 800; text-transform: uppercase; color: #333;">Tenant & Emergency Contacts Information</h1>
+        <p style="margin: 6px 0 0; font-size: 15px; font-weight: bold; color: #111;">
+            Tenant: <span style="font-size: 17px; font-weight: 900; color: #000;">{{ $tenant->name }}</span> | Unit: <span style="font-size: 17px; font-weight: 900; color: #000;">{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</span>
+        </p>
     </div>
 
     <div class="section-title">Personal Details</div>

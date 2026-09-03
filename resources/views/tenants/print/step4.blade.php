@@ -27,12 +27,16 @@
     </style>
 </head>
 <body onload="window.print()">
-    <div class="header">
-        <div class="header-info">
-            <h1>Required Documents Checklist</h1>
-            <p>Tenant: <strong>{{ $tenant->name }}</strong> | Unit: <strong>{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</strong></p>
-        </div>
-        <div style="text-align: right; font-size: 12px; color: #666;">
+    <div style="position: relative; text-align: center; margin-bottom: 25px; border-bottom: 2px solid #111; padding-bottom: 15px; min-height: 65px;">
+        @if($tenant->passport_photo)
+            <img src="{{ $tenant->passport_photo_url }}" alt="{{ $tenant->name }}" style="position: absolute; right: 0; top: 0; width: 65px; height: 65px; object-fit: cover; border-radius: 6px; border: 1.5px solid #111;">
+        @endif
+        <h2 style="margin: 0 0 4px; font-size: 26px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; color: #111;">PALLADIUM MALL</h2>
+        <h1 style="margin: 0 0 10px; font-size: 20px; font-weight: 800; text-transform: uppercase; color: #333;">Required Documents Checklist</h1>
+        <p style="margin: 8px 0 0; font-size: 16px; font-weight: bold; color: #111;">
+            Tenant: <span style="font-size: 18px; font-weight: 900; color: #000;">{{ $tenant->name }}</span> | Unit: <span style="font-size: 18px; font-weight: 900; color: #000;">{{ $tenant->unit ? $tenant->unit->unit_number . ($tenant->unit->floor ? ' (' . $tenant->unit->floor->name . ')' : '') . ($tenant->unit->block ? ' - ' . $tenant->unit->block->name : '') : 'N/A' }}</span>
+        </p>
+        <div style="margin-top: 6px; font-size: 12px; color: #666;">
             Date: {{ now()->format('d M Y') }}
         </div>
     </div>
@@ -56,14 +60,7 @@
             ['field' => 'frc_form_b', 'label' => 'FRC / Form-B', 'desc' => 'Family registration certificate / Form-B'],
             ['field' => 'police_verification', 'label' => 'Police Verification Certificate', 'desc' => 'Local police verification check document'],
         ],
-        'Application & Tenancy Agreement' => [
-            ['field' => 'tenant_application_form', 'label' => 'Tenant Application Form', 'desc' => 'Fully filled application form'],
-            ['field' => 'tenancy_agreement_copy', 'label' => 'Tenancy Agreement Scan', 'desc' => 'Signed copy of tenancy agreement'],
-            ['field' => 'rules_acknowledgment', 'label' => 'Rules Acknowledgment Signed', 'desc' => 'Signed rules and regulation handbook'],
-        ],
         'Property Handover & Security' => [
-            ['field' => 'inspection_report', 'label' => 'Inspection Report', 'desc' => 'Unit pre-inspection check list report'],
-            ['field' => 'property_handover_form', 'label' => 'Property Handover Form', 'desc' => 'Signed unit key handover slip'],
             ['field' => 'security_deposit_receipt', 'label' => 'Security Deposit / Voucher', 'desc' => 'Bank deposit receipt copy of security amount'],
             ['field' => 'meter_picture', 'label' => 'Meter Picture', 'desc' => 'Utility meter reading photo scan'],
         ],
@@ -76,8 +73,8 @@
             ['field' => 'old_tenant_verification', 'label' => 'Old Tenant Verification', 'desc' => 'Clearance document of prior occupancy'],
         ],
         'Commercial Only' => [
-            ['field' => 'business_license', 'label' => 'Business License', 'desc' => 'Company registration/NTN certificates'],
-            ['field' => 'utility_bills_clearance', 'label' => 'Utility Bills Clearance', 'desc' => 'Utility bill clearance certificates from prior owners'],
+            ['field' => 'business_license', 'label' => 'Tenant Utility Bill', 'desc' => 'Electricity/utility bill copy of tenant'],
+            ['field' => 'utility_bills_clearance', 'label' => 'Palladium Mall Utility Bill', 'desc' => 'Palladium Mall utility bill clearance copy'],
         ]
     ];
     @endphp
@@ -103,12 +100,44 @@
                 @foreach($items as $item)
                     @php
                         $isUploaded = $cl?->{$item['field']} ?? false;
+                        $fileUrl = $cl?->getFileUrlForField($item['field']);
+                        $filePath = $cl?->getFilePathForField($item['field']);
+                        $fileAttrVal = $filePath ? $cl?->{$filePath} : null;
+
+                        if (!$fileUrl) {
+                            if ($item['field'] === 'cnic_copy_tenant_front' && $tenant?->cnic_front_image) {
+                                $fileUrl = $tenant->cnic_front_url;
+                                $fileAttrVal = $tenant->cnic_front_image;
+                                $isUploaded = true;
+                            } elseif ($item['field'] === 'cnic_copy_tenant_back' && $tenant?->cnic_back_image) {
+                                $fileUrl = $tenant->cnic_back_url;
+                                $fileAttrVal = $tenant->cnic_back_image;
+                                $isUploaded = true;
+                            } elseif ($item['field'] === 'passport_photo' && $tenant?->passport_photo) {
+                                $fileUrl = $tenant->passport_photo_url;
+                                $fileAttrVal = $tenant->passport_photo;
+                                $isUploaded = true;
+                            }
+                        }
+
+                        $isImage = false;
+                        if ($fileAttrVal) {
+                            $ext = strtolower(pathinfo($fileAttrVal, PATHINFO_EXTENSION));
+                            $isImage = in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif']);
+                        }
                     @endphp
                     <tr>
                         <td class="checkbox-cell">
                             {!! $isUploaded ? '&#x2611;' : '&#x2610;' !!}
                         </td>
-                        <td style="font-weight: bold;">{{ $item['label'] }}</td>
+                        <td style="font-weight: bold;">
+                            <div>{{ $item['label'] }}</div>
+                            @if($isImage && $fileUrl)
+                                <div style="margin-top: 6px;">
+                                    <img src="{{ $fileUrl }}" style="max-width: 220px; max-height: 160px; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; padding: 2px;" alt="{{ $item['label'] }}">
+                                </div>
+                            @endif
+                        </td>
                         <td style="color: #666;">{{ $item['desc'] }}</td>
                         <td>
                             @if($isUploaded)

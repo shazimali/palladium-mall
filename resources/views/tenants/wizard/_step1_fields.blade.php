@@ -240,6 +240,40 @@ $error = 'mt-1.5 text-sm font-semibold text-red-500';
         </div>
     </div>
 
+    {{-- ── Section: Emergency Contact ────────────────────────────────────── --}}
+    @php
+        $ec = isset($t) ? $t?->emergencyContacts?->first() : null;
+    @endphp
+    <div class="rounded-xl border border-orange-100 bg-orange-50 p-5 dark:border-orange-900/30 dark:bg-orange-900/10 mb-6">
+        <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-400">Emergency Contact <span class="text-red-500">*</span></h4>
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            <div>
+                <label class="{{ $label }}">Contact Name <span class="text-red-500">*</span></label>
+                <input type="text" name="ec_name" value="{{ old('ec_name', $ec?->name ?? '') }}"
+                       placeholder="Full name"
+                       class="{{ $input }} {{ $errors->has('ec_name') ? 'border-red-400' : '' }}">
+                @error('ec_name') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="{{ $label }}">Relation <span class="text-red-500">*</span></label>
+                <select name="ec_relation" class="{{ $select }} {{ $errors->has('ec_relation') ? 'border-red-400' : '' }}">
+                    <option value="">Select relation</option>
+                    @foreach(['father' => 'Father', 'mother' => 'Mother', 'brother' => 'Brother', 'sister' => 'Sister', 'wife' => 'Wife', 'husband' => 'Husband', 'son' => 'Son', 'daughter' => 'Daughter', 'other' => 'Other'] as $val => $lbl)
+                        <option value="{{ $val }}" {{ old('ec_relation', $ec?->relation ?? '') === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                    @endforeach
+                </select>
+                @error('ec_relation') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="{{ $label }}">Phone <span class="text-red-500">*</span></label>
+                <input type="text" name="ec_phone" value="{{ old('ec_phone', $ec?->phone ?? '') }}"
+                       placeholder="03001234567"
+                       class="{{ $input }} {{ $errors->has('ec_phone') ? 'border-red-400' : '' }}">
+                @error('ec_phone') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+        </div>
+    </div>
+
     {{-- ── Section: Additional ──────────────────────────────────────────── --}}
     <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02] mb-6">
         <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Additional Details</h4>
@@ -713,39 +747,7 @@ $error = 'mt-1.5 text-sm font-semibold text-red-500';
         </div>
     </div>
 
-    {{-- ── Section: Emergency Contact ────────────────────────────────────── --}}
-    @php
-        $ec = isset($t) ? $t?->emergencyContacts?->first() : null;
-    @endphp
-    <div class="rounded-xl border border-orange-100 bg-orange-50 p-5 dark:border-orange-900/30 dark:bg-orange-900/10 mb-6">
-        <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-400">Emergency Contact <span class="text-red-500">*</span></h4>
-        <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            <div>
-                <label class="{{ $label }}">Contact Name <span class="text-red-500">*</span></label>
-                <input type="text" name="ec_name" value="{{ old('ec_name', $ec?->name ?? '') }}"
-                       placeholder="Full name"
-                       class="{{ $input }} {{ $errors->has('ec_name') ? 'border-red-400' : '' }}">
-                @error('ec_name') <p class="{{ $error }}">{{ $message }}</p> @enderror
-            </div>
-            <div>
-                <label class="{{ $label }}">Relation <span class="text-red-500">*</span></label>
-                <select name="ec_relation" class="{{ $select }} {{ $errors->has('ec_relation') ? 'border-red-400' : '' }}">
-                    <option value="">Select relation</option>
-                    @foreach(['father' => 'Father', 'mother' => 'Mother', 'brother' => 'Brother', 'sister' => 'Sister', 'wife' => 'Wife', 'husband' => 'Husband', 'son' => 'Son', 'daughter' => 'Daughter', 'other' => 'Other'] as $val => $lbl)
-                        <option value="{{ $val }}" {{ old('ec_relation', $ec?->relation ?? '') === $val ? 'selected' : '' }}>{{ $lbl }}</option>
-                    @endforeach
-                </select>
-                @error('ec_relation') <p class="{{ $error }}">{{ $message }}</p> @enderror
-            </div>
-            <div>
-                <label class="{{ $label }}">Phone <span class="text-red-500">*</span></label>
-                <input type="text" name="ec_phone" value="{{ old('ec_phone', $ec?->phone ?? '') }}"
-                       placeholder="03001234567"
-                       class="{{ $input }} {{ $errors->has('ec_phone') ? 'border-red-400' : '' }}">
-                @error('ec_phone') <p class="{{ $error }}">{{ $message }}</p> @enderror
-            </div>
-        </div>
-    </div>
+
 
     {{-- Reusable Camera Scanner Overlay Modal --}}
     <div x-show="showCameraModal" 
