@@ -10,6 +10,7 @@ use App\Notifications\TaskAssignedNotification;
 use App\Notifications\TaskCommentAddedNotification;
 use App\Notifications\TaskStatusUpdatedNotification;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -107,7 +108,7 @@ class TaskController extends Controller
     // Print View — Daily Tasks Register
     // -----------------------------------------------------------------------
 
-    public function print(Request $request): View
+    public function print(Request $request): View|\Illuminate\Http\Response
     {
         $this->authorizeTaskAccess('view');
 
@@ -202,7 +203,7 @@ class TaskController extends Controller
             ?? $request->input('date_to')
             ?? now()->toDateString();
 
-        return view('tasks.print', [
+        $data = [
             'title'            => 'Daily Tasks Register Print',
             'tasks'            => $tasks,
             'counts'           => $counts,
@@ -213,7 +214,16 @@ class TaskController extends Controller
             'filters'          => $request->only(['category_id', 'assigned_to', 'status', 'priority', 'date_from', 'date_to']),
             'selectedCategory' => $selectedCategory,
             'selectedAssignee' => $selectedAssignee,
-        ]);
+        ];
+
+        if ($request->input('download') === 'pdf' || $request->has('pdf')) {
+            $pdf = Pdf::loadView('tasks.pdf', $data)->setPaper('a4', 'landscape');
+            $filename = 'daily-tasks-register-' . now()->format('Y-m-d') . '.pdf';
+
+            return $pdf->download($filename);
+        }
+
+        return view('tasks.print', $data);
     }
 
     // -----------------------------------------------------------------------
