@@ -31,7 +31,7 @@ class TenantController extends Controller
             ->when($request->landlord_id, function ($q) use ($request) {
                 $q->where(function ($sq) use ($request) {
                     $sq->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id))
-                       ->orWhereHas('agreements.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                        ->orWhereHas('agreements.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
                 });
             })
             ->when($request->date_from, function ($q) use ($request) {
@@ -510,31 +510,31 @@ class TenantController extends Controller
             4 => view('tenants.wizard.step4', array_merge($data, [
                 'checklist' => $displayAgreement ? $displayAgreement->documentChecklist : null,
             ])),
-            5 => (function() use ($data, $displayAgreement, $tenant) {
-                $flatReport = null;
-                $prefilledFromVacant = false;
+            5 => (function () use ($data, $displayAgreement, $tenant) {
+                    $flatReport = null;
+                    $prefilledFromVacant = false;
 
-                if ($displayAgreement) {
-                    $flatReport = FlatInspectionReport::with('items')
+                    if ($displayAgreement) {
+                        $flatReport = FlatInspectionReport::with('items')
                         ->where('agreement_id', $displayAgreement->id)
                         ->where('type', 'move_in')
                         ->first();
 
-                    if (!$flatReport && $displayAgreement->unit_id) {
-                        $vacantReport = FlatInspectionReport::with('items')
+                        if (!$flatReport && $displayAgreement->unit_id) {
+                            $vacantReport = FlatInspectionReport::with('items')
                             ->where('unit_id', $displayAgreement->unit_id)
                             ->where('type', 'vacant')
                             ->latest('id')
                             ->first();
 
-                        if ($vacantReport) {
-                            $flatReport = $vacantReport;
-                            $prefilledFromVacant = true;
+                            if ($vacantReport) {
+                                $flatReport = $vacantReport;
+                                $prefilledFromVacant = true;
+                            }
                         }
                     }
-                }
 
-                return view('tenants.wizard.step5', array_merge($data, [
+                    return view('tenants.wizard.step5', array_merge($data, [
                     'checklist' => $displayAgreement?->moveInChecklist,
                     'agreement' => $displayAgreement,
                     'inspectionPersons' => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
@@ -542,8 +542,8 @@ class TenantController extends Controller
                     'inspectionHeads' => InspectionHead::active()->flatInspection()->orderBy('sort_order')->get(),
                     'flatInspectionReport' => $flatReport,
                     'prefilledFromVacant' => $prefilledFromVacant,
-                ]));
-            })(),
+                    ]));
+                })(),
             6 => view('tenants.wizard.step6', array_merge($data, [
                 'partners' => $displayAgreement ? $displayAgreement->partners()->get() : collect(),
                 'guarantors' => $displayAgreement ? $displayAgreement->guarantors()->get() : collect(),
@@ -1150,14 +1150,14 @@ class TenantController extends Controller
         $report = FlatInspectionReport::updateOrCreate(
             ['agreement_id' => $agreement->id, 'type' => 'move_in'],
             [
-                'unit_id'              => $agreement->unit_id,
-                'tenant_id'            => $tenant->id,
-                'inspected_by'         => auth()->id(),
+                'unit_id' => $agreement->unit_id,
+                'tenant_id' => $tenant->id,
+                'inspected_by' => auth()->id(),
                 'inspection_person_id' => $inspector->id,
-                'inspection_member'    => $inspector->name,
-                'inspected_at'         => $data['checklist_date'],
-                'flat_condition'       => $data['flat_condition'] ?? null,
-                'remarks'              => $data['final_remarks'] ?? null,
+                'inspection_member' => $inspector->name,
+                'inspected_at' => $data['checklist_date'],
+                'flat_condition' => $data['flat_condition'] ?? null,
+                'remarks' => $data['final_remarks'] ?? null,
             ]
         );
 
@@ -1764,7 +1764,7 @@ class TenantController extends Controller
             ->when($request->landlord_id, function ($q) use ($request) {
                 $q->where(function ($sq) use ($request) {
                     $sq->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id))
-                       ->orWhereHas('agreements.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                        ->orWhereHas('agreements.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
                 });
             })
             ->when($request->date_from, function ($q) use ($request) {
@@ -1818,7 +1818,7 @@ class TenantController extends Controller
                 ->when($request->landlord_id, function ($q) use ($request) {
                     $q->where(function ($sq) use ($request) {
                         $sq->whereHas('unit', fn($u) => $u->where('landlord_id', $request->landlord_id))
-                           ->orWhereHas('unitHistory.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
+                            ->orWhereHas('unitHistory.unit', fn($u) => $u->where('landlord_id', $request->landlord_id));
                     });
                 });
 

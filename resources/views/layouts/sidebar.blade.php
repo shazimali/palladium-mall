@@ -60,6 +60,9 @@
             if (path === '/tenants' && currentPath.startsWith('/tenants/pending-documents')) {
                 return false;
             }
+            if (path === '/units' && currentPath.startsWith('/units/print-meters')) {
+                return false;
+            }
             // Active if exact match OR current path starts with path + '/'
             return currentPath === path || currentPath.startsWith(path + '/');
         }

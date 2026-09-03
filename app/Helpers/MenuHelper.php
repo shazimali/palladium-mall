@@ -84,221 +84,238 @@ class MenuHelper
     public static function getMenuGroups()
     {
         $user = auth()->user();
-
-        // 1. Dashboard (Always first)
-        $mainItems = self::getMainNavItems();
-
-        // 2. Asset Management & Leasing
-        if (auth()->check() && $user->can('units.view')) {
-            $mainItems[] = [
-                'icon' => 'tables',
-                'name' => 'Flat/Shops',
-                'path' => '/units',
-            ];
+        if (!$user) {
+            return [];
         }
 
-        if (auth()->check() && $user->can('tenants.view')) {
-            $mainItems[] = [
-                'icon' => 'forms',
-                'name' => 'Tenants & Agreements',
-                'path' => '/tenants',
-            ];
-            $mainItems[] = [
-                'icon' => 'task',
-                'name' => 'Pending Documents',
-                'path' => '/tenants/pending-documents',
-            ];
-        }
+        // =========================================================================
+        // GROUP 1: ADMIN (Items 1 to 7)
+        // =========================================================================
+        $adminItems = [];
 
-        if (auth()->check() && $user->can('other_tenants.view')) {
-            $mainItems[] = [
+        // 1. Dashboard
+        $adminItems[] = [
+            'icon' => 'dashboard',
+            'name' => 'Dashboard',
+            'path' => '/',
+        ];
+
+        // 2. Landlord
+        if ($user->can('landlords.view')) {
+            $adminItems[] = [
                 'icon' => 'user-profile',
-                'name' => 'Other Tenants',
-                'path' => '/other-tenants',
-            ];
-        }
-
-        if (auth()->check() && $user->can('landlords.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Landlords',
+                'name' => 'Landlord',
                 'path' => '/landlords',
             ];
         }
 
-        if (auth()->check() && ($user->can('tasks.view') || $user->isSuperAdmin())) {
-            $mainItems[] = [
-                'icon' => 'task',
-                'name' => 'Daily Tasks',
-                'path' => '/tasks',
-            ];
-        }
-
-        if (auth()->check() && ($user->can('performance.reports.view') || $user->isSuperAdmin())) {
-            $mainItems[] = [
-                'icon' => 'table',
-                'name' => 'Performance Reports',
-                'path' => '/performance',
-            ];
-        }
-
-        if (auth()->check() && $user->isEmployee()) {
-            $mainItems[] = [
-                'icon' => 'task',
-                'name' => 'Daily Entry',
-                'path' => '/performance/daily',
-            ];
-        }
-
-        // 3. People & Directories
-        if (auth()->check() && $user->can('owners.view')) {
-            $mainItems[] = [
+        // 3. Managing Owner
+        if ($user->can('owners.view')) {
+            $adminItems[] = [
                 'icon' => 'user-profile',
-                'name' => 'Managing Owners',
-                'path' => '/owners'
+                'name' => 'Managing Owner',
+                'path' => '/owners',
             ];
         }
 
-        if (auth()->check() && $user->can('parties.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'New Parties',
-                'path' => '/parties',
+        // 4. Flat / Shop
+        if ($user->can('units.view')) {
+            $adminItems[] = [
+                'icon' => 'tables',
+                'name' => 'Flat / Shop',
+                'path' => '/units',
             ];
         }
 
-        if (auth()->check() && $user->can('inspection_persons.view')) {
-            $mainItems[] = [
-                'icon' => 'user-profile',
-                'name' => 'Inspection Persons',
-                'path' => '/inspection-persons',
-            ];
-        }
-
-        if (auth()->check() && ($user->can('report_types.view') || $user->isSuperAdmin())) {
-            $mainItems[] = [
-                'icon' => 'grid',
-                'name' => 'Admin Reporting',
-                'path' => '/report-types',
-            ];
-        }
-
-        if (auth()->check() && ($user->can('inspection_heads.view') || $user->isSuperAdmin())) {
-            $mainItems[] = [
-                'icon' => 'list',
-                'name' => 'Report Inspection Heads',
-                'path' => '/inspection-heads',
-            ];
-        }
-
-        if (auth()->check()) {
-            $serviceReportTypes = \App\Models\ReportType::active()->ordered()->get();
-            if ($serviceReportTypes->isNotEmpty()) {
-                $serviceReportSubItems = [];
-                if ($user->can('admin_office_reports_summary.view') || $user->can('inspection_reports.view') || $user->can('flat_inspections.view') || $user->isSuperAdmin()) {
-                    $serviceReportSubItems[] = [
-                        'name' => '📊 Reports Summary',
-                        'path' => '/admin-office-reports/summary',
-                    ];
-                }
-                foreach ($serviceReportTypes as $srt) {
-                    $perm = ($srt->key === 'flat_inspection') ? 'flat_inspections.view' : 'inspection_reports.view';
-                    if ($user->can($perm) || $user->isSuperAdmin()) {
-                        $serviceReportSubItems[] = [
-                            'name' => $srt->name . ($srt->is_daily ? ' (Daily)' : ''),
-                            'path' => '/inspection-reports/' . $srt->key,
-                        ];
-                    }
-                }
-                if (!empty($serviceReportSubItems)) {
-                    $mainItems[] = [
-                        'icon' => 'list',
-                        'name' => 'Admin Office Reports',
-                        'subItems' => $serviceReportSubItems,
-                    ];
-                }
-            }
-        }
-
-        if (auth()->check() && ($user->can('post_schedules.view') || $user->isSuperAdmin())) {
-            $mainItems[] = [
+        // 5. Tenants & Agreements
+        if ($user->can('tenants.view')) {
+            $adminItems[] = [
                 'icon' => 'forms',
-                'name' => 'Post Schedule',
-                'path' => '/post-schedules',
+                'name' => 'Tenants & Agreements',
+                'path' => '/tenants',
             ];
         }
 
-        // 4. Billings & Cash Flows
-        if (auth()->check() && $user->can('payments.view')) {
-            $mainItems[] = [
-                'icon' => 'ecommerce',
-                'name' => 'Monthly Billings',
-                'path' => '/payments',
+        // 6. Other Tenants Details
+        if ($user->can('other_tenants.view')) {
+            $adminItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Other Tenants Details',
+                'path' => '/other-tenants',
             ];
         }
 
-        if ($user->can('utility_readings.view') || $user->can('utility_readings.edit') || $user->can('utilities.record') || $user->can('utility_meters_management') || $user->can('meters.edit') || $user->can('meter_vouchers.view') || $user->isSuperAdmin()) {
-            $mainItems[] = ['icon' => 'ecommerce', 'name' => 'Utility Meter Readings', 'path' => '/utility-readings'];
-        }
-
-        $voucherSubItems = [];
-        if (auth()->check()) {
-            if ($user->can('receiving_vouchers.view')) {
-                $voucherSubItems[] = ['name' => 'Tenants Receiving Vouchers', 'path' => '/receiving-vouchers'];
-            }
-            if ($user->can('general_receiving_vouchers.view')) {
-                $voucherSubItems[] = ['name' => 'General Receiving Vouchers', 'path' => '/general-receiving-vouchers'];
-            }
-            if ($user->can('payment_vouchers.view')) {
-                $voucherSubItems[] = ['name' => 'Paid Vouchers', 'path' => '/payment-vouchers'];
-            }
-            if ($user->can('expenses.view')) {
-                $voucherSubItems[] = ['name' => 'Expense Vouchers', 'path' => '/expense-vouchers'];
-            }
-            if ($user->can('jv_vouchers.view')) {
-                $voucherSubItems[] = ['name' => 'JV Voucher', 'path' => '/jv-vouchers'];
-            }
-            if ($user->can('other_owned_rent_purchase_vouchers.view') || $user->isSuperAdmin()) {
-                $voucherSubItems[] = ['name' => 'ORP Vouchers', 'path' => '/other-owned-rent-purchase-vouchers'];
-            }
-
-        }
-
-        if (!empty($voucherSubItems)) {
-            $mainItems[] = [
-                'icon' => 'ecommerce',
-                'name' => 'Vouchers',
-                'subItems' => $voucherSubItems,
-            ];
-        }
-
-        if (auth()->check() && $user->can('payment_accounts.view')) {
-            $mainItems[] = [
+        // 7. Pending Agreement Documents
+        if ($user->can('tenants.view')) {
+            $adminItems[] = [
                 'icon' => 'task',
-                'name' => 'Cash & Bank Accounts',
-                'path' => '/payment-accounts',
+                'name' => 'Pending Agreement Documents',
+                'path' => '/tenants/pending-documents',
             ];
         }
 
-        if (auth()->check() && $user->can('expense_heads.view')) {
-            $mainItems[] = [
-                'icon' => 'task',
-                'name' => 'Expense Heads',
-                'path' => '/expense-heads',
-            ];
-        }
+        // =========================================================================
+        // GROUP 2: TASKS & NOTES (Items 8 to 10)
+        // =========================================================================
+        $taskItems = [];
 
-        if (auth()->check() && ($user->can('note_pads.view') || $user->isSuperAdmin())) {
-            $mainItems[] = [
+        // 8. Note Pad
+        if ($user->can('note_pads.view') || $user->isSuperAdmin()) {
+            $taskItems[] = [
                 'icon' => 'task',
                 'name' => 'Note Pad',
                 'path' => '/note-pads',
             ];
         }
 
-        // 5. Ledgers
+        // 9. Daily Task
+        if ($user->can('tasks.view') || $user->isSuperAdmin()) {
+            $taskItems[] = [
+                'icon' => 'task',
+                'name' => 'Daily Task',
+                'path' => '/tasks',
+            ];
+        }
+
+        // 10. Post Scheduled Task
+        if ($user->can('post_schedules.view') || $user->isSuperAdmin()) {
+            $taskItems[] = [
+                'icon' => 'forms',
+                'name' => 'Post Scheduled Task',
+                'path' => '/post-schedules',
+            ];
+        }
+
+        // =========================================================================
+        // GROUP 3: MANAGEMENT & INSPECTIONS SETUP (Items 11 to 15)
+        // =========================================================================
+        $setupItems = [];
+
+        // 11. New Parties
+        if ($user->can('parties.view')) {
+            $setupItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'New Parties',
+                'path' => '/parties',
+            ];
+        }
+
+        // 12. Add Executive / Inspection Person
+        if ($user->can('inspection_persons.view')) {
+            $setupItems[] = [
+                'icon' => 'user-profile',
+                'name' => 'Add Executive / Inspection Person',
+                'path' => '/inspection-persons',
+            ];
+        }
+
+        // 13. Expense Head
+        if ($user->can('expense_heads.view')) {
+            $setupItems[] = [
+                'icon' => 'task',
+                'name' => 'Expense Head',
+                'path' => '/expense-heads',
+            ];
+        }
+
+        // 14. Staff Reporting Setting
+        if ($user->can('report_types.view') || $user->can('inspection_heads.view') || $user->isSuperAdmin()) {
+            $reportingSettingSub = [];
+            if ($user->can('report_types.view') || $user->isSuperAdmin()) {
+                $reportingSettingSub[] = [
+                    'name' => 'Report Types',
+                    'path' => '/report-types',
+                ];
+            }
+            if ($user->can('inspection_heads.view') || $user->isSuperAdmin()) {
+                $reportingSettingSub[] = [
+                    'name' => 'Report Inspection Heads',
+                    'path' => '/inspection-heads',
+                ];
+            }
+            $setupItems[] = [
+                'icon' => 'grid',
+                'name' => 'Staff Reporting Setting',
+                'subItems' => $reportingSettingSub,
+            ];
+        }
+
+        // 15. Add Inspection Report
+        if ($user->can('inspection_reports.view') || $user->can('flat_inspections.view') || $user->isSuperAdmin()) {
+            $inspectionSubItems = [];
+            if ($user->can('flat_inspections.view') || $user->isSuperAdmin()) {
+                $inspectionSubItems[] = [
+                    'name' => 'Flat Inspection',
+                    'path' => '/flat-inspections',
+                ];
+            }
+            $serviceReportTypes = \App\Models\ReportType::active()->ordered()->get();
+            foreach ($serviceReportTypes as $srt) {
+                if ($srt->key === 'flat_inspection') continue;
+                if ($user->can('inspection_reports.view') || $user->isSuperAdmin()) {
+                    $inspectionSubItems[] = [
+                        'name' => $srt->name . ($srt->is_daily ? ' (Daily)' : ''),
+                        'path' => '/inspection-reports/' . $srt->key,
+                    ];
+                }
+            }
+            if (!empty($inspectionSubItems)) {
+                $setupItems[] = [
+                    'icon' => 'list',
+                    'name' => 'Add Inspection Report',
+                    'subItems' => $inspectionSubItems,
+                ];
+            }
+        }
+
+        // =========================================================================
+        // GROUP 4: BILLING & ACCOUNTS (Items 16 to 19)
+        // =========================================================================
+        $billingItems = [];
+
+        // 16. Monthly Billing
+        if ($user->can('payments.view')) {
+            $billingItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Monthly Billing',
+                'path' => '/payments',
+            ];
+        }
+
+        // 17. Voucher
+        $voucherSubItems = [];
+        if ($user->can('receiving_vouchers.view')) {
+            $voucherSubItems[] = ['name' => 'Tenants Receiving Vouchers', 'path' => '/receiving-vouchers'];
+        }
+        if ($user->can('general_receiving_vouchers.view')) {
+            $voucherSubItems[] = ['name' => 'General Receiving Vouchers', 'path' => '/general-receiving-vouchers'];
+        }
+        if ($user->can('payment_vouchers.view')) {
+            $voucherSubItems[] = ['name' => 'Paid Vouchers', 'path' => '/payment-vouchers'];
+        }
+        if ($user->can('expenses.view')) {
+            $voucherSubItems[] = ['name' => 'Expense Vouchers', 'path' => '/expense-vouchers'];
+        }
+        if ($user->can('jv_vouchers.view')) {
+            $voucherSubItems[] = ['name' => 'JV Voucher', 'path' => '/jv-vouchers'];
+        }
+        if ($user->can('other_owned_rent_purchase_vouchers.view') || $user->isSuperAdmin()) {
+            $voucherSubItems[] = ['name' => 'ORP Vouchers', 'path' => '/other-owned-rent-purchase-vouchers'];
+        }
+        if ($user->can('payment_accounts.view')) {
+            $voucherSubItems[] = ['name' => 'Cash & Bank Accounts', 'path' => '/payment-accounts'];
+        }
+        if (!empty($voucherSubItems)) {
+            $billingItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Voucher',
+                'subItems' => $voucherSubItems,
+            ];
+        }
+
+        // 18. Ledger
         $ledgerSubItems = [];
-        if (auth()->check() && $user->can('ledgers.view')) {
+        if ($user->can('ledgers.view')) {
             $ledgerSubItems[] = ['name' => 'Flat/Shop Ledger', 'path' => '/ledgers/flat-shop'];
             $ledgerSubItems[] = ['name' => 'Tenant Ledger', 'path' => '/ledgers/tenant'];
             $ledgerSubItems[] = ['name' => 'Owner Ledger', 'path' => '/ledgers/owner'];
@@ -307,117 +324,158 @@ class MenuHelper
             $ledgerSubItems[] = ['name' => 'Expense Ledger', 'path' => '/ledgers/expense'];
             $ledgerSubItems[] = ['name' => 'Party Ledger', 'path' => '/ledgers/party'];
         }
-
         if (!empty($ledgerSubItems)) {
-            $mainItems[] = [
+            $billingItems[] = [
                 'icon' => 'tables',
-                'name' => 'Ledgers',
+                'name' => 'Ledger',
                 'subItems' => $ledgerSubItems,
             ];
         }
 
-        // 6. Inventory & Warehousing
-        $inventorySubItems = [];
-        if (auth()->check()) {
-            if ($user->can('inventory.view')) {
-                $inventorySubItems[] = ['name' => 'Items Stock', 'path' => '/inventory/items'];
-                $inventorySubItems[] = ['name' => 'Stock Inflows', 'path' => '/inventory/stock-entries'];
-            }
-            if ($user->can('gatepasses.view')) {
-                $inventorySubItems[] = ['name' => 'Gate Passes', 'path' => '/inventory/gate-passes'];
-            }
-        }
-
-        if (!empty($inventorySubItems)) {
-            $mainItems[] = [
-                'icon' => 'ecommerce',
-                'name' => 'Inventory & Stock',
-                'subItems' => $inventorySubItems,
-            ];
-        }
-
-        // 7. Reports & Analytics
+        // 19. Reports Statement
         $reportsSubItems = [];
-        if (auth()->check() && $user->can('reports.view')) {
+        if ($user->can('reports.view')) {
             $reportsSubItems[] = ['name' => 'All Reports Overview', 'path' => '/reports'];
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Generated)', 'path' => '/reports?report_type=monthly_matrix'];
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Expected)', 'path' => '/reports?report_type=monthly_matrix_expected'];
             $reportsSubItems[] = ['name' => 'Receivables Report', 'path' => '/reports/receivables'];
             $reportsSubItems[] = ['name' => 'Payables Report', 'path' => '/reports/payables'];
         }
-        if (auth()->check() && ($user->can('reports.account_summary') || $user->can('reports.view'))) {
+        if ($user->can('reports.account_summary') || $user->can('reports.view')) {
             $reportsSubItems[] = ['name' => 'Account Summary', 'path' => '/reports/account-summary'];
         }
-        if (auth()->check() && $user->can('reports.profit_loss')) {
+        if ($user->can('reports.profit_loss')) {
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
         }
-        if (auth()->check() && $user->can('reports.daybook')) {
+        if ($user->can('reports.daybook')) {
             $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];
         }
-        if (auth()->check() && $user->can('reports.cashbook')) {
+        if ($user->can('reports.cashbook')) {
             $reportsSubItems[] = ['name' => 'Daily Cash Book', 'path' => '/reports/cash-book'];
         }
-
+        if ($user->can('performance.reports.view') || $user->isSuperAdmin()) {
+            $reportsSubItems[] = ['name' => 'Performance Reports', 'path' => '/performance'];
+        }
+        if ($user->isEmployee()) {
+            $reportsSubItems[] = ['name' => 'Daily Entry', 'path' => '/performance/daily'];
+        }
         if (!empty($reportsSubItems)) {
-            $mainItems[] = [
+            $billingItems[] = [
                 'icon' => 'charts',
-                'name' => 'Reports & Statements',
+                'name' => 'Reports Statement',
                 'subItems' => $reportsSubItems,
             ];
         }
 
-        $groups = [
-            [
-                'title' => 'Menu',
-                'items' => $mainItems,
-            ],
-            // [
-            //     'title' => 'Others',
-            //     'items' => self::getOthersItems(),
-            // ],
-        ];
+        // =========================================================================
+        // GROUP 5: STAFF REPORT (Items 20 to 23)
+        // =========================================================================
+        $staffReportItems = [];
 
-        if (auth()->check()) {
-            $adminItems = [];
+        // 20. Daily Staff Inspection Report
+        if ($user->can('admin_office_reports_summary.view') || $user->can('inspection_reports.view') || $user->can('flat_inspections.view') || $user->isSuperAdmin()) {
+            $staffReportItems[] = [
+                'icon' => 'list',
+                'name' => 'Daily Staff Inspection Report',
+                'path' => '/admin-office-reports/summary',
+            ];
+        }
 
-            if ($user->can('users.view')) {
-                $adminItems[] = [
-                    'icon' => 'user-profile',
-                    'name' => 'Users',
-                    'path' => '/users',
-                ];
-            }
+        // 21. Meter Reading Report
+        if ($user->can('utility_readings.view') || $user->can('utility_readings.edit') || $user->can('utilities.record') || $user->can('utility_meters_management') || $user->can('meters.edit') || $user->can('meter_vouchers.view') || $user->isSuperAdmin()) {
+            $staffReportItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Meter Reading Report',
+                'path' => '/utility-readings',
+            ];
+        }
 
-            if ($user->can('roles.view')) {
-                $adminItems[] = [
-                    'icon' => 'tables',
-                    'name' => 'Roles',
-                    'path' => '/roles',
-                ];
-            }
+        // 22. Inventory Stock
+        $inventorySubItems = [];
+        if ($user->can('inventory.view')) {
+            $inventorySubItems[] = ['name' => 'Items Stock', 'path' => '/inventory/items'];
+            $inventorySubItems[] = ['name' => 'Stock Inflows', 'path' => '/inventory/stock-entries'];
+        }
+        if ($user->can('gatepasses.view')) {
+            $inventorySubItems[] = ['name' => 'Gate Passes', 'path' => '/inventory/gate-passes'];
+        }
+        if (!empty($inventorySubItems)) {
+            $staffReportItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Inventory Stock',
+                'subItems' => $inventorySubItems,
+            ];
+        }
 
-            if ($user->can('permissions.view')) {
-                $adminItems[] = [
-                    'icon' => 'forms',
-                    'name' => 'Permissions',
-                    'path' => '/permissions',
-                ];
-            }
+        // 23. Transfer Meter
+        if ($user->can('units.view') || $user->can('utility_readings.view') || $user->isSuperAdmin()) {
+            $staffReportItems[] = [
+                'icon' => 'ecommerce',
+                'name' => 'Transfer Meter',
+                'path' => '/units/print-meters',
+            ];
+        }
 
-            if ($user->can('activity_logs.view')) {
-                $adminItems[] = [
-                    'icon' => 'task',
-                    'name' => 'Activity Logs',
-                    'path' => '/activity-logs',
-                ];
-            }
+        // =========================================================================
+        // ASSEMBLE GROUPS
+        // =========================================================================
+        $groups = [];
 
-            if (!empty($adminItems)) {
-                $groups[] = [
-                    'title' => 'User Management',
-                    'items' => $adminItems,
-                ];
-            }
+        if (!empty($adminItems)) {
+            $groups[] = [
+                'title' => 'Admin',
+                'items' => $adminItems,
+            ];
+        }
+
+        if (!empty($taskItems)) {
+            $groups[] = [
+                'title' => 'Tasks',
+                'items' => $taskItems,
+            ];
+        }
+
+        if (!empty($setupItems)) {
+            $groups[] = [
+                'title' => 'Management',
+                'items' => $setupItems,
+            ];
+        }
+
+        if (!empty($billingItems)) {
+            $groups[] = [
+                'title' => 'Accounts',
+                'items' => $billingItems,
+            ];
+        }
+
+        if (!empty($staffReportItems)) {
+            $groups[] = [
+                'title' => 'Staff Report',
+                'items' => $staffReportItems,
+            ];
+        }
+
+        // User Management (Super Admin)
+        $userMgmtItems = [];
+        if ($user->can('users.view')) {
+            $userMgmtItems[] = ['icon' => 'user-profile', 'name' => 'Users', 'path' => '/users'];
+        }
+        if ($user->can('roles.view')) {
+            $userMgmtItems[] = ['icon' => 'tables', 'name' => 'Roles', 'path' => '/roles'];
+        }
+        if ($user->can('permissions.view')) {
+            $userMgmtItems[] = ['icon' => 'forms', 'name' => 'Permissions', 'path' => '/permissions'];
+        }
+        if ($user->can('activity_logs.view')) {
+            $userMgmtItems[] = ['icon' => 'task', 'name' => 'Activity Logs', 'path' => '/activity-logs'];
+        }
+
+        if (!empty($userMgmtItems)) {
+            $groups[] = [
+                'title' => 'User Management',
+                'items' => $userMgmtItems,
+            ];
         }
 
         return $groups;
