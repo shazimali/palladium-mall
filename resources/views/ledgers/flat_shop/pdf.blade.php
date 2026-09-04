@@ -111,6 +111,7 @@
         .bg-green { background: #ecfdf5; }
         .bg-rose { background: #fff1f2; }
         .bg-amber { background: #fffbeb; }
+        .bg-teal { background: #f0fdfa; }
         .bg-purple { background: #faf5ff; }
     </style>
 </head>
@@ -142,31 +143,37 @@
         {{-- Security Deposit Matrix KPI Summary Table --}}
         <table class="summary-table">
             <tr>
-                <td style="width: 20%; padding: 3px;">
+                <td style="width: 16.66%; padding: 3px;">
                     <div class="summary-box" style="border-color: #bfdbfe; background: #eff6ff;">
                         <div class="summary-title" style="color: #1d4ed8;">Required Deposit</div>
                         <div class="summary-value" style="color: #1d4ed8;">Rs. {{ number_format($summary['total_required'], 2) }}</div>
                     </div>
                 </td>
-                <td style="width: 20%; padding: 3px;">
+                <td style="width: 16.66%; padding: 3px;">
                     <div class="summary-box" style="border-color: #a7f3d0; background: #ecfdf5;">
                         <div class="summary-title" style="color: #047857;">Collected Deposit</div>
                         <div class="summary-value" style="color: #047857;">Rs. {{ number_format($summary['total_collected'], 2) }}</div>
                     </div>
                 </td>
-                <td style="width: 20%; padding: 3px;">
+                <td style="width: 16.66%; padding: 3px;">
                     <div class="summary-box" style="border-color: #fecdd3; background: #fff1f2;">
                         <div class="summary-title" style="color: #e11d48;">Pending Deposit</div>
                         <div class="summary-value" style="color: #e11d48;">Rs. {{ number_format($summary['total_pending'], 2) }}</div>
                     </div>
                 </td>
-                <td style="width: 20%; padding: 3px;">
+                <td style="width: 16.66%; padding: 3px;">
                     <div class="summary-box" style="border-color: #fde68a; background: #fffbeb;">
                         <div class="summary-title" style="color: #b45309;">Deductions / Damage</div>
                         <div class="summary-value" style="color: #b45309;">Rs. {{ number_format($summary['total_deductions'], 2) }}</div>
                     </div>
                 </td>
-                <td style="width: 20%; padding: 3px;">
+                <td style="width: 16.66%; padding: 3px;">
+                    <div class="summary-box" style="border-color: #99f6e4; background: #f0fdfa;">
+                        <div class="summary-title" style="color: #0f766e;">Refunded Deposit</div>
+                        <div class="summary-value" style="color: #0f766e;">Rs. {{ number_format($summary['total_refunded'], 2) }}</div>
+                    </div>
+                </td>
+                <td style="width: 16.66%; padding: 3px;">
                     <div class="summary-box" style="border-color: #e9d5ff; background: #faf5ff;">
                         <div class="summary-title" style="color: #7e22ce;">Net Refundable</div>
                         <div class="summary-value" style="color: #7e22ce;">Rs. {{ number_format($summary['total_net_refundable'], 2) }}</div>
@@ -188,6 +195,7 @@
                     <th class="text-right bg-green">COLLECTED DEPOSIT</th>
                     <th class="text-right bg-rose">PENDING DEPOSIT</th>
                     <th class="text-right bg-amber">DEDUCTIONS</th>
+                    <th class="text-right bg-teal">REFUNDED DEPOSIT</th>
                     <th class="text-right bg-purple">NET REFUNDABLE</th>
                 </tr>
             </thead>
@@ -203,6 +211,7 @@
                         <td class="text-right font-bold bg-green" style="color: #047857;">{{ $r['collected_deposit'] > 0 ? number_format($r['collected_deposit'], 2) : '—' }}</td>
                         <td class="text-right font-bold bg-rose" style="color: #e11d48;">{{ $r['pending_deposit'] > 0 ? number_format($r['pending_deposit'], 2) : '—' }}</td>
                         <td class="text-right font-bold bg-amber" style="color: #b45309;">{{ $r['deduction_deposit'] > 0 ? number_format($r['deduction_deposit'], 2) : '—' }}</td>
+                        <td class="text-right font-bold bg-teal" style="color: #0f766e;">{{ $r['refunded_deposit'] > 0 ? number_format($r['refunded_deposit'], 2) : '—' }}</td>
                         <td class="text-right font-bold bg-purple" style="color: #7e22ce;">{{ $r['net_refundable'] > 0 ? number_format($r['net_refundable'], 2) : '—' }}</td>
                     </tr>
                 @endforeach
@@ -214,6 +223,7 @@
                     <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #047857;">{{ number_format($summary['total_collected'], 2) }}</td>
                     <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #e11d48;">{{ number_format($summary['total_pending'], 2) }}</td>
                     <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #b45309;">{{ number_format($summary['total_deductions'], 2) }}</td>
+                    <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #0f766e;">{{ number_format($summary['total_refunded'], 2) }}</td>
                     <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #7e22ce;">{{ number_format($summary['total_net_refundable'], 2) }}</td>
                 </tr>
             </tfoot>

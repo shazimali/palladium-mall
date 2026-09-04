@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Unit;
 use App\Models\Payment;
+use App\Models\PaymentVoucher;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -85,12 +86,23 @@ class FlatShopLedgerService
                 ->get()
                 ->groupBy('unit_id');
 
+            $refundVouchers = PaymentVoucher::where('paid_to_type', 'tenant')
+                ->where('date', '>=', $dateFrom->toDateString())
+                ->where('date', '<=', $dateTo->toDateString())
+                ->with(['tenant', 'unit'])
+                ->get();
+
+            $refundVouchersByUnit = $refundVouchers->groupBy(function ($pv) {
+                return $pv->unit_id ?? $pv->tenant?->unit_id;
+            });
+
             $rows = collect();
             $sr = 1;
 
             foreach ($units as $unit) {
                 $unitSecPayments = $secPayments->get($unit->id) ?? collect();
                 $unitDeductions  = $deductionPayments->get($unit->id) ?? collect();
+                $unitRefunds     = $refundVouchersByUnit->get($unit->id) ?? collect();
 
                 $agreement = $unit->agreements()
                     ->where('start_date', '>=', $dateFrom->toDateString())
@@ -105,23 +117,35 @@ class FlatShopLedgerService
                     }
                 }
 
-                // Strictly filter units to those having security deposit payments, deductions, or agreements matching date range
-                if ($unitSecPayments->isEmpty() && $unitDeductions->isEmpty() && !$agreement) {
+                // Strictly filter units to those having security deposit payments, deductions, refunds, or agreements matching date range
+                if ($unitSecPayments->isEmpty() && $unitDeductions->isEmpty() && $unitRefunds->isEmpty() && !$agreement) {
                     continue;
                 }
 
                 $tenantName = $agreement?->tenant?->name 
                     ?? $unitSecPayments->first()?->tenant?->name 
                     ?? $unitSecPayments->first()?->otherTenant?->name 
+                    ?? $unitRefunds->first()?->tenant?->name
                     ?? ($unit->otherTenant?->name ?? '—');
 
                 $agSec            = (float) ($agreement?->security_deposit ?? 0);
                 $paySec           = (float) $unitSecPayments->sum('amount');
-                $requiredDeposit  = max($agSec, $paySec);
                 $collectedDeposit = (float) $unitSecPayments->sum('amount_paid');
-                $pendingDeposit   = max(0.0, $requiredDeposit - $collectedDeposit);
+                $refundedDeposit  = (float) $unitRefunds->sum('amount');
                 $deductionDeposit = (float) $unitDeductions->sum('amount_paid');
-                $netRefundable    = max(0.0, $collectedDeposit - $deductionDeposit);
+
+                // If collected in period is less than refunded (e.g. deposit was paid in a prior month), resolve historical payments
+                if ($collectedDeposit < $refundedDeposit) {
+                    $historicalPaySec = (float) Payment::where('unit_id', $unit->id)->where('type', 'security_deposit')->sum('amount');
+                    $historicalCollected = (float) Payment::where('unit_id', $unit->id)->where('type', 'security_deposit')->sum('amount_paid');
+                    $agSec = max($agSec, $historicalPaySec);
+                    $paySec = max($paySec, $historicalPaySec);
+                    $collectedDeposit = max($collectedDeposit, $historicalCollected);
+                }
+
+                $requiredDeposit  = max($agSec, $paySec);
+                $pendingDeposit   = max(0.0, $requiredDeposit - $collectedDeposit);
+                $netRefundable    = max(0.0, $collectedDeposit - $deductionDeposit - $refundedDeposit);
 
                 if ($agreement) {
                     $status = $unit->status === 'sp' ? 'SP' : 'RENTED';
@@ -147,6 +171,7 @@ class FlatShopLedgerService
                     'collected_deposit' => $collectedDeposit,
                     'pending_deposit'   => $pendingDeposit,
                     'deduction_deposit' => $deductionDeposit,
+                    'refunded_deposit'  => $refundedDeposit,
                     'net_refundable'    => $netRefundable,
                 ]);
             }
@@ -156,6 +181,7 @@ class FlatShopLedgerService
                 'total_collected'      => (float) $rows->sum('collected_deposit'),
                 'total_pending'        => (float) $rows->sum('pending_deposit'),
                 'total_deductions'     => (float) $rows->sum('deduction_deposit'),
+                'total_refunded'       => (float) $rows->sum('refunded_deposit'),
                 'total_net_refundable' => (float) $rows->sum('net_refundable'),
                 'total_records'        => $rows->count(),
             ];
@@ -452,6 +478,9 @@ class FlatShopLedgerService
 
             $tenantName = $p->tenant?->name ?? ($p->otherTenant?->name ?? '—');
 
+            $voucherNo = $p->receivingVouchers->first()?->voucher_no ?? ('PM-PAY-' . str_pad($p->id, 5, '0', STR_PAD_LEFT));
+            $description = $p->notes ?: ($p->type_label . ' payment');
+
             $entries->push([
                 'id' => $p->id,
                 'date' => $p->due_date ?: $p->month,
@@ -459,12 +488,17 @@ class FlatShopLedgerService
                 'tenant_name' => $tenantName,
                 'type' => $p->type_label,
                 'type_code' => $p->type,
+                'voucher_no' => $voucherNo,
+                'description' => $description,
                 'amount_due' => $debit,
                 'amount_paid' => $credit,
+                'debit' => $debit,
+                'credit' => $credit,
                 'payment_method' => $p->payment_method ? ucfirst(str_replace('_', ' ', $p->payment_method)) : '—',
                 'payment_account' => $p->paymentAccount?->name ?? '—',
                 'paid_at' => $p->paid_at ? $p->paid_at->format('d M Y') : '—',
                 'balance' => $runningBalance,
+                'running_balance' => $runningBalance,
                 'status' => $p->status,
             ]);
         }

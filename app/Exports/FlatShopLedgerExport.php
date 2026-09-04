@@ -30,6 +30,7 @@ class FlatShopLedgerExport implements FromCollection, WithHeadings, WithStyles, 
                 'COLLECTED DEPOSIT'    => number_format($row['collected_deposit'], 2),
                 'PENDING DEPOSIT'      => number_format($row['pending_deposit'], 2),
                 'DEDUCTIONS / DAMAGE'  => number_format($row['deduction_deposit'], 2),
+                'REFUNDED DEPOSIT'     => number_format($row['refunded_deposit'] ?? 0, 2),
                 'NET REFUNDABLE'       => number_format($row['net_refundable'], 2),
             ]);
         }
@@ -62,6 +63,7 @@ class FlatShopLedgerExport implements FromCollection, WithHeadings, WithStyles, 
                 'COLLECTED DEPOSIT',
                 'PENDING DEPOSIT',
                 'DEDUCTIONS / DAMAGE',
+                'REFUNDED DEPOSIT',
                 'NET REFUNDABLE',
             ];
         }

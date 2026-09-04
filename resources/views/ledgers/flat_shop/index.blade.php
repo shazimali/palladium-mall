@@ -123,7 +123,7 @@
 
     {{-- Summary KPI Cards --}}
     @if(!empty($is_security_deposit))
-        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <div class="rounded-2xl border border-blue-100 bg-white p-5 shadow-sm dark:border-blue-900/40 dark:bg-white/[0.03]">
                 <p class="text-xs font-bold uppercase tracking-wider text-blue-600">Required Deposit</p>
                 <h4 class="mt-2 text-2xl font-black text-blue-700 dark:text-blue-400">Rs. {{ number_format($summary['total_required'] ?? 0) }}</h4>
@@ -139,6 +139,10 @@
             <div class="rounded-2xl border border-amber-100 bg-white p-5 shadow-sm dark:border-amber-900/40 dark:bg-white/[0.03]">
                 <p class="text-xs font-bold uppercase tracking-wider text-amber-600">Deductions / Damage</p>
                 <h4 class="mt-2 text-2xl font-black text-amber-600">Rs. {{ number_format($summary['total_deductions'] ?? 0) }}</h4>
+            </div>
+            <div class="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm dark:border-teal-900/40 dark:bg-white/[0.03]">
+                <p class="text-xs font-bold uppercase tracking-wider text-teal-600">Refunded Deposit</p>
+                <h4 class="mt-2 text-2xl font-black text-teal-600">Rs. {{ number_format($summary['total_refunded'] ?? 0) }}</h4>
             </div>
             <div class="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm dark:border-purple-900/40 dark:bg-white/[0.03]">
                 <p class="text-xs font-bold uppercase tracking-wider text-purple-600">Net Refundable</p>
@@ -187,6 +191,7 @@
                             <th class="px-4 py-4 text-right bg-emerald-50/80 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border-l border-emerald-100 dark:border-emerald-900/50">COLLECTED DEPOSIT</th>
                             <th class="px-4 py-4 text-right bg-rose-50/80 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300 border-l border-rose-100 dark:border-rose-900/50">PENDING DEPOSIT</th>
                             <th class="px-4 py-4 text-right bg-amber-50/80 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border-l border-amber-100 dark:border-amber-900/50">DEDUCTIONS / DAMAGE</th>
+                            <th class="px-4 py-4 text-right bg-teal-50/80 text-teal-800 dark:bg-teal-950/40 dark:text-teal-300 border-l border-teal-100 dark:border-teal-900/50">REFUNDED DEPOSIT</th>
                             <th class="px-4 py-4 text-right bg-purple-50/80 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 border-l border-purple-100 dark:border-purple-900/50">NET REFUNDABLE</th>
                         </tr>
                     </thead>
@@ -206,7 +211,7 @@
                                         $st = strtoupper($r['status'] ?? '');
                                         $stBadge = match(true) {
                                             $st === 'RENTED' || $st === 'OCCUPIED' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-                                            $st === 'VACANT' => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+                                             $st === 'VACANT' => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
                                             default => 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
                                         };
                                     @endphp
@@ -226,13 +231,16 @@
                                 <td class="px-4 py-3.5 text-right font-black {{ $r['deduction_deposit'] > 0 ? 'text-amber-600' : 'text-gray-400' }} bg-amber-50/30 dark:bg-amber-950/10">
                                     {{ $r['deduction_deposit'] > 0 ? 'Rs. ' . number_format($r['deduction_deposit']) : '—' }}
                                 </td>
+                                <td class="px-4 py-3.5 text-right font-black {{ $r['refunded_deposit'] > 0 ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400' }} bg-teal-50/30 dark:bg-teal-950/10">
+                                    {{ $r['refunded_deposit'] > 0 ? 'Rs. ' . number_format($r['refunded_deposit']) : '—' }}
+                                </td>
                                 <td class="px-4 py-3.5 text-right font-black text-purple-700 dark:text-purple-300 bg-purple-50/30 dark:bg-purple-950/10">
                                     {{ $r['net_refundable'] > 0 ? 'Rs. ' . number_format($r['net_refundable']) : '—' }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="px-4 py-12 text-center text-gray-400 font-semibold">No security deposit records match the selected filters.</td>
+                                <td colspan="11" class="px-4 py-12 text-center text-gray-400 font-semibold">No security deposit records match the selected filters.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -244,6 +252,7 @@
                             <td class="px-4 py-4.5 text-right text-sm font-black text-emerald-600">Rs. {{ number_format($summary['total_collected'] ?? 0) }}</td>
                             <td class="px-4 py-4.5 text-right text-sm font-black text-rose-600">Rs. {{ number_format($summary['total_pending'] ?? 0) }}</td>
                             <td class="px-4 py-4.5 text-right text-sm font-black text-amber-600">Rs. {{ number_format($summary['total_deductions'] ?? 0) }}</td>
+                            <td class="px-4 py-4.5 text-right text-sm font-black text-teal-600">Rs. {{ number_format($summary['total_refunded'] ?? 0) }}</td>
                             <td class="px-4 py-4.5 text-right text-sm font-black text-purple-600">Rs. {{ number_format($summary['total_net_refundable'] ?? 0) }}</td>
                         </tr>
                     </tfoot>
