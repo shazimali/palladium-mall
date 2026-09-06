@@ -14,7 +14,9 @@ class FloorBlockAreaSeeder extends Seeder
         // Seed Floors
         $floors = ['Ground', '1st', '2nd', '3rd', '4th'];
         foreach ($floors as $floorName) {
+
             Floor::firstOrCreate(['name' => $floorName]);
+
         }
 
         // Seed Blocks
