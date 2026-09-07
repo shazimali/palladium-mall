@@ -918,10 +918,6 @@ class PaymentController extends Controller
                 ->get();
 
             foreach ($agreements as $ag) {
-                if ($ag->start_date && Carbon::parse($ag->start_date)->lt('2026-08-01')) {
-                    continue;
-                }
-
                 foreach ($types as $type) {
                     if (!in_array($type, ['rent', 'maintenance'])) {
                         continue;
