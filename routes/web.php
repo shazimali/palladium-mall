@@ -234,6 +234,7 @@ Route::middleware('auth')->group(function () {
         Route::get('flat-inspections/create', [\App\Http\Controllers\FlatInspectionReportController::class, 'create'])->name('flat-inspections.create');
         Route::post('flat-inspections', [\App\Http\Controllers\FlatInspectionReportController::class, 'store'])->name('flat-inspections.store');
     });
+    Route::get('flat-inspections', fn() => redirect()->route('inspection-reports.index', 'flat_inspection'))->name('flat-inspections.index');
     Route::middleware('permission:flat_inspections.view')->group(function () {
         Route::get('flat-inspections/{flatInspectionReport}', [\App\Http\Controllers\FlatInspectionReportController::class, 'show'])->name('flat-inspections.show');
         Route::get('flat-inspections/{flatInspectionReport}/print', [\App\Http\Controllers\FlatInspectionReportController::class, 'print'])->name('flat-inspections.print');
