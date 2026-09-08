@@ -251,7 +251,8 @@ class MenuHelper
             }
             $serviceReportTypes = \App\Models\ReportType::active()->ordered()->get();
             foreach ($serviceReportTypes as $srt) {
-                if ($srt->key === 'flat_inspection') continue;
+                if ($srt->key === 'flat_inspection')
+                    continue;
                 if ($user->can('inspection_reports.view') || $user->isSuperAdmin()) {
                     $inspectionSubItems[] = [
                         'name' => $srt->name . ($srt->is_daily ? ' (Daily)' : ''),
@@ -407,14 +408,14 @@ class MenuHelper
             ];
         }
 
-        // 23. Transfer Meter
-        if ($user->can('units.view') || $user->can('utility_readings.view') || $user->isSuperAdmin()) {
-            $staffReportItems[] = [
-                'icon' => 'ecommerce',
-                'name' => 'Transfer Meter',
-                'path' => '/units/print-meters',
-            ];
-        }
+        // // 23. Transfer Meter
+        // if ($user->can('units.view') || $user->can('utility_readings.view') || $user->isSuperAdmin()) {
+        //     $staffReportItems[] = [
+        //         'icon' => 'ecommerce',
+        //         'name' => 'Transfer Meter',
+        //         'path' => '/units/print-meters',
+        //     ];
+        // }
 
         // =========================================================================
         // ASSEMBLE GROUPS
