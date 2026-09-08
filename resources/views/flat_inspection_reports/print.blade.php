@@ -33,7 +33,70 @@
         .signatures { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 30px; }
         .sig-box { border-top: 1px solid #222; padding-top: 8px; text-align: center; font-size: 11px; font-weight: 600; }
         .print-btn { position: fixed; top: 12px; right: 12px; padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 12px; }
-        @media print { .print-btn { display: none; } body { font-size: 11px; } }
+
+        .unit-banner-centric {
+            text-align: center;
+            margin-bottom: 16px;
+            padding: 12px 16px;
+            background: #f8fafc;
+            border: 2px solid #0f172a;
+            border-radius: 8px;
+        }
+        .unit-number-bold {
+            font-size: 22px;
+            font-weight: 900;
+            color: #0f172a;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .unit-type-badge {
+            font-size: 15px;
+            font-weight: 800;
+            color: #475569;
+            margin-left: 6px;
+        }
+        .unit-details-bold {
+            font-size: 12px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-top: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .unit-details-bold span strong {
+            color: #0f172a;
+            font-weight: 900;
+        }
+
+        /* @page MUST be top-level — nesting inside @media print breaks @bottom-right in all browsers */
+        @page {
+            size: A4 portrait;
+            margin: 1.2cm 0.8cm 1.5cm 0.8cm;
+
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: #475569;
+            }
+        }
+
+        @media print {
+            .print-btn { display: none !important; }
+            body { font-size: 11px; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .print-page-number {
+                display: block !important;
+                position: fixed;
+                bottom: 6px;
+                right: 10px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                color: #475569;
+            }
+        }
     </style>
 </head>
 <body>
@@ -46,21 +109,42 @@
                 <div class="title">
                     {{ $report->type_label }} Report
                 </div>
-                <div class="subtitle">
-                    Unit / Flat: <strong>{{ $report->effective_unit?->unit_number ?? '—' }}</strong> ({{ ucfirst($report->effective_unit?->type ?? 'Flat') }})
-                    @if($report->tenant)
-                        &nbsp;|&nbsp; Tenant: <strong>{{ $report->tenant->name }}</strong>
-                    @endif
-                    @if($report->agreement_id)
-                        &nbsp;|&nbsp; Agreement #<strong>{{ $report->agreement_id }}</strong>
-                    @endif
-                </div>
             </div>
             <div style="text-align:right">
                 <div class="date-large">
                     DATE: {{ $report->inspected_at?->format('d M Y') ?? now()->format('d M Y') }}
                 </div>
                 <div style="font-size:10px; color:#777; margin-top:5px;">Generated: {{ now()->format('d M Y, h:i A') }}</div>
+            </div>
+        </div>
+
+        {{-- Centered & Bold Unit Information Banner --}}
+        <div class="unit-banner-centric">
+            <div class="unit-number-bold">
+                UNIT {{ $report->effective_unit?->unit_number ?? '—' }}
+                @if($report->effective_unit?->type)
+                    <span class="unit-type-badge">({{ strtoupper($report->effective_unit->type) }})</span>
+                @endif
+            </div>
+            <div class="unit-details-bold">
+                @if($report->effective_unit?->floor)
+                    <span><strong>Floor:</strong> {{ $report->effective_unit->floor->name }}</span>
+                @endif
+                @if($report->effective_unit?->block)
+                    <span><strong>Block:</strong> {{ $report->effective_unit->block->name }}</span>
+                @endif
+                @if($report->effective_unit?->area)
+                    <span><strong>Area:</strong> {{ $report->effective_unit->area->name }}</span>
+                @endif
+                @if($report->tenant ?? $report->agreement?->tenant)
+                    <span><strong>Tenant:</strong> {{ $report->tenant?->name ?? $report->agreement?->tenant?->name }}</span>
+                @endif
+                @if($report->effective_unit?->landlord)
+                    <span><strong>Owner:</strong> {{ $report->effective_unit->landlord->name }}</span>
+                @endif
+                @if($report->agreement_id)
+                    <span><strong>Agreement #:</strong> {{ $report->agreement_id }}</span>
+                @endif
             </div>
         </div>
 
@@ -180,5 +264,8 @@
             </div>
         </div>
     </div>
+
+    <!-- Fixed page-number footer: repeats on every printed page (cross-browser fallback) -->
+    <div class="print-page-number" style="display:none;"></div>
 </body>
 </html>

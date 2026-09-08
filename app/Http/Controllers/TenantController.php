@@ -1884,4 +1884,30 @@ class TenantController extends Controller
             'occupants' => $occupants,
         ]);
     }
+
+    /**
+     * Print View — Pending Documents & Checklists Report
+     */
+    public function printPendingDocuments(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('tenants.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $tenants = Tenant::whereHas('activeAgreement')
+            ->with([
+                'activeAgreement.documentChecklist.agreement.unit',
+                'activeAgreement.moveInChecklist',
+                'activeAgreement.unit',
+                'unit'
+            ])
+            ->when($request->search, fn($q) => $q->search($request->search))
+            ->orderBy('name')
+            ->get();
+
+        return view('tenants.print_pending_documents', [
+            'pageTitle' => 'Pending Documents & Checklists Report',
+            'tenants'   => $tenants,
+        ]);
+    }
 }

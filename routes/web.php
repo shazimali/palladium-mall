@@ -112,9 +112,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('permission:tenants.view')->group(function () {
-        Route::get('tenants/print-guards',      [TenantController::class, 'printGuards'])->name('tenants.printGuards');
-        Route::get('tenants/print-staff',       [TenantController::class, 'printStaff'])->name('tenants.printStaff');
-        Route::get('tenants/pending-documents', [TenantController::class, 'pendingDocuments'])->name('tenants.pending-documents');
+        Route::get('tenants/print-guards',            [TenantController::class, 'printGuards'])->name('tenants.printGuards');
+        Route::get('tenants/print-staff',             [TenantController::class, 'printStaff'])->name('tenants.printStaff');
+        Route::get('tenants/pending-documents',       [TenantController::class, 'pendingDocuments'])->name('tenants.pending-documents');
+        Route::get('tenants/pending-documents/print', [TenantController::class, 'printPendingDocuments'])->name('tenants.pending-documents.print');
         Route::resource('tenants', TenantController::class)->except(['create', 'store']);
     });
 

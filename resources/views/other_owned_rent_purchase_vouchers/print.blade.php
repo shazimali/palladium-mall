@@ -50,6 +50,10 @@
             </a>
         </div>
         <div class="flex items-center gap-3">
+            <a href="{{ route('other-owned-rent-purchase-vouchers.create') }}"
+                class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 transition-all cursor-pointer">
+                ➕ New Voucher
+            </a>
             <button onclick="window.print()"
                 class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 transition-all cursor-pointer">
                 🖨️ Print Voucher

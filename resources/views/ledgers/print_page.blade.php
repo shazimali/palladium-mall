@@ -201,19 +201,20 @@
             background: #000;
         }
 
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 0.5cm;
+        /* @page MUST be top-level — nesting inside @media print breaks @bottom-right in all browsers */
+        @page {
+            size: A4 portrait;
+            margin: 1.5cm 0.5cm 1.8cm 0.5cm;
 
-                @bottom-right {
-                    content: "Page " counter(page) " of " counter(pages);
-                    font-size: 0.8rem;
-                    font-weight: 800;
-                    color: #475569;
-                }
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: #475569;
             }
+        }
 
+        @media print {
             .no-print {
                 display: none !important;
             }
@@ -235,6 +236,17 @@
                 margin: 0 !important;
                 border: none !important;
                 box-shadow: none !important;
+            }
+
+            /* position:fixed repeats on every printed page — cross-browser fallback */
+            .print-page-number {
+                display: block !important;
+                position: fixed;
+                bottom: 6px;
+                right: 10px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                color: #475569;
             }
         }
     </style>
@@ -351,17 +363,10 @@
         @endif
     </table>
 
-    <!-- Printed Footer (Party Print Strategy) -->
+    <!-- Printed Footer -->
     <div class="footer">
-        <span>Palladium Mall Management Office, Islamabad</span>
         <span>Generated on {{ now()->format('d M Y \a\t h:i A') }}</span>
     </div>
-
-    <script>
-        window.addEventListener('load', function () {
-            if (window.opener) { setTimeout(function () { window.print(); }, 400); }
-        });
-    </script>
 </body>
 
 </html>

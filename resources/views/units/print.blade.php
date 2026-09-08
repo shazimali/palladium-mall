@@ -29,11 +29,20 @@
         }
     </script>
     <style>
-        @media print {
-            @page {
-                size: A4;
-                margin: 0.5cm;
+        /* @page MUST be top-level — nesting inside @media print breaks @bottom-right in all browsers */
+        @page {
+            size: A4;
+            margin: 1.5cm 0.5cm 1.8cm 0.5cm;
+
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: #475569;
             }
+        }
+
+        @media print {
             .no-print {
                 display: none !important;
             }
@@ -55,6 +64,17 @@
             .print-border {
                 border-width: 1px !important;
                 border-color: #d1d5db !important;
+            }
+
+            /* position:fixed repeats on every printed page — cross-browser fallback */
+            .print-page-number {
+                display: block !important;
+                position: fixed;
+                bottom: 6px;
+                right: 10px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                color: #475569;
             }
         }
     </style>
@@ -155,12 +175,7 @@
         </div>
     </div>
 
-    <script>
-        window.onload = function() {
-            setTimeout(function() {
-                window.print();
-            }, 500);
-        }
-    </script>
+    <!-- Fixed page-number footer: repeats on every printed page (cross-browser fallback) -->
+    <div class="print-page-number" style="display:none;"></div>
 </body>
 </html>

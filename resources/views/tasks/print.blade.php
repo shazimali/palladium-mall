@@ -7,11 +7,20 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @media print {
-            @page {
-                size: A4 landscape;
-                margin: 0.5cm;
+        /* @page MUST be top-level — nesting inside @media print breaks @bottom-right in all browsers */
+        @page {
+            size: A4 landscape;
+            margin: 1.2cm 0.8cm 1.5cm 0.8cm;
+
+            @bottom-right {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: #475569;
             }
+        }
+
+        @media print {
             .no-print {
                 display: none !important;
             }
@@ -43,6 +52,17 @@
             }
             tfoot {
                 display: table-footer-group;
+            }
+
+            /* position:fixed repeats on every printed page — cross-browser fallback */
+            .print-page-number {
+                display: block !important;
+                position: fixed;
+                bottom: 6px;
+                right: 10px;
+                font-size: 0.72rem;
+                font-weight: 800;
+                color: #475569;
             }
         }
     </style>
@@ -325,5 +345,7 @@
 
     </div>
 
+    <!-- Fixed page-number footer: repeats on every printed page (cross-browser fallback) -->
+    <div class="print-page-number" style="display:none;"></div>
 </body>
 </html>
