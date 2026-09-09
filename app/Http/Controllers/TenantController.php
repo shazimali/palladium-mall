@@ -949,8 +949,8 @@ class TenantController extends Controller
         $validationRules = [];
         $validationMessages = [];
         foreach ($fileFields as $field) {
-            $validationRules[$field] = 'nullable|file|mimes:jpg,jpeg,png,pdf,webp|max:200';
-            $validationMessages["{$field}.max"] = 'The uploaded file must not be larger than 200KB.';
+            $validationRules[$field] = 'nullable|file|mimes:jpg,jpeg,png,pdf,webp|max:500';
+            $validationMessages["{$field}.max"] = 'The uploaded file must not be larger than 500KB.';
         }
         $request->validate($validationRules, $validationMessages);
 
@@ -1907,7 +1907,7 @@ class TenantController extends Controller
 
         return view('tenants.print_pending_documents', [
             'pageTitle' => 'Pending Documents & Checklists Report',
-            'tenants'   => $tenants,
+            'tenants' => $tenants,
         ]);
     }
 }
