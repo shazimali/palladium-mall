@@ -224,26 +224,26 @@
 
             <!-- Ledger Entries Table -->
             <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
-                <table class="w-full text-base sm:text-lg text-left text-gray-800 dark:text-gray-200">
-                    <thead class="text-xs font-black uppercase tracking-wider bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-700">
+                <table class="w-full text-xs sm:text-sm text-left text-gray-800 dark:text-gray-200">
+                    <thead class="text-[11px] font-black uppercase tracking-wider bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="px-4 py-3">Date</th>
-                            <th class="px-4 py-3">Ref/Voucher #</th>
-                            <th class="px-4 py-3">Transaction Type</th>
-                            <th class="px-4 py-3">Details / Description</th>
-                            <th class="px-4 py-3 text-right">Debit (Dr)</th>
-                            <th class="px-4 py-3 text-right">Credit (Cr)</th>
-                            <th class="px-4 py-3 text-right">Balance</th>
-                            <!-- <th class="px-4 py-3 text-right no-print">Actions</th> -->
+                            <th class="px-3.5 py-2.5">Date</th>
+                            <th class="px-3.5 py-2.5">Ref/Voucher #</th>
+                            <th class="px-3.5 py-2.5">Transaction Type</th>
+                            <th class="px-3.5 py-2.5">Details / Description</th>
+                            <th class="px-3.5 py-2.5 text-right">Debit (Dr)</th>
+                            <th class="px-3.5 py-2.5 text-right">Credit (Cr)</th>
+                            <th class="px-3.5 py-2.5 text-right">Balance</th>
+                            <!-- <th class="px-3.5 py-2.5 text-right no-print">Actions</th> -->
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
                         @forelse($ledgerEntries as $entry)
                             <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                <td class="px-4 py-3 text-xs whitespace-nowrap">
+                                <td class="px-3.5 py-2.5 text-xs whitespace-nowrap">
                                     {{ ($entry['date'] instanceof \Carbon\Carbon ? $entry['date'] : \Carbon\Carbon::parse($entry['date']))->format('d M Y') }}
                                 </td>
-                                <td class="px-4 py-3 font-mono font-semibold text-gray-800 dark:text-white/90">
+                                <td class="px-3.5 py-2.5 text-xs sm:text-sm font-mono font-semibold text-gray-800 dark:text-white/90">
                                     @if($entry['type'] === 'Receipt (General)')
                                         <a href="{{ route('general-receiving-vouchers.show', $entry['id']) }}"
                                             class="text-brand-500 hover:underline">
@@ -258,8 +258,8 @@
                                         {{ $entry['ref'] }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-xs">
-                                    <span class="inline-flex rounded-lg px-2.5 py-1 text-xs font-semibold 
+                                <td class="px-3.5 py-2.5 text-xs">
+                                    <span class="inline-flex rounded-lg px-2 py-0.5 text-xs font-semibold 
                                                     {{ strpos($entry['type'], 'Due') !== false ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400' : '' }}
                                                     {{ strpos($entry['type'], 'Receipt') !== false ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400' : '' }}
                                                     {{ strpos($entry['type'], 'Payment') !== false ? 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400' : '' }}
@@ -267,40 +267,40 @@
                                         {{ $entry['type'] }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-xs text-gray-500">
+                                <td class="px-3.5 py-2.5 text-xs text-gray-500 dark:text-gray-400">
                                     {{ $entry['description'] }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-semibold font-mono text-gray-900 dark:text-white">
+                                <td class="px-3.5 py-2.5 text-right font-semibold font-mono text-xs sm:text-sm text-gray-900 dark:text-white">
                                     {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 0) : '—' }}
                                 </td>
-                                <td class="px-4 py-3 text-right font-semibold font-mono text-gray-900 dark:text-white">
+                                <td class="px-3.5 py-2.5 text-right font-semibold font-mono text-xs sm:text-sm text-gray-900 dark:text-white">
                                     {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 0) : '—' }}
                                 </td>
                                 <td
-                                    class="px-4 py-3 text-right font-semibold font-mono {{ ($entry['balance'] ?? 0) > 0 ? 'text-red-500' : (($entry['balance'] ?? 0) < 0 ? 'text-green-600' : 'text-gray-500') }}">
+                                    class="px-3.5 py-2.5 text-right font-semibold font-mono text-xs sm:text-sm {{ ($entry['balance'] ?? 0) > 0 ? 'text-red-500' : (($entry['balance'] ?? 0) < 0 ? 'text-green-600' : 'text-gray-500') }}">
                                     @php $bal = $entry['balance'] ?? 0; @endphp
                                     Rs. {{ number_format(abs($bal), 0) }}
                                     <span class="text-[10px] font-bold ml-0.5">{{ $bal > 0 ? 'Dr' : ($bal < 0 ? 'Cr' : '') }}</span>
                                 </td>
-                                <!-- <td class="px-4 py-3 text-right no-print">
+                                <!-- <td class="px-3.5 py-2.5 text-right no-print">
                                                 @if($entry['is_due'])
-                                                    <form action="{{ route('ledgers.party.dues.destroy', $entry['id']) }}" method="POST"
-                                                        onsubmit="return confirm('Are you sure you want to delete this due record?');"
-                                                        class="inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="text-xs text-red-500 hover:text-red-700 font-semibold">
-                                                            Delete Due
-                                                        </button>
-                                                    </form>
+                                                     <form action="{{ route('ledgers.party.dues.destroy', $entry['id']) }}" method="POST"
+                                                         onsubmit="return confirm('Are you sure you want to delete this due record?');"
+                                                         class="inline">
+                                                         @csrf
+                                                         @method('DELETE')
+                                                         <button type="submit" class="text-xs text-red-500 hover:text-red-700 font-semibold">
+                                                             Delete Due
+                                                         </button>
+                                                     </form>
                                                 @else
-                                                    <span class="text-xs text-gray-400 italic">Voucher Locked</span>
+                                                     <span class="text-xs text-gray-400 italic">Voucher Locked</span>
                                                 @endif
                                             </td> -->
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
+                                <td colspan="7" class="px-4 py-10 text-center text-xs text-gray-400 dark:text-gray-600">
                                     No ledger entries found for this party.
                                 </td>
                             </tr>
@@ -315,20 +315,20 @@
                             class="bg-gray-100/80 dark:bg-gray-800/80 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-bold">
                             <tr>
                                 <td colspan="4"
-                                    class="px-4 py-4 text-xs uppercase tracking-wider font-extrabold text-gray-700 dark:text-gray-300">
+                                    class="px-3.5 py-3 text-xs uppercase tracking-wider font-extrabold text-gray-700 dark:text-gray-300">
                                     Total Summary
                                 </td>
-                                <td class="px-4 py-4 text-right font-mono font-extrabold text-sm text-gray-900 dark:text-white">
+                                <td class="px-3.5 py-3 text-right font-mono font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white">
                                     Rs. {{ number_format($sumDebit, 0) }}
                                 </td>
-                                <td class="px-4 py-4 text-right font-mono font-extrabold text-sm text-gray-900 dark:text-white">
+                                <td class="px-3.5 py-3 text-right font-mono font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white">
                                     Rs. {{ number_format($sumCredit, 0) }}
                                 </td>
                                 @php $netBalance = $sumDebit - $sumCredit; @endphp
                                 <td
-                                    class="px-4 py-4 text-right font-mono font-extrabold text-sm {{ $netBalance > 0 ? 'text-red-500' : ($netBalance < 0 ? 'text-green-600' : 'text-gray-500') }}">
+                                    class="px-3.5 py-3 text-right font-mono font-extrabold text-xs sm:text-sm {{ $netBalance > 0 ? 'text-red-500' : ($netBalance < 0 ? 'text-green-600' : 'text-gray-500') }}">
                                     Rs. {{ number_format(abs($netBalance), 0) }}
-                                    <span class="text-xs ml-0.5">{{ $netBalance > 0 ? 'Dr' : ($netBalance < 0 ? 'Cr' : '') }}</span>
+                                    <span class="text-[10px] ml-0.5">{{ $netBalance > 0 ? 'Dr' : ($netBalance < 0 ? 'Cr' : '') }}</span>
                                 </td>
                                 <td class="no-print"></td>
                             </tr>

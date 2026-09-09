@@ -111,24 +111,24 @@
 
             {{-- Table --}}
             <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
-                <table class="w-full text-base sm:text-lg text-left text-gray-800 dark:text-gray-200">
-                    <thead class="text-xs font-black uppercase tracking-wider bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-700">
+                <table class="w-full text-xs sm:text-sm text-left text-gray-800 dark:text-gray-200">
+                    <thead class="text-[11px] font-black uppercase tracking-wider bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-b-2 border-gray-200 dark:border-gray-700">
                         <tr>
-                            <th class="px-5 py-4">Date</th>
-                            <th class="px-5 py-4">Voucher #</th>
-                            <th class="px-5 py-4">Spent On / Notes</th>
-                            <th class="px-5 py-4">Payment Account</th>
-                            <th class="px-5 py-4">Reference</th>
-                            <th class="px-5 py-4 text-right">Amount</th>
+                            <th class="px-3.5 py-2.5">Date</th>
+                            <th class="px-3.5 py-2.5">Voucher #</th>
+                            <th class="px-3.5 py-2.5">Spent On / Notes</th>
+                            <th class="px-3.5 py-2.5">Payment Account</th>
+                            <th class="px-3.5 py-2.5">Reference</th>
+                            <th class="px-3.5 py-2.5 text-right">Amount</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200">
                         @forelse($ledgerData['entries'] as $entry)
                             <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                <td class="px-5 py-3.5 text-xs font-mono">
+                                <td class="px-3.5 py-2.5 text-xs font-mono">
                                     {{ $entry['date']->format('d M Y') }}
                                 </td>
-                                <td class="px-5 py-3.5 text-xs font-mono font-semibold">
+                                <td class="px-3.5 py-2.5 text-xs font-mono font-semibold">
                                     @if(!empty($entry['id']))
                                         <a href="{{ route('expenses.show', $entry['id']) }}" class="text-brand-500 hover:underline">
                                             {{ $entry['voucher_no'] }}
@@ -137,22 +137,22 @@
                                         {{ $entry['voucher_no'] }}
                                     @endif
                                 </td>
-                                <td class="px-5 py-3.5 text-xs">
+                                <td class="px-3.5 py-2.5 text-xs">
                                     {{ $entry['notes'] }}
                                 </td>
-                                <td class="px-5 py-3.5 text-xs font-semibold">
+                                <td class="px-3.5 py-2.5 text-xs font-semibold">
                                     {{ $entry['payment_account'] }}
                                 </td>
-                                <td class="px-5 py-3.5 text-xs font-mono">
+                                <td class="px-3.5 py-2.5 text-xs font-mono">
                                     {{ $entry['reference'] }}
                                 </td>
-                                <td class="px-5 py-3.5 text-right font-bold text-rose-600">
+                                <td class="px-3.5 py-2.5 text-right font-bold font-mono text-xs sm:text-sm text-rose-600">
                                     Rs. {{ number_format($entry['amount'], 2) }}
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-5 py-12 text-center text-gray-400 dark:text-gray-600">
+                                <td colspan="6" class="px-5 py-10 text-center text-xs text-gray-400 dark:text-gray-600">
                                     No expenditures recorded under this expense category.
                                 </td>
                             </tr>
@@ -164,10 +164,10 @@
                         @endphp
                         <tfoot class="bg-gray-100/80 dark:bg-gray-800/80 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-bold">
                             <tr>
-                                <td colspan="5" class="px-5 py-4 text-xs uppercase tracking-wider font-extrabold text-gray-700 dark:text-gray-300">
+                                <td colspan="5" class="px-3.5 py-3 text-xs uppercase tracking-wider font-extrabold text-gray-700 dark:text-gray-300">
                                     Total Summary
                                 </td>
-                                <td class="px-5 py-4 text-right text-rose-600 font-mono font-extrabold text-sm">
+                                <td class="px-3.5 py-3 text-right text-rose-600 font-mono font-extrabold text-xs sm:text-sm">
                                     Rs. {{ number_format($sumAmount, 2) }}
                                 </td>
                             </tr>
