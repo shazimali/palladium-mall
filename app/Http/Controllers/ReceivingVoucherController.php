@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ReceivingVoucherController extends Controller
@@ -31,6 +32,7 @@ class ReceivingVoucherController extends Controller
                 $term = $request->search;
                 $q->where(function ($sub) use ($term) {
                     $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('manual_voucher_no', 'like', "%{$term}%")
                         ->orWhere('reference', 'like', "%{$term}%")
                         ->orWhere('other_name', 'like', "%{$term}%")
                         ->orWhere('notes', 'like', "%{$term}%")
@@ -127,6 +129,7 @@ class ReceivingVoucherController extends Controller
 
         $rules = [
             'date' => ['required', 'date'],
+            'manual_voucher_no' => ['required', 'string', 'max:255', Rule::unique('receiving_vouchers', 'manual_voucher_no')],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'received_from_type' => ['required', 'string', 'in:tenant'],
             'unit_id' => ['required', 'exists:units,id'],
@@ -372,6 +375,7 @@ class ReceivingVoucherController extends Controller
 
         $rules = [
             'date' => ['required', 'date'],
+            'manual_voucher_no' => ['required', 'string', 'max:255', Rule::unique('receiving_vouchers', 'manual_voucher_no')->ignore($receivingVoucher->id)],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'received_from_type' => ['required', 'string', 'in:tenant'],
             'unit_id' => ['required', 'exists:units,id'],
@@ -555,6 +559,7 @@ class ReceivingVoucherController extends Controller
                 $term = $request->search;
                 $q->where(function ($sub) use ($term) {
                     $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('manual_voucher_no', 'like', "%{$term}%")
                         ->orWhere('reference', 'like', "%{$term}%")
                         ->orWhere('other_name', 'like', "%{$term}%")
                         ->orWhere('notes', 'like', "%{$term}%")

@@ -127,6 +127,7 @@
                     <tr class="bg-gray-100 border-b border-gray-300 text-gray-700 uppercase tracking-wider font-extrabold">
                         <th class="py-3 px-3">Date</th>
                         <th class="py-3 px-3">Voucher #</th>
+                        <th class="py-3 px-3">Manual Voucher #</th>
                         <th class="py-3 px-3">Received From</th>
                         <th class="py-3 px-3">Deposit Account</th>
                         <th class="py-3 px-3">Method</th>
@@ -142,6 +143,9 @@
                             </td>
                             <td class="py-2.5 px-3 font-mono font-black text-gray-900">
                                 {{ $item->voucher_no }}
+                            </td>
+                            <td class="py-2.5 px-3 font-mono font-black text-gray-900">
+                                {{ $item->manual_voucher_no ?? '—' }}
                             </td>
                             <td class="py-2.5 px-3 font-bold text-gray-900">
                                 @if($item->received_from_type === 'party')
@@ -169,7 +173,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-8 text-center text-gray-400 font-bold text-sm">
+                            <td colspan="8" class="py-8 text-center text-gray-400 font-bold text-sm">
                                 No general receiving vouchers found matching the criteria.
                             </td>
                         </tr>
@@ -178,7 +182,7 @@
                 @if(count($vouchers) > 0)
                     <tfoot>
                         <tr class="bg-gray-100 border-t-2 border-gray-300 font-black text-xs text-gray-900 uppercase">
-                            <td colspan="6" class="py-3 px-3 text-right">Total Amount:</td>
+                            <td colspan="7" class="py-3 px-3 text-right">Total Amount:</td>
                             <td class="py-3 px-3 text-right text-emerald-700 font-mono text-base whitespace-nowrap">
                                 Rs. {{ number_format($totalAmount, 2) }}
                             </td>

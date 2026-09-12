@@ -125,6 +125,7 @@
                     <tr class="bg-blue-700 text-white uppercase text-[11px] tracking-wider">
                         <th class="border border-blue-800 px-3 py-2.5 text-center">#</th>
                         <th class="border border-blue-800 px-3 py-2.5 font-mono">Voucher #</th>
+                        <th class="border border-blue-800 px-3 py-2.5 font-mono">Manual #</th>
                         <th class="border border-blue-800 px-3 py-2.5">Date</th>
                         <th class="border border-blue-800 px-3 py-2.5">Flat / Shop</th>
                         <th class="border border-blue-800 px-3 py-2.5">Received From</th>
@@ -154,6 +155,9 @@
                             <td class="border border-gray-300 px-3 py-2 font-mono font-bold text-gray-900">
                                 {{ $voucher->voucher_no }}
                             </td>
+                            <td class="border border-gray-300 px-3 py-2 font-mono font-bold text-gray-900">
+                                {{ $voucher->manual_voucher_no ?? '—' }}
+                            </td>
                             <td class="border border-gray-300 px-3 py-2 font-semibold">
                                 {{ $voucher->date->format('d M Y') }}
                             </td>
@@ -176,7 +180,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="border border-gray-300 px-4 py-8 text-center text-gray-400 font-semibold">
+                            <td colspan="9" class="border border-gray-300 px-4 py-8 text-center text-gray-400 font-semibold">
                                 No receiving vouchers match the selected filter criteria.
                             </td>
                         </tr>
@@ -184,7 +188,7 @@
                 </tbody>
                 <tfoot>
                     <tr class="bg-gray-100 border-t-2 border-gray-400 font-black text-xs">
-                        <td colspan="7" class="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider text-gray-700">
+                        <td colspan="8" class="border border-gray-300 px-4 py-3 text-right uppercase tracking-wider text-gray-700">
                             Total Received Amount:
                         </td>
                         <td class="border border-gray-300 px-3 py-3 text-right font-mono text-emerald-700 text-sm">

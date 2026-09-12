@@ -85,7 +85,7 @@
                                 </svg>
                             </span>
                             <input type="text" name="search" value="{{ request('search') }}"
-                                placeholder="Search voucher #, landlord, party..."
+                                placeholder="Search voucher #, manual #, landlord, party..."
                                 class="dark:bg-dark-900 shadow-theme-xs focus:border-brand-300 focus:ring-brand-500/10 dark:focus:border-brand-800 h-10 w-full rounded-lg border border-gray-300 bg-transparent py-2 pl-11 pr-4 text-sm text-gray-800 placeholder:text-gray-400 focus:ring-3 focus:outline-hidden dark:border-gray-700 dark:bg-gray-900 dark:text-white/90" />
                         </div>
 
@@ -149,6 +149,7 @@
                         <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                             <tr>
                                 <th class="px-4 py-3">Voucher #</th>
+                                <th class="px-4 py-3">Manual Voucher #</th>
                                 <th class="px-4 py-3">Date</th>
                                 <th class="px-4 py-3">Received From</th>
                                 <th class="px-4 py-3">Payment Account</th>
@@ -162,6 +163,9 @@
                                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                                     <td class="px-4 py-3 font-mono font-semibold text-gray-800 dark:text-white/90">
                                         {{ $voucher->voucher_no }}
+                                    </td>
+                                    <td class="px-4 py-3 font-mono font-semibold text-gray-800 dark:text-white/90">
+                                        {{ $voucher->manual_voucher_no ?? '—' }}
                                     </td>
                                     <td class="px-4 py-3 text-xs">
                                         {{ $voucher->date->format('d M Y') }}
@@ -223,7 +227,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
+                                    <td colspan="8" class="px-4 py-12 text-center text-gray-400 dark:text-gray-600">
                                         No general receiving vouchers found.
                                     </td>
                                 </tr>

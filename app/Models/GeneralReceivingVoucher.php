@@ -15,6 +15,7 @@ class GeneralReceivingVoucher extends Model
 
     protected $fillable = [
         'voucher_no',
+        'manual_voucher_no',
         'date',
         'amount',
         'received_from_type',

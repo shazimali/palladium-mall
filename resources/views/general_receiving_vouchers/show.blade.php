@@ -61,7 +61,7 @@
         {{-- FIELDS GRID --}}
         <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
 
-            {{-- ROW 1: Voucher Date & Received From Type --}}
+            {{-- ROW 1: Voucher Date & Manual Voucher No --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
                 <div class="grid grid-cols-3 min-h-[48px]">
                     <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
@@ -70,18 +70,26 @@
                     </div>
                 </div>
                 <div class="grid grid-cols-3 min-h-[48px]">
+                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Manual Voucher No</div>
+                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                        {{ $voucher->manual_voucher_no ?? '—' }}
+                    </div>
+                </div>
+            </div>
+
+            {{-- ROW 2: Received From & Entity Name --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
+                <div class="grid grid-cols-3 min-h-[48px]">
                     <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Received From</div>
                     <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
                         {{ $receivedFromTypeLabel }}
                     </div>
                 </div>
-            </div>
-
-            {{-- ROW 2: Entity Name --}}
-            <div class="grid grid-cols-3 min-h-[48px]">
-                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">{{ $entityLabel }}</div>
-                <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
-                    {{ $recipientName }}
+                <div class="grid grid-cols-3 min-h-[48px]">
+                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">{{ $entityLabel }}</div>
+                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                        {{ $recipientName }}
+                    </div>
                 </div>
             </div>
 

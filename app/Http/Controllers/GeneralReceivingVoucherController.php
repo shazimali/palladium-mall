@@ -12,6 +12,7 @@ use App\Models\PaymentVoucher;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class GeneralReceivingVoucherController extends Controller
@@ -30,6 +31,7 @@ class GeneralReceivingVoucherController extends Controller
                 $term = $request->search;
                 $q->where(function ($sub) use ($term) {
                     $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('manual_voucher_no', 'like', "%{$term}%")
                         ->orWhere('reference', 'like', "%{$term}%")
                         ->orWhere('notes', 'like', "%{$term}%")
                         ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"))
@@ -98,6 +100,7 @@ class GeneralReceivingVoucherController extends Controller
 
         $rules = [
             'date'               => ['required', 'date'],
+            'manual_voucher_no'  => ['required', 'string', 'max:255', Rule::unique('general_receiving_vouchers', 'manual_voucher_no')],
             'amount'             => ['required', 'numeric', 'min:1'],
             'received_from_type' => ['required', 'string', 'in:party,account,landlord'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
@@ -231,6 +234,7 @@ class GeneralReceivingVoucherController extends Controller
 
         $rules = [
             'date'               => ['required', 'date'],
+            'manual_voucher_no'  => ['required', 'string', 'max:255', Rule::unique('general_receiving_vouchers', 'manual_voucher_no')->ignore($generalReceivingVoucher->id)],
             'amount'             => ['required', 'numeric', 'min:1'],
             'received_from_type' => ['required', 'string', 'in:party,account,landlord'],
             'payment_account_id' => ['required', 'exists:payment_accounts,id'],
@@ -358,6 +362,7 @@ class GeneralReceivingVoucherController extends Controller
                 $term = $request->search;
                 $q->where(function ($sub) use ($term) {
                     $sub->where('voucher_no', 'like', "%{$term}%")
+                        ->orWhere('manual_voucher_no', 'like', "%{$term}%")
                         ->orWhere('reference', 'like', "%{$term}%")
                         ->orWhere('notes', 'like', "%{$term}%")
                         ->orWhereHas('party', fn($p) => $p->where('name', 'like', "%{$term}%"))

@@ -62,46 +62,54 @@
             {{-- LEFT COLUMN: Date, Flat/Shop, Tenant Name, Payment Amount, Payment Method --}}
             <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
                 
-                {{-- Field 1: Voucher Date --}}
-                <div class="grid grid-cols-3 min-h-[52px]">
-                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
-                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
-                        {{ $voucher->date->format('M. d, Y') }}
+                {{-- Row 1: Voucher Date & Manual Voucher No --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                            {{ $voucher->date->format('M. d, Y') }}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Manual Voucher No</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                            {{ $voucher->manual_voucher_no ?? '—' }}
+                        </div>
                     </div>
                 </div>
 
-                {{-- Field 2: Flat / Shop --}}
-                <div class="grid grid-cols-3 min-h-[52px]">
-                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Flat / Shop</div>
-                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
-                        {{ $voucher->display_unit_number !== '—' ? $voucher->display_unit_number : 'N/A' }}
+                {{-- Row 2: Flat / Shop & Tenant Name --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Flat / Shop</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                            {{ $voucher->display_unit_number !== '—' ? $voucher->display_unit_number : 'N/A' }}
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Tenant Name</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
+                            {{ $recipientName }}
+                        </div>
                     </div>
                 </div>
 
-                {{-- Field 3: Tenant Name --}}
-                <div class="grid grid-cols-3 min-h-[52px]">
-                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Tenant Name</div>
-                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
-                        {{ $recipientName }}
+                {{-- Row 3: Payment Amount & Payment Method --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Amount</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-lg sm:text-xl font-mono text-emerald-600 dark:text-emerald-400">
+                            Rs. {{ number_format($voucher->amount, 2) }}
+                        </div>
                     </div>
-                </div>
-
-                {{-- Field 4: Payment Amount --}}
-                <div class="grid grid-cols-3 min-h-[52px]">
-                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Amount</div>
-                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-lg sm:text-xl font-mono text-emerald-600 dark:text-emerald-400">
-                        Rs. {{ number_format($voucher->amount, 2) }}
-                    </div>
-                </div>
-
-                {{-- Field 5: Payment Method --}}
-                <div class="grid grid-cols-3 min-h-[52px]">
-                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Method</div>
-                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
-                        {{ $voucher->paymentAccount ? $voucher->paymentAccount->name : '—' }}
-                        @if($voucher->payment_method)
-                            <span class="ml-2 text-xs font-semibold text-gray-500 dark:text-gray-400">({{ ucfirst(str_replace('_', ' ', $voucher->payment_method)) }})</span>
-                        @endif
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Method</div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                            {{ $voucher->paymentAccount ? $voucher->paymentAccount->name : '—' }}
+                            @if($voucher->payment_method)
+                                <span class="ml-2 text-xs font-semibold text-gray-500 dark:text-gray-400">({{ ucfirst(str_replace('_', ' ', $voucher->payment_method)) }})</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
 

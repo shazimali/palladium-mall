@@ -262,7 +262,7 @@
             {{-- FORM GRID CONTAINER --}}
             <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-visible mb-6 border border-gray-200 dark:border-gray-700">
                 
-                {{-- ROW 1: Voucher Date & Received From Type --}}
+                {{-- ROW 1: Voucher Date & Manual Voucher No --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-40 rounded-t-2xl">
                     {{-- Field 1: Voucher Date --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
@@ -273,10 +273,22 @@
                         </div>
                     </div>
 
-                    {{-- Field 2: Received From Type --}}
+                    {{-- Field 2: Manual Voucher No --}}
+                    <div class="grid grid-cols-3 min-h-[52px]">
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Manual Voucher No <span class="text-rose-300 ml-1">*</span></div>
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-tr-2xl">
+                            <input type="text" name="manual_voucher_no" value="{{ old('manual_voucher_no', $voucher->manual_voucher_no) }}" required maxlength="255" placeholder="e.g. 1024"
+                                class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ROW 2: Received From Type & Searchable Dynamic Entity Selection --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-50">
+                    {{-- Field 1: Received From Type --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Received From <span class="text-rose-300 ml-1">*</span></div>
-                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center md:rounded-tr-2xl">
+                        <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
                             <select name="received_from_type" x-model="receivedFromType" required
                                 class="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-base sm:text-lg font-black text-gray-900 dark:text-white focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none transition-all">
                                 <option value="party">Registered Party Head</option>
@@ -285,17 +297,15 @@
                             </select>
                         </div>
                     </div>
-                </div>
 
-                {{-- ROW 2: Searchable Dynamic Entity Selection --}}
-                <div class="grid grid-cols-1 min-h-[52px] bg-gray-200 dark:bg-gray-700 relative z-50">
+                    {{-- Field 2: Searchable Dynamic Entity Selection --}}
                     <div class="grid grid-cols-3 min-h-[52px] relative z-50">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">
                             <span x-text="receivedFromType === 'party' ? 'Select Party' : (receivedFromType === 'account' ? 'Source Account' : 'Select Landlord')"></span>
                             <span class="text-rose-300 ml-1">*</span>
                         </div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 flex items-center">
-                            
+
                             {{-- Case 1: Searchable Party Dropdown --}}
                             <div x-show="receivedFromType === 'party'" class="w-full relative" @click.away="openParty = false; highlightedPartyIndex = -1">
                                 <input type="hidden" name="party_id" x-model="partyId" :required="receivedFromType === 'party'">
@@ -408,7 +418,7 @@
                     </div>
                 </div>
 
-                {{-- ROW 3: Payment Amount & Payment Method / Account --}}
+                {{-- ROW 4: Payment Amount & Payment Method / Account --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 relative z-10 rounded-b-2xl">
                     {{-- Field 1: Payment Amount --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
