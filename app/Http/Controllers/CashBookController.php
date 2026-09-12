@@ -60,6 +60,12 @@ class CashBookController extends Controller
             ->where('payment_account_id', 2)
             ->get();
 
+        // Fetch Inflows (Account Transfers In via Payment Vouchers) for to_payment_account_id = 2
+        $transfersIn = PaymentVoucher::with(['paymentAccount', 'user'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where('to_payment_account_id', 2)
+            ->get();
+
         // Fetch Outflows (Withdrawals) for payment_account_id = 2
         $withdrawals = \App\Models\Withdrawal::with(['owner', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -79,8 +85,14 @@ class CashBookController extends Controller
             ->where('payment_account_id', 2)
             ->get();
 
+        // Fetch Outflows (Account Transfers Out via General Receiving Vouchers) for from_payment_account_id = 2
+        $grvTransfersOut = \App\Models\GeneralReceivingVoucher::with(['paymentAccount'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where('from_payment_account_id', 2)
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers)->concat($grvTransfersOut);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -139,10 +151,31 @@ class CashBookController extends Controller
             ]);
         }
 
+        foreach ($transfersIn as $transfer) {
+            $sourceName = $transfer->paymentAccount?->name ?: 'Account';
+            $notes = trim($transfer->notes ?? '');
+            $details = 'Transfer In from ' . $sourceName . ($notes !== '' ? ' • ' . $notes : '');
+
+            $ledgerEntries->push([
+                'date' => $transfer->date,
+                'created_at' => $transfer->created_at,
+                'voucher_no' => $transfer->voucher_no,
+                'type' => 'Transfer In',
+                'details' => $details,
+                'method' => $transfer->payment_method . ' (' . $sourceName . ')',
+                'debit' => (float) $transfer->amount,
+                'credit' => 0.0,
+                'model_type' => 'payment_voucher',
+                'model_id' => $transfer->id,
+                'unit_number' => null,
+            ]);
+        }
+
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
             $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
+            $isGrvTransferOut = $outflow instanceof \App\Models\GeneralReceivingVoucher;
             $notes = trim($outflow->notes ?? '');
 
             if ($isExpense) {
@@ -169,6 +202,10 @@ class CashBookController extends Controller
                 } else {
                     $details = $head ?: 'JV Voucher';
                 }
+            } elseif ($isGrvTransferOut) {
+                $type = 'Transfer Out';
+                $destName = $outflow->paymentAccount?->name ?: 'Account';
+                $details = 'Transfer Out to ' . $destName . ($notes !== '' ? ' • ' . $notes : '');
             } else {
                 $type = 'Payout';
                 $recipient = $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name) : ($outflow->other_name);
@@ -190,7 +227,7 @@ class CashBookController extends Controller
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float) $outflow->amount,
-                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : 'payment_voucher')),
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : ($isGrvTransferOut ? 'general_receiving_voucher' : 'payment_voucher'))),
                 'model_id' => $outflow->id,
                 'unit_number' => null,
             ]);
@@ -295,6 +332,12 @@ class CashBookController extends Controller
             ->where('payment_account_id', 2)
             ->get();
 
+        // Fetch Inflows (Account Transfers In via Payment Vouchers) for to_payment_account_id = 2
+        $transfersIn = PaymentVoucher::with(['paymentAccount', 'user'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where('to_payment_account_id', 2)
+            ->get();
+
         // Fetch Outflows (Withdrawals) for payment_account_id = 2
         $withdrawals = \App\Models\Withdrawal::with(['owner', 'paymentAccount', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
@@ -314,8 +357,14 @@ class CashBookController extends Controller
             ->where('payment_account_id', 2)
             ->get();
 
+        // Fetch Outflows (Account Transfers Out via General Receiving Vouchers) for from_payment_account_id = 2
+        $grvTransfersOut = \App\Models\GeneralReceivingVoucher::with(['paymentAccount'])
+            ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
+            ->where('from_payment_account_id', 2)
+            ->get();
+
         // Combine outflows
-        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers);
+        $outflows = $expenses->concat($paymentVouchers)->concat($withdrawals)->concat($jvVouchers)->concat($grvTransfersOut);
 
         // Combine into unified ledger entries
         $ledgerEntries = collect();
@@ -374,10 +423,31 @@ class CashBookController extends Controller
             ]);
         }
 
+        foreach ($transfersIn as $transfer) {
+            $sourceName = $transfer->paymentAccount?->name ?: 'Account';
+            $notes = trim($transfer->notes ?? '');
+            $details = 'Transfer In from ' . $sourceName . ($notes !== '' ? ' • ' . $notes : '');
+
+            $ledgerEntries->push([
+                'date' => $transfer->date,
+                'created_at' => $transfer->created_at,
+                'voucher_no' => $transfer->voucher_no,
+                'type' => 'Transfer In',
+                'details' => $details,
+                'method' => $transfer->payment_method . ' (' . $sourceName . ')',
+                'debit' => (float) $transfer->amount,
+                'credit' => 0.0,
+                'model_type' => 'payment_voucher',
+                'model_id' => $transfer->id,
+                'unit_number' => null,
+            ]);
+        }
+
         foreach ($outflows as $outflow) {
             $isExpense = $outflow instanceof Expense;
             $isWithdrawal = $outflow instanceof \App\Models\Withdrawal;
             $isJvVoucher = $outflow instanceof \App\Models\JvVoucher;
+            $isGrvTransferOut = $outflow instanceof \App\Models\GeneralReceivingVoucher;
             $notes = trim($outflow->notes ?? '');
 
             if ($isExpense) {
@@ -404,6 +474,10 @@ class CashBookController extends Controller
                 } else {
                     $details = $head ?: 'JV Voucher';
                 }
+            } elseif ($isGrvTransferOut) {
+                $type = 'Transfer Out';
+                $destName = $outflow->paymentAccount?->name ?: 'Account';
+                $details = 'Transfer Out to ' . $destName . ($notes !== '' ? ' • ' . $notes : '');
             } else {
                 $type = 'Payout';
                 $recipient = $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name) : ($outflow->other_name);
@@ -425,7 +499,7 @@ class CashBookController extends Controller
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float) $outflow->amount,
-                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : 'payment_voucher')),
+                'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : ($isGrvTransferOut ? 'general_receiving_voucher' : 'payment_voucher'))),
                 'model_id' => $outflow->id,
                 'unit_number' => null,
             ]);
@@ -521,6 +595,10 @@ class CashBookController extends Controller
             ->where('payment_account_id', 2)
             ->sum('amount');
 
+        $priorTransfersIn = PaymentVoucher::where('date', '<', $startDateStr)
+            ->where('to_payment_account_id', 2)
+            ->sum('amount');
+
         $priorWithdrawals = \App\Models\Withdrawal::where('date', '<', $startDateStr)
             ->where('payment_account_id', 2)
             ->sum('amount');
@@ -536,6 +614,10 @@ class CashBookController extends Controller
             ->where('payment_account_id', 2)
             ->sum('amount');
 
-        return $accountOpeningBalance + (float) (($priorReceiving + $priorGeneralReceiving) - ($priorExpenses + $priorPaymentVouchers + $priorWithdrawals + $priorJvVouchers));
+        $priorGrvTransfersOut = \App\Models\GeneralReceivingVoucher::where('date', '<', $startDateStr)
+            ->where('from_payment_account_id', 2)
+            ->sum('amount');
+
+        return $accountOpeningBalance + (float) (($priorReceiving + $priorGeneralReceiving + $priorTransfersIn) - ($priorExpenses + $priorPaymentVouchers + $priorWithdrawals + $priorJvVouchers + $priorGrvTransfersOut));
     }
 }
