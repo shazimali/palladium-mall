@@ -15,26 +15,10 @@ use Carbon\Carbon;
 class UtilityReadingController extends Controller
 {
     /**
-     * Display month-wise and unit-wise utility meter readings grid.
+     * Build the filtered meter reading rows + totals shared by the index, print and PDF views.
      */
-    public function index(Request $request): View
+    private function buildReadingsData(Request $request, $user): array
     {
-        $user = auth()->user();
-        if (!$user->isSuperAdmin() &&
-            !$user->hasPermission('utility_readings.view') &&
-            !$user->hasPermission('utility_readings.edit') &&
-            !$user->hasPermission('utilities.record') &&
-            !$user->hasPermission('utility_meters_management') &&
-            !$user->hasPermission('meters.edit') &&
-            !$user->hasPermission('meter_vouchers.view')) {
-            abort(403, 'Unauthorized action.');
-        }
-
-        $canEdit = $user->isSuperAdmin() ||
-                   $user->hasPermission('utility_readings.edit') ||
-                   $user->hasPermission('utilities.record') ||
-                   $user->hasPermission('meters.edit');
-
         // Selected Month (default to current month YYYY-MM)
         $selectedMonth = $request->input('month', now()->format('Y-m'));
         try {
@@ -157,30 +141,32 @@ class UtilityReadingController extends Controller
             $isPaidLocked = ($status === 'paid' && !$user->isSuperAdmin());
 
             $readings[] = [
-                'meter_id'          => $meter->id,
-                'voucher_id'        => $voucherId,
-                'unit_id'           => $meter->unit_id,
-                'unit_number'       => $meter->unit->unit_number ?? 'N/A',
-                'floor'             => $meter->unit->floor->name ?? 'N/A',
-                'block'             => $meter->unit->block->name ?? '',
-                'breaker_status'    => strtoupper($meter->unit->breaker_status ?? 'OFF'),
-                'tenant_name'       => $meter->unit->tenant->name ?? ($meter->unit->otherTenant->name ?? 'N/A'),
-                'meter_type'        => $meter->type,
-                'meter_type_label'  => $meter->getTypeLabelAttribute(),
-                'meter_ref_no'      => $meter->meter_ref_no ?? 'N/A',
-                'meter_consumer_id' => $meter->meter_consumer_id ?? 'N/A',
-                'previous_reading'  => $prevReading,
-                'current_reading'   => $currentReading,
-                'units_consumed'    => $unitsConsumed,
-                'available'         => $voucher->available ?? '',
-                'amount'            => $amount,
-                'status'            => $status,
-                'meter_image_url'   => $meterImage,
-                'notes'             => $voucher->notes ?? '',
-                'is_active'         => (bool) $meter->is_active,
-                'is_paid_locked'    => $isPaidLocked,
-                'edited_by'         => $voucher?->user?->name,
-                'last_updated'      => $voucher?->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : null,
+                'meter_id'           => $meter->id,
+                'voucher_id'         => $voucherId,
+                'unit_id'            => $meter->unit_id,
+                'unit_number'        => $meter->unit->unit_number ?? 'N/A',
+                'floor'              => $meter->unit->floor->name ?? 'N/A',
+                'block'              => $meter->unit->block->name ?? '',
+                'breaker_status'     => strtoupper($meter->unit->breaker_status ?? 'OFF'),
+                'tenant_name'        => $meter->unit->tenant->name ?? ($meter->unit->otherTenant->name ?? 'N/A'),
+                'meter_type'         => $meter->type,
+                'meter_type_label'   => $meter->getTypeLabelAttribute(),
+                'meter_ref_no'       => $meter->meter_ref_no ?? 'N/A',
+                'meter_consumer_id'  => $meter->meter_consumer_id ?? 'N/A',
+                'previous_reading'   => $prevReading,
+                'current_reading'    => $currentReading,
+                'units_consumed'     => $unitsConsumed,
+                'available'          => $voucher->available ?? '',
+                'amount'             => $amount,
+                'status'             => $status,
+                'meter_image_url'    => $meterImage,
+                'notes'              => $voucher->notes ?? '',
+                'is_active'          => (bool) $meter->is_active,
+                'is_paid_locked'     => $isPaidLocked,
+                'bill_generate_date' => $voucher?->bill_generate_date ? $voucher->bill_generate_date->format('Y-m-d') : '',
+                'bill_generate_date_label' => $voucher?->bill_generate_date ? $voucher->bill_generate_date->format('d M Y') : null,
+                'edited_by'          => $voucher?->user?->name,
+                'last_updated'       => $voucher?->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : null,
             ];
         }
 
@@ -193,14 +179,10 @@ class UtilityReadingController extends Controller
             return strcmp($a['meter_type'] ?? '', $b['meter_type'] ?? '');
         });
 
-        $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
-
-        return view('utility_readings.index', [
-            'title'              => 'Utility Meter Readings — ' . $monthCarbon->format('F Y'),
+        return [
             'readings'           => $readings,
-            'units'              => $units,
+            'monthCarbon'        => $monthCarbon,
             'selectedMonth'      => $selectedMonth,
-            'selectedMonthName'  => $monthCarbon->format('F Y'),
             'selectedUnitId'     => $selectedUnitId,
             'selectedType'       => $selectedType,
             'selectedStatus'     => $selectedStatus,
@@ -209,6 +191,47 @@ class UtilityReadingController extends Controller
             'totalBilled'        => $totalBilled,
             'totalPaid'          => $totalPaid,
             'totalUnpaid'        => $totalUnpaid,
+        ];
+    }
+
+    /**
+     * Display month-wise and unit-wise utility meter readings grid.
+     */
+    public function index(Request $request): View
+    {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() &&
+            !$user->hasPermission('utility_readings.view') &&
+            !$user->hasPermission('utility_readings.edit') &&
+            !$user->hasPermission('utilities.record') &&
+            !$user->hasPermission('utility_meters_management') &&
+            !$user->hasPermission('meters.edit') &&
+            !$user->hasPermission('meter_vouchers.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $canEdit = $user->isSuperAdmin() ||
+                   $user->hasPermission('utility_readings.edit') ||
+                   $user->hasPermission('utilities.record') ||
+                   $user->hasPermission('meters.edit');
+
+        $data = $this->buildReadingsData($request, $user);
+        $units = Unit::orderBy('unit_number')->get(['id', 'unit_number']);
+
+        return view('utility_readings.index', [
+            'title'              => 'Utility Meter Readings — ' . $data['monthCarbon']->format('F Y'),
+            'readings'           => $data['readings'],
+            'units'              => $units,
+            'selectedMonth'      => $data['selectedMonth'],
+            'selectedMonthName'  => $data['monthCarbon']->format('F Y'),
+            'selectedUnitId'     => $data['selectedUnitId'],
+            'selectedType'       => $data['selectedType'],
+            'selectedStatus'     => $data['selectedStatus'],
+            'searchTerm'         => $data['searchTerm'],
+            'totalUnitsConsumed' => $data['totalUnitsConsumed'],
+            'totalBilled'        => $data['totalBilled'],
+            'totalPaid'          => $data['totalPaid'],
+            'totalUnpaid'        => $data['totalUnpaid'],
             'canEdit'            => $canEdit,
             'isSuperAdmin'       => $user->isSuperAdmin(),
         ]);
@@ -228,148 +251,8 @@ class UtilityReadingController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $selectedMonth = $request->input('month', now()->format('Y-m'));
-        try {
-            $monthCarbon = Carbon::createFromFormat('Y-m', $selectedMonth)->startOfMonth();
-        } catch (\Exception $e) {
-            $monthCarbon = now()->startOfMonth();
-            $selectedMonth = $monthCarbon->format('Y-m');
-        }
-
-        $selectedUnitId = $request->input('unit_id');
-        $selectedType   = $request->input('type');
-        $selectedStatus = $request->input('status');
-        $searchTerm     = trim($request->input('search', ''));
-
-        $metersQuery = Meter::query()
-            ->select('meters.*')
-            ->join('units', 'meters.unit_id', '=', 'units.id')
-            ->with(['unit.floor', 'unit.block', 'unit.tenant', 'unit.otherTenant'])
-            ->whereHas('unit');
-
-        if ($selectedUnitId) {
-            $metersQuery->where('meters.unit_id', $selectedUnitId);
-        }
-
-        if ($selectedType) {
-            $metersQuery->where('meters.type', $selectedType);
-        }
-
-        if (!empty($searchTerm)) {
-            $metersQuery->where(function ($q) use ($searchTerm) {
-                $q->where('meters.meter_ref_no', 'like', "%{$searchTerm}%")
-                  ->orWhere('meters.meter_consumer_id', 'like', "%{$searchTerm}%")
-                  ->orWhere('units.unit_number', 'like', "%{$searchTerm}%");
-            });
-        }
-
-        $allMeters = $metersQuery->orderBy('units.unit_number')->orderBy('meters.type')->get();
-
-        $startOfMonth = $monthCarbon->copy()->startOfMonth()->format('Y-m-d');
-        $endOfMonth   = $monthCarbon->copy()->endOfMonth()->format('Y-m-d');
-
-        $vouchers = MeterReadingVoucher::with('user:id,name')
-            ->whereDate('date', '>=', $startOfMonth)
-            ->whereDate('date', '<=', $endOfMonth)
-            ->get()
-            ->keyBy(function ($v) {
-                return $v->unit_id . '_' . $v->meter_ref_no;
-            });
-
-        // Fetch prior readings for previous reading calculation
-        $prevVouchers = MeterReadingVoucher::whereDate('date', '<', $startOfMonth)
-            ->orderBy('date', 'desc')
-            ->get()
-            ->groupBy(function ($v) {
-                return $v->unit_id . '_' . $v->meter_ref_no;
-            })
-            ->map(function ($group) {
-                return $group->first();
-            });
-
-        $prevVouchersByUnit = MeterReadingVoucher::whereDate('date', '<', $startOfMonth)
-            ->orderBy('date', 'desc')
-            ->get()
-            ->groupBy('unit_id')
-            ->map(function ($group) {
-                return $group->first();
-            });
-
-        $readings = [];
-        $totalUnitsConsumed = 0;
-        $totalBilled = 0;
-        $totalPaid = 0;
-        $totalUnpaid = 0;
-
-        foreach ($allMeters as $meter) {
-            $key = $meter->unit_id . '_' . $meter->meter_ref_no;
-            $voucher     = $vouchers->get($key);
-            $prevVoucher = $prevVouchers->get($key) ?? $prevVouchersByUnit->get($meter->unit_id);
-
-            if (!$voucher) {
-                $voucher = $vouchers->first(function ($v) use ($meter) {
-                    return $v->unit_id == $meter->unit_id && $v->meter_ref_no == $meter->meter_ref_no;
-                });
-            }
-
-            // Auto-fetch: Previous month's meter reading becomes this month's prev reading
-            $prevReading = 0.00;
-            if ($prevVoucher && $prevVoucher->current_reading !== null && (float) $prevVoucher->current_reading > 0) {
-                $prevReading = (float) $prevVoucher->current_reading;
-            } elseif ($voucher && $voucher->previous_reading !== null && (float) $voucher->previous_reading > 0) {
-                $prevReading = (float) $voucher->previous_reading;
-            }
-
-            $currentReading = $voucher && $voucher->current_reading !== null ? (float) $voucher->current_reading : 0.00;
-            $unitsConsumed  = ($currentReading > 0 && $currentReading >= $prevReading)
-                ? round($currentReading - $prevReading, 2)
-                : 0.00;
-
-            $amount         = $voucher ? (float) $voucher->amount : 0;
-            $status         = $voucher ? strtolower($voucher->status ?? 'unpaid') : 'unpaid';
-
-            if ($selectedStatus && $status !== strtolower($selectedStatus)) {
-                continue;
-            }
-
-            $totalUnitsConsumed += $unitsConsumed;
-            $totalBilled += $amount;
-            if ($status === 'paid') {
-                $totalPaid += $amount;
-            } else {
-                $totalUnpaid += $amount;
-            }
-
-            $readings[] = [
-                'meter_id'          => $meter->id,
-                'unit_number'       => $meter->unit->unit_number ?? 'N/A',
-                'floor'             => $meter->unit->floor->name ?? 'N/A',
-                'block'             => $meter->unit->block->name ?? '',
-                'breaker_status'    => strtoupper($meter->unit->breaker_status ?? 'OFF'),
-                'meter_type'        => $meter->type,
-                'meter_type_label'  => $meter->getTypeLabelAttribute(),
-                'meter_ref_no'      => $meter->meter_ref_no ?? 'N/A',
-                'meter_consumer_id' => $meter->meter_consumer_id ?? 'N/A',
-                'previous_reading'  => $prevReading,
-                'current_reading'   => $currentReading,
-                'units_consumed'    => $unitsConsumed,
-                'available'         => $voucher->available ?? '',
-                'amount'            => $amount,
-                'status'            => $status,
-                'is_active'         => (bool) $meter->is_active,
-                'edited_by'         => $voucher?->user?->name,
-                'last_updated'      => $voucher?->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : null,
-            ];
-        }
-
-        // Natural sort by unit_number then meter_type
-        usort($readings, function ($a, $b) {
-            $cmp = strnatcasecmp($a['unit_number'] ?? '', $b['unit_number'] ?? '');
-            if ($cmp !== 0) {
-                return $cmp;
-            }
-            return strcmp($a['meter_type'] ?? '', $b['meter_type'] ?? '');
-        });
+        $data     = $this->buildReadingsData($request, $user);
+        $readings = $data['readings'];
 
         $activeMeters   = collect($readings)->where('is_active', true)->count();
         $inactiveMeters = collect($readings)->where('is_active', false)->count();
@@ -381,12 +264,12 @@ class UtilityReadingController extends Controller
 
         return view('utility_readings.print', [
             'readings'           => $readings,
-            'selectedMonth'      => $selectedMonth,
-            'selectedMonthName'  => $monthCarbon->format('F Y'),
-            'totalUnitsConsumed' => $totalUnitsConsumed,
-            'totalBilled'        => $totalBilled,
-            'totalPaid'          => $totalPaid,
-            'totalUnpaid'        => $totalUnpaid,
+            'selectedMonth'      => $data['selectedMonth'],
+            'selectedMonthName'  => $data['monthCarbon']->format('F Y'),
+            'totalUnitsConsumed' => $data['totalUnitsConsumed'],
+            'totalBilled'        => $data['totalBilled'],
+            'totalPaid'          => $data['totalPaid'],
+            'totalUnpaid'        => $data['totalUnpaid'],
             'activeMeters'       => $activeMeters,
             'inactiveMeters'     => $inactiveMeters,
             'breakerOn'          => $breakerOn,
@@ -395,6 +278,50 @@ class UtilityReadingController extends Controller
             'unpaidCount'        => $unpaidCount,
             'pendingCount'       => $pendingCount,
         ]);
+    }
+
+    /**
+     * Download the filtered Utility Meter Readings report as a PDF.
+     */
+    public function downloadPdf(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->isSuperAdmin() &&
+            !$user->hasPermission('utilities.record') &&
+            !$user->hasPermission('utility_meters_management') &&
+            !$user->hasPermission('meters.edit') &&
+            !$user->hasPermission('meter_vouchers.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $data     = $this->buildReadingsData($request, $user);
+        $readings = $data['readings'];
+
+        $activeMeters   = collect($readings)->where('is_active', true)->count();
+        $inactiveMeters = collect($readings)->where('is_active', false)->count();
+        $breakerOn      = collect($readings)->filter(fn($r) => strtoupper($r['breaker_status'] ?? 'OFF') === 'ON')->count();
+        $breakerOff     = collect($readings)->filter(fn($r) => strtoupper($r['breaker_status'] ?? 'OFF') === 'OFF')->count();
+        $paidCount      = collect($readings)->where('status', 'paid')->count();
+        $unpaidCount    = collect($readings)->where('status', 'unpaid')->count();
+        $pendingCount   = collect($readings)->where('status', 'pending')->count();
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('utility_readings.pdf', [
+            'readings'           => $readings,
+            'selectedMonthName'  => $data['monthCarbon']->format('F Y'),
+            'totalUnitsConsumed' => $data['totalUnitsConsumed'],
+            'totalBilled'        => $data['totalBilled'],
+            'totalPaid'          => $data['totalPaid'],
+            'totalUnpaid'        => $data['totalUnpaid'],
+            'activeMeters'       => $activeMeters,
+            'inactiveMeters'     => $inactiveMeters,
+            'breakerOn'          => $breakerOn,
+            'breakerOff'         => $breakerOff,
+            'paidCount'          => $paidCount,
+            'unpaidCount'        => $unpaidCount,
+            'pendingCount'       => $pendingCount,
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('utility_readings_' . $data['monthCarbon']->format('Y_m') . '.pdf');
     }
 
     /**
@@ -420,6 +347,7 @@ class UtilityReadingController extends Controller
             'amount'           => ['nullable', 'numeric', 'min:0'],
             'status'           => ['required', 'in:paid,unpaid,pending'],
             'notes'            => ['nullable', 'string', 'max:500'],
+            'bill_generate_date' => ['nullable', 'date'],
             'meter_image'      => ['nullable', 'image', 'max:200'],
         ], [
             'meter_image.max' => 'Meter photo size must not exceed 200 KB.',
@@ -492,6 +420,7 @@ class UtilityReadingController extends Controller
         $voucher->amount           = $validated['amount'] ?? 0;
         $voucher->status           = $validated['status'];
         $voucher->notes            = $validated['notes'] ?? null;
+        $voucher->bill_generate_date = $validated['bill_generate_date'] ?? null;
         $voucher->user_id          = $user->id;
         $voucher->save();
 
@@ -507,6 +436,8 @@ class UtilityReadingController extends Controller
                 'amount'           => (float) $voucher->amount,
                 'status'           => strtolower($voucher->status),
                 'meter_image_url'  => $voucher->getMeterImageUrlAttribute() ?: ($meter->meter_image ? Storage::disk('public')->url($meter->meter_image) : null),
+                'bill_generate_date' => $voucher->bill_generate_date ? $voucher->bill_generate_date->format('Y-m-d') : '',
+                'bill_generate_date_label' => $voucher->bill_generate_date ? $voucher->bill_generate_date->format('d M Y') : null,
                 'edited_by'        => $user->name,
                 'last_updated'     => $voucher->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : now()->format('d M Y, h:i A'),
             ],

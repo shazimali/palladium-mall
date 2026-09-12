@@ -85,6 +85,10 @@
                         class="h-11 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs flex items-center justify-center gap-1 shadow-xs transition-colors" title="Print Report">
                         🖨️ Print
                     </a>
+                    <a href="{{ route('utility-readings.download-pdf', request()->query()) }}"
+                        class="h-11 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs flex items-center justify-center gap-1 shadow-xs transition-colors" title="Download PDF (as per selected filter)">
+                        ⬇️ PDF
+                    </a>
                     <a href="{{ route('utility-readings.index') }}" class="h-11 px-3 rounded-xl border border-gray-300 dark:border-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" title="Reset Filters">
                         🔄
                     </a>
@@ -129,6 +133,7 @@
                             <th class="py-3.5 px-4 text-center">Available</th>
                             <th class="py-3.5 px-4 text-right">Bill Amount (Rs.)</th>
                             <th class="py-3.5 px-4 text-center">Status</th>
+                            <th class="py-3.5 px-4 text-center">Bill Gen. Date</th>
                             <th class="py-3.5 px-4 text-center">Meter Status</th>
                             <th class="py-3.5 px-4 text-center">Edited By</th>
                             <th class="py-3.5 px-4 text-center">Action</th>
@@ -240,6 +245,17 @@
                                     </template>
                                 </td>
 
+                                {{-- Bill Generate Date Column --}}
+                                <td class="py-3.5 px-4 text-center">
+                                    <template x-if="row.bill_generate_date_label">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                                            x-text="row.bill_generate_date_label"></span>
+                                    </template>
+                                    <template x-if="!row.bill_generate_date_label">
+                                        <span class="text-xs text-gray-400 font-semibold">—</span>
+                                    </template>
+                                </td>
+
                                 {{-- Meter Status Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="row.is_active">
@@ -302,7 +318,7 @@
 
                         <template x-if="readings.length === 0">
                             <tr>
-                                <td colspan="13" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                                <td colspan="14" class="py-12 text-center text-gray-400 dark:text-gray-500">
                                     <p class="text-3xl mb-2">⚡</p>
                                     <p class="font-bold text-sm">No utility meters found matching your filter criteria.</p>
                                 </td>
@@ -437,14 +453,31 @@
                                 </div>
                             </div>
 
-                            {{-- Available (Manual) --}}
-                            <div>
-                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                                    📦 Available (Manual)
-                                </label>
-                                <input type="text" x-model="modalForm.available"
-                                    placeholder="e.g. Yes, No, Available, etc."
-                                    class="w-full h-10 px-3 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
+                            {{-- Available (Manual) & Bill Generate Date --}}
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                        📦 Available (Manual)
+                                    </label>
+                                    <input type="text" x-model="modalForm.available"
+                                        placeholder="e.g. Yes, No, Available, etc."
+                                        class="w-full h-10 px-3 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                                        🧾 Bill Generate Date
+                                    </label>
+                                    <input type="text" id="modal_bill_generate_date" x-model="modalForm.bill_generate_date"
+                                        autocomplete="off" placeholder="Select date"
+                                        x-init="billDatePicker = flatpickr($el, {
+                                            dateFormat: 'Y-m-d',
+                                            allowInput: true,
+                                            disableMobile: true,
+                                            onChange: (selectedDates, dateStr) => { modalForm.bill_generate_date = dateStr; }
+                                        })"
+                                        class="w-full h-10 px-3 text-xs bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 focus:outline-none cursor-pointer">
+                                </div>
                             </div>
                         </div>
 
@@ -564,6 +597,7 @@
                 // Modal state
                 modalOpen: false,
                 savingModal: false,
+                billDatePicker: null,
                 modalForm: {
                     meter_id: null,
                     unit_number: '',
@@ -580,6 +614,7 @@
                     original_status: '',
                     is_paid_locked: false,
                     notes: '',
+                    bill_generate_date: '',
                     edited_by: '',
                     last_updated: '',
                     meter_image_url: '',
@@ -608,6 +643,7 @@
                         original_status: row.status || 'unpaid',
                         is_paid_locked: !!row.is_paid_locked,
                         notes: row.notes || '',
+                        bill_generate_date: row.bill_generate_date || '',
                         edited_by: row.edited_by || '',
                         last_updated: row.last_updated || '',
                         meter_image_url: row.meter_image_url || '',
@@ -617,6 +653,11 @@
                     let fileInput = document.getElementById('modal_meter_image_input');
                     if (fileInput) fileInput.value = '';
                     this.modalOpen = true;
+                    this.$nextTick(() => {
+                        if (this.billDatePicker) {
+                            this.billDatePicker.setDate(this.modalForm.bill_generate_date || null, false);
+                        }
+                    });
                 },
 
                 closeEditModal() {
@@ -667,6 +708,7 @@
                         formData.append('amount', this.modalForm.amount === '' ? 0 : this.modalForm.amount);
                         formData.append('status', this.modalForm.status);
                         formData.append('notes', this.modalForm.notes || '');
+                        formData.append('bill_generate_date', this.modalForm.bill_generate_date || '');
                         formData.append('_token', '{{ csrf_token() }}');
                         if (this.modalForm.new_image_file) {
                             formData.append('meter_image', this.modalForm.new_image_file);
@@ -692,6 +734,8 @@
                                 target.amount           = data.data.amount;
                                 target.status           = data.data.status;
                                 target.is_paid_locked   = (data.data.status === 'paid' && !this.isSuperAdmin);
+                                target.bill_generate_date = data.data.bill_generate_date;
+                                target.bill_generate_date_label = data.data.bill_generate_date_label;
                                 if (data.data.meter_image_url) {
                                     target.meter_image_url = data.data.meter_image_url;
                                 }

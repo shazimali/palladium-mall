@@ -157,6 +157,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:utility_readings.view,utility_readings.edit,utilities.record,utility_meters_management,meters.edit,meter_vouchers.view')->group(function () {
         Route::get('utility-readings', [\App\Http\Controllers\UtilityReadingController::class, 'index'])->name('utility-readings.index');
         Route::get('utility-readings/print', [\App\Http\Controllers\UtilityReadingController::class, 'print'])->name('utility-readings.print');
+        Route::get('utility-readings/download-pdf', [\App\Http\Controllers\UtilityReadingController::class, 'downloadPdf'])->name('utility-readings.download-pdf');
         Route::post('utility-readings/update-row', [\App\Http\Controllers\UtilityReadingController::class, 'updateRow'])->name('utility-readings.update-row');
         Route::post('utility-readings/upload-image', [\App\Http\Controllers\UtilityReadingController::class, 'uploadImage'])->name('utility-readings.upload-image');
     });

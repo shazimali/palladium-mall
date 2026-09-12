@@ -18,6 +18,7 @@ class MeterReadingVoucher extends Model
         'unit_id',
         'date',
         'due_date',
+        'bill_generate_date',
         'meter_ref_no',
         'previous_reading',
         'current_reading',
@@ -33,6 +34,7 @@ class MeterReadingVoucher extends Model
     protected $casts = [
         'date'             => 'date',
         'due_date'         => 'date',
+        'bill_generate_date' => 'date',
         'amount'           => 'decimal:2',
         'previous_reading' => 'decimal:2',
         'current_reading'  => 'decimal:2',
