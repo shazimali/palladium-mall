@@ -54,49 +54,49 @@
                 </div>
             </div>
 
-            {{-- 2-Column Side-By-Side Form Grid Layout matching JV Vouchers --}}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-start">
-                
-                {{-- LEFT COLUMN --}}
-                <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+            {{-- FIELDS GRID matching Create/Edit row ordering --}}
+            <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-6 border border-gray-200 dark:border-gray-700">
+
+                {{-- ROW 1: Voucher Date & Billing Month --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
                             {{ $voucher->date ? $voucher->date->format('M. d, Y') : '—' }}
                         </div>
                     </div>
-
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Billing Month</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
                             {{ $voucher->month ? $voucher->month->format('F Y') : '—' }}
                         </div>
                     </div>
+                </div>
 
+                {{-- ROW 2: Landlord & Self Unit --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Landlord</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
                             {{ $voucher->landlord->name ?? '—' }}
                         </div>
                     </div>
-                </div>
-
-                {{-- RIGHT COLUMN --}}
-                <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Self Unit</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
                             {{ $voucher->unit?->unit_number ?? '—' }}
                         </div>
                     </div>
+                </div>
 
+                {{-- ROW 3: Other Tenant & Purchase Amount --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Other Tenant</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
                             {{ $voucher->otherTenant?->name ?? '—' }}
                         </div>
                     </div>
-
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Purchase Amount</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 px-4 py-3 flex items-center font-black text-lg sm:text-xl font-mono">

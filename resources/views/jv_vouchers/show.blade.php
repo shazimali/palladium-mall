@@ -78,12 +78,11 @@
                 </div>
             </div>
 
-            {{-- 2-COLUMN SIDE-BY-SIDE FORM GRID LAYOUT --}}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6 items-start">
-                
-                {{-- LEFT COLUMN: Voucher Date, Expense Head, Amount, Status --}}
-                <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                    
+            {{-- FIELDS GRID: row order/grouping mirrors create/edit forms --}}
+            <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-6 border border-gray-200 dark:border-gray-700">
+
+                {{-- ROW 1: Voucher Date & Category --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
                     {{-- Field 1: Voucher Date --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
@@ -99,10 +98,13 @@
                             {{ $voucher->expenseHead->name ?? 'Uncategorized' }}
                         </div>
                     </div>
+                </div>
 
+                {{-- ROW 2: Payment Amount & Voucher Status --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
                     {{-- Field 3: Payment Amount --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Amount</div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Amount</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-lg sm:text-xl font-mono text-emerald-600 dark:text-emerald-400">
                             Rs. {{ number_format($voucher->amount, 2) }}
                         </div>
@@ -110,37 +112,38 @@
 
                     {{-- Field 4: Voucher Status --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Status</div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Status</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
                             @if($voucher->status === 'paid')
                                 <span class="text-green-600 dark:text-green-400 font-bold uppercase">● Paid (Settled)</span>
                             @else
-                                <span class="text-amber-600 dark:text-amber-400 font-bold uppercase">● Unpaid (Accrued Expense)</span>
+                                <span class="text-amber-600 dark:text-amber-400 font-bold uppercase">● Unpaid (Accrued)</span>
                             @endif
                         </div>
                     </div>
-
                 </div>
 
-                {{-- RIGHT COLUMN: Settlement Account, Paid Date, Reference, Recorded By --}}
-                <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                    
-                    {{-- Field 5: Settlement Account --}}
+                {{-- ROW 3: Paid From & Method / Date --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
+                    {{-- Field 5: Paid From (Payment Account) --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Acc.</div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid From</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
                             {{ $voucher->status === 'paid' ? ($voucher->paymentAccount->name ?? '—') : 'Not Settled Yet' }}
                         </div>
                     </div>
 
-                    {{-- Field 6: Settlement Date / Method --}}
+                    {{-- Field 6: Method & Date --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Paid Date</div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Method & Date</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-extrabold text-sm sm:text-base">
                             {{ $voucher->status === 'paid' && $voucher->paid_date ? $voucher->paid_date->format('M. d, Y') . ' (' . ($voucher->payment_method ?? 'Cash') . ')' : '—' }}
                         </div>
                     </div>
+                </div>
 
+                {{-- ROW 4: Reference # & Attach Receipt --}}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
                     {{-- Field 7: Reference / Bill # --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
                         <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Reference #</div>
@@ -149,38 +152,41 @@
                         </div>
                     </div>
 
-                    {{-- Field 8: User --}}
+                    {{-- Field 8: Attach Receipt --}}
                     <div class="grid grid-cols-3 min-h-[52px]">
-                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Prepared By</div>
+                        <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Attach Receipt</div>
                         <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-semibold text-sm">
-                            {{ $voucher->user->name ?? 'System' }}
+                            @if($voucher->receipt)
+                                <a href="{{ $voucher->receipt_url }}" target="_blank"
+                                    class="inline-flex items-center gap-1 text-brand-600 dark:text-brand-400 font-bold underline">
+                                    📄 View Document
+                                </a>
+                            @else
+                                <span class="text-gray-400 dark:text-gray-500">Not attached</span>
+                            @endif
                         </div>
                     </div>
-
                 </div>
 
             </div>
 
-            {{-- REMARKS / NOTES SECTION --}}
-            <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 mb-6">
-                <span class="block text-xs uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Description / Remarks:</span>
-                <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 whitespace-pre-line">
-                    {{ $voucher->notes ?? 'No specific remarks entered.' }}
-                </p>
-            </div>
-
-            @if($voucher->receipt)
-                <div class="bg-gray-50 dark:bg-gray-800 rounded-2xl p-4 border border-gray-200 dark:border-gray-700 mb-6 flex items-center justify-between">
-                    <div>
-                        <span class="block text-xs uppercase font-bold text-gray-500 dark:text-gray-400">Attached Receipt Document</span>
-                        <span class="text-xs text-gray-400">Uploaded file attachment</span>
-                    </div>
-                    <a href="{{ $voucher->receipt_url }}" target="_blank"
-                        class="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-xs font-bold text-white hover:bg-brand-600 shadow-sm transition-all">
-                        📄 View Document &rarr;
-                    </a>
+            {{-- ROW 5 / BOTTOM SECTION: Approved by & Remarks --}}
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch mb-6">
+                {{-- Left Box: Approved by Box --}}
+                <div class="bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white rounded-2xl p-4 flex flex-col justify-center border border-gray-200 dark:border-gray-700 shadow-xs">
+                    <p class="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300">
+                        Approved by: <span class="text-brand-600 dark:text-brand-400 font-extrabold ml-1">{{ $voucher->user->name ?? 'System' }}</span>
+                    </p>
                 </div>
-            @endif
+
+                {{-- Right Box: Remarks --}}
+                <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-xs">
+                    <span class="block text-xs uppercase font-bold text-gray-500 dark:text-gray-400 mb-1">Description / Remarks:</span>
+                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200 whitespace-pre-line">
+                        {{ $voucher->notes ?? 'No specific remarks entered.' }}
+                    </p>
+                </div>
+            </div>
 
             <div class="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-800 text-xs text-gray-400">
                 <span>Created at: {{ $voucher->created_at ? $voucher->created_at->format('d M Y h:i A') : '—' }}</span>

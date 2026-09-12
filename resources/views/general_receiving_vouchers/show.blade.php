@@ -5,16 +5,20 @@
 
     @php
         $recipientName = '—';
-        $receivedFromTypeLabel = 'Party Head';
+        $receivedFromTypeLabel = 'Registered Party Head';
+        $entityLabel = 'Party';
         if ($voucher->received_from_type === 'party') {
             $recipientName = $voucher->party->name ?? 'N/A';
-            $receivedFromTypeLabel = 'Party Head';
+            $receivedFromTypeLabel = 'Registered Party Head';
+            $entityLabel = 'Party';
         } elseif ($voucher->received_from_type === 'account') {
             $recipientName = $voucher->fromPaymentAccount ? $voucher->fromPaymentAccount->name . ' (' . ucfirst($voucher->fromPaymentAccount->type) . ')' : 'N/A';
-            $receivedFromTypeLabel = 'Source Account';
+            $receivedFromTypeLabel = 'Transfer From Account';
+            $entityLabel = 'Source Account';
         } elseif ($voucher->received_from_type === 'landlord') {
             $recipientName = $voucher->landlord->name ?? 'N/A';
             $receivedFromTypeLabel = 'Landlord / Owner';
+            $entityLabel = 'Landlord';
         }
     @endphp
 
@@ -54,43 +58,46 @@
             </div>
         </div>
 
-        {{-- TOP GRID --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
-            
-            {{-- Row 1, Col 1: Date --}}
-            <div class="grid grid-cols-3 min-h-[48px]">
-                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
-                <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
-                    {{ $voucher->date->format('M. d, Y') }}
+        {{-- FIELDS GRID --}}
+        <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
+
+            {{-- ROW 1: Voucher Date & Received From Type --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
+                <div class="grid grid-cols-3 min-h-[48px]">
+                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Voucher Date</div>
+                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                        {{ $voucher->date->format('M. d, Y') }}
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 min-h-[48px]">
+                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Received From</div>
+                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                        {{ $receivedFromTypeLabel }}
+                    </div>
                 </div>
             </div>
 
-            {{-- Row 1, Col 2: Received From --}}
+            {{-- ROW 2: Entity Name --}}
             <div class="grid grid-cols-3 min-h-[48px]">
-                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">{{ $receivedFromTypeLabel }}</div>
+                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">{{ $entityLabel }}</div>
                 <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
                     {{ $recipientName }}
                 </div>
             </div>
 
-            {{-- Row 2: Deposit Account --}}
-            <div class="grid grid-cols-3 min-h-[48px] md:col-span-2">
-                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Deposit Account</div>
-                <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
-                    {{ $voucher->paymentAccount ? $voucher->paymentAccount->name . ' (' . ucfirst($voucher->paymentAccount->type) . ')' : '—' }}
+            {{-- ROW 3: Payment Amount & Deposit Account --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-[2px] bg-gray-200 dark:bg-gray-700">
+                <div class="grid grid-cols-3 min-h-[48px]">
+                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Payment Amount</div>
+                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-xl sm:text-2xl font-mono text-emerald-600 dark:text-emerald-400">
+                        Rs. {{ number_format($voucher->amount, 2) }}
+                    </div>
                 </div>
-            </div>
-
-        </div>
-
-        {{-- MIDDLE STACKED GRID --}}
-        <div class="flex flex-col gap-[2px] bg-gray-200 dark:bg-gray-700 rounded-2xl overflow-hidden mb-5 border border-gray-200 dark:border-gray-700">
-            
-            {{-- Row 1: Payment Amount --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 min-h-[48px]">
-                <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide md:col-span-1">Payment Amount</div>
-                <div class="md:col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-xl sm:text-2xl font-mono text-emerald-600 dark:text-emerald-400">
-                    Rs. {{ number_format($voucher->amount, 2) }}
+                <div class="grid grid-cols-3 min-h-[48px]">
+                    <div class="bg-brand-600 dark:bg-brand-900 text-white px-4 py-3 flex items-center font-bold text-sm tracking-wide">Deposit Account</div>
+                    <div class="col-span-2 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-3 flex items-center font-black text-base sm:text-lg">
+                        {{ $voucher->paymentAccount ? $voucher->paymentAccount->name . ' (' . ucfirst($voucher->paymentAccount->type) . ')' : '—' }}
+                    </div>
                 </div>
             </div>
 

@@ -33,24 +33,12 @@
         <x-common.component-card title="Voucher Summary Information" desc="">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                {{-- Voucher & Date --}}
+                {{-- Left Column: Voucher Date, Flat / Shop, Tenant Name, Due Date (matches create/edit order) --}}
                 <div class="space-y-4">
                     <div>
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Voucher Number</p>
-                        <p class="text-xl font-black font-mono text-gray-900 dark:text-white mt-0.5">{{ $voucher->voucher_no }}</p>
-                    </div>
-
-                    <div>
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Bill / Voucher Date</p>
+                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Voucher Date</p>
                         <p class="text-base font-bold font-mono text-gray-800 dark:text-gray-200 mt-0.5">
                             {{ $voucher->date ? $voucher->date->format('d M Y') : '—' }}
-                        </p>
-                    </div>
-
-                    <div>
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Bill Due Date</p>
-                        <p class="text-base font-bold font-mono text-gray-800 dark:text-gray-200 mt-0.5">
-                            {{ $voucher->due_date ? $voucher->due_date->format('d M Y') : '—' }}
                         </p>
                     </div>
 
@@ -76,33 +64,40 @@
                             {{ $voucher->unit?->tenant?->name ?? ($voucher->unit?->otherTenant?->name ?? 'Vacant / Self') }}
                         </p>
                     </div>
+
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Due Date</p>
+                        <p class="text-base font-bold font-mono text-gray-800 dark:text-gray-200 mt-0.5">
+                            {{ $voucher->due_date ? $voucher->due_date->format('d M Y') : '—' }}
+                        </p>
+                    </div>
                 </div>
 
-                {{-- Financial & Meter Details --}}
+                {{-- Right Column: GEPCO Ref #, Reading (kWh), Bill Amount, Bill Status (matches create/edit order) --}}
                 <div class="space-y-4">
                     <div>
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">GEPCO Meter Reference #</p>
+                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">GEPCO Ref #</p>
                         <p class="text-lg font-black font-mono text-brand-600 dark:text-brand-400 mt-0.5">
                             {{ $voucher->meter_ref_no ?? '—' }}
                         </p>
                     </div>
 
                     <div>
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Current Meter Reading (kWh)</p>
+                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Reading (kWh)</p>
                         <p class="text-lg font-black font-mono text-gray-900 dark:text-white mt-0.5">
                             {{ $voucher->current_reading ? number_format($voucher->current_reading, 2) . ' kWh' : '—' }}
                         </p>
                     </div>
 
                     <div>
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">GEPCO Bill Amount</p>
+                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Bill Amount</p>
                         <p class="text-2xl font-black font-mono text-gray-900 dark:text-white mt-0.5">
                             Rs. {{ number_format($voucher->amount, 2) }}
                         </p>
                     </div>
 
                     <div>
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Payment Status</p>
+                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Bill Status</p>
                         <div class="mt-1">
                             @if($voucher->status === 'paid')
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300">
@@ -117,21 +112,24 @@
                     </div>
                 </div>
 
-                {{-- Meter Photo Preview --}}
-                @if($voucher->meter_image_url)
-                    <div class="md:col-span-2 border-t border-gray-200 dark:border-gray-800 pt-4">
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">Meter / Bill Photo</p>
-                        <a href="{{ $voucher->meter_image_url }}" target="_blank" class="inline-block">
-                            <img src="{{ $voucher->meter_image_url }}" alt="Meter Photo" class="max-h-72 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-md object-contain hover:opacity-95 transition-opacity" />
-                        </a>
-                    </div>
-                @endif
+                {{-- Bottom Row: Meter Photo & Remarks / Notes side-by-side (matches create/edit bottom section grouping) --}}
+                @if($voucher->meter_image_url || $voucher->notes)
+                    <div class="md:col-span-2 border-t border-gray-200 dark:border-gray-800 pt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        @if($voucher->meter_image_url)
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">GEPCO Meter Photo</p>
+                                <a href="{{ $voucher->meter_image_url }}" target="_blank" class="inline-block">
+                                    <img src="{{ $voucher->meter_image_url }}" alt="Meter Photo" class="max-h-72 rounded-2xl border border-gray-300 dark:border-gray-700 shadow-md object-contain hover:opacity-95 transition-opacity" />
+                                </a>
+                            </div>
+                        @endif
 
-                {{-- Notes --}}
-                @if($voucher->notes)
-                    <div class="md:col-span-2 border-t border-gray-200 dark:border-gray-800 pt-4">
-                        <p class="text-xs font-black uppercase tracking-wider text-gray-400">Notes / Remarks</p>
-                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mt-1 whitespace-pre-line">{{ $voucher->notes }}</p>
+                        @if($voucher->notes)
+                            <div>
+                                <p class="text-xs font-black uppercase tracking-wider text-gray-400">Remarks / Notes</p>
+                                <p class="text-sm font-medium text-gray-800 dark:text-gray-200 mt-1 whitespace-pre-line">{{ $voucher->notes }}</p>
+                            </div>
+                        @endif
                     </div>
                 @endif
 

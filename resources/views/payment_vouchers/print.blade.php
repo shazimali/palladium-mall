@@ -43,22 +43,28 @@
 
     @php
         $recipientName = '—';
-        $paidToTypeLabel = 'Recipient';
+        $paidToCategoryLabel = 'Recipient';
+        $paidToEntityLabel = 'Recipient';
         if ($voucher->paid_to_type === 'tenant') {
             $recipientName = ($voucher->tenant->name ?? 'N/A') . ($voucher->unit ? ' (' . $voucher->unit->unit_number . ')' : '');
-            $paidToTypeLabel = 'Tenant / Flat/Shop';
+            $paidToCategoryLabel = 'Tenant / Unit';
+            $paidToEntityLabel = 'Select Tenant';
         } elseif ($voucher->paid_to_type === 'other') {
             $recipientName = $voucher->party->name ?? $voucher->other_name ?? 'N/A';
-            $paidToTypeLabel = 'Registered Party';
+            $paidToCategoryLabel = 'Registered Party Head';
+            $paidToEntityLabel = 'Select Party';
         } elseif ($voucher->paid_to_type === 'landlord') {
             $recipientName = $voucher->landlord->name ?? 'N/A';
-            $paidToTypeLabel = 'Landlord';
+            $paidToCategoryLabel = 'Landlord';
+            $paidToEntityLabel = 'Select Landlord';
         } elseif ($voucher->paid_to_type === 'owner') {
             $recipientName = $voucher->owner->name ?? 'N/A';
-            $paidToTypeLabel = 'Managing Owner';
+            $paidToCategoryLabel = 'Managing Owner Withdrawal';
+            $paidToEntityLabel = 'Select Managing Owner';
         } elseif ($voucher->paid_to_type === 'account') {
             $recipientName = $voucher->toPaymentAccount ? $voucher->toPaymentAccount->name . ' (' . ucfirst($voucher->toPaymentAccount->type) . ')' : 'N/A';
-            $paidToTypeLabel = 'Destination Account';
+            $paidToCategoryLabel = 'Account Transfer';
+            $paidToEntityLabel = 'To Account';
         }
     @endphp
 
@@ -103,10 +109,10 @@
             </h2>
         </div>
 
-        <!-- TOP METADATA GRID -->
+        <!-- TOP METADATA GRID (Row 1: Voucher Date & Paid To Type, Row 2: Dynamic Entity Selection) -->
         <div class="grid grid-cols-2 gap-[2px] bg-gray-300 rounded-2xl overflow-hidden mb-5 border border-gray-300">
 
-            <!-- Row 1, Col 1: Date -->
+            <!-- Row 1, Field 1: Voucher Date -->
             <div class="grid grid-cols-3 min-h-[48px]">
                 <div
                     class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
@@ -117,22 +123,22 @@
                 </div>
             </div>
 
-            <!-- Row 1, Col 2: Paid From Account -->
+            <!-- Row 1, Field 2: Paid To Type -->
             <div class="grid grid-cols-3 min-h-[48px]">
                 <div
                     class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
-                    Paid From</div>
+                    Paid To</div>
                 <div
                     class="col-span-2 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-extrabold text-xs sm:text-sm">
-                    {{ $voucher->paymentAccount ? $voucher->paymentAccount->name . ' (' . ucfirst($voucher->paymentAccount->type) . ')' : '—' }}
+                    {{ $paidToCategoryLabel }}
                 </div>
             </div>
 
-            <!-- Row 2: Paid To Recipient (Full Width) -->
+            <!-- Row 2: Dynamic Entity Selection (Full Width) -->
             <div class="col-span-2 grid grid-cols-6 min-h-[48px]">
                 <div
                     class="col-span-2 bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
-                    {{ $paidToTypeLabel }}
+                    {{ $paidToEntityLabel }}
                 </div>
                 <div
                     class="col-span-4 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-extrabold text-xs sm:text-sm">
@@ -142,10 +148,10 @@
 
         </div>
 
-        <!-- MIDDLE STACKED GRID -->
-        <div class="flex flex-col gap-[2px] bg-gray-300 rounded-2xl overflow-hidden mb-5 border border-gray-300">
+        <!-- ROW 3 GRID: Payment Amount & Paid From Account -->
+        <div class="grid grid-cols-2 gap-[2px] bg-gray-300 rounded-2xl overflow-hidden mb-5 border border-gray-300">
 
-            <!-- Row 1: Payment Amount -->
+            <!-- Row 3, Field 1: Payment Amount -->
             <div class="grid grid-cols-3 min-h-[48px]">
                 <div
                     class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
@@ -153,6 +159,17 @@
                 <div
                     class="col-span-2 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-black text-base sm:text-lg font-mono text-emerald-700">
                     Rs. {{ number_format($voucher->amount, 2) }}
+                </div>
+            </div>
+
+            <!-- Row 3, Field 2: Paid From Account -->
+            <div class="grid grid-cols-3 min-h-[48px]">
+                <div
+                    class="bg-blue-700 text-white px-4 py-3 flex items-center font-bold text-xs sm:text-sm tracking-wide">
+                    Paid From</div>
+                <div
+                    class="col-span-2 bg-gray-50 text-gray-900 px-4 py-3 flex items-center font-extrabold text-xs sm:text-sm">
+                    {{ $voucher->paymentAccount ? $voucher->paymentAccount->name . ' (' . ucfirst($voucher->paymentAccount->type) . ')' : '—' }}
                 </div>
             </div>
 
