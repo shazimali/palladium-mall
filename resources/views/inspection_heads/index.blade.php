@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <x-common.page-breadcrumb pageTitle="Inspection Heads" />
+    <x-common.page-breadcrumb pageTitle="Inspection Tasks" />
 
     <div class="mx-auto w-full space-y-4">
         {{-- Header --}}
@@ -14,7 +14,7 @@
                 <a href="{{ route('inspection-heads.create') }}"
                    class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-600 transition-colors shadow-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                    Add Inspection Head
+                    Add Inspection Task
                 </a>
             @endcan
         </div>

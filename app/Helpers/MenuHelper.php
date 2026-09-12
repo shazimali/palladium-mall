@@ -229,7 +229,7 @@ class MenuHelper
             }
             if ($user->can('inspection_heads.view') || $user->isSuperAdmin()) {
                 $reportingSettingSub[] = [
-                    'name' => 'Report Inspection Heads',
+                    'name' => 'Generate Inspection Task',
                     'path' => '/inspection-heads',
                 ];
             }
@@ -263,7 +263,7 @@ class MenuHelper
             if (!empty($inspectionSubItems)) {
                 $setupItems[] = [
                     'icon' => 'list',
-                    'name' => 'Add Inspection Report',
+                    'name' => 'Staff Reporting',
                     'subItems' => $inspectionSubItems,
                 ];
             }
@@ -336,7 +336,7 @@ class MenuHelper
         // 19. Reports Statement
         $reportsSubItems = [];
         if ($user->can('reports.view')) {
-            $reportsSubItems[] = ['name' => 'All Reports Overview', 'path' => '/reports'];
+            // $reportsSubItems[] = ['name' => 'All Reports Overview', 'path' => '/reports'];
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Generated)', 'path' => '/reports?report_type=monthly_matrix'];
             $reportsSubItems[] = ['name' => 'Monthly Matrix (Expected)', 'path' => '/reports?report_type=monthly_matrix_expected'];
             $reportsSubItems[] = ['name' => 'Receivables Report', 'path' => '/reports/receivables'];
