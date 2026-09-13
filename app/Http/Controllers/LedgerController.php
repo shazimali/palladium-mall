@@ -329,19 +329,17 @@ class LedgerController extends Controller
 
         foreach ($payments as $payment) {
             $unitNo = $payment->unit->unit_number ?? $unit->unit_number;
-            // Debit Entry: Bill Generated (Only for non-security deposit bills)
-            if ($payment->type !== 'security_deposit') {
-                $entries->push([
-                    'date' => $payment->month,
-                    'description' => ucfirst(str_replace('_', ' ', $payment->type)) . ' Billing - ' . $payment->month->format('M Y'),
-                    'reference' => 'Bill #' . $payment->id,
-                    'debit' => (float) $payment->amount,
-                    'credit' => 0.00,
-                    'type' => 'bill',
-                    'id' => $payment->id,
-                    'unit_number' => $unitNo,
-                ]);
-            }
+            // Debit Entry: Bill Generated
+            $entries->push([
+                'date' => $payment->month,
+                'description' => ucfirst(str_replace('_', ' ', $payment->type)) . ' Billing - ' . $payment->month->format('M Y'),
+                'reference' => 'Bill #' . $payment->id,
+                'debit' => (float) $payment->amount,
+                'credit' => 0.00,
+                'type' => 'bill',
+                'id' => $payment->id,
+                'unit_number' => $unitNo,
+            ]);
 
             // Legacy/Direct payments check
             $voucheredPaid = $payment->receivingVouchers->sum(fn($v) => $v->pivot->amount_allocated);
