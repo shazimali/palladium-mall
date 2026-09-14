@@ -15,13 +15,13 @@
     {{-- Card --}}
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800">
-            <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Step 1 — Tenant Personal Information</h1>
-            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Fill in the tenant's personal details. This creates a draft record.</p>
+            <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Tenant &amp; Agreement</h1>
+            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Fill in the tenant's details and agreement terms. The agreement activates as soon as this is saved — guarantor, documents, and move-in details can be added later.</p>
         </div>
 
         <form method="POST" action="{{ route('tenants.store') }}" enctype="multipart/form-data" class="px-6 py-6 space-y-6">
             @csrf
-            @include('tenants.wizard._step1_fields', ['tenant' => null])
+            @include('tenants.wizard._step1_fields', ['tenant' => null, 'agreement' => null, 'inspectionPersons' => $inspectionPersons])
 
             <div class="flex items-center justify-between pt-4 gap-4 border-t-2 border-gray-100 dark:border-gray-800">
                 <a href="{{ route('tenants.index') }}"
@@ -40,7 +40,7 @@
                     {{-- Continue --}}
                     <button type="submit"
                         class="inline-flex items-center gap-2.5 rounded-2xl bg-brand-600 px-7 py-3.5 text-base font-extrabold text-white shadow-md hover:bg-brand-700 focus:outline-none transition-colors cursor-pointer">
-                        Continue — Step 2
+                        Create Tenant &amp; Activate Agreement
                         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                         </svg>

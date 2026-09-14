@@ -332,9 +332,9 @@
                             </svg>
                             Print
                         </a>
-                        @if($ag->status === 'draft')
+                        @if(in_array($ag->status, ['draft', 'active']))
                             <span class="text-gray-300 dark:text-gray-700">|</span>
-                            <a href="{{ route('tenants.showStep', [$tenant, 3]) }}"
+                            <a href="{{ route('tenants.showStep', [$tenant, 1]) }}"
                                 class="text-xs text-brand-500 hover:underline">Edit Terms</a>
                         @endif
                     </div>
@@ -407,7 +407,7 @@
                             </svg>
                             Print
                         </a>
-                        @if($selectedAgreement && $selectedAgreement->status === 'draft')
+                        @if($selectedAgreement && in_array($selectedAgreement->status, ['draft', 'active']))
                             <span class="text-gray-300 dark:text-gray-700">|</span>
                             <a href="{{ route('tenants.showStep', [$tenant, 4]) }}"
                                 class="text-xs text-brand-500 hover:underline">Update</a>
@@ -444,7 +444,7 @@
                             </svg>
                             Print
                         </a>
-                        @if($selectedAgreement && $selectedAgreement->status === 'draft')
+                        @if($selectedAgreement && in_array($selectedAgreement->status, ['draft', 'active']))
                             <span class="text-gray-300 dark:text-gray-700">|</span>
                             <a href="{{ route('tenants.showStep', [$tenant, 5]) }}"
                                 class="text-xs text-brand-500 hover:underline">Update</a>

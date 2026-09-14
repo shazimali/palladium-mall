@@ -108,7 +108,6 @@ Route::middleware('auth')->group(function () {
         Route::post('tenants',                      [TenantController::class, 'store'])->name('tenants.store');
         Route::get('tenants/{tenant}/step/{step}',  [TenantController::class, 'showStep'])->name('tenants.showStep');
         Route::post('tenants/{tenant}/step/{step}', [TenantController::class, 'saveStep'])->name('tenants.saveStep');
-        Route::post('tenants/{tenant}/confirm',     [TenantController::class, 'confirm'])->name('tenants.confirm');
     });
 
     Route::middleware('permission:tenants.view')->group(function () {

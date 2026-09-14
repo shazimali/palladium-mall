@@ -31,8 +31,8 @@
     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <div class="border-b border-gray-100 px-6 py-5 dark:border-gray-800 flex justify-between items-center">
             <div>
-                <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Tenant Application Form</h1>
-                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Fill in the tenant's personal details and assign a flat.</p>
+                <h1 class="text-lg font-semibold text-gray-900 dark:text-white/90">Tenant &amp; Agreement</h1>
+                <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-400">Tenant details and agreement terms. Saving here keeps the agreement active — guarantor, documents, and move-in details can be added anytime from the tenant's profile.</p>
             </div>
             @if(isset($tenant) && $tenant->id)
                 <a href="{{ route('tenants.printStep', [$tenant, 1]) }}" target="_blank"
@@ -54,7 +54,7 @@
                 @csrf
         @endif
 
-            @include('tenants.wizard._step1_fields', ['tenant' => $tenant ?? null, 'units' => $units])
+            @include('tenants.wizard._step1_fields', ['tenant' => $tenant ?? null, 'units' => $units, 'agreement' => $agreement ?? null, 'inspectionPersons' => $inspectionPersons ?? []])
 
             <div class="flex items-center justify-between pt-2 gap-3">
                 @if(isset($tenant) && $tenant->id)
@@ -78,7 +78,7 @@
                     {{-- Save & Continue --}}
                     <button type="submit"
                         class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 transition-colors">
-                        Save & Continue — Step 2
+                        {{ isset($agreement) && $agreement?->status === 'active' ? 'Save Changes' : 'Save & Activate Agreement' }}
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
                         </svg>

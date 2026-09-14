@@ -163,10 +163,10 @@
                             </td>
                             <td class="px-4 py-3 text-right">
                                 <div class="flex flex-wrap items-center justify-end gap-1.5">
-                                    <a href="{{ route('tenants.showStep', [$tenant, 3]) }}" 
+                                    <a href="{{ route('tenants.showStep', [$tenant, 1]) }}"
                                        class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
-                                       title="Upload Agreement Government Document (Step 3)">
-                                        Govt Doc (Step 3)
+                                       title="Upload Agreement Government Document">
+                                        Govt Doc
                                     </a>
                                     <a href="{{ route('tenants.showStep', [$tenant, 4]) }}" 
                                        class="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"

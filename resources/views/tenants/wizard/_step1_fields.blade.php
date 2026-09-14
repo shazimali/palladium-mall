@@ -1,4 +1,4 @@
-@php $t = $tenant ?? null; @endphp
+@php $t = $tenant ?? null; $a = $agreement ?? null; @endphp
 
 {{-- Helper class string --}}
 @php
@@ -842,6 +842,221 @@ $error = 'mt-1.5 text-sm font-semibold text-red-500';
         </div>
     </div>
 
+    {{-- ── Section: Agreement Terms (merged from former Step 3) ─────────── --}}
+    <div x-data="{
+        monthlyRent: '{{ old('monthly_rent', $a?->monthly_rent ?? '') }}',
+        displayMonthlyRent: '',
+        maintenanceCharge: '{{ old('maintenance_charge', $a?->maintenance_charge ?? '') }}',
+        displayMaintenanceCharge: '',
+        securityDeposit: '{{ old('security_deposit', $a?->security_deposit ?? '') }}',
+        displaySecurityDeposit: '',
+        finePerDay: '{{ old('fine_per_day', $a?->fine_per_day ?? '') }}',
+        displayFinePerDay: '',
+        formatAmount(val, field) {
+            let clean = val.replace(/[^\d.]/g, '');
+            let parts = clean.split('.');
+            if (parts.length > 2) {
+                parts = [parts[0], parts.slice(1).join('')];
+            }
+            parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            let formatted = parts.join('.');
+
+            if (field === 'rent') {
+                this.displayMonthlyRent = formatted;
+                this.monthlyRent = clean;
+            } else if (field === 'maintenance') {
+                this.displayMaintenanceCharge = formatted;
+                this.maintenanceCharge = clean;
+            } else if (field === 'deposit') {
+                this.displaySecurityDeposit = formatted;
+                this.securityDeposit = clean;
+            } else if (field === 'fine') {
+                this.displayFinePerDay = formatted;
+                this.finePerDay = clean;
+            }
+        },
+        init() {
+            if (this.monthlyRent) this.formatAmount(String(this.monthlyRent), 'rent');
+            if (this.maintenanceCharge) this.formatAmount(String(this.maintenanceCharge), 'maintenance');
+            if (this.securityDeposit) this.formatAmount(String(this.securityDeposit), 'deposit');
+            if (this.finePerDay) this.formatAmount(String(this.finePerDay), 'fine');
+        }
+    }" class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02] mb-6">
+        <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Agreement Terms</h4>
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+
+            <div>
+                <label class="{{ $label }}">Start Date <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <input type="text" name="start_date" id="start_date"
+                           value="{{ old('start_date', optional($a?->start_date)->format('Y-m-d') ?? '') }}"
+                           placeholder="Select start date"
+                           class="{{ $input }} pr-10 {{ $errors->has('start_date') ? 'border-red-400' : '' }}" readonly>
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </span>
+                </div>
+                @error('start_date') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">End Date <span class="text-red-500">*</span></label>
+                <div class="relative">
+                    <input type="text" name="end_date" id="end_date"
+                           value="{{ old('end_date', optional($a?->end_date)->format('Y-m-d') ?? '') }}"
+                           placeholder="Select end date"
+                           class="{{ $input }} pr-10 {{ $errors->has('end_date') ? 'border-red-400' : '' }}" readonly>
+                    <span class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </span>
+                </div>
+                @error('end_date') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Monthly Rent (PKR) <span class="text-red-500">*</span></label>
+                <input type="text"
+                       x-model="displayMonthlyRent"
+                       @input="formatAmount($event.target.value, 'rent')"
+                       placeholder="e.g. 25,000" class="{{ $input }} {{ $errors->has('monthly_rent') ? 'border-red-400' : '' }}" required>
+                <input type="hidden" name="monthly_rent" x-model="monthlyRent">
+                @error('monthly_rent') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Maintenance Charge (PKR)</label>
+                <input type="text"
+                       x-model="displayMaintenanceCharge"
+                       @input="formatAmount($event.target.value, 'maintenance')"
+                       placeholder="e.g. 2,000" class="{{ $input }}">
+                <input type="hidden" name="maintenance_charge" x-model="maintenanceCharge">
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Security Deposit (PKR) <span class="text-red-500">*</span></label>
+                <input type="text"
+                       x-model="displaySecurityDeposit"
+                       @input="formatAmount($event.target.value, 'deposit')"
+                       placeholder="e.g. 50,000" class="{{ $input }} {{ $errors->has('security_deposit') ? 'border-red-400' : '' }}" required>
+                <input type="hidden" name="security_deposit" x-model="securityDeposit">
+                @error('security_deposit') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Payment Due Day <span class="text-red-500">*</span></label>
+                <input type="number" name="payment_due_day" value="{{ old('payment_due_day', $a?->payment_due_day ?? 5) }}"
+                       min="1" max="31" placeholder="5" class="{{ $input }}">
+                <p class="mt-1 text-xs text-gray-400">Day of month rent is due</p>
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Grace Period (days)</label>
+                <input type="number" name="grace_period_days" value="{{ old('grace_period_days', $a?->grace_period_days ?? 10) }}"
+                       min="0" placeholder="10" class="{{ $input }}">
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Fine Per Day (PKR) <span class="text-red-500">*</span></label>
+                <input type="text"
+                       x-model="displayFinePerDay"
+                       @input="formatAmount($event.target.value, 'fine')"
+                       placeholder="e.g. 500" class="{{ $input }} {{ $errors->has('fine_per_day') ? 'border-red-400' : '' }}" required>
+                <input type="hidden" name="fine_per_day" x-model="finePerDay">
+                @error('fine_per_day') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Notice Period (months)</label>
+                <input type="number" name="notice_period_months" value="{{ old('notice_period_months', $a?->notice_period_months ?? 1) }}"
+                       min="0" placeholder="1" class="{{ $input }}">
+            </div>
+
+        </div>
+    </div>
+
+    {{-- ── Section: Special Terms ────────────────────────────────────────── --}}
+    <div class="mb-6">
+        <label class="{{ $label }}">Special Terms &amp; Conditions</label>
+        <textarea name="terms" rows="4" placeholder="Any special terms or conditions..."
+            class="{{ $input }}">{{ old('terms', $a?->terms ?? '') }}</textarea>
+    </div>
+
+    {{-- ── Section: Government Document (merged from former Step 3) ─────── --}}
+    <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02] mb-6">
+        <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">Government Document</h4>
+        <div>
+            <label class="{{ $label }}">Upload Govt Document (Image/PDF)</label>
+            @if($a?->govt_document)
+                <div class="mb-3 flex items-center gap-3">
+                    <a href="{{ $a->govt_document_url }}" target="_blank" download
+                       class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-100 dark:border-brand-800 dark:bg-brand-900/20 dark:text-brand-400 transition-colors">
+                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                        Download Current Document
+                    </a>
+                    <span class="text-xs text-gray-400">Upload new to replace</span>
+                </div>
+            @endif
+            <input type="file" name="govt_document" accept="image/jpeg,image/png,application/pdf"
+                   class="{{ $input }} file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1 file:text-xs file:font-medium file:text-brand-600 hover:file:bg-brand-100">
+            @error('govt_document') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            <p class="mt-1 text-xs text-gray-400">Accepted: JPG, PNG, PDF — Max 5MB. Optional — the agreement activates without it; you can add it later.</p>
+        </div>
+    </div>
+
+    {{-- ── Section: Electricity Breaker & Initial Meter Inspection (moved from former Step 5) ─── --}}
+    <div class="rounded-xl border border-gray-100 bg-gray-50 p-5 dark:border-gray-800 dark:bg-white/[0.02] mb-6">
+        <h4 class="mb-4 text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 flex items-center gap-2">
+            <span>⚡ Electricity Breaker &amp; Initial Meter Inspection</span>
+        </h4>
+        <p class="text-xs text-gray-500 mb-4">Record initial meter reading, officer verification statement, photo proof, and upload the signed handover form to safely switch breaker <strong>ON</strong> for tenant move-in. Meter reading and inspection officer are required; photo proof, signed form, and statement can be added later.</p>
+
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div>
+                <label class="{{ $label }}">Initial Meter Reading (kWh) <span class="text-red-500">*</span></label>
+                <input type="number" step="0.01" name="meter_reading" value="{{ old('meter_reading', $a?->initial_meter_reading ?? '') }}" placeholder="e.g. 14850.50" class="{{ $input }}" required>
+                @error('meter_reading') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Meter Reading Photo Proof</label>
+                <input type="file" name="meter_image" accept="image/*" class="{{ $input }}">
+                @error('meter_image') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Inspection Officer <span class="text-red-500">*</span></label>
+                <select name="inspection_person_id" class="{{ $input }}" required>
+                    <option value="">Select Inspection Officer</option>
+                    @foreach($inspectionPersons ?? [] as $person)
+                        <option value="{{ $person->id }}" {{ old('inspection_person_id') == $person->id ? 'selected' : '' }}>
+                            {{ $person->name }} ({{ $person->role ?? $person->designation ?? 'Inspector' }})
+                        </option>
+                    @endforeach
+                </select>
+                @error('inspection_person_id') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
+                <label class="{{ $label }}">Upload Signed Inspection PDF / Form</label>
+                <input type="file" name="signed_inspection_doc" accept="application/pdf,image/*" class="{{ $input }}">
+                <p class="mt-1 text-xs text-gray-400">Download/print handover PDF, get physical signatures, then upload here.</p>
+                @error('signed_inspection_doc') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="sm:col-span-2">
+                <label class="{{ $label }}">Officer Statement / Handover Verification</label>
+                <textarea name="officer_statement" rows="2" class="{{ $input }}">{{ old('officer_statement', 'I inspect and confirm initial electricity meter reading and switch breaker ON for tenant move-in.') }}</textarea>
+                @error('officer_statement') <p class="{{ $error }}">{{ $message }}</p> @enderror
+            </div>
+        </div>
+    </div>
+
 </div>
 
 {{-- ── Scripts (CNIC Mask & AJAX Form Submit) ──────────────────────── --}}
@@ -1431,6 +1646,44 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+});
+</script>
+@endpush
+@endonce
+
+{{-- ── Scripts (Agreement date pickers — merged from former Step 3) ─── --}}
+@once
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof flatpickr === 'undefined') return;
+    const startEl = document.getElementById('start_date');
+    const endEl = document.getElementById('end_date');
+
+    if (startEl) {
+        flatpickr(startEl, {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd M Y',
+            disableMobile: true,
+            allowInput: false,
+            onChange: function(selectedDates, dateStr, instance) {
+                if (endEl && endEl._flatpickr) {
+                    endEl._flatpickr.set('minDate', dateStr);
+                }
+            }
+        });
+    }
+
+    if (endEl) {
+        flatpickr(endEl, {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd M Y',
+            disableMobile: true,
+            allowInput: false,
+        });
+    }
 });
 </script>
 @endpush

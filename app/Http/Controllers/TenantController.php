@@ -139,6 +139,7 @@ class TenantController extends Controller
             'title' => 'Add New Tenant',
             'step' => 1,
             'units' => $units,
+            'inspectionPersons' => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
@@ -197,6 +198,24 @@ class TenantController extends Controller
             'partners.*.delete_passport_photo' => 'nullable|boolean',
             'partners.*.delete_cnic_front_image' => 'nullable|boolean',
             'partners.*.delete_cnic_back_image' => 'nullable|boolean',
+
+            // Agreement Terms (merged from former Step 3)
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'monthly_rent' => 'required|numeric|min:0',
+            'maintenance_charge' => 'nullable|numeric|min:0',
+            'security_deposit' => 'required|numeric|min:0',
+            'payment_due_day' => 'required|integer|min:1|max:31',
+            'grace_period_days' => 'nullable|integer|min:0',
+            'notice_period_months' => 'nullable|integer|min:0',
+            'fine_per_day' => 'required|numeric|min:0',
+            'terms' => 'nullable|string',
+            'govt_document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'meter_reading' => 'required|numeric|min:0',
+            'meter_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'inspection_person_id' => 'required|exists:inspection_persons,id',
+            'officer_statement' => 'nullable|string|max:1000',
+            'signed_inspection_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ], [
             'unit_id.required' => 'Please select a flat or shop.',
             'phone.regex' => 'Phone format must be digits only (e.g. 03001234567)',
@@ -243,7 +262,23 @@ class TenantController extends Controller
             'rented_by_multiple',
             'passport_photo',
             'cnic_front_image',
-            'cnic_back_image'
+            'cnic_back_image',
+            'start_date',
+            'end_date',
+            'monthly_rent',
+            'maintenance_charge',
+            'security_deposit',
+            'payment_due_day',
+            'grace_period_days',
+            'notice_period_months',
+            'fine_per_day',
+            'terms',
+            'govt_document',
+            'meter_reading',
+            'meter_image',
+            'inspection_person_id',
+            'officer_statement',
+            'signed_inspection_doc',
         ])->toArray();
 
         if ($request->boolean('delete_passport_photo')) {
@@ -282,32 +317,20 @@ class TenantController extends Controller
             $tenantData['cnic_back_image'] = $request->file('cnic_back_image')->store('tenants/documents', 'public');
         }
 
+        $oldUnitId = $existingTenant?->unit_id;
+
         if ($existingTenant) {
             $existingTenant->update($tenantData);
             $tenant = $existingTenant;
-            $msg = 'Existing tenant profile loaded and updated. Continue with guarantor details.';
+            $msg = 'Existing tenant profile updated and agreement activated.';
         } else {
             $tenant = Tenant::create($tenantData);
-            $msg = 'Step 1 saved. Continue with guarantor details.';
+            $msg = 'Tenant created and agreement activated.';
         }
 
-        // Initialize draft agreement in Step 1 if creating a new tenancy flow.
-        // If the tenant already has an active agreement, we update that active agreement.
-        // If an existing tenant has only past (expired/terminated) agreements and save_only is clicked,
-        // we do NOT auto-create a draft agreement unless progressing into the wizard or already in draft.
-        $hasActiveAgreement = $tenant->agreements()->where('status', 'active')->exists();
-        if ($hasActiveAgreement) {
-            $agreement = $tenant->agreements()->where('status', 'active')->latest()->first();
-        } else {
-            $agreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
-            if (!$agreement && (!$existingTenant || !$request->input('save_only'))) {
-                $agreement = $tenant->agreements()->create([
-                    'tenant_id' => $tenant->id,
-                    'unit_id' => $tenant->unit_id,
-                    'status' => 'draft',
-                ]);
-            }
-        }
+        // Merged Step 1 + former Step 3: upsert agreement terms and activate immediately.
+        $termsData = collect($data)->only($this->agreementTermsFields())->toArray();
+        $agreement = $this->upsertAndActivateAgreement($tenant, $request, $termsData, $oldUnitId);
 
         if ($agreement) {
             // Save emergency contact (replace existing for this agreement)
@@ -423,13 +446,13 @@ class TenantController extends Controller
         if ($request->expectsJson()) {
             $redirectUrl = $request->input('save_only')
                 ? route('tenants.showStep', [$tenant, 1])
-                : route('tenants.showStep', [$tenant, 2]);
+                : route('tenants.show', $tenant);
 
-            session()->flash('success', $request->input('save_only') ? 'Step 1 saved successfully.' : 'Step 1 saved.');
+            session()->flash('success', $msg);
 
             return response()->json([
                 'success' => true,
-                'message' => $request->input('save_only') ? 'Step 1 saved successfully.' : 'Step 1 saved. Proceeding...',
+                'message' => $msg,
                 'tenant' => [
                     'id' => $tenant->id,
                     'name' => $tenant->name,
@@ -447,26 +470,139 @@ class TenantController extends Controller
 
         if ($request->input('save_only')) {
             return redirect()->route('tenants.showStep', [$tenant, 1])
-                ->with('success', 'Step 1 saved.');
+                ->with('success', $msg);
         }
 
-        return redirect()->route('tenants.showStep', [$tenant, 2])
+        return redirect()->route('tenants.show', $tenant)
             ->with('success', $msg);
+    }
+
+    // -----------------------------------------------------------------------
+    // Shared: merged Step 1 + former Step 3 — upsert agreement terms & activate
+    // -----------------------------------------------------------------------
+
+    private function agreementTermsFields(): array
+    {
+        return [
+            'start_date',
+            'end_date',
+            'monthly_rent',
+            'maintenance_charge',
+            'security_deposit',
+            'payment_due_day',
+            'grace_period_days',
+            'notice_period_months',
+            'fine_per_day',
+            'terms',
+        ];
+    }
+
+    private function upsertAndActivateAgreement(Tenant $tenant, Request $request, array $termsData, ?int $oldUnitId = null): Agreement
+    {
+        $unitId = $tenant->unit_id;
+
+        $currentAgreement = $tenant->agreements()->where('status', 'active')->latest()->first()
+            ?: $tenant->agreements()->where('status', 'draft')->latest()->first();
+
+        // Govt document upload (optional — replaces any previous file)
+        if ($request->hasFile('govt_document')) {
+            if ($currentAgreement?->govt_document) {
+                Storage::disk('public')->delete($currentAgreement->govt_document);
+            }
+            $termsData['govt_document'] = $request->file('govt_document')->store('tenants/documents', 'public');
+        }
+
+        if ($request->filled('meter_reading')) {
+            $termsData['initial_meter_reading'] = $request->input('meter_reading');
+        }
+
+        $termsData['unit_id'] = $unitId;
+
+        // Mark the previously assigned unit vacant if the tenant's unit changed
+        if ($unitId && $oldUnitId && $oldUnitId !== (int) $unitId) {
+            Unit::find($oldUnitId)?->update(['status' => 'vacant']);
+        }
+
+        // Upsert without duplicating — if an active agreement already exists, update it
+        // directly instead of creating a new draft (a fresh draft here would produce a
+        // second active agreement once activated).
+        if ($currentAgreement && $currentAgreement->status === 'active') {
+            $currentAgreement->update($termsData);
+            $agreement = $currentAgreement;
+        } else {
+            $agreement = $tenant->agreements()->updateOrCreate(
+                ['tenant_id' => $tenant->id, 'status' => 'draft'],
+                $termsData
+            );
+
+            if (\App\Support\LegacyDraftActivator::hasOtherActiveAgreement($agreement)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'cnic' => 'This tenant already has another active agreement. A tenant cannot have multiple active agreements at the same time. The previous agreement must be expired or terminated first.',
+                ]);
+            }
+
+            \App\Support\LegacyDraftActivator::runActivationTransaction($tenant, $agreement);
+        }
+
+        if ($unitId) {
+            Unit::find($unitId)?->update(['status' => 'rented']);
+        }
+
+        // Record Breaker ON inspection log if a meter reading was submitted
+        if ($unitId && $request->filled('meter_reading')) {
+            $unit = Unit::find($unitId);
+            if ($unit) {
+                $meterImagePath = $request->hasFile('meter_image')
+                    ? $request->file('meter_image')->store('breaker_inspections', 'public')
+                    : null;
+
+                $signedDocPath = $request->hasFile('signed_inspection_doc')
+                    ? $request->file('signed_inspection_doc')->store('breaker_inspections/signed_docs', 'public')
+                    : null;
+
+                $inspector = $request->filled('inspection_person_id')
+                    ? InspectionPerson::find($request->input('inspection_person_id'))
+                    : null;
+                $inspectorName = $inspector?->name ?? auth()->user()->name;
+
+                \App\Models\UnitBreakerInspection::create([
+                    'unit_id' => $unit->id,
+                    'agreement_id' => $agreement->id,
+                    'inspection_person_id' => $inspector?->id,
+                    'breaker_status' => 'on',
+                    'meter_reading' => (float) $request->input('meter_reading'),
+                    'meter_image' => $meterImagePath,
+                    'signed_inspection_doc' => $signedDocPath,
+                    'inspection_officer_name' => $inspectorName,
+                    'officer_statement' => $request->input('officer_statement', 'Initial move-in inspection. Breaker turned ON for tenant agreement.'),
+                    'inspected_at' => now(),
+                ]);
+
+                $unit->update(['breaker_status' => 'on']);
+            }
+        }
+
+        return $agreement->fresh();
     }
 
     // -----------------------------------------------------------------------
     // Wizard Steps 2–6 — Show & Save
     // -----------------------------------------------------------------------
 
-    public function showStep(Tenant $tenant, int $step): View
+    public function showStep(Tenant $tenant, int $step): View|\Illuminate\Http\RedirectResponse
     {
         $data = ['title' => 'Add Tenant — Step ' . $step, 'tenant' => $tenant, 'step' => $step];
         $activeAgreement = $tenant->agreements()->where('status', 'active')->latest()->first();
         $draftAgreement = $tenant->agreements()->where('status', 'draft')->latest()->first();
         $displayAgreement = $activeAgreement ?: ($draftAgreement ?: $tenant->agreements()->latest()->first());
 
+        if ($displayAgreement && $displayAgreement->status === 'draft') {
+            $displayAgreement = \App\Support\LegacyDraftActivator::activate($displayAgreement);
+        }
+
         return match ($step) {
             1 => view('tenants.wizard.step1', array_merge($data, [
+                'agreement' => $displayAgreement,
                 'units' => Unit::where('is_self', false)
                     ->where(function ($q) use ($tenant) {
                             $q->where('status', 'vacant')
@@ -474,6 +610,7 @@ class TenantController extends Controller
                         })
                     ->orderBy('unit_number')
                     ->get(),
+                'inspectionPersons' => InspectionPerson::where('is_active', true)->orderBy('name')->get(),
                 'partners' => ($displayAgreement ? $displayAgreement->partners()->get() : collect())->map(fn($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
@@ -496,17 +633,7 @@ class TenantController extends Controller
                 'guarantors' => $displayAgreement ? $displayAgreement->guarantors()->get() : collect(),
                 'emergencyContacts' => $displayAgreement ? $displayAgreement->emergencyContacts : collect(),
             ])),
-            3 => view('tenants.wizard.step3', array_merge($data, [
-                'agreement' => $displayAgreement,
-                'inspectionPersons' => \App\Models\InspectionPerson::where('is_active', true)->orderBy('name')->get(),
-                'units' => Unit::where('is_self', false)
-                    ->where(function ($q) use ($tenant) {
-                            $q->where('status', 'vacant')
-                            ->orWhere('id', $tenant->unit_id);
-                        })
-                    ->orderBy('unit_number')
-                    ->get(),
-            ])),
+            3 => redirect()->route('tenants.showStep', [$tenant, 1]),
             4 => view('tenants.wizard.step4', array_merge($data, [
                 'checklist' => $displayAgreement ? $displayAgreement->documentChecklist : null,
             ])),
@@ -569,7 +696,6 @@ class TenantController extends Controller
     {
         return match ($step) {
             2 => $this->saveStep2($request, $tenant),
-            3 => $this->saveStep3($request, $tenant),
             4 => $this->saveStep4($request, $tenant),
             5 => $this->saveStep5($request, $tenant),
             default => redirect()->route('tenants.showStep', [$tenant, $step]),
@@ -745,131 +871,8 @@ class TenantController extends Controller
                 ->with('success', 'Step 2 saved.');
         }
 
-        return redirect()->route('tenants.showStep', [$tenant, 3])
+        return redirect()->route('tenants.show', $tenant)
             ->with('success', 'Step 2 saved.');
-    }
-
-    // -----------------------------------------------------------------------
-    // Step 3 — Unit & Agreement Terms
-    // -----------------------------------------------------------------------
-
-    private function saveStep3(Request $request, Tenant $tenant): RedirectResponse
-    {
-        $data = $request->validate([
-            'unit_id' => 'nullable|exists:units,id',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'monthly_rent' => 'required|numeric|min:0',
-            'maintenance_charge' => 'nullable|numeric|min:0',
-            'security_deposit' => 'required|numeric|min:0',
-            'payment_due_day' => 'required|integer|min:1|max:31',
-            'grace_period_days' => 'nullable|integer|min:0',
-            'notice_period_months' => 'nullable|integer|min:0',
-            'fine_per_day' => 'required|numeric|min:0',
-            'terms' => 'nullable|string',
-            'govt_document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            'meter_reading' => 'nullable|numeric|min:0',
-            'meter_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
-            'inspection_person_id' => 'nullable|exists:inspection_persons,id',
-            'officer_statement' => 'nullable|string|max:1000',
-            'signed_inspection_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-        ]);
-
-        if (isset($data['meter_reading']) && $data['meter_reading'] !== null) {
-            $data['initial_meter_reading'] = $data['meter_reading'];
-        }
-
-        // Handle govt_document upload
-        if ($request->hasFile('govt_document')) {
-            $existing = $tenant->agreements()->whereIn('status', ['active', 'draft'])->latest()->first();
-            if ($existing?->govt_document) {
-                Storage::disk('public')->delete($existing->govt_document);
-            }
-            $data['govt_document'] = $request->file('govt_document')->store('tenants/documents', 'public');
-        }
-
-        // Use unit from tenant (set in Step 1), or override if provided
-        $unitId = $data['unit_id'] ?? $tenant->unit_id;
-        unset($data['unit_id']);
-
-        if ($unitId) {
-            // Mark previous unit as vacant if changed
-            if ($tenant->unit_id && $tenant->unit_id !== (int) $unitId) {
-                Unit::find($tenant->unit_id)?->update(['status' => 'vacant']);
-            }
-
-            // Flat status should only be 'rented' if govt_document is uploaded (either in this request or previously in active/draft)
-            $currentAgreement = $tenant->agreements()->whereIn('status', ['active', 'draft'])->latest()->first();
-            $hasGovtDocument = isset($data['govt_document']) || ($currentAgreement && !empty($currentAgreement->govt_document));
-
-            if ($hasGovtDocument) {
-                Unit::find($unitId)?->update(['status' => 'rented']);
-            } else {
-                Unit::find($unitId)?->update(['status' => 'vacant']);
-            }
-
-            $tenant->update(['unit_id' => $unitId]);
-            $data['unit_id'] = $unitId;
-        }
-
-        // Upsert agreement.
-        // If an active agreement already exists, update it directly instead of creating
-        // a new draft — creating a draft here would produce a second active agreement on confirm.
-        $existingActive = $tenant->agreements()->where('status', 'active')->latest()->first();
-        if ($existingActive) {
-            $existingActive->update(array_merge($data, ['unit_id' => $unitId ?? $existingActive->unit_id]));
-            $agreementId = $existingActive->id;
-        } else {
-            $ag = $tenant->agreements()->updateOrCreate(
-                ['tenant_id' => $tenant->id, 'status' => 'draft'],
-                array_merge($data, ['status' => 'draft'])
-            );
-            $agreementId = $ag->id;
-        }
-
-        // Record Breaker ON inspection log if meter reading provided
-        if ($unitId && $request->filled('meter_reading')) {
-            $unit = Unit::find($unitId);
-            if ($unit) {
-                $meterImagePath = null;
-                if ($request->hasFile('meter_image')) {
-                    $meterImagePath = $request->file('meter_image')->store('breaker_inspections', 'public');
-                }
-
-                $signedDocPath = null;
-                if ($request->hasFile('signed_inspection_doc')) {
-                    $signedDocPath = $request->file('signed_inspection_doc')->store('breaker_inspections/signed_docs', 'public');
-                }
-
-                $inspector = $request->filled('inspection_person_id')
-                    ? \App\Models\InspectionPerson::find($request->input('inspection_person_id'))
-                    : null;
-                $inspectorName = $inspector?->name ?? auth()->user()->name;
-
-                \App\Models\UnitBreakerInspection::create([
-                    'unit_id' => $unit->id,
-                    'agreement_id' => $agreementId,
-                    'inspection_person_id' => $inspector?->id,
-                    'breaker_status' => 'on',
-                    'meter_reading' => (float) $request->input('meter_reading'),
-                    'meter_image' => $meterImagePath,
-                    'signed_inspection_doc' => $signedDocPath,
-                    'inspection_officer_name' => $inspectorName,
-                    'officer_statement' => $request->input('officer_statement', 'Initial move-in inspection. Breaker turned ON for tenant agreement.'),
-                    'inspected_at' => now(),
-                ]);
-
-                $unit->update(['breaker_status' => 'on']);
-            }
-        }
-
-        if ($request->input('save_only')) {
-            return redirect()->route('tenants.showStep', [$tenant, 3])
-                ->with('success', 'Step 3 saved.');
-        }
-
-        return redirect()->route('tenants.showStep', [$tenant, 4])
-            ->with('success', 'Step 3 saved.');
     }
 
     // -----------------------------------------------------------------------
@@ -913,8 +916,8 @@ class TenantController extends Controller
         $agreement = $tenant->agreements()->where('status', 'active')->latest()->first()
             ?: $tenant->agreements()->where('status', 'draft')->latest()->first();
         if (!$agreement) {
-            return redirect()->route('tenants.showStep', [$tenant, 3])
-                ->with('error', 'Agreement not found. Please complete Step 3 first.');
+            return redirect()->route('tenants.showStep', [$tenant, 1])
+                ->with('error', 'Agreement not found. Please complete Tenant & Agreement details first.');
         }
 
         $checklist = $agreement->documentChecklist ?: new \App\Models\TenantDocumentChecklist();
@@ -1084,8 +1087,8 @@ class TenantController extends Controller
         $agreement = $tenant->agreements()->where('status', 'active')->latest()->first()
             ?: $tenant->agreements()->where('status', 'draft')->latest()->first();
         if (!$agreement) {
-            return redirect()->route('tenants.showStep', [$tenant, 3])
-                ->with('error', 'Agreement not found. Please complete Step 3 first.');
+            return redirect()->route('tenants.showStep', [$tenant, 1])
+                ->with('error', 'Agreement not found. Please complete Tenant & Agreement details first.');
         }
         $data['agreement_id'] = $agreement->id;
         $data['tenant_id'] = $tenant->id;
@@ -1201,60 +1204,6 @@ class TenantController extends Controller
 
         return redirect()->route('tenants.showStep', [$tenant, 6])
             ->with('success', 'Step 5 saved successfully.');
-    }
-
-    // -----------------------------------------------------------------------
-    // Step 6 — Confirm (promote draft → active)
-    // -----------------------------------------------------------------------
-
-    public function confirm(Request $request, Tenant $tenant): RedirectResponse
-    {
-        $agreement = $tenant->agreements()->where('status', 'active')->latest()->first()
-            ?: $tenant->agreements()->where('status', 'draft')->latest()->first();
-
-        if (!$agreement || empty($agreement->govt_document)) {
-            return redirect()->route('tenants.showStep', [$tenant, 6])
-                ->with('error', 'Agreement cannot be confirmed. Please upload the Government Document in Step 3 first.');
-        }
-
-        // If the agreement is already active, we don't need to do any activation or expiration.
-        // It's already live. Just ensure tenant status is active and redirect.
-        if ($agreement->status === 'active') {
-            if ($tenant->status !== 'active') {
-                $tenant->update(['status' => 'active']);
-            }
-            return redirect()->route('tenants.show', $tenant)
-                ->with('success', 'Tenant ' . $tenant->name . ' details updated successfully.');
-        }
-
-        // Restrict tenant to only one active agreement at a time
-        $hasActiveAgreement = Agreement::where('tenant_id', $tenant->id)
-            ->where('status', 'active')
-            ->where('id', '!=', $agreement->id)
-            ->exists();
-
-        if ($hasActiveAgreement) {
-            return redirect()->route('tenants.showStep', [$tenant, 6])
-                ->with('error', 'This tenant already has another active agreement. A tenant cannot have multiple active agreements at the same time. The previous agreement must be expired or terminated first.');
-        }
-
-        \Illuminate\Support\Facades\DB::transaction(function () use ($tenant, $agreement) {
-            // Activate tenant
-            $tenant->update(['status' => 'active']);
-
-            // Expire any previous active agreements for this tenant on the same unit
-            $tenant->agreements()
-                ->where('unit_id', $agreement->unit_id)
-                ->where('status', 'active')
-                ->where('id', '!=', $agreement->id)
-                ->update(['status' => 'expired']);
-
-            // Activate agreement
-            $agreement->update(['status' => 'active']);
-        });
-
-        return redirect()->route('tenants.show', $tenant)
-            ->with('success', 'Tenant ' . $tenant->name . ' has been updated/added successfully.');
     }
 
     // -----------------------------------------------------------------------
@@ -1464,6 +1413,24 @@ class TenantController extends Controller
             'partners.*.delete_passport_photo' => 'nullable|boolean',
             'partners.*.delete_cnic_front_image' => 'nullable|boolean',
             'partners.*.delete_cnic_back_image' => 'nullable|boolean',
+
+            // Agreement Terms (merged from former Step 3)
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'monthly_rent' => 'required|numeric|min:0',
+            'maintenance_charge' => 'nullable|numeric|min:0',
+            'security_deposit' => 'required|numeric|min:0',
+            'payment_due_day' => 'required|integer|min:1|max:31',
+            'grace_period_days' => 'nullable|integer|min:0',
+            'notice_period_months' => 'nullable|integer|min:0',
+            'fine_per_day' => 'required|numeric|min:0',
+            'terms' => 'nullable|string',
+            'govt_document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'meter_reading' => 'required|numeric|min:0',
+            'meter_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:4096',
+            'inspection_person_id' => 'required|exists:inspection_persons,id',
+            'officer_statement' => 'nullable|string|max:1000',
+            'signed_inspection_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ], [
             'unit_id.required' => 'Please select a flat or shop.',
             'phone.regex' => 'Phone format must be digits only (e.g. 03001234567)',
@@ -1486,7 +1453,23 @@ class TenantController extends Controller
             'rented_by_multiple',
             'passport_photo',
             'cnic_front_image',
-            'cnic_back_image'
+            'cnic_back_image',
+            'start_date',
+            'end_date',
+            'monthly_rent',
+            'maintenance_charge',
+            'security_deposit',
+            'payment_due_day',
+            'grace_period_days',
+            'notice_period_months',
+            'fine_per_day',
+            'terms',
+            'govt_document',
+            'meter_reading',
+            'meter_image',
+            'inspection_person_id',
+            'officer_statement',
+            'signed_inspection_doc',
         ])->toArray();
 
         if ($request->boolean('delete_passport_photo')) {
@@ -1525,22 +1508,12 @@ class TenantController extends Controller
             $tenantData['cnic_back_image'] = $request->file('cnic_back_image')->store('tenants/documents', 'public');
         }
 
+        $oldUnitId = $tenant->unit_id;
         $tenant->update($tenantData);
 
-        // Initialize/update draft agreement immediately in Step 1 update.
-        // IMPORTANT: If an active agreement already exists, do NOT create a new draft —
-        // doing so and then confirming it would produce a second active agreement.
-        $hasActiveAgreementForUpdate = $tenant->agreements()->where('status', 'active')->exists();
-        if ($hasActiveAgreementForUpdate) {
-            // Reuse the existing active agreement; do not spawn a new draft.
-            $draftAgreement = $tenant->agreements()->where('status', 'active')->latest()->first();
-            $draftAgreement->update(['unit_id' => $tenant->unit_id]);
-        } else {
-            $draftAgreement = $tenant->agreements()->updateOrCreate(
-                ['tenant_id' => $tenant->id, 'status' => 'draft'],
-                ['unit_id' => $tenant->unit_id]
-            );
-        }
+        // Merged Step 1 + former Step 3: upsert agreement terms and activate immediately.
+        $termsData = collect($data)->only($this->agreementTermsFields())->toArray();
+        $draftAgreement = $this->upsertAndActivateAgreement($tenant, $request, $termsData, $oldUnitId);
 
         // Save emergency contact (replace for this draft agreement)
         if ($draftAgreement) {
@@ -1658,11 +1631,13 @@ class TenantController extends Controller
         if ($request->expectsJson()) {
             $redirectUrl = $request->input('save_only')
                 ? route('tenants.showStep', [$tenant, 1])
-                : route('tenants.showStep', [$tenant, 2]);
+                : route('tenants.show', $tenant);
+
+            $message = $request->input('save_only') ? 'Tenant & agreement details saved.' : 'Tenant & agreement details updated.';
 
             return response()->json([
                 'success' => true,
-                'message' => $request->input('save_only') ? 'Step 1 saved successfully.' : 'Step 1 saved. Proceeding...',
+                'message' => $message,
                 'tenant' => [
                     'id' => $tenant->id,
                     'name' => $tenant->name,
@@ -1680,11 +1655,11 @@ class TenantController extends Controller
 
         if ($request->input('save_only')) {
             return redirect()->route('tenants.showStep', [$tenant, 1])
-                ->with('success', 'Personal details saved.');
+                ->with('success', 'Tenant & agreement details saved.');
         }
 
-        return redirect()->route('tenants.showStep', [$tenant, 2])
-            ->with('success', 'Personal details updated.');
+        return redirect()->route('tenants.show', $tenant)
+            ->with('success', 'Tenant & agreement details updated.');
     }
 
     // -----------------------------------------------------------------------
