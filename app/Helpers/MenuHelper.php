@@ -343,7 +343,7 @@ class MenuHelper
             $reportsSubItems[] = ['name' => 'Payables Report', 'path' => '/reports/payables'];
         }
         if ($user->can('reports.account_summary') || $user->can('reports.view')) {
-            $reportsSubItems[] = ['name' => 'Account Summary', 'path' => '/reports/account-summary'];
+            $reportsSubItems[] = ['name' => 'Balance Sheet (as per Accounts)', 'path' => '/reports/account-summary'];
         }
         if ($user->can('reports.profit_loss')) {
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];

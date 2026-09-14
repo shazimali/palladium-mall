@@ -29,10 +29,9 @@ class AccountSummaryController extends Controller
         $accountType = $request->input('account_type', 'all');
 
         $summary = $this->summaryService->getSummary($dateFrom, $dateTo, $accountType);
-        $summary = $summary->groupBy('group');
 
         return view('reports.account_summary', [
-            'title' => 'Account Summary Report',
+            'title' => 'Balance Sheet (as per Accounts)',
             'summary' => $summary,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
@@ -51,10 +50,9 @@ class AccountSummaryController extends Controller
         $accountType = $request->input('account_type', 'all');
 
         $summary = $this->summaryService->getSummary($dateFrom, $dateTo, $accountType);
-        $summary = $summary->groupBy('group');
 
         $pdf = Pdf::loadView('reports.account_summary_pdf', [
-            'title' => 'Account Summary Report',
+            'title' => 'Balance Sheet (as per Accounts)',
             'summary' => $summary,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,

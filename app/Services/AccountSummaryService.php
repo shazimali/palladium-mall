@@ -22,25 +22,86 @@ class AccountSummaryService
      */
     public function getSummary($dateFrom, $dateTo, $type = 'all')
     {
-        $summary = collect();
+        $detailed = collect();
+        $categoryKeys = [];
 
         if ($type === 'all' || $type === 'asset') {
-            $summary = $summary->concat($this->getAssetsSummary($dateFrom, $dateTo));
+            $detailed = $detailed->concat($this->getAssetsSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'asset_cash';
+            $categoryKeys[] = 'asset_bank';
         }
-        
+
         if ($type === 'all' || $type === 'liability') {
-            $summary = $summary->concat($this->getLiabilitiesSummary($dateFrom, $dateTo));
+            $detailed = $detailed->concat($this->getLiabilitiesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'liability';
         }
 
         if ($type === 'all' || $type === 'receivable') {
-            $summary = $summary->concat($this->getReceivablesSummary($dateFrom, $dateTo));
-        }
-        
-        if ($type === 'all' || $type === 'expense') {
-            $summary = $summary->concat($this->getExpensesSummary($dateFrom, $dateTo));
+            $detailed = $detailed->concat($this->getReceivablesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'receivable';
         }
 
-        return $summary;
+        if ($type === 'all' || $type === 'expense') {
+            $detailed = $detailed->concat($this->getExpensesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'expense';
+        }
+
+        if ($type === 'all' || $type === 'landlord_payable') {
+            $detailed = $detailed->concat($this->getLandlordPayablesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'landlord_payable';
+        }
+
+        if ($type === 'all' || $type === 'party_due') {
+            $detailed = $detailed->concat($this->getPartyDuesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'party_due';
+        }
+
+        if ($type === 'all' || $type === 'meter_reading') {
+            $detailed = $detailed->concat($this->getMeterReadingReceivablesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'meter_reading';
+        }
+
+        return $this->collapseToCategories($detailed, $categoryKeys);
+    }
+
+    /**
+     * Collapse the per-entity rows produced by the get*Summary() methods into
+     * one summary row per meaningful account category (two for assets: Cash vs Bank).
+     */
+    private function collapseToCategories($detailed, array $categoryKeys)
+    {
+        $labels = [
+            'asset_cash'       => 'Cash',
+            'asset_bank'       => 'Bank',
+            'liability'        => 'Equity & Liabilities (Owners)',
+            'receivable'       => 'Receivables (Tenants)',
+            'expense'          => 'Expenses',
+            'landlord_payable' => 'Landlord Payables',
+            'party_due'        => 'Party Dues',
+            'meter_reading'    => 'Meter Reading Receivables',
+        ];
+
+        $byKey = $detailed->groupBy(function ($row) {
+            return $row['group'] === 'asset' ? 'asset_' . ($row['subtype'] ?? 'bank') : $row['group'];
+        });
+
+        $results = collect();
+        foreach ($categoryKeys as $key) {
+            $entries = $byKey->get($key, collect());
+            $results->push([
+                'id'      => $key,
+                'name'    => $labels[$key],
+                'type'    => $labels[$key],
+                'group'   => str_starts_with($key, 'asset_') ? 'asset' : $key,
+                'opening' => $entries->sum('opening'),
+                'debit'   => $entries->sum('debit'),
+                'credit'  => $entries->sum('credit'),
+                'closing' => $entries->sum('closing'),
+                'url'     => null,
+            ]);
+        }
+
+        return $results;
     }
 
     private function getAssetsSummary($dateFrom, $dateTo)
@@ -102,6 +163,7 @@ class AccountSummaryService
                 'name' => $account->name,
                 'type' => 'Asset (Bank/Cash)',
                 'group' => 'asset',
+                'subtype' => $account->id == 2 ? 'cash' : 'bank',
                 'opening' => $openingBalance,
                 'debit' => $totalDebit,
                 'credit' => $totalCredit,
@@ -310,6 +372,206 @@ class AccountSummaryService
                 'credit' => $totalCredit,
                 'closing' => $closingBalance,
                 'url' => route('ledgers.expense', ['expense_head_id' => $head->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+            ]);
+        }
+
+        return $results;
+    }
+
+    private function getLandlordPayablesSummary($dateFrom, $dateTo)
+    {
+        $results = collect();
+        $landlords = \App\Models\Landlord::with('ownerships')->orderBy('name')->get();
+
+        foreach ($landlords as $landlord) {
+            $unitValueOwed = (float) $landlord->ownerships->sum('credit_amount');
+
+            // Prior Period
+            $priorPaid = 0.0;
+            $priorCharged = 0.0;
+            if ($dateFrom) {
+                $priorPaid += (float) ReceivingVoucher::where('received_from_type', 'owner')
+                    ->where('owner_id', $landlord->id)->where('date', '<', $dateFrom)->sum('amount');
+                $priorPaid += (float) GeneralReceivingVoucher::where('landlord_id', $landlord->id)
+                    ->where('date', '<', $dateFrom)->sum('amount');
+                $priorPaid += (float) Payment::where('landlord_id', $landlord->id)
+                    ->where('type', 'extra_payment')->where('amount_paid', '>', 0)
+                    ->where(function ($q) use ($dateFrom) {
+                        $q->whereNull('paid_at')->where('month', '<', $dateFrom)
+                          ->orWhere('paid_at', '<', $dateFrom);
+                    })->sum('amount_paid');
+
+                $priorCharged += (float) PaymentVoucher::where('paid_to_type', 'landlord')
+                    ->where('landlord_id', $landlord->id)->where('date', '<', $dateFrom)->sum('amount');
+                $priorCharged += (float) \App\Models\OtherOwnedRentPurchaseVoucher::where('landlord_id', $landlord->id)
+                    ->where('date', '<', $dateFrom)->sum('amount');
+            }
+
+            $openingBalance = $unitValueOwed - $priorPaid + $priorCharged;
+
+            // Current Period Credits (payments received)
+            $rvPaid = (float) ReceivingVoucher::where('received_from_type', 'owner')
+                ->where('owner_id', $landlord->id)
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $grvPaid = (float) GeneralReceivingVoucher::where('landlord_id', $landlord->id)
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $extraPaid = (float) Payment::where('landlord_id', $landlord->id)
+                ->where('type', 'extra_payment')->where('amount_paid', '>', 0)
+                ->where(function ($q) use ($dateFrom, $dateTo) {
+                    if ($dateFrom) {
+                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '>=', $dateFrom)->orWhere('paid_at', '>=', $dateFrom));
+                    }
+                    if ($dateTo) {
+                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '<=', $dateTo)->orWhere('paid_at', '<=', $dateTo));
+                    }
+                })->sum('amount_paid');
+
+            $totalCredit = $rvPaid + $grvPaid + $extraPaid;
+
+            // Current Period Debits (payouts / rent purchases)
+            $payouts = (float) PaymentVoucher::where('paid_to_type', 'landlord')
+                ->where('landlord_id', $landlord->id)
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $orp = (float) \App\Models\OtherOwnedRentPurchaseVoucher::where('landlord_id', $landlord->id)
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+
+            $totalDebit = $payouts + $orp;
+            $closingBalance = $openingBalance + $totalDebit - $totalCredit;
+
+            if ($openingBalance == 0 && $totalDebit == 0 && $totalCredit == 0) {
+                continue;
+            }
+
+            $results->push([
+                'id' => $landlord->id,
+                'name' => $landlord->name,
+                'type' => 'Landlord Payable',
+                'group' => 'landlord_payable',
+                'opening' => $openingBalance,
+                'debit' => $totalDebit,
+                'credit' => $totalCredit,
+                'closing' => $closingBalance,
+                'url' => route('landlord_ledgers.index', ['landlord_id' => $landlord->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+            ]);
+        }
+
+        return $results;
+    }
+
+    private function getPartyDuesSummary($dateFrom, $dateTo)
+    {
+        $results = collect();
+        $parties = \App\Models\Party::orderBy('name')->get();
+
+        foreach ($parties as $party) {
+            $opBal = (float) ($party->opening_balance ?? 0);
+            $opReceivable = $opBal > 0 ? $opBal : 0.0;
+            $opPayable = $opBal < 0 ? abs($opBal) : 0.0;
+            $includeOpeningBalance = !$dateFrom || !$party->created_at || $party->created_at->lt(\Carbon\Carbon::parse($dateFrom));
+
+            // Prior Period
+            $priorDebit = 0.0;
+            $priorCredit = 0.0;
+            if ($dateFrom) {
+                $priorDebit += (float) \App\Models\PartyDue::where('party_id', $party->id)
+                    ->where('type', 'receivable')->where('date', '<', $dateFrom)->sum('amount');
+                $priorCredit += (float) \App\Models\PartyDue::where('party_id', $party->id)
+                    ->where('type', 'payable')->where('date', '<', $dateFrom)->sum('amount');
+
+                $priorDebit += (float) PaymentVoucher::where('party_id', $party->id)
+                    ->where('paid_to_type', 'other')->where('date', '<', $dateFrom)->sum('amount');
+                $priorCredit += (float) GeneralReceivingVoucher::where('party_id', $party->id)
+                    ->where('date', '<', $dateFrom)->sum('amount');
+            }
+
+            $openingBalance = ($includeOpeningBalance ? ($opReceivable - $opPayable) : 0) + $priorDebit - $priorCredit;
+
+            // Current Period
+            $duesReceivable = (float) \App\Models\PartyDue::where('party_id', $party->id)
+                ->where('type', 'receivable')
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $payments = (float) PaymentVoucher::where('party_id', $party->id)
+                ->where('paid_to_type', 'other')
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $totalDebit = $duesReceivable + $payments;
+
+            $duesPayable = (float) \App\Models\PartyDue::where('party_id', $party->id)
+                ->where('type', 'payable')
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $receipts = (float) GeneralReceivingVoucher::where('party_id', $party->id)
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $totalCredit = $duesPayable + $receipts;
+
+            $closingBalance = $openingBalance + $totalDebit - $totalCredit;
+
+            if ($openingBalance == 0 && $totalDebit == 0 && $totalCredit == 0) {
+                continue;
+            }
+
+            $results->push([
+                'id' => $party->id,
+                'name' => $party->name,
+                'type' => 'Party Due',
+                'group' => 'party_due',
+                'opening' => $openingBalance,
+                'debit' => $totalDebit,
+                'credit' => $totalCredit,
+                'closing' => $closingBalance,
+                'url' => route('ledgers.party', ['party_id' => $party->id]),
+            ]);
+        }
+
+        return $results;
+    }
+
+    private function getMeterReadingReceivablesSummary($dateFrom, $dateTo)
+    {
+        $results = collect();
+
+        $unitIds = \App\Models\MeterReadingVoucher::select('unit_id')->distinct()->pluck('unit_id');
+        $units = Unit::with(['tenant', 'otherTenant'])->whereIn('id', $unitIds)->orderBy('unit_number')->get();
+
+        foreach ($units as $unit) {
+            $openingBilled = $dateFrom ? (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
+                ->where('date', '<', $dateFrom)->sum('amount') : 0.0;
+            $openingPaid = $dateFrom ? (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
+                ->where('date', '<', $dateFrom)->where('status', 'paid')->sum('amount') : 0.0;
+            $openingBalance = $openingBilled - $openingPaid;
+
+            $totalDebit = (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+            $totalCredit = (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
+                ->where('status', 'paid')
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+
+            $closingBalance = $openingBalance + $totalDebit - $totalCredit;
+
+            if ($openingBalance == 0 && $totalDebit == 0 && $totalCredit == 0) {
+                continue;
+            }
+
+            $tenantName = $unit->tenant->name ?? $unit->otherTenant->name ?? null;
+
+            $results->push([
+                'id' => $unit->id,
+                'name' => 'Unit ' . $unit->unit_number . ($tenantName ? ' (' . $tenantName . ')' : ''),
+                'type' => 'Meter Reading Receivable',
+                'group' => 'meter_reading',
+                'opening' => $openingBalance,
+                'debit' => $totalDebit,
+                'credit' => $totalCredit,
+                'closing' => $closingBalance,
+                'url' => route('utility-readings.index', ['unit_id' => $unit->id, 'month' => \Carbon\Carbon::parse($dateTo ?: now())->format('Y-m')]),
             ]);
         }
 

@@ -110,6 +110,9 @@
                         <option value="liability" {{ $accountType == 'liability' ? 'selected' : '' }}>Equity / Liabilities (Owners)</option>
                         <option value="receivable" {{ $accountType == 'receivable' ? 'selected' : '' }}>Receivables (Tenants)</option>
                         <option value="expense" {{ $accountType == 'expense' ? 'selected' : '' }}>Expenses</option>
+                        <option value="landlord_payable" {{ $accountType == 'landlord_payable' ? 'selected' : '' }}>Landlord Payables</option>
+                        <option value="party_due" {{ $accountType == 'party_due' ? 'selected' : '' }}>Party Dues</option>
+                        <option value="meter_reading" {{ $accountType == 'meter_reading' ? 'selected' : '' }}>Meter Reading Receivables</option>
                     </select>
                 </div>
                 <div class="flex gap-2 items-end w-full sm:w-auto">
@@ -154,69 +157,23 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700 text-base">
-                @php 
-                    $grandTotalOpening = 0;
-                    $grandTotalDebit = 0;
-                    $grandTotalCredit = 0;
-                    $grandTotalClosing = 0;
-                @endphp
-
-                @forelse($summary as $groupName => $entries)
-                    @php 
-                        $groupLabel = '';
-                        if ($groupName === 'asset') $groupLabel = 'Assets (Bank & Cash)';
-                        elseif ($groupName === 'liability') $groupLabel = 'Equity & Liabilities (Owners)';
-                        elseif ($groupName === 'receivable') $groupLabel = 'Receivables (Tenants)';
-                        elseif ($groupName === 'expense') $groupLabel = 'Expenses';
-
-                        $groupOpening = $entries->sum('opening');
-                        $groupDebit = $entries->sum('debit');
-                        $groupCredit = $entries->sum('credit');
-                        $groupClosing = $entries->sum('closing');
-
-                        // We only sum up for grand totals logically. But mixing assets and expenses in a single grand total might not make accounting sense. 
-                        // We will just show the grand totals as a raw sum of what's displayed.
-                        $grandTotalOpening += $groupOpening;
-                        $grandTotalDebit += $groupDebit;
-                        $grandTotalCredit += $groupCredit;
-                        $grandTotalClosing += $groupClosing;
-                    @endphp
-
-                    <tr class="bg-gray-100 dark:bg-gray-700 font-bold border-t-2 border-gray-300 dark:border-gray-600">
-                        <td colspan="5" class="px-6 py-3 text-sm text-gray-900 dark:text-white uppercase tracking-wider">
-                            {{ $groupLabel }}
+                @forelse($summary as $entry)
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-medium">
+                            {{ $entry['name'] }}
                         </td>
-                    </tr>
-
-                    @foreach($entries as $entry)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white font-medium">
-                                <a href="{{ $entry['url'] }}" class="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 no-print underline" target="_blank" title="View Ledger">
-                                    {{ $entry['name'] }}
-                                </a>
-                                <span class="hidden print:inline">{{ $entry['name'] }}</span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                                {{ number_format($entry['opening'], 2) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                                {{ number_format($entry['debit'], 2) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                                {{ number_format($entry['credit'], 2) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold {{ $entry['closing'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
-                                {{ number_format($entry['closing'], 2) }}
-                            </td>
-                        </tr>
-                    @endforeach
-                    
-                    <tr class="bg-gray-50 dark:bg-gray-800 font-semibold border-b-2 border-gray-300 dark:border-gray-600">
-                        <td class="px-6 py-3 text-sm text-right text-gray-900 dark:text-white">Group Total:</td>
-                        <td class="px-6 py-3 text-sm text-right text-gray-900 dark:text-white">{{ number_format($groupOpening, 2) }}</td>
-                        <td class="px-6 py-3 text-sm text-right text-gray-900 dark:text-white">{{ number_format($groupDebit, 2) }}</td>
-                        <td class="px-6 py-3 text-sm text-right text-gray-900 dark:text-white">{{ number_format($groupCredit, 2) }}</td>
-                        <td class="px-6 py-3 text-sm text-right text-gray-900 dark:text-white">{{ number_format($groupClosing, 2) }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
+                            {{ number_format($entry['opening'], 2) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
+                            {{ number_format($entry['debit'], 2) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
+                            {{ number_format($entry['credit'], 2) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold {{ $entry['closing'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                            {{ number_format($entry['closing'], 2) }}
+                        </td>
                     </tr>
                 @empty
                     <tr>
@@ -230,10 +187,10 @@
             <tfoot class="bg-gray-200 dark:bg-gray-900 border-t-4 border-gray-300 dark:border-gray-700 print:bg-gray-200 print:text-black">
                 <tr>
                     <th scope="row" class="px-6 py-4 text-left text-base font-bold text-gray-900 dark:text-white uppercase print:text-black">Grand Total</th>
-                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($grandTotalOpening, 2) }}</td>
-                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($grandTotalDebit, 2) }}</td>
-                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($grandTotalCredit, 2) }}</td>
-                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($grandTotalClosing, 2) }}</td>
+                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('opening'), 2) }}</td>
+                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('debit'), 2) }}</td>
+                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('credit'), 2) }}</td>
+                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('closing'), 2) }}</td>
                 </tr>
             </tfoot>
             @endif

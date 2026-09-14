@@ -40,56 +40,15 @@
             </tr>
         </thead>
         <tbody>
-            @php 
-                $grandTotalOpening = 0;
-                $grandTotalDebit = 0;
-                $grandTotalCredit = 0;
-                $grandTotalClosing = 0;
-            @endphp
-
-            @forelse($summary as $groupName => $entries)
-                @php 
-                    $groupLabel = '';
-                    if ($groupName === 'asset') $groupLabel = 'Assets (Bank & Cash)';
-                    elseif ($groupName === 'liability') $groupLabel = 'Equity & Liabilities (Owners)';
-                    elseif ($groupName === 'receivable') $groupLabel = 'Receivables (Tenants)';
-                    elseif ($groupName === 'expense') $groupLabel = 'Expenses';
-
-                    $groupOpening = $entries->sum('opening');
-                    $groupDebit = $entries->sum('debit');
-                    $groupCredit = $entries->sum('credit');
-                    $groupClosing = $entries->sum('closing');
-
-                    $grandTotalOpening += $groupOpening;
-                    $grandTotalDebit += $groupDebit;
-                    $grandTotalCredit += $groupCredit;
-                    $grandTotalClosing += $groupClosing;
-                @endphp
-
+            @forelse($summary as $entry)
                 <tr>
-                    <td colspan="5" class="group-header">
-                        {{ $groupLabel }}
+                    <td class="text-left">{{ $entry['name'] }}</td>
+                    <td>{{ number_format($entry['opening'], 2) }}</td>
+                    <td>{{ number_format($entry['debit'], 2) }}</td>
+                    <td>{{ number_format($entry['credit'], 2) }}</td>
+                    <td style="font-weight: bold;">
+                        {{ number_format($entry['closing'], 2) }}
                     </td>
-                </tr>
-
-                @foreach($entries as $entry)
-                    <tr>
-                        <td class="text-left">{{ $entry['name'] }}</td>
-                        <td>{{ number_format($entry['opening'], 2) }}</td>
-                        <td>{{ number_format($entry['debit'], 2) }}</td>
-                        <td>{{ number_format($entry['credit'], 2) }}</td>
-                        <td style="font-weight: bold;">
-                            {{ number_format($entry['closing'], 2) }}
-                        </td>
-                    </tr>
-                @endforeach
-                
-                <tr class="group-total">
-                    <td class="text-left" style="text-align: right;">Group Total:</td>
-                    <td>{{ number_format($groupOpening, 2) }}</td>
-                    <td>{{ number_format($groupDebit, 2) }}</td>
-                    <td>{{ number_format($groupCredit, 2) }}</td>
-                    <td>{{ number_format($groupClosing, 2) }}</td>
                 </tr>
             @empty
                 <tr>
@@ -101,10 +60,10 @@
         <tfoot>
             <tr class="grand-total">
                 <th class="text-left" style="text-align: left;">Grand Total</th>
-                <td style="text-align: right;">{{ number_format($grandTotalOpening, 2) }}</td>
-                <td style="text-align: right;">{{ number_format($grandTotalDebit, 2) }}</td>
-                <td style="text-align: right;">{{ number_format($grandTotalCredit, 2) }}</td>
-                <td style="text-align: right;">{{ number_format($grandTotalClosing, 2) }}</td>
+                <td style="text-align: right;">{{ number_format($summary->sum('opening'), 2) }}</td>
+                <td style="text-align: right;">{{ number_format($summary->sum('debit'), 2) }}</td>
+                <td style="text-align: right;">{{ number_format($summary->sum('credit'), 2) }}</td>
+                <td style="text-align: right;">{{ number_format($summary->sum('closing'), 2) }}</td>
             </tr>
         </tfoot>
         @endif
