@@ -106,20 +106,19 @@ class LedgerController extends Controller
         $owners = Owner::orderBy('name')->get();
 
         $ownerId = $request->query('owner_id');
-        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
-        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
+        [$year, $months] = $this->resolveOwnerMonthFilter($request);
 
         $ledgerData = null;
         if ($ownerId) {
-            $ledgerData = $this->getOwnerLedgerData($ownerId, $dateFrom, $dateTo);
+            $ledgerData = $this->getOwnerLedgerData($ownerId, $year, $months);
         }
 
         return view('ledgers.owner', [
             'title' => 'Managing Owner Ledger',
             'owners' => $owners,
             'ownerId' => $ownerId,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
+            'year' => $year,
+            'months' => $months,
             'ledgerData' => $ledgerData,
         ]);
     }
@@ -129,19 +128,19 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $ownerId = $request->query('owner_id');
-        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
-        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
+        [$year, $months] = $this->resolveOwnerMonthFilter($request);
 
         if (!$ownerId) {
             return back()->with('error', 'Select an owner to export.');
         }
 
-        $ledgerData = $this->getOwnerLedgerData($ownerId, $dateFrom, $dateTo);
+        $ledgerData = $this->getOwnerLedgerData($ownerId, $year, $months);
 
         $pdf = Pdf::loadView('ledgers.pdf', array_merge($ledgerData, [
             'type' => 'owner',
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
+            'dateFrom' => null,
+            'dateTo' => null,
+            'periodLabel' => $this->ownerMonthsRangeLabel($year, $months),
             'title' => 'Owner Ledger - ' . $ledgerData['owner']->name,
         ]))->setPaper('a4', 'portrait');
 
@@ -153,19 +152,48 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $ownerId = $request->query('owner_id');
-        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
-        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
+        [$year, $months] = $this->resolveOwnerMonthFilter($request);
 
         if (!$ownerId) {
             return back()->with('error', 'Select an owner to export.');
         }
 
-        $ledgerData = $this->getOwnerLedgerData($ownerId, $dateFrom, $dateTo);
+        $ledgerData = $this->getOwnerLedgerData($ownerId, $year, $months);
 
         return Excel::download(
             new OwnerLedgerExport($ledgerData['entries'], 'Owner Ledger - ' . $ledgerData['owner']->name, $ledgerData['summary']),
             'owner_ledger_' . str_replace(' ', '_', strtolower($ledgerData['owner']->name)) . '.xlsx'
         );
+    }
+
+    /**
+     * Resolve the selected year + month checkboxes for the owner ledger filter,
+     * defaulting to the current month when nothing is selected yet.
+     */
+    private function resolveOwnerMonthFilter(Request $request): array
+    {
+        $year = (int) $request->query('year', Carbon::now()->year);
+
+        $months = collect($request->query('months', []))
+            ->map(fn($m) => (int) $m)
+            ->filter(fn($m) => $m >= 1 && $m <= 12)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        if (empty($months)) {
+            $months = [Carbon::now()->month];
+        }
+
+        return [$year, $months];
+    }
+
+    private function ownerMonthsRangeLabel(int $year, array $months): string
+    {
+        return collect($months)
+            ->map(fn($m) => Carbon::create($year, $m, 1)->format('F Y'))
+            ->implode(', ');
     }
 
     /**
@@ -563,14 +591,24 @@ class LedgerController extends Controller
         return $totalIncome - $totalExpenses;
     }
 
-    private function getOwnerLedgerData($ownerId, $dateFrom, $dateTo)
+    private function getOwnerLedgerData($ownerId, int $year, array $months)
     {
         $owner = Owner::findOrFail($ownerId);
         $entries = collect();
 
-        // Standardize dates
-        $dateFromStr = $dateFrom ?: Carbon::now()->startOfMonth()->toDateString();
-        $dateToStr = $dateTo ?: Carbon::now()->endOfMonth()->toDateString();
+        // Selected months (sorted) define the set of visible periods; the earliest
+        // one anchors the opening balance carried forward into the statement.
+        sort($months);
+        $monthRanges = collect($months)->map(function ($m) use ($year) {
+            $start = Carbon::create($year, $m, 1)->startOfMonth();
+            return [
+                'month' => $m,
+                'start' => $start,
+                'end' => $start->copy()->endOfMonth(),
+            ];
+        });
+
+        $dateFromStr = $monthRanges->first()['start']->toDateString();
 
         // 1. Calculate Previous Month / Prior Accumulated Profit (Opening Balance)
         $priorToDate = Carbon::parse($dateFromStr)->subDay()->toDateString();
@@ -607,44 +645,49 @@ class LedgerController extends Controller
             'is_opening' => true,
         ]);
 
-        // 2. Month-by-Month Profit Share (Locked at the end of each month)
-        $currentMonth = Carbon::parse($dateFromStr)->startOfMonth();
-        $endMonth = Carbon::parse($dateToStr)->endOfMonth();
+        // 2. Month-by-Month Profit Share (Locked at the end of each selected month)
+        foreach ($monthRanges as $range) {
+            $monthStart = $range['start'];
+            $monthKey = $monthStart->format('Y-m');
 
-        while ($currentMonth->lte($endMonth)) {
-            $mStartStr = $currentMonth->copy()->startOfMonth()->toDateString();
-            $mEndStr = $currentMonth->copy()->endOfMonth()->toDateString();
-
-            $mProfit = $this->calculateMallNetProfit($mStartStr, $mEndStr);
+            $mProfit = $this->calculateMallNetProfit($monthStart->toDateString(), $range['end']->toDateString());
             $mShare = round($mProfit * ((float) $owner->partnership_percentage / 100), 2);
 
             if ($mShare != 0) {
-                $mClosingDate = $currentMonth->copy()->endOfMonth()->endOfDay();
-                $isCurrentOngoingMonth = $currentMonth->isCurrentMonth();
+                $mClosingDate = $range['end']->copy()->endOfDay();
+                $isCurrentOngoingMonth = $monthStart->isCurrentMonth();
 
                 $entries->push([
                     'date' => $mClosingDate,
-                    'voucher_no' => 'P&L-' . strtoupper($currentMonth->format('M-Y')),
+                    'voucher_no' => 'P&L-' . strtoupper($monthStart->format('M-Y')),
                     'account' => 'Mall Profit Share',
                     'reference' => 'Share (' . number_format($owner->partnership_percentage, 1) . '%)',
-                    'notes' => ($isCurrentOngoingMonth ? 'Ongoing Profit Share for ' : 'Locked Monthly Profit Share for ') . $currentMonth->format('F Y'),
+                    'notes' => ($isCurrentOngoingMonth ? 'Ongoing Profit Share for ' : 'Locked Monthly Profit Share for ') . $monthStart->format('F Y'),
                     'debit' => $mShare < 0 ? abs($mShare) : 0.00,
                     'credit' => $mShare > 0 ? $mShare : 0.00,
                     'type' => 'profit_share',
                     'id' => null,
                     'is_opening' => false,
+                    'month_key' => $monthKey,
                 ]);
             }
-
-            $currentMonth->addMonth();
         }
+
+        // Constrain a query to only the selected (possibly non-contiguous) month ranges
+        $withinSelectedMonths = function ($query) use ($monthRanges) {
+            $query->where(function ($q) use ($monthRanges) {
+                foreach ($monthRanges as $range) {
+                    $q->orWhereBetween('date', [$range['start']->toDateString(), $range['end']->toDateString()]);
+                }
+            });
+        };
+        $monthKeyForDate = fn($date) => Carbon::parse($date)->format('Y-m');
 
         // 3. Outflows: Payment Vouchers as DEBITS
         $pvPayouts = PaymentVoucher::with('paymentAccount')
             ->where('paid_to_type', 'owner')
             ->where('owner_id', $ownerId)
-            ->where('date', '>=', $dateFromStr)
-            ->where('date', '<=', $dateToStr)
+            ->tap($withinSelectedMonths)
             ->get();
 
         foreach ($pvPayouts as $pv) {
@@ -659,13 +702,13 @@ class LedgerController extends Controller
                 'type' => 'payment_voucher',
                 'id' => $pv->id,
                 'is_opening' => false,
+                'month_key' => $monthKeyForDate($pv->date),
             ]);
         }
 
         // 4. Outflows: Withdrawals as DEBITS
         $payouts = Withdrawal::where('owner_id', $ownerId)
-            ->where('date', '>=', $dateFromStr)
-            ->where('date', '<=', $dateToStr)
+            ->tap($withinSelectedMonths)
             ->get();
 
         foreach ($payouts as $payout) {
@@ -680,14 +723,14 @@ class LedgerController extends Controller
                 'type' => 'withdrawal',
                 'id' => $payout->id,
                 'is_opening' => false,
+                'month_key' => $monthKeyForDate($payout->date),
             ]);
         }
 
         // 5. Inflows: ReceivingVouchers (type = 'owner') as CREDITS
         $deposits = ReceivingVoucher::where('received_from_type', 'owner')
             ->where('owner_id', $ownerId)
-            ->where('date', '>=', $dateFromStr)
-            ->where('date', '<=', $dateToStr)
+            ->tap($withinSelectedMonths)
             ->get();
 
         foreach ($deposits as $deposit) {
@@ -702,6 +745,7 @@ class LedgerController extends Controller
                 'type' => 'receiving_voucher',
                 'id' => $deposit->id,
                 'is_opening' => false,
+                'month_key' => $monthKeyForDate($deposit->date),
             ]);
         }
 
@@ -723,9 +767,24 @@ class LedgerController extends Controller
             return $entry;
         });
 
+        // Per-month subtotals, in the order the months were selected/rendered,
+        // so every selected month gets a section even when it has no entries.
+        $monthlySubtotals = $monthRanges->mapWithKeys(function ($range) use ($entries) {
+            $monthKey = $range['start']->format('Y-m');
+            $monthEntries = $entries->where('month_key', $monthKey);
+
+            return [$monthKey => [
+                'label' => $range['start']->format('F Y'),
+                'debit' => $monthEntries->sum('debit'),
+                'credit' => $monthEntries->sum('credit'),
+                'net' => $monthEntries->sum('credit') - $monthEntries->sum('debit'),
+            ]];
+        });
+
         return [
             'owner' => $owner,
             'entries' => $entries,
+            'monthly_subtotals' => $monthlySubtotals,
             'summary' => [
                 'total_debit' => $totalDebit,
                 'total_credit' => $totalCredit,
@@ -1144,23 +1203,19 @@ class LedgerController extends Controller
         $this->authorizeLedger();
 
         $ownerId = $request->query('owner_id');
-        $dateFrom = $request->query('date_from', Carbon::now()->startOfMonth()->toDateString());
-        $dateTo = $request->query('date_to', Carbon::now()->endOfMonth()->toDateString());
+        [$year, $months] = $this->resolveOwnerMonthFilter($request);
 
         if (!$ownerId) {
             abort(400, 'No owner selected.');
         }
 
-        $ledgerData = $this->getOwnerLedgerData($ownerId, $dateFrom, $dateTo);
+        $ledgerData = $this->getOwnerLedgerData($ownerId, $year, $months);
         $owner = $ledgerData['owner'];
 
         $filterChips = [
             ['label' => 'Owner', 'value' => $owner->name . ($owner->email ? ' (' . $owner->email . ')' : '')],
+            ['label' => 'Months', 'value' => $this->ownerMonthsRangeLabel($year, $months)],
         ];
-        if ($dateFrom)
-            $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
-        if ($dateTo)
-            $filterChips[] = ['label' => 'Date To', 'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
 
         $s = $ledgerData['summary'];
         $summaryCards = [

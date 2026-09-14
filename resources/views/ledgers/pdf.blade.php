@@ -36,8 +36,12 @@
     <div class="header">
         <h1>{{ $title }}</h1>
         <p>
-            <strong>Palladium Mall Management System</strong> &bull; 
-            Statement Period: {{ $dateFrom ? Carbon\Carbon::parse($dateFrom)->format('d M Y') : 'Beginning' }} to {{ $dateTo ? Carbon\Carbon::parse($dateTo)->format('d M Y') : 'Present' }}
+            <strong>Palladium Mall Management System</strong> &bull;
+            @if(!empty($periodLabel))
+                Statement Period: {{ $periodLabel }}
+            @else
+                Statement Period: {{ $dateFrom ? Carbon\Carbon::parse($dateFrom)->format('d M Y') : 'Beginning' }} to {{ $dateTo ? Carbon\Carbon::parse($dateTo)->format('d M Y') : 'Present' }}
+            @endif
         </p>
         <p>Generated on: {{ now()->format('d M Y h:i A') }}</p>
     </div>
