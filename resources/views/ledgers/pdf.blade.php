@@ -221,6 +221,9 @@
                     <th>Date</th>
                     <th>Voucher #</th>
                     <th>Spent On / Notes</th>
+                    @if(!empty($is_all))
+                        <th>Expense Category</th>
+                    @endif
                     <th>Payment Account</th>
                     <th>Reference</th>
                     <th class="text-right">Amount</th>
@@ -232,6 +235,9 @@
                         <td class="font-mono">{{ $entry['date']->format('d M Y') }}</td>
                         <td class="font-mono">{{ $entry['voucher_no'] }}</td>
                         <td>{{ $entry['notes'] }}</td>
+                        @if(!empty($is_all))
+                            <td>{{ $entry['expense_head'] }}</td>
+                        @endif
                         <td>{{ $entry['payment_account'] }}</td>
                         <td class="font-mono">{{ $entry['reference'] }}</td>
                         <td class="text-right text-red" style="font-weight: bold;">Rs. {{ number_format($entry['amount'], 2) }}</td>

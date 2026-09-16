@@ -309,15 +309,16 @@ class LedgerController extends Controller
         }
 
         $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
+        $headName = $ledgerData['head']->name ?? 'All Expenses';
 
         $pdf = Pdf::loadView('ledgers.pdf', array_merge($ledgerData, [
             'type' => 'expense',
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
-            'title' => 'Expense Head Ledger - ' . $ledgerData['head']->name,
+            'title' => 'Expense Head Ledger - ' . $headName,
         ]))->setPaper('a4', 'portrait');
 
-        return $pdf->download('expense_head_ledger_' . str_replace(' ', '_', strtolower($ledgerData['head']->name)) . '.pdf');
+        return $pdf->download('expense_head_ledger_' . str_replace(' ', '_', strtolower($headName)) . '.pdf');
     }
 
     public function exportExpenseExcel(Request $request)
@@ -333,10 +334,11 @@ class LedgerController extends Controller
         }
 
         $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
+        $headName = $ledgerData['head']->name ?? 'All Expenses';
 
         return Excel::download(
-            new ExpenseLedgerExport($ledgerData['entries'], 'Expense Head Ledger - ' . $ledgerData['head']->name, $ledgerData['summary']),
-            'expense_head_ledger_' . str_replace(' ', '_', strtolower($ledgerData['head']->name)) . '.xlsx'
+            new ExpenseLedgerExport($ledgerData['entries'], 'Expense Head Ledger - ' . $headName, $ledgerData['summary'], $ledgerData['is_all']),
+            'expense_head_ledger_' . str_replace(' ', '_', strtolower($headName)) . '.xlsx'
         );
     }
 
@@ -1082,16 +1084,17 @@ class LedgerController extends Controller
 
     private function getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo)
     {
-        $head = ExpenseHead::findOrFail($expenseHeadId);
+        $isAll = $expenseHeadId === 'all';
+        $head = $isAll ? null : ExpenseHead::findOrFail($expenseHeadId);
 
-        $expenses = Expense::where('expense_head_id', $expenseHeadId)
-            ->with(['paymentAccount'])
+        $expenses = Expense::when(!$isAll, fn($q) => $q->where('expense_head_id', $expenseHeadId))
+            ->with(['paymentAccount', 'expenseHead'])
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->get();
 
-        $jvVouchers = \App\Models\JvVoucher::where('expense_head_id', $expenseHeadId)
-            ->with(['paymentAccount'])
+        $jvVouchers = \App\Models\JvVoucher::when(!$isAll, fn($q) => $q->where('expense_head_id', $expenseHeadId))
+            ->with(['paymentAccount', 'expenseHead'])
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
             ->get();
@@ -1103,6 +1106,7 @@ class LedgerController extends Controller
                 'date' => $e->date,
                 'voucher_no' => $e->voucher_no,
                 'notes' => $e->notes ?? '—',
+                'expense_head' => $e->expenseHead->name ?? '—',
                 'payment_account' => $e->paymentAccount->name ?? '—',
                 'reference' => $e->reference ?? '—',
                 'amount' => (float) $e->amount,
@@ -1117,6 +1121,7 @@ class LedgerController extends Controller
                 'date' => $jv->date,
                 'voucher_no' => $jv->voucher_no,
                 'notes' => $jv->notes ?? '—',
+                'expense_head' => $jv->expenseHead->name ?? '—',
                 'payment_account' => $jv->status === 'paid' ? ($jv->paymentAccount->name ?? '—') : 'Unpaid (Accrued)',
                 'reference' => $jv->reference ?? '—',
                 'amount' => (float) $jv->amount,
@@ -1131,6 +1136,7 @@ class LedgerController extends Controller
 
         return [
             'head' => $head,
+            'is_all' => $isAll,
             'entries' => $entries,
             'summary' => [
                 'total_amount' => $totalAmount,
@@ -1307,9 +1313,10 @@ class LedgerController extends Controller
 
         $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
         $head = $ledgerData['head'];
+        $headName = $head->name ?? 'All Expenses';
 
         $filterChips = [
-            ['label' => 'Expense Category', 'value' => $head->name . ($head->code ? ' (Code: ' . $head->code . ')' : '')],
+            ['label' => 'Expense Category', 'value' => $head ? ($head->name . ($head->code ? ' (Code: ' . $head->code . ')' : '')) : 'All Expenses'],
         ];
         if ($dateFrom)
             $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
@@ -1325,13 +1332,16 @@ class LedgerController extends Controller
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
             ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
             ['key' => 'notes', 'label' => 'Spent On / Notes'],
-            ['key' => 'payment_account', 'label' => 'Payment Account'],
-            ['key' => 'reference', 'label' => 'Reference', 'td_class' => 'mono'],
-            ['key' => 'amount', 'label' => 'Amount', 'type' => 'amount', 'class' => 'text-right'],
         ];
+        if ($ledgerData['is_all']) {
+            $columns[] = ['key' => 'expense_head', 'label' => 'Expense Category'];
+        }
+        $columns[] = ['key' => 'payment_account', 'label' => 'Payment Account'];
+        $columns[] = ['key' => 'reference', 'label' => 'Reference', 'td_class' => 'mono'];
+        $columns[] = ['key' => 'amount', 'label' => 'Amount', 'type' => 'amount', 'class' => 'text-right'];
 
         return view('ledgers.print_page', [
-            'pageTitle' => 'Expense Ledger — ' . $head->name,
+            'pageTitle' => 'Expense Ledger — ' . $headName,
             'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
             'columns' => $columns,

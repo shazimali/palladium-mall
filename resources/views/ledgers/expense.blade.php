@@ -13,6 +13,13 @@
                 open: false,
                 highlightedIndex: -1,
                 options: [
+                    {
+                        id: 'all',
+                        headName: 'All Expenses',
+                        code: '',
+                        text: 'All Expenses',
+                        searchLabel: 'all expenses'
+                    },
                     @foreach($heads as $head)
                     {
                         id: '{{ $head->id }}',
@@ -195,6 +202,9 @@
                             <th class="px-3.5 py-2.5 text-white">Date</th>
                             <th class="px-3.5 py-2.5 text-white">Voucher #</th>
                             <th class="px-3.5 py-2.5 text-white">Spent On / Notes</th>
+                            @if($ledgerData['is_all'])
+                                <th class="px-3.5 py-2.5 text-white">Expense Category</th>
+                            @endif
                             <th class="px-3.5 py-2.5 text-white">Payment Account</th>
                             <th class="px-3.5 py-2.5 text-white">Reference</th>
                             <th class="px-3.5 py-2.5 text-right text-white">Amount</th>
@@ -224,6 +234,11 @@
                                 <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">
                                     {{ $entry['notes'] }}
                                 </td>
+                                @if($ledgerData['is_all'])
+                                    <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">
+                                        {{ $entry['expense_head'] }}
+                                    </td>
+                                @endif
                                 <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">
                                     {{ $entry['payment_account'] }}
                                 </td>
@@ -236,8 +251,12 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
-                                    No expenditures recorded under this expense category.
+                                <td colspan="{{ $ledgerData['is_all'] ? 7 : 6 }}" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
+                                    @if($ledgerData['is_all'])
+                                        No expenditures recorded for the selected date range.
+                                    @else
+                                        No expenditures recorded under this expense category.
+                                    @endif
                                 </td>
                             </tr>
                         @endforelse
@@ -248,7 +267,7 @@
                         @endphp
                         <tfoot class="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-black text-xs sm:text-sm">
                             <tr>
-                                <td colspan="5" class="px-3.5 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
+                                <td colspan="{{ $ledgerData['is_all'] ? 6 : 5 }}" class="px-3.5 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                 </td>
                                 <td class="px-3.5 py-2.5 text-right text-rose-600 dark:text-rose-400 font-mono font-black whitespace-nowrap">

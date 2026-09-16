@@ -24,43 +24,58 @@ class ExpenseLedgerExport implements
     public function __construct(
         protected Collection $entries,
         protected string $title,
-        protected array $summary
+        protected array $summary,
+        protected bool $isAll = false
     ) {}
 
     public function collection(): Collection
     {
-        return $this->entries->map(fn($e) => [
-            'Date' => $e['date'] ? $e['date']->format('d M Y') : '—',
-            'Voucher #' => $e['voucher_no'] ?? '—',
-            'Spent On / Notes' => $e['notes'] ?? '—',
-            'Payment Account' => $e['payment_account'] ?? '—',
-            'Reference' => $e['reference'] ?? '—',
-            'Amount' => number_format($e['amount'], 2)
-        ]);
+        return $this->entries->map(function ($e) {
+            $row = [
+                'Date' => $e['date'] ? $e['date']->format('d M Y') : '—',
+                'Voucher #' => $e['voucher_no'] ?? '—',
+                'Spent On / Notes' => $e['notes'] ?? '—',
+            ];
+            if ($this->isAll) {
+                $row['Expense Category'] = $e['expense_head'] ?? '—';
+            }
+            $row['Payment Account'] = $e['payment_account'] ?? '—';
+            $row['Reference'] = $e['reference'] ?? '—';
+            $row['Amount'] = number_format($e['amount'], 2);
+
+            return $row;
+        });
     }
 
     public function headings(): array
     {
-        return [
-            'Date',
-            'Voucher #',
-            'Spent On / Notes',
-            'Payment Account',
-            'Reference',
-            'Amount (Rs.)'
-        ];
+        $headings = ['Date', 'Voucher #', 'Spent On / Notes'];
+        if ($this->isAll) {
+            $headings[] = 'Expense Category';
+        }
+        $headings[] = 'Payment Account';
+        $headings[] = 'Reference';
+        $headings[] = 'Amount (Rs.)';
+
+        return $headings;
     }
 
     public function columnWidths(): array
     {
-        return [
-            'A' => 16,
-            'B' => 18,
-            'C' => 35,
-            'D' => 20,
-            'E' => 20,
-            'F' => 20,
-        ];
+        $widths = ['A' => 16, 'B' => 18, 'C' => 35];
+
+        if ($this->isAll) {
+            $widths['D'] = 22;
+            $widths['E'] = 20;
+            $widths['F'] = 20;
+            $widths['G'] = 20;
+        } else {
+            $widths['D'] = 20;
+            $widths['E'] = 20;
+            $widths['F'] = 20;
+        }
+
+        return $widths;
     }
 
     public function styles(Worksheet $sheet): array
