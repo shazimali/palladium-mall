@@ -18,6 +18,46 @@ use Illuminate\Support\Facades\DB;
 class AccountSummaryService
 {
     /**
+     * Flat, per-entity balances (no category collapsing) — one row per real
+     * account/owner/tenant/expense head/landlord/party, grouped by 'group' key.
+     */
+    public function getDetailedSummary($dateFrom, $dateTo, $type = 'all')
+    {
+        $detailed = collect();
+
+        if ($type === 'all' || $type === 'asset') {
+            $detailed = $detailed->concat($this->getAssetsSummary($dateFrom, $dateTo));
+        }
+
+        if ($type === 'all' || $type === 'liability') {
+            $detailed = $detailed->concat($this->getLiabilitiesSummary($dateFrom, $dateTo));
+        }
+
+        if ($type === 'all' || $type === 'receivable') {
+            $detailed = $detailed->concat($this->getReceivablesSummary($dateFrom, $dateTo));
+            $detailed = $detailed->concat($this->getTenantSecurityDepositsSummary($dateFrom, $dateTo));
+        }
+
+        if ($type === 'all' || $type === 'expense') {
+            $detailed = $detailed->concat($this->getExpensesSummary($dateFrom, $dateTo));
+        }
+
+        if ($type === 'all' || $type === 'landlord_payable') {
+            $detailed = $detailed->concat($this->getLandlordPayablesSummary($dateFrom, $dateTo));
+        }
+
+        if ($type === 'all' || $type === 'party_due') {
+            $detailed = $detailed->concat($this->getPartyDuesSummary($dateFrom, $dateTo));
+        }
+
+        if ($type === 'all' || $type === 'jv_payable') {
+            $detailed = $detailed->concat($this->getJvPayablesSummary($dateFrom, $dateTo));
+        }
+
+        return $detailed;
+    }
+
+    /**
      * Get summary for all account types.
      */
     public function getSummary($dateFrom, $dateTo, $type = 'all')

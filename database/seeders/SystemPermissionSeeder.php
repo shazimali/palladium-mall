@@ -14,6 +14,7 @@ class SystemPermissionSeeder extends Seeder
             // Reports Group
             ['name' => 'reports.cashbook', 'display_name' => 'View Cash Book Report', 'group' => 'Reports'],
             ['name' => 'reports.account_summary', 'display_name' => 'View Account Summary Report', 'group' => 'Reports'],
+            ['name' => 'reports.account_summary_detail', 'display_name' => 'View Account Summary Report (Detailed)', 'group' => 'Reports'],
             ['name' => 'reports.daybook', 'display_name' => 'View Day Book Report', 'group' => 'Reports'],
 
             // General Receiving Vouchers Group

@@ -423,6 +423,11 @@ Route::middleware('auth')->group(function () {
         Route::get('ledgers/flat-shop/print', [\App\Http\Controllers\FlatShopLedgerController::class, 'print'])->name('ledgers.flat_shop.print');
         Route::get('ledgers/flat-shop/export', [\App\Http\Controllers\FlatShopLedgerController::class, 'export'])->name('ledgers.flat_shop.export');
         Route::get('ledgers/flat-shop/statement/{unit}', [\App\Http\Controllers\FlatShopLedgerController::class, 'statement'])->name('ledgers.flat_shop.statement');
+
+        // Security Ledger Routes
+        Route::get('ledgers/security', [\App\Http\Controllers\SecurityLedgerController::class, 'index'])->name('ledgers.security.index');
+        Route::get('ledgers/security/print', [\App\Http\Controllers\SecurityLedgerController::class, 'print'])->name('ledgers.security.print');
+        Route::get('ledgers/security/export', [\App\Http\Controllers\SecurityLedgerController::class, 'export'])->name('ledgers.security.export');
     });
 
 
@@ -435,6 +440,9 @@ Route::middleware('auth')->group(function () {
         Route::get('reports/account-summary', [\App\Http\Controllers\AccountSummaryController::class, 'index'])->name('reports.account_summary');
         Route::get('reports/account-summary/pdf', [\App\Http\Controllers\AccountSummaryController::class, 'exportPdf'])->name('reports.account_summary.pdf');
         Route::get('reports/account-summary/excel', [\App\Http\Controllers\AccountSummaryController::class, 'exportExcel'])->name('reports.account_summary.excel');
+        Route::get('reports/account-summary-detail', [\App\Http\Controllers\AccountSummaryController::class, 'detail'])->name('reports.account_summary_detail');
+        Route::get('reports/account-summary-detail/pdf', [\App\Http\Controllers\AccountSummaryController::class, 'detailPdf'])->name('reports.account_summary_detail.pdf');
+        Route::get('reports/account-summary-detail/excel', [\App\Http\Controllers\AccountSummaryController::class, 'detailExcel'])->name('reports.account_summary_detail.excel');
         Route::get('reports/meter-readings', fn() => redirect()->route('utility-readings.index'));
         Route::get('reports/meter-readings/print', fn() => redirect()->route('utility-readings.print'));
     });

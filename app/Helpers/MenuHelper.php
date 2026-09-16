@@ -318,6 +318,7 @@ class MenuHelper
         $ledgerSubItems = [];
         if ($user->can('ledgers.view')) {
             $ledgerSubItems[] = ['name' => 'Flat/Shop Recovery', 'path' => '/ledgers/flat-shop'];
+            $ledgerSubItems[] = ['name' => 'Security Ledgers', 'path' => '/ledgers/security'];
             $ledgerSubItems[] = ['name' => 'Tenant Ledger', 'path' => '/ledgers/tenant'];
             $ledgerSubItems[] = ['name' => 'Owner Ledger', 'path' => '/ledgers/owner'];
             $ledgerSubItems[] = ['name' => 'Landlord Ledger', 'path' => '/landlord-ledgers'];
@@ -344,6 +345,9 @@ class MenuHelper
         }
         if ($user->can('reports.account_summary') || $user->can('reports.view')) {
             $reportsSubItems[] = ['name' => 'Balance Sheet (as per Accounts)', 'path' => '/reports/account-summary'];
+        }
+        if ($user->can('reports.account_summary_detail') || $user->isSuperAdmin()) {
+            $reportsSubItems[] = ['name' => 'Account Summary', 'path' => '/reports/account-summary-detail'];
         }
         if ($user->can('reports.profit_loss')) {
             $reportsSubItems[] = ['name' => 'Profit & Loss', 'path' => '/reports/profit-loss'];
