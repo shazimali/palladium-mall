@@ -39,6 +39,9 @@ class AccountSummaryService
         if ($type === 'all' || $type === 'receivable') {
             $detailed = $detailed->concat($this->getReceivablesSummary($dateFrom, $dateTo));
             $categoryKeys[] = 'receivable';
+
+            $detailed = $detailed->concat($this->getTenantSecurityDepositsSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'tenant_security_deposit';
         }
 
         if ($type === 'all' || $type === 'expense') {
@@ -56,9 +59,9 @@ class AccountSummaryService
             $categoryKeys[] = 'party_due';
         }
 
-        if ($type === 'all' || $type === 'meter_reading') {
-            $detailed = $detailed->concat($this->getMeterReadingReceivablesSummary($dateFrom, $dateTo));
-            $categoryKeys[] = 'meter_reading';
+        if ($type === 'all' || $type === 'jv_payable') {
+            $detailed = $detailed->concat($this->getJvPayablesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'jv_payable';
         }
 
         return $this->collapseToCategories($detailed, $categoryKeys);
@@ -74,11 +77,12 @@ class AccountSummaryService
             'asset_cash'       => 'Cash',
             'asset_bank'       => 'Bank',
             'liability'        => 'Equity & Liabilities (Owners)',
-            'receivable'       => 'Receivables (Tenants)',
+            'receivable'       => 'Tenants',
+            'tenant_security_deposit' => 'Tenant Security Deposits',
             'expense'          => 'Expenses',
             'landlord_payable' => 'Landlord Payables',
             'party_due'        => 'Party Dues',
-            'meter_reading'    => 'Meter Reading Receivables',
+            'jv_payable'       => 'JV Payables',
         ];
 
         $byKey = $detailed->groupBy(function ($row) {
@@ -93,11 +97,13 @@ class AccountSummaryService
                 'name'    => $labels[$key],
                 'type'    => $labels[$key],
                 'group'   => str_starts_with($key, 'asset_') ? 'asset' : $key,
-                'opening' => $entries->sum('opening'),
-                'debit'   => $entries->sum('debit'),
-                'credit'  => $entries->sum('credit'),
-                'closing' => $entries->sum('closing'),
-                'url'     => null,
+                'opening'    => $entries->sum('opening'),
+                'debit'      => $entries->sum('debit'),
+                'credit'     => $entries->sum('credit'),
+                'closing'    => $entries->sum('closing'),
+                'receivable' => $entries->sum(fn($e) => $e['receivable'] ?? max(0, $e['closing'])),
+                'payable'    => $entries->sum(fn($e) => $e['payable'] ?? max(0, -$e['closing'])),
+                'url'        => null,
             ]);
         }
 
@@ -341,6 +347,103 @@ class AccountSummaryService
         return $results;
     }
 
+    /**
+     * Tenant security deposits, shown separately from rent/maintenance dues.
+     * Pending (uncollected) deposits are a receivable; once collected they become
+     * a payable (held on behalf of the tenant until refunded on move-out).
+     */
+    private function getTenantSecurityDepositsSummary($dateFrom, $dateTo)
+    {
+        $results = collect();
+
+        $unitIds = Payment::where('type', 'security_deposit')->distinct()->pluck('unit_id');
+        $units = Unit::with(['tenant', 'otherTenant'])->whereIn('id', $unitIds)->orderBy('unit_number')->get();
+
+        foreach ($units as $unit) {
+            $unitId = $unit->id;
+
+            // Prior Period
+            $priorDepositInvoiced = 0.0;
+            $priorDepositPaid = 0.0;
+            $priorDepositRefunded = 0.0;
+
+            if ($dateFrom) {
+                $priorDepositInvoiced = (float) Payment::where('unit_id', $unitId)
+                    ->where('type', 'security_deposit')
+                    ->where('month', '<', $dateFrom)->sum('amount');
+
+                $priorDepositPaid = (float) Payment::where('unit_id', $unitId)
+                    ->where('type', 'security_deposit')
+                    ->where(function ($q) use ($dateFrom) {
+                        $q->whereNull('paid_at')->where('month', '<', $dateFrom)
+                          ->orWhere('paid_at', '<', $dateFrom);
+                    })->sum('amount_paid');
+
+                $priorDepositRefunded = (float) PaymentVoucher::where('paid_to_type', 'tenant')
+                    ->where(function ($q) use ($unitId, $unit) {
+                        $q->where('unit_id', $unitId);
+                        if ($unit->tenant_id) $q->orWhere('tenant_id', $unit->tenant_id);
+                    })->where('date', '<', $dateFrom)->sum('amount');
+            }
+
+            $openingPendingDeposit = $priorDepositInvoiced - $priorDepositPaid;
+            $openingHeldDeposit = $priorDepositPaid - $priorDepositRefunded;
+
+            // Current Period
+            $periodDepositInvoiced = (float) Payment::where('unit_id', $unitId)
+                ->where('type', 'security_deposit')
+                ->when($dateFrom, fn($q) => $q->where('month', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('month', '<=', $dateTo))->sum('amount');
+
+            $periodDepositPaid = (float) Payment::where('unit_id', $unitId)
+                ->where('type', 'security_deposit')
+                ->where(function ($q) use ($dateFrom, $dateTo) {
+                    if ($dateFrom) {
+                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '>=', $dateFrom)->orWhere('paid_at', '>=', $dateFrom));
+                    }
+                    if ($dateTo) {
+                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '<=', $dateTo)->orWhere('paid_at', '<=', $dateTo));
+                    }
+                })->sum('amount_paid');
+
+            $periodDepositRefunded = (float) PaymentVoucher::where('paid_to_type', 'tenant')
+                ->where(function ($q) use ($unitId, $unit) {
+                    $q->where('unit_id', $unitId);
+                    if ($unit->tenant_id) $q->orWhere('tenant_id', $unit->tenant_id);
+                })
+                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+
+            $pendingDeposit = $openingPendingDeposit + $periodDepositInvoiced - $periodDepositPaid;
+            $heldDeposit = $openingHeldDeposit + $periodDepositPaid - $periodDepositRefunded;
+
+            $entryReceivable = max(0, $pendingDeposit);
+            $entryPayable = max(0, $heldDeposit);
+
+            if ($entryReceivable == 0 && $entryPayable == 0) {
+                continue;
+            }
+
+            $tenantName = $unit->tenant->name ?? $unit->otherTenant->name ?? null;
+
+            $results->push([
+                'id' => $unit->id,
+                'name' => 'Unit ' . $unit->unit_number . ($tenantName ? ' (' . $tenantName . ')' : ''),
+                'type' => 'Tenant Security Deposit',
+                'group' => 'tenant_security_deposit',
+                'opening' => $openingPendingDeposit - $openingHeldDeposit,
+                'debit' => $periodDepositInvoiced,
+                'credit' => $periodDepositPaid + $periodDepositRefunded,
+                'closing' => $entryReceivable - $entryPayable,
+                'receivable' => $entryReceivable,
+                'payable' => $entryPayable,
+                'url' => route('ledgers.tenant', ['unit_id' => $unit->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+            ]);
+        }
+
+        return $results;
+    }
+
     private function getExpensesSummary($dateFrom, $dateTo)
     {
         $results = collect();
@@ -532,46 +635,55 @@ class AccountSummaryService
         return $results;
     }
 
-    private function getMeterReadingReceivablesSummary($dateFrom, $dateTo)
+    /**
+     * JV (Journal Voucher) expenses that are still unpaid as of the period end — a payable
+     * owed against each expense head, distinct from the accrued spend shown under Expenses.
+     */
+    private function getJvPayablesSummary($dateFrom, $dateTo)
     {
         $results = collect();
+        $heads = ExpenseHead::orderBy('name')->get();
 
-        $unitIds = \App\Models\MeterReadingVoucher::select('unit_id')->distinct()->pluck('unit_id');
-        $units = Unit::with(['tenant', 'otherTenant'])->whereIn('id', $unitIds)->orderBy('unit_number')->get();
+        foreach ($heads as $head) {
+            $openingPayable = $dateFrom ? (float) \App\Models\JvVoucher::where('expense_head_id', $head->id)
+                ->where('date', '<', $dateFrom)
+                ->where(function ($q) use ($dateFrom) {
+                    $q->where('status', 'unpaid')
+                      ->orWhere(fn($sub) => $sub->where('status', 'paid')->where('paid_date', '>=', $dateFrom));
+                })->sum('amount') : 0.0;
 
-        foreach ($units as $unit) {
-            $openingBilled = $dateFrom ? (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
-                ->where('date', '<', $dateFrom)->sum('amount') : 0.0;
-            $openingPaid = $dateFrom ? (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
-                ->where('date', '<', $dateFrom)->where('status', 'paid')->sum('amount') : 0.0;
-            $openingBalance = $openingBilled - $openingPaid;
+            $closingPayable = (float) \App\Models\JvVoucher::where('expense_head_id', $head->id)
+                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+                ->where(function ($q) use ($dateTo) {
+                    $q->where('status', 'unpaid')
+                      ->when($dateTo, fn($sub) => $sub->orWhere(fn($s2) => $s2->where('status', 'paid')->where('paid_date', '>', $dateTo)));
+                })->sum('amount');
 
-            $totalDebit = (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
+            $periodCreated = (float) \App\Models\JvVoucher::where('expense_head_id', $head->id)
                 ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-            $totalCredit = (float) \App\Models\MeterReadingVoucher::where('unit_id', $unit->id)
+
+            $periodPaid = (float) \App\Models\JvVoucher::where('expense_head_id', $head->id)
                 ->where('status', 'paid')
-                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
+                ->when($dateFrom, fn($q) => $q->where('paid_date', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('paid_date', '<=', $dateTo))->sum('amount');
 
-            $closingBalance = $openingBalance + $totalDebit - $totalCredit;
-
-            if ($openingBalance == 0 && $totalDebit == 0 && $totalCredit == 0) {
+            if ($openingPayable == 0 && $closingPayable == 0 && $periodCreated == 0 && $periodPaid == 0) {
                 continue;
             }
 
-            $tenantName = $unit->tenant->name ?? $unit->otherTenant->name ?? null;
-
             $results->push([
-                'id' => $unit->id,
-                'name' => 'Unit ' . $unit->unit_number . ($tenantName ? ' (' . $tenantName . ')' : ''),
-                'type' => 'Meter Reading Receivable',
-                'group' => 'meter_reading',
-                'opening' => $openingBalance,
-                'debit' => $totalDebit,
-                'credit' => $totalCredit,
-                'closing' => $closingBalance,
-                'url' => route('utility-readings.index', ['unit_id' => $unit->id, 'month' => \Carbon\Carbon::parse($dateTo ?: now())->format('Y-m')]),
+                'id' => $head->id,
+                'name' => $head->name,
+                'type' => 'JV Payable',
+                'group' => 'jv_payable',
+                'opening' => $openingPayable,
+                'debit' => $periodCreated,
+                'credit' => $periodPaid,
+                'closing' => $closingPayable,
+                'receivable' => 0.0,
+                'payable' => $closingPayable,
+                'url' => route('ledgers.expense', ['expense_head_id' => $head->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
             ]);
         }
 

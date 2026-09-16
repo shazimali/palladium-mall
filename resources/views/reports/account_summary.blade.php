@@ -108,11 +108,11 @@
                         <option value="all" {{ $accountType == 'all' ? 'selected' : '' }}>All Accounts</option>
                         <option value="asset" {{ $accountType == 'asset' ? 'selected' : '' }}>Assets (Banks/Cash)</option>
                         <option value="liability" {{ $accountType == 'liability' ? 'selected' : '' }}>Equity / Liabilities (Owners)</option>
-                        <option value="receivable" {{ $accountType == 'receivable' ? 'selected' : '' }}>Receivables (Tenants)</option>
+                        <option value="receivable" {{ $accountType == 'receivable' ? 'selected' : '' }}>Tenants (incl. Security Deposits)</option>
                         <option value="expense" {{ $accountType == 'expense' ? 'selected' : '' }}>Expenses</option>
                         <option value="landlord_payable" {{ $accountType == 'landlord_payable' ? 'selected' : '' }}>Landlord Payables</option>
                         <option value="party_due" {{ $accountType == 'party_due' ? 'selected' : '' }}>Party Dues</option>
-                        <option value="meter_reading" {{ $accountType == 'meter_reading' ? 'selected' : '' }}>Meter Reading Receivables</option>
+                        <option value="jv_payable" {{ $accountType == 'jv_payable' ? 'selected' : '' }}>JV Payables</option>
                     </select>
                 </div>
                 <div class="flex gap-2 items-end w-full sm:w-auto">
@@ -150,10 +150,9 @@
             <thead class="text-sm uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                 <tr>
                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300 w-1/3">Account Name</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">Opening Balance</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">Total Debit</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">Total Credit</th>
-                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">Closing Balance</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">Payables</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">Receivables</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider dark:text-gray-300">Balance</th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700 text-base">
@@ -163,13 +162,10 @@
                             {{ $entry['name'] }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                            {{ number_format($entry['opening'], 2) }}
+                            {{ $entry['payable'] > 0 ? number_format($entry['payable'], 2) : '—' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                            {{ number_format($entry['debit'], 2) }}
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-700 dark:text-gray-300">
-                            {{ number_format($entry['credit'], 2) }}
+                            {{ $entry['receivable'] > 0 ? number_format($entry['receivable'], 2) : '—' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-bold {{ $entry['closing'] >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
                             {{ number_format($entry['closing'], 2) }}
@@ -177,7 +173,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
+                        <td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">
                             No accounts found for the selected criteria.
                         </td>
                     </tr>
@@ -187,9 +183,8 @@
             <tfoot class="bg-gray-200 dark:bg-gray-900 border-t-4 border-gray-300 dark:border-gray-700 print:bg-gray-200 print:text-black">
                 <tr>
                     <th scope="row" class="px-6 py-4 text-left text-base font-bold text-gray-900 dark:text-white uppercase print:text-black">Grand Total</th>
-                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('opening'), 2) }}</td>
-                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('debit'), 2) }}</td>
-                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('credit'), 2) }}</td>
+                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('payable'), 2) }}</td>
+                    <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('receivable'), 2) }}</td>
                     <td class="px-6 py-4 text-right text-base font-bold text-gray-900 dark:text-white print:text-black">{{ number_format($summary->sum('closing'), 2) }}</td>
                 </tr>
             </tfoot>

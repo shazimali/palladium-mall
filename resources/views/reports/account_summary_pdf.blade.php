@@ -33,26 +33,24 @@
         <thead>
             <tr>
                 <th class="text-left" style="width: 40%">Account Name</th>
-                <th style="width: 15%">Opening Balance</th>
-                <th style="width: 15%">Total Debit</th>
-                <th style="width: 15%">Total Credit</th>
-                <th style="width: 15%">Closing Balance</th>
+                <th style="width: 20%">Payables</th>
+                <th style="width: 20%">Receivables</th>
+                <th style="width: 20%">Balance</th>
             </tr>
         </thead>
         <tbody>
             @forelse($summary as $entry)
                 <tr>
                     <td class="text-left">{{ $entry['name'] }}</td>
-                    <td>{{ number_format($entry['opening'], 2) }}</td>
-                    <td>{{ number_format($entry['debit'], 2) }}</td>
-                    <td>{{ number_format($entry['credit'], 2) }}</td>
+                    <td>{{ $entry['payable'] > 0 ? number_format($entry['payable'], 2) : '—' }}</td>
+                    <td>{{ $entry['receivable'] > 0 ? number_format($entry['receivable'], 2) : '—' }}</td>
                     <td style="font-weight: bold;">
                         {{ number_format($entry['closing'], 2) }}
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" style="text-align: center;">No accounts found.</td>
+                    <td colspan="4" style="text-align: center;">No accounts found.</td>
                 </tr>
             @endforelse
         </tbody>
@@ -60,9 +58,8 @@
         <tfoot>
             <tr class="grand-total">
                 <th class="text-left" style="text-align: left;">Grand Total</th>
-                <td style="text-align: right;">{{ number_format($summary->sum('opening'), 2) }}</td>
-                <td style="text-align: right;">{{ number_format($summary->sum('debit'), 2) }}</td>
-                <td style="text-align: right;">{{ number_format($summary->sum('credit'), 2) }}</td>
+                <td style="text-align: right;">{{ number_format($summary->sum('payable'), 2) }}</td>
+                <td style="text-align: right;">{{ number_format($summary->sum('receivable'), 2) }}</td>
                 <td style="text-align: right;">{{ number_format($summary->sum('closing'), 2) }}</td>
             </tr>
         </tfoot>
