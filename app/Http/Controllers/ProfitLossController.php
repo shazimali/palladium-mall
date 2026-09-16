@@ -365,7 +365,7 @@ class ProfitLossController extends Controller
             'name' => $o->name,
             'percentage' => (float) $o->partnership_percentage,
             'share' => (float) ($netProfitLoss * ($o->partnership_percentage / 100)),
-        ])->toArray();
+        ])->sortByDesc('share')->values()->toArray();
 
         return [
             'date_from' => $from,

@@ -290,7 +290,7 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="grid grid-cols-1 gap-6">
 
         {{-- Income Details --}}
         <x-common.component-card title="Income Breakdown" desc="Revenue collected vs unpaid outstanding for period">
@@ -436,6 +436,13 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                            <tr class="bg-gray-50 dark:bg-gray-800 font-bold text-base">
+                                <td class="px-4 py-4">Totals</td>
+                                <td class="px-4 py-4 text-brand-600">{{ number_format($totalOwnerSharePct, 2) }}%</td>
+                                <td class="px-4 py-4 text-right text-lg {{ $netProfitLoss >= 0 ? 'text-green-600' : 'text-red-500' }}">
+                                    Rs. {{ number_format($netProfitLoss, 2) }}
+                                </td>
+                            </tr>
                             @foreach($distribution as $row)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02]">
                                     <td class="px-4 py-3 font-semibold text-gray-800 dark:text-white">
@@ -451,15 +458,6 @@
                                 </tr>
                             @endforeach
                         </tbody>
-                        <tfoot>
-                            <tr class="bg-gray-50 dark:bg-gray-800 font-bold text-sm">
-                                <td class="px-4 py-3">Totals</td>
-                                <td class="px-4 py-3 text-brand-600">{{ number_format($totalOwnerSharePct, 2) }}%</td>
-                                <td class="px-4 py-3 text-right {{ $netProfitLoss >= 0 ? 'text-green-600' : 'text-red-500' }}">
-                                    Rs. {{ number_format($netProfitLoss, 2) }}
-                                </td>
-                            </tr>
-                        </tfoot>
                     </table>
                 </div>
             @endif
