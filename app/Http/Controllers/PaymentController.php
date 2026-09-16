@@ -1347,7 +1347,7 @@ class PaymentController extends Controller
 
     public function print(Payment $payment): View
     {
-        $payment->load(['tenant', 'unit', 'agreement']);
+        $payment->load(['tenant', 'unit.block', 'agreement']);
 
         if (in_array($payment->type, ['maintenance', 'electricity', 'water', 'gas'])) {
             $groupedPayments = Payment::with(['tenant', 'unit', 'agreement', 'meter'])
@@ -1360,12 +1360,45 @@ class PaymentController extends Controller
                 'title' => 'Print Maintenance Bill — ' . ($payment->tenant->name ?? 'N/A'),
                 'payment' => $payment,
                 'groupedPayments' => $groupedPayments,
+                'billingHistory' => $this->paymentBillingHistory($payment),
             ]);
         }
 
         return view('payments.print', [
             'title' => 'Print Receipt — ' . ($payment->tenant->name ?? 'N/A'),
             'payment' => $payment,
+            'billingHistory' => $this->paymentBillingHistory($payment),
+        ]);
+    }
+
+    /**
+     * Print one consolidated bill covering every payment (rent, maintenance,
+     * utilities, etc.) for this payment's unit and month, regardless of type.
+     */
+    public function printBill(Payment $payment): View
+    {
+        $payment->load(['tenant', 'unit.block', 'agreement', 'otherTenant']);
+
+        $query = Payment::with(['tenant', 'unit', 'agreement', 'meter', 'otherTenant'])
+            ->where('unit_id', $payment->unit_id)
+            ->where('month', $payment->month->toDateString());
+
+        if ($payment->tenant_id) {
+            $query->where('tenant_id', $payment->tenant_id);
+        } elseif ($payment->other_tenant_id) {
+            $query->where('other_tenant_id', $payment->other_tenant_id);
+        }
+
+        $groupedPayments = $query->get();
+        $billTenant = $payment->tenant ?: $payment->otherTenant;
+
+        return view('payments.print_maintenance', [
+            'title' => 'Print Bill — ' . ($billTenant->name ?? 'N/A'),
+            'payment' => $payment,
+            'groupedPayments' => $groupedPayments,
+            'billingHistory' => $this->consolidatedBillingHistory($payment),
+            'billHeading' => 'CONSOLIDATED BILL',
+            'billEyebrow' => 'All Charges',
         ]);
     }
 
@@ -1373,7 +1406,7 @@ class PaymentController extends Controller
     {
         $payment = Payment::where('hash', $hash)->firstOrFail();
 
-        $payment->load(['tenant', 'unit', 'agreement']);
+        $payment->load(['tenant', 'unit.block', 'agreement']);
 
         if (in_array($payment->type, ['maintenance', 'electricity', 'water', 'gas'])) {
             $groupedPayments = Payment::with(['tenant', 'unit', 'agreement', 'meter'])
@@ -1386,13 +1419,88 @@ class PaymentController extends Controller
                 'title' => 'Print Maintenance Bill — ' . ($payment->tenant->name ?? 'N/A'),
                 'payment' => $payment,
                 'groupedPayments' => $groupedPayments,
+                'billingHistory' => $this->paymentBillingHistory($payment),
             ]);
         }
 
         return view('payments.print', [
             'title' => 'Print Receipt — ' . ($payment->tenant->name ?? 'N/A'),
             'payment' => $payment,
+            'billingHistory' => $this->paymentBillingHistory($payment),
         ]);
+    }
+
+    /**
+     * Last N billing cycles for this payment's tenant, used to render the
+     * "Billing History" panel on the print views. For maintenance/utility
+     * payments (billed as several line items per month) rows are summed per
+     * month; other payment types are billed as one record per month already.
+     */
+    private function paymentBillingHistory(Payment $payment, int $limit = 6): \Illuminate\Support\Collection
+    {
+        if (!$payment->tenant_id) {
+            return collect();
+        }
+
+        if (in_array($payment->type, ['maintenance', 'electricity', 'water', 'gas'])) {
+            $rows = Payment::where('tenant_id', $payment->tenant_id)
+                ->whereIn('type', ['maintenance', 'electricity', 'water', 'gas'])
+                ->where('month', '<', $payment->month->toDateString())
+                ->selectRaw('month, SUM(amount) as billed, SUM(amount_paid) as received')
+                ->groupBy('month')
+                ->orderByDesc('month')
+                ->limit($limit)
+                ->get();
+
+            return $rows->map(fn($row) => (object) [
+                'month' => $row->month,
+                'billed' => (float) $row->billed,
+                'received' => (float) $row->received,
+            ]);
+        }
+
+        $rows = Payment::where('tenant_id', $payment->tenant_id)
+            ->where('type', $payment->type)
+            ->where('id', '!=', $payment->id)
+            ->orderByDesc('month')
+            ->limit($limit)
+            ->get(['month', 'amount', 'amount_paid']);
+
+        return $rows->map(fn($row) => (object) [
+            'month' => $row->month,
+            'billed' => (float) $row->amount,
+            'received' => (float) $row->amount_paid,
+        ]);
+    }
+
+    /**
+     * Billing history for the consolidated (all payment types) bill: prior
+     * months' totals for this unit and tenant/other-tenant, summed across
+     * every payment type billed that month.
+     */
+    private function consolidatedBillingHistory(Payment $payment, int $limit = 6): \Illuminate\Support\Collection
+    {
+        $query = Payment::where('unit_id', $payment->unit_id)
+            ->where('month', '<', $payment->month->toDateString());
+
+        if ($payment->tenant_id) {
+            $query->where('tenant_id', $payment->tenant_id);
+        } elseif ($payment->other_tenant_id) {
+            $query->where('other_tenant_id', $payment->other_tenant_id);
+        } else {
+            return collect();
+        }
+
+        return $query->selectRaw('month, SUM(amount) as billed, SUM(amount_paid) as received')
+            ->groupBy('month')
+            ->orderByDesc('month')
+            ->limit($limit)
+            ->get()
+            ->map(fn($row) => (object) [
+                'month' => $row->month,
+                'billed' => (float) $row->billed,
+                'received' => (float) $row->received,
+            ]);
     }
 
     public function toggleStatus(Payment $payment): RedirectResponse

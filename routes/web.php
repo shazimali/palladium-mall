@@ -328,6 +328,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:payments.print')->group(function () {
         Route::get('payments/{payment}/print', [PaymentController::class, 'print'])
             ->name('payments.print');
+        Route::get('payments/{payment}/print-bill', [PaymentController::class, 'printBill'])
+            ->name('payments.print-bill');
     });
 
     Route::middleware('permission:utilities.record')->group(function () {
