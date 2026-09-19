@@ -118,6 +118,7 @@
                             <th class="px-3.5 py-2.5 text-white">Notes</th>
                             <th class="px-3.5 py-2.5 text-right text-white">Debit (Paid)</th>
                             <th class="px-3.5 py-2.5 text-right text-white">Credit (Received)</th>
+                            <th class="px-3.5 py-2.5 text-right text-white">Balance</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-semibold text-xs sm:text-[13px]">
@@ -138,13 +139,16 @@
                                 <td class="px-3.5 py-2 text-right font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-[13.5px] font-mono whitespace-nowrap">
                                     {{ $openingEntry['credit'] > 0 ? 'Rs. ' . number_format($openingEntry['credit'], 2) : '—' }}
                                 </td>
+                                <td class="px-3.5 py-2 text-right font-black {{ $openingEntry['running_balance'] < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }} text-xs sm:text-[13.5px] font-mono whitespace-nowrap">
+                                    Rs. {{ number_format($openingEntry['running_balance'], 2) }}
+                                </td>
                             </tr>
                         @endif
 
                         @forelse($ledgerData['monthly_subtotals'] as $monthKey => $monthInfo)
                             {{-- Month section header --}}
                             <tr class="bg-brand-50 dark:bg-brand-500/10">
-                                <td colspan="7" class="px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-brand-700 dark:text-brand-300">
+                                <td colspan="8" class="px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-brand-700 dark:text-brand-300">
                                     {{ $monthInfo['label'] }}
                                 </td>
                             </tr>
@@ -194,10 +198,13 @@
                                     <td class="px-3.5 py-2 text-right font-black text-emerald-600 dark:text-emerald-400 text-xs sm:text-[13.5px] font-mono whitespace-nowrap">
                                         {{ $entry['credit'] > 0 ? 'Rs. ' . number_format($entry['credit'], 2) : '—' }}
                                     </td>
+                                    <td class="px-3.5 py-2 text-right font-black {{ $entry['running_balance'] < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-900 dark:text-white' }} text-xs sm:text-[13.5px] font-mono whitespace-nowrap">
+                                        Rs. {{ number_format($entry['running_balance'], 2) }}
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-4 py-4 text-center text-gray-400 dark:text-gray-600 text-xs font-bold">
+                                    <td colspan="8" class="px-4 py-4 text-center text-gray-400 dark:text-gray-600 text-xs font-bold">
                                         No transactions in {{ $monthInfo['label'] }}.
                                     </td>
                                 </tr>
@@ -217,10 +224,13 @@
                                 <td class="px-3.5 py-2 text-right text-emerald-600 dark:text-emerald-400 font-mono font-black whitespace-nowrap">
                                     Rs. {{ number_format($monthInfo['credit'], 2) }}
                                 </td>
+                                <td class="px-3.5 py-2 text-right text-gray-700 dark:text-gray-300 font-mono font-black whitespace-nowrap">
+                                    {{ $monthEntries->isNotEmpty() ? 'Rs. ' . number_format($monthEntries->last()['running_balance'], 2) : '—' }}
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
+                                <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
                                     No month selected.
                                 </td>
                             </tr>
@@ -247,6 +257,9 @@
                                 </td>
                                 <td class="px-3.5 py-2.5 text-right text-emerald-600 dark:text-emerald-400 font-mono font-black whitespace-nowrap">
                                     Rs. {{ number_format($sumCredit, 2) }}
+                                </td>
+                                <td class="px-3.5 py-2.5 text-right text-gray-900 dark:text-white font-mono font-black whitespace-nowrap">
+                                    Rs. {{ number_format($netBalance, 2) }}
                                 </td>
                             </tr>
                         </tfoot>

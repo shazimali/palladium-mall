@@ -96,7 +96,19 @@ class Landlord extends Model
 
     /**
      * Calculate current outstanding balance of the landlord.
-     * Outstanding Balance = Total Value Owed - Vouchers Paid - GRV Paid - Tenant Extra Payments Paid + Mall Payouts to Landlord + ORP Purchases.
+     *
+     * Negative = amount the mall owes the landlord (payable via a Payment Voucher).
+     * Positive = amount the landlord still owes the mall for their unit purchase.
+     *
+     * Rent-share "extra payments" collected on the landlord's behalf (is_self units)
+     * are always payable to them and are NOT netted against unit-purchase debt —
+     * a landlord who still owes for their unit can still be paid rent already
+     * collected for them; only unit-purchase overpayment reduces that debt.
+     *
+     * ORP (Other Owned Rent Purchase) vouchers are excluded here: they are an
+     * internal record of rent-share owed, not an actual disbursement, so they
+     * must not reduce the available-to-pay amount (they'd otherwise cancel out
+     * the matching extra_payment record for the same month and hide real debt).
      */
     public function currentBalance(): float
     {
@@ -108,9 +120,13 @@ class Landlord extends Model
         $extraPaid = (float) Payment::where('landlord_id', $this->id)
             ->where('type', 'extra_payment')
             ->sum('amount_paid');
-        $payouts      = (float) $this->payouts()->sum('amount');
-        $orpPurchases = (float) $this->otherOwnedRentPurchases()->sum('amount');
+        $payouts = (float) $this->payouts()->sum('amount');
 
-        return $opening - $vouchersPaid - $grvPaid - $extraPaid + $payouts + $orpPurchases;
+        $purchaseDebt = $opening - $vouchersPaid - $grvPaid;
+        $overpaymentRefund = $purchaseDebt < 0 ? -$purchaseDebt : 0.0;
+
+        $availableToPay = $overpaymentRefund + $extraPaid - $payouts;
+
+        return -$availableToPay;
     }
 }
