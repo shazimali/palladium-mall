@@ -283,6 +283,14 @@ class MenuHelper
             ];
         }
 
+        if ($user->can('reports.cashbook')) {
+            $billingItems[] = [
+                'icon' => 'tables',
+                'name' => 'Daily Cash Book',
+                'path' => '/reports/cash-book'
+            ];
+        }
+
         // 17. Voucher
         $voucherSubItems = [];
         if ($user->can('receiving_vouchers.view')) {
@@ -333,7 +341,6 @@ class MenuHelper
                 'subItems' => $ledgerSubItems,
             ];
         }
-
         // 19. Reports Statement
         $reportsSubItems = [];
         if ($user->can('reports.view')) {
@@ -354,9 +361,6 @@ class MenuHelper
         }
         if ($user->can('reports.daybook')) {
             $reportsSubItems[] = ['name' => 'Daily Transactions Book', 'path' => '/reports/day-book'];
-        }
-        if ($user->can('reports.cashbook')) {
-            $reportsSubItems[] = ['name' => 'Daily Cash Book', 'path' => '/reports/cash-book'];
         }
         if ($user->can('performance.reports.view') || $user->isSuperAdmin()) {
             $reportsSubItems[] = ['name' => 'Performance Reports', 'path' => '/performance'];
