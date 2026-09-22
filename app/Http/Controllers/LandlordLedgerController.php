@@ -176,7 +176,7 @@ class LandlordLedgerController extends Controller
     /**
      * Compile chronological ledger entries for a Landlord.
      */
-    private function getLandlordLedgerData($landlordId, $dateFrom, $dateTo): array
+    public function getLandlordLedgerData($landlordId, $dateFrom, $dateTo): array
     {
         $landlord = Landlord::with(['ownerships.unit'])->findOrFail($landlordId);
         $entries = collect();

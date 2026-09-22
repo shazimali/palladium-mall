@@ -414,6 +414,12 @@ Route::middleware('auth')->group(function () {
         Route::get('ledgers/expense/excel', [\App\Http\Controllers\LedgerController::class, 'exportExpenseExcel'])->name('ledgers.expense.excel');
         Route::get('ledgers/expense/print', [\App\Http\Controllers\LedgerController::class, 'printExpense'])->name('ledgers.expense.print');
 
+        // Unified "All Ledgers" Routes
+        Route::get('ledgers/all', [\App\Http\Controllers\AllLedgersController::class, 'index'])->name('ledgers.all');
+        Route::get('ledgers/all/print', [\App\Http\Controllers\AllLedgersController::class, 'print'])->name('ledgers.all.print');
+        Route::get('ledgers/all/pdf', [\App\Http\Controllers\AllLedgersController::class, 'pdf'])->name('ledgers.all.pdf');
+        Route::get('ledgers/all/excel', [\App\Http\Controllers\AllLedgersController::class, 'excel'])->name('ledgers.all.excel');
+
         // Party Ledger Routes
         Route::get('ledgers/party', [\App\Http\Controllers\PartyLedgerController::class, 'index'])->name('ledgers.party');
         Route::post('ledgers/party/dues', [\App\Http\Controllers\PartyLedgerController::class, 'storeDue'])->name('ledgers.party.dues.store');

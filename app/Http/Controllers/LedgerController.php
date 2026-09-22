@@ -346,7 +346,7 @@ class LedgerController extends Controller
     // Helper Data Fetchers
     // -------------------------------------------------------------------------
 
-    private function getTenantLedgerData($unitId, $dateFrom, $dateTo)
+    public function getTenantLedgerData($unitId, $dateFrom, $dateTo)
     {
         $unit = Unit::with(['tenant', 'otherTenant'])->findOrFail($unitId);
         $entries = collect();
@@ -593,7 +593,7 @@ class LedgerController extends Controller
         return $totalIncome - $totalExpenses;
     }
 
-    private function getOwnerLedgerData($ownerId, int $year, array $months)
+    public function getOwnerLedgerData($ownerId, int $year, array $months)
     {
         $owner = Owner::findOrFail($ownerId);
         $entries = collect();
@@ -795,7 +795,7 @@ class LedgerController extends Controller
         ];
     }
 
-    private function getAccountLedgerData($accountId, $dateFrom, $dateTo)
+    public function getAccountLedgerData($accountId, $dateFrom, $dateTo)
     {
         $account = PaymentAccount::findOrFail($accountId);
         $entries = collect();
@@ -1082,7 +1082,7 @@ class LedgerController extends Controller
         ];
     }
 
-    private function getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo)
+    public function getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo)
     {
         $isAll = $expenseHeadId === 'all';
         $head = $isAll ? null : ExpenseHead::findOrFail($expenseHeadId);

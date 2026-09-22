@@ -323,22 +323,11 @@ class MenuHelper
         }
 
         // 18. Ledger
-        $ledgerSubItems = [];
         if ($user->can('ledgers.view')) {
-            $ledgerSubItems[] = ['name' => 'Flat/Shop Recovery', 'path' => '/ledgers/flat-shop'];
-            $ledgerSubItems[] = ['name' => 'Security Ledgers', 'path' => '/ledgers/security'];
-            $ledgerSubItems[] = ['name' => 'Tenant Ledger', 'path' => '/ledgers/tenant'];
-            $ledgerSubItems[] = ['name' => 'Owner Ledger', 'path' => '/ledgers/owner'];
-            $ledgerSubItems[] = ['name' => 'Landlord Ledger', 'path' => '/landlord-ledgers'];
-            $ledgerSubItems[] = ['name' => 'Account Ledger', 'path' => '/ledgers/payment-account'];
-            $ledgerSubItems[] = ['name' => 'Expense Ledger', 'path' => '/ledgers/expense'];
-            $ledgerSubItems[] = ['name' => 'Party Ledger', 'path' => '/ledgers/party'];
-        }
-        if (!empty($ledgerSubItems)) {
             $billingItems[] = [
                 'icon' => 'tables',
-                'name' => 'Ledger',
-                'subItems' => $ledgerSubItems,
+                'name' => 'All Ledgers',
+                'path' => '/ledgers/all',
             ];
         }
         // 19. Reports Statement
