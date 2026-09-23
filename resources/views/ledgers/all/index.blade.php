@@ -49,6 +49,12 @@
                         <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="YYYY-MM-DD" autocomplete="off"
                             class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
+                    <div class="flex-shrink-0 pb-0.5">
+                        <label class="inline-flex items-center gap-1.5 rounded-lg border-2 border-gray-300 dark:border-gray-700 px-3 py-2.5 text-[11px] font-bold text-gray-700 dark:text-gray-300 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" name="include_security_deposit" value="1" {{ request()->boolean('include_security_deposit') ? 'checked' : '' }}>
+                            Show Security Deposit
+                        </label>
+                    </div>
 
                 @elseif($ledgerType === 'owner')
                     <div class="w-56 flex-shrink-0">

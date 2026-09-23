@@ -27,7 +27,8 @@ class ExpenseController extends Controller
         if ($request->filled('search')) {
             $term = $request->search;
             $query->where(function ($q) use ($term) {
-                $q->where('reference', 'like', "%{$term}%")
+                $q->where('voucher_no', 'like', "%{$term}%")
+                    ->orWhere('reference', 'like', "%{$term}%")
                     ->orWhere('notes', 'like', "%{$term}%")
                     ->orWhereHas('expenseHead', function ($h) use ($term) {
                         $h->where('name', 'like', "%{$term}%");

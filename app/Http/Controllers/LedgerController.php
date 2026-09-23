@@ -346,7 +346,7 @@ class LedgerController extends Controller
     // Helper Data Fetchers
     // -------------------------------------------------------------------------
 
-    public function getTenantLedgerData($unitId, $dateFrom, $dateTo)
+    public function getTenantLedgerData($unitId, $dateFrom, $dateTo, bool $includeSecurityDeposit = true)
     {
         $unit = Unit::with(['tenant', 'otherTenant'])->findOrFail($unitId);
         $entries = collect();
@@ -358,6 +358,10 @@ class LedgerController extends Controller
             ->get();
 
         foreach ($payments as $payment) {
+            if (!$includeSecurityDeposit && $payment->type === 'security_deposit') {
+                continue;
+            }
+
             $unitNo = $payment->unit->unit_number ?? $unit->unit_number;
             // Debit Entry: Bill Generated
             $entries->push([
@@ -402,10 +406,21 @@ class LedgerController extends Controller
 
         foreach ($receivingVouchers as $voucher) {
             $unitNo = $unit->unit_number;
-            $allocatedForUnit = $voucher->payments->where('unit_id', $unitId)->sum(fn($p) => (float) $p->pivot->amount_allocated);
+            $unitPayments = $voucher->payments->where('unit_id', $unitId);
+            $countedPayments = $includeSecurityDeposit
+                ? $unitPayments
+                : $unitPayments->where('type', '!=', 'security_deposit');
+
+            $allocatedForUnit = $countedPayments->sum(fn($p) => (float) $p->pivot->amount_allocated);
+
+            // Voucher was entirely for a security deposit payment and it's hidden — drop the row.
+            if (!$includeSecurityDeposit && $unitPayments->isNotEmpty() && $allocatedForUnit <= 0) {
+                continue;
+            }
+
             $creditAmount = $allocatedForUnit > 0 ? $allocatedForUnit : (float) $voucher->amount;
 
-            $typesPaid = $voucher->payments->where('unit_id', $unitId)->map(fn($p) => ucfirst(str_replace('_', ' ', $p->type)))->unique()->implode(', ');
+            $typesPaid = $countedPayments->map(fn($p) => ucfirst(str_replace('_', ' ', $p->type)))->unique()->implode(', ');
             $desc = 'Payment received' . ($typesPaid ? ' (' . $typesPaid . ')' : '') . ' via ' . ($voucher->paymentAccount->name ?? 'Voucher');
 
             $entries->push([

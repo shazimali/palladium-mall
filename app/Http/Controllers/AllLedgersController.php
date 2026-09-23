@@ -158,8 +158,9 @@ class AllLedgersController extends Controller
 
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
+        $includeSecurityDeposit = $request->boolean('include_security_deposit', false);
 
-        $ledgerData = $this->ledgerController->getTenantLedgerData($unitId, $dateFrom, $dateTo);
+        $ledgerData = $this->ledgerController->getTenantLedgerData($unitId, $dateFrom, $dateTo, $includeSecurityDeposit);
         $unit = $ledgerData['unit'];
         $tenant = $unit->tenant ?? $unit->otherTenant;
 
@@ -171,6 +172,9 @@ class AllLedgersController extends Controller
         }
         if ($dateTo) {
             $filterChips[] = ['label' => 'Date To', 'value' => Carbon::parse($dateTo)->format('d M Y')];
+        }
+        if ($includeSecurityDeposit) {
+            $filterChips[] = ['label' => 'Security Deposit', 'value' => 'Included'];
         }
 
         $s = $ledgerData['summary'];
