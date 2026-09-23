@@ -64,7 +64,6 @@ class SecurityLedgerService
             : collect();
 
         $rows = collect();
-        $sr = 1;
         $totalReceived = 0.0;
         $totalDeducted = 0.0;
         $totalRefunded = 0.0;
@@ -149,7 +148,7 @@ class SecurityLedgerService
             if ($periodEntries->isEmpty()) {
                 // Unit has an opening balance carried forward but no activity this period.
                 $rows->push([
-                    'sr' => $sr++,
+                    '_ts' => $dateFrom->timestamp,
                     'date' => $dateFrom->format('d M Y'),
                     'unit_id' => $unit->id,
                     'unit_number' => $unit->unit_number,
@@ -168,7 +167,7 @@ class SecurityLedgerService
                     $runningBalance += ($e['credit'] - $e['debit']);
 
                     $rows->push([
-                        'sr' => $sr++,
+                        '_ts' => Carbon::parse($e['date'])->timestamp,
                         'date' => Carbon::parse($e['date'])->format('d M Y'),
                         'unit_id' => $unit->id,
                         'unit_number' => $unit->unit_number,
@@ -191,6 +190,14 @@ class SecurityLedgerService
 
             $totalBalance += $runningBalance;
         }
+
+        // Rows are pushed grouped by unit; re-sort the whole set chronologically
+        // (stable — ties keep their per-unit push order) and renumber Sr #.
+        $rows = $rows->sortBy('_ts')->values()->map(function ($row, $index) {
+            $row['sr'] = $index + 1;
+            unset($row['_ts']);
+            return $row;
+        });
 
         $summary = [
             'total_units' => $rows->pluck('unit_id')->unique()->count(),

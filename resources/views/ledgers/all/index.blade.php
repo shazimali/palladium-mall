@@ -12,7 +12,7 @@
 
                 {{-- Ledger Type Selector --}}
                 <div class="w-64 flex-shrink-0">
-                    <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
                         Ledger Type
                     </label>
                     <x-common.searchable-select
@@ -31,7 +31,7 @@
                 {{-- Per-type filter fields --}}
                 @if($ledgerType === 'tenant')
                     <div class="w-64 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Flat / Shop</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Flat / Shop</label>
                         <x-common.searchable-select
                             name="unit_id"
                             placeholder="Choose a Flat / Shop"
@@ -40,19 +40,19 @@
                         />
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
                         <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
                         <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
 
                 @elseif($ledgerType === 'owner')
                     <div class="w-56 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Owner</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Owner</label>
                         <x-common.searchable-select
                             name="owner_id"
                             placeholder="Choose an Owner"
@@ -61,7 +61,7 @@
                         />
                     </div>
                     <div class="w-28 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Year</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Year</label>
                         <x-common.searchable-select
                             name="year"
                             placeholder="Year"
@@ -71,10 +71,10 @@
                         />
                     </div>
                     <div class="w-[420px] flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Months</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Months</label>
                         <div class="flex flex-wrap gap-2">
                             @foreach(range(1, 12) as $m)
-                                <label class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 px-2.5 py-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
+                                <label class="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-700 px-2.5 py-1 text-[11px] font-bold text-gray-700 dark:text-gray-300 cursor-pointer">
                                     <input type="checkbox" name="months[]" value="{{ $m }}" {{ in_array($m, $months ?? []) ? 'checked' : '' }}>
                                     {{ \Carbon\Carbon::create(null, $m, 1)->format('M') }}
                                 </label>
@@ -84,7 +84,7 @@
 
                 @elseif($ledgerType === 'payment_account')
                     <div class="w-64 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Cash / Bank Account</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Cash / Bank Account</label>
                         <x-common.searchable-select
                             name="payment_account_id"
                             placeholder="Choose an Account"
@@ -93,19 +93,19 @@
                         />
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
                         <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
                         <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
 
                 @elseif($ledgerType === 'expense')
                     <div class="w-64 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Expense Category</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Expense Category</label>
                         <x-common.searchable-select
                             name="expense_head_id"
                             placeholder="Choose a Category"
@@ -114,19 +114,19 @@
                         />
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
                         <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
                         <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
 
                 @elseif($ledgerType === 'landlord')
                     <div class="w-64 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Landlord</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Landlord</label>
                         <x-common.searchable-select
                             name="landlord_id"
                             placeholder="Choose a Landlord"
@@ -135,29 +135,29 @@
                         />
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
                         <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
                         <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
 
                 @elseif($ledgerType === 'security')
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
                         <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
                         <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-44 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Transaction</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Transaction</label>
                         <x-common.searchable-select
                             name="transaction_type"
                             placeholder="All Transactions"
@@ -171,7 +171,7 @@
                         />
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Unit #</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Unit #</label>
                         <x-common.searchable-select
                             name="unit_id"
                             placeholder="All Units"
@@ -182,17 +182,17 @@
 
                 @elseif($ledgerType === 'flat_shop')
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date From</label>
                         <input type="text" id="date_from" name="date_from" value="{{ request('date_from') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Date To</label>
                         <input type="text" id="date_to" name="date_to" value="{{ request('date_to') }}" placeholder="YYYY-MM-DD" autocomplete="off"
-                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-base font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                            class="w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-bold text-gray-900 focus:border-brand-500 focus:outline-none dark:border-gray-700 dark:bg-gray-900 dark:text-white">
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Owner Type</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Owner Type</label>
                         <x-common.searchable-select
                             name="owner_type"
                             placeholder="All Owners"
@@ -204,7 +204,7 @@
                         />
                     </div>
                     <div class="w-40 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Occupancy</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Occupancy</label>
                         <x-common.searchable-select
                             name="occupancy_status"
                             placeholder="All Occupancy"
@@ -218,7 +218,7 @@
                         />
                     </div>
                     <div class="w-40 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Billing Type</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Billing Type</label>
                         <x-common.searchable-select
                             name="billing_type"
                             placeholder="All Billings"
@@ -233,7 +233,7 @@
                         />
                     </div>
                     <div class="w-36 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Payment Status</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Payment Status</label>
                         <x-common.searchable-select
                             name="payment_status"
                             placeholder="All Statuses"
@@ -247,7 +247,7 @@
                         />
                     </div>
                     <div class="w-32 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Unit #</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Unit #</label>
                         <x-common.searchable-select
                             name="unit_id"
                             placeholder="All Units"
@@ -258,7 +258,7 @@
 
                 @elseif($ledgerType === 'party')
                     <div class="w-64 flex-shrink-0">
-                        <label class="mb-1.5 block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Party</label>
+                        <label class="mb-1.5 block text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Party</label>
                         <x-common.searchable-select
                             name="party_id"
                             placeholder="Choose a Party"
@@ -271,29 +271,29 @@
                 {{-- Action Buttons --}}
                 <div class="flex items-center gap-2 flex-shrink-0">
                     <button type="submit"
-                        class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-base font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
+                        class="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-brand-700 transition-colors cursor-pointer">
                         Filter
                     </button>
                     <a href="{{ route('ledgers.all', ['ledger_type' => $ledgerType]) }}"
-                        class="rounded-xl border-2 border-gray-300 px-4 py-2.5 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
+                        class="rounded-xl border-2 border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                         Clear
                     </a>
                     @if($hasSelection)
                         @if($printRoute)
                             <a href="{{ $printRoute }}" target="_blank"
-                                class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-base font-extrabold text-white shadow-md hover:bg-gray-800 transition-colors cursor-pointer">
+                                class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-gray-800 transition-colors cursor-pointer">
                                 🖨️ Print
                             </a>
                         @endif
                         @if($pdfRoute)
                             <a href="{{ $pdfRoute }}"
-                                class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 px-4 py-2.5 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
+                                class="inline-flex items-center gap-2 rounded-xl border-2 border-gray-300 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-white/5 transition-colors">
                                 PDF
                             </a>
                         @endif
                         @if($manageRoute)
                             <a href="{{ $manageRoute }}"
-                                class="inline-flex items-center gap-2 rounded-xl border-2 border-brand-300 px-4 py-2.5 text-base font-bold text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-white/5 transition-colors">
+                                class="inline-flex items-center gap-2 rounded-xl border-2 border-brand-300 px-4 py-2.5 text-sm font-bold text-brand-700 hover:bg-brand-50 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-white/5 transition-colors">
                                 + Add / Manage Dues
                             </a>
                         @endif
@@ -317,7 +317,10 @@
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800 text-gray-900 dark:text-gray-100 font-semibold text-xs sm:text-[13px]">
                             @forelse($rows as $row)
-                                <tr class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                <tr
+                                    @if(!empty($row['link'])) data-href="{{ $row['link'] }}" @endif
+                                    class="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors {{ !empty($row['link']) ? 'cursor-pointer' : '' }}"
+                                >
                                     @foreach($columns as $col)
                                         @php
                                             $key = $col['key'];
@@ -426,6 +429,19 @@
                     });
                 });
             }
+
+            document.querySelectorAll('tbody tr[data-href]').forEach(function (row) {
+                row.addEventListener('click', function (e) {
+                    if (e.target.closest('a, button, input, select, label')) {
+                        return;
+                    }
+                    if (e.ctrlKey || e.metaKey) {
+                        window.open(row.dataset.href, '_blank');
+                    } else {
+                        window.location.href = row.dataset.href;
+                    }
+                });
+            });
         });
     </script>
 @endpush

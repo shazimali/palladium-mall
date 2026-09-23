@@ -11,6 +11,7 @@ use App\Models\Party;
 use App\Services\SecurityLedgerService;
 use App\Services\FlatShopLedgerService;
 use App\Support\LedgerTypeRegistry;
+use App\Support\VoucherLinkResolver;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -189,10 +190,21 @@ class AllLedgersController extends Controller
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
+        $entries = $ledgerData['entries']->map(function ($e) {
+            $modelType = match ($e['type'] ?? null) {
+                'bill', 'legacy_payment' => 'payment',
+                'voucher' => 'receiving_voucher',
+                'voucher_payout' => 'payment_voucher',
+                default => null,
+            };
+            $e['link'] = VoucherLinkResolver::resolve($modelType, $e['id'] ?? null);
+            return $e;
+        });
+
         return [
             'hasSelection' => true,
-            'rows' => $ledgerData['entries'],
-            'allRows' => $ledgerData['entries'],
+            'rows' => $entries,
+            'allRows' => $entries,
             'columns' => $columns,
             'summaryCards' => $summaryCards,
             'filterChips' => $filterChips,
@@ -250,12 +262,21 @@ class AllLedgersController extends Controller
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
+        $entries = $ledgerData['entries']->map(function ($e) {
+            $modelType = match ($e['type'] ?? null) {
+                'payment_voucher', 'withdrawal', 'receiving_voucher' => $e['type'],
+                default => null,
+            };
+            $e['link'] = VoucherLinkResolver::resolve($modelType, $e['id'] ?? null);
+            return $e;
+        });
+
         return [
             'hasSelection' => true,
             'year' => $year,
             'months' => $months,
-            'rows' => $ledgerData['entries'],
-            'allRows' => $ledgerData['entries'],
+            'rows' => $entries,
+            'allRows' => $entries,
             'columns' => $columns,
             'summaryCards' => $summaryCards,
             'filterChips' => $filterChips,
@@ -305,10 +326,15 @@ class AllLedgersController extends Controller
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
+        $entries = $ledgerData['entries']->map(function ($e) {
+            $e['link'] = VoucherLinkResolver::resolve($e['model_type'] ?? null, $e['model_id'] ?? null);
+            return $e;
+        });
+
         return [
             'hasSelection' => true,
-            'rows' => $ledgerData['entries'],
-            'allRows' => $ledgerData['entries'],
+            'rows' => $entries,
+            'allRows' => $entries,
             'columns' => $columns,
             'summaryCards' => $summaryCards,
             'filterChips' => $filterChips,
@@ -359,10 +385,20 @@ class AllLedgersController extends Controller
         $columns[] = ['key' => 'amount', 'label' => 'Amount', 'type' => 'amount', 'class' => 'text-right'];
         $columns[] = ['key' => 'status', 'label' => 'Status', 'type' => 'status'];
 
+        $entries = $ledgerData['entries']->map(function ($e) {
+            $modelType = match ($e['type'] ?? null) {
+                'Expense' => 'expense',
+                'JV Voucher' => 'jv_voucher',
+                default => null,
+            };
+            $e['link'] = VoucherLinkResolver::resolve($modelType, $e['id'] ?? null);
+            return $e;
+        });
+
         return [
             'hasSelection' => true,
-            'rows' => $ledgerData['entries'],
-            'allRows' => $ledgerData['entries'],
+            'rows' => $entries,
+            'allRows' => $entries,
             'columns' => $columns,
             'summaryCards' => $summaryCards,
             'filterChips' => $filterChips,
@@ -401,10 +437,22 @@ class AllLedgersController extends Controller
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
+        $entries = $ledgerData['entries']->map(function ($e) {
+            $model = $e['model'] ?? null;
+            $modelType = match (true) {
+                $model instanceof \App\Models\GeneralReceivingVoucher => 'general_receiving_voucher',
+                $model instanceof \App\Models\PaymentVoucher => 'payment_voucher',
+                $model instanceof \App\Models\OtherOwnedRentPurchaseVoucher => 'other_owned_rent_purchase_voucher',
+                default => null,
+            };
+            $e['link'] = $model ? VoucherLinkResolver::resolve($modelType, $model->id) : null;
+            return $e;
+        });
+
         return [
             'hasSelection' => true,
-            'rows' => $ledgerData['entries'],
-            'allRows' => $ledgerData['entries'],
+            'rows' => $entries,
+            'allRows' => $entries,
             'columns' => $columns,
             'summaryCards' => $summaryCards,
             'filterChips' => [
@@ -422,6 +470,18 @@ class AllLedgersController extends Controller
     {
         $data = $this->securityService->buildLedgerData($request);
         $s = $data['summary'];
+
+        $attachLink = function ($row) {
+            $row['link'] = VoucherLinkResolver::resolve($row['reference_type'] ?? null, $row['reference_id'] ?? null);
+            return $row;
+        };
+
+        if ($data['rows'] instanceof LengthAwarePaginator) {
+            $data['rows']->setCollection($data['rows']->getCollection()->map($attachLink));
+        } else {
+            $data['rows'] = $data['rows']->map($attachLink);
+        }
+        $data['all_rows'] = $data['all_rows']->map($attachLink);
 
         $summaryCards = [
             ['label' => 'Deposit Received', 'value' => 'Rs. ' . number_format($s['total_received'] ?? 0, 2), 'color' => 's-green'],
@@ -464,6 +524,23 @@ class AllLedgersController extends Controller
         $data = $this->flatShopService->buildLedgerData($request);
         $s = $data['summary'];
         $isSecurityDeposit = $data['is_security_deposit'];
+
+        // Only the non-deposit rows carry a per-transaction Payment id; the
+        // security-deposit mode rows are per-unit aggregates with no single
+        // voucher to link to.
+        if (!$isSecurityDeposit) {
+            $attachLink = function ($row) {
+                $row['link'] = !empty($row['payment_id']) ? VoucherLinkResolver::resolve('payment', $row['payment_id']) : null;
+                return $row;
+            };
+
+            if ($data['rows'] instanceof LengthAwarePaginator) {
+                $data['rows']->setCollection($data['rows']->getCollection()->map($attachLink));
+            } else {
+                $data['rows'] = $data['rows']->map($attachLink);
+            }
+            $data['all_rows'] = $data['all_rows']->map($attachLink);
+        }
 
         if ($isSecurityDeposit) {
             $summaryCards = [
@@ -558,10 +635,20 @@ class AllLedgersController extends Controller
             ['key' => 'balance', 'label' => 'Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
+        $entries = $ledgerData['entries']->map(function ($e) {
+            $modelType = match ($e['type'] ?? null) {
+                'Receipt (General)' => 'general_receiving_voucher',
+                'Payment', 'Payment (Advance)' => 'payment_voucher',
+                default => null,
+            };
+            $e['link'] = VoucherLinkResolver::resolve($modelType, $e['id'] ?? null);
+            return $e;
+        });
+
         return [
             'hasSelection' => true,
-            'rows' => $ledgerData['entries'],
-            'allRows' => $ledgerData['entries'],
+            'rows' => $entries,
+            'allRows' => $entries,
             'columns' => $columns,
             'summaryCards' => $summaryCards,
             'filterChips' => [
