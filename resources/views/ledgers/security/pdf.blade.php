@@ -19,7 +19,7 @@
             padding-bottom: 16px;
         }
         .header-brand {
-            font-size: 28px;
+            font-size: 16px;
             font-weight: 900;
             color: #0f172a;
             text-transform: uppercase;
@@ -27,9 +27,9 @@
             margin: 0 0 4px 0;
         }
         .header-title {
-            font-size: 15px;
-            font-weight: 800;
-            color: #475569;
+            font-size: 22px;
+            font-weight: 900;
+            color: #0f172a;
             text-transform: uppercase;
             letter-spacing: 1px;
             margin: 0 0 12px 0;
@@ -98,6 +98,7 @@
         .data-table td {
             padding: 8px 7px;
             border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
         }
         .text-right { text-align: right; }
         .text-center { text-align: center; }
@@ -156,7 +157,6 @@
                 <th class="text-center">SR #</th>
                 <th>DATE</th>
                 <th>FLAT/SHOP</th>
-                <th>OWNER</th>
                 <th>TENANT</th>
                 <th>TRANSACTION</th>
                 <th>REFERENCE</th>
@@ -171,7 +171,6 @@
                     <td class="text-center" style="color: #94a3b8;">{{ $r['sr'] }}</td>
                     <td>{{ $r['date'] }}</td>
                     <td class="font-bold" style="color: #1d4ed8;">{{ $r['unit_number'] }}</td>
-                    <td class="font-bold">{{ $r['owner'] }}</td>
                     <td>{{ $r['tenant_name'] }}</td>
                     @php
                         $pdfTypeColor = match($r['type']) {
@@ -191,7 +190,7 @@
         </tbody>
         <tfoot>
             <tr style="font-weight: 900; font-size: 12px; background: #cbd5e1; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a;">
-                <td colspan="7" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #0f172a;">Total ({{ $summary['total_records'] }} Records)</td>
+                <td colspan="6" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #0f172a;">Total ({{ $summary['total_records'] }} Records)</td>
                 <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #e11d48;">{{ number_format($summary['total_deducted'] + $summary['total_refunded'], 2) }}</td>
                 <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #059669;">{{ number_format($summary['total_received'], 2) }}</td>
                 <td class="text-right" style="padding: 10px 7px; font-weight: 900; font-size: 12px; color: #7e22ce;">{{ number_format($summary['total_balance'], 2) }}</td>

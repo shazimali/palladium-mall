@@ -65,6 +65,15 @@
             margin-top: 2px;
         }
 
+        .highlight-name {
+            text-align: center;
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: #0f172a;
+            margin-bottom: 16px;
+            letter-spacing: 0.02em;
+        }
+
         .party-info {
             margin-bottom: 16px;
             font-size: 0.95rem;
@@ -131,16 +140,19 @@
         .debit {
             color: #16a34a;
             font-weight: 900;
+            font-size: 1.15rem;
         }
 
         .credit {
             color: #dc2626;
             font-weight: 900;
+            font-size: 1.15rem;
         }
 
         .balance {
             color: #0f172a;
             font-weight: 900;
+            font-size: 1.15rem;
         }
 
         .badge {
@@ -269,12 +281,16 @@
         </div>
     </div>
 
+    @if(!empty($highlightName))
+        <div class="highlight-name">{{ $highlightName }}</div>
+    @endif
+
     <!-- Statement Details / Filter Chips -->
     @if(!empty($filterChips))
         <div class="party-info">
             <div style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center;">
                 @foreach($filterChips as $chip)
-                    <p style="margin: 0;"><strong>{{ $chip['label'] }}:</strong> {{ $chip['value'] }}</p>
+                    <p style="margin: 0;"><strong>{{ $chip['label'] }}: {{ $chip['value'] }}</strong></p>
                 @endforeach
             </div>
         </div>

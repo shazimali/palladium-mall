@@ -83,6 +83,7 @@ class SecurityLedgerService
                         'reference' => $rv?->voucher_no ?? ('Bill #' . $p->id),
                         'reference_type' => $rv ? 'receiving_voucher' : null,
                         'reference_id' => $rv?->id,
+                        'manual_voucher_no' => $rv?->manual_voucher_no,
                         'notes' => $p->notes,
                     ];
                 });
@@ -100,6 +101,7 @@ class SecurityLedgerService
                         'reference' => $rv?->voucher_no ?? ('Bill #' . $p->id),
                         'reference_type' => $rv ? 'receiving_voucher' : null,
                         'reference_id' => $rv?->id,
+                        'manual_voucher_no' => $rv?->manual_voucher_no,
                         'notes' => $p->notes,
                     ];
                 });
@@ -114,6 +116,7 @@ class SecurityLedgerService
                     'reference' => $pv->voucher_no,
                     'reference_type' => 'payment_voucher',
                     'reference_id' => $pv->id,
+                    'manual_voucher_no' => null,
                     'notes' => $pv->notes ?? null,
                 ]);
 
@@ -158,6 +161,7 @@ class SecurityLedgerService
                     'reference' => '—',
                     'reference_type' => null,
                     'reference_id' => null,
+                    'manual_voucher_no' => null,
                     'debit' => 0.0,
                     'credit' => 0.0,
                     'balance' => $runningBalance,
@@ -177,6 +181,7 @@ class SecurityLedgerService
                         'reference' => $e['reference'],
                         'reference_type' => $e['reference_type'],
                         'reference_id' => $e['reference_id'],
+                        'manual_voucher_no' => $e['manual_voucher_no'] ?? null,
                         'debit' => $e['debit'],
                         'credit' => $e['credit'],
                         'balance' => $runningBalance,

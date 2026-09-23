@@ -226,7 +226,9 @@ class FlatShopLedgerService
                 }
             }
 
-            if ($paymentStatus && $paymentStatus !== 'all') {
+            if ($paymentStatus === 'unpaid') {
+                $paymentsQuery->whereIn('status', ['unpaid', 'partial']);
+            } elseif ($paymentStatus && $paymentStatus !== 'all') {
                 $paymentsQuery->where('status', $paymentStatus);
             }
 
@@ -396,8 +398,6 @@ class FlatShopLedgerService
             $filterTags[] = ['label' => 'Status', 'value' => 'Paid', 'type' => 'status'];
         } elseif ($paymentStatus === 'unpaid') {
             $filterTags[] = ['label' => 'Status', 'value' => 'Unpaid', 'type' => 'status'];
-        } elseif ($paymentStatus === 'partial') {
-            $filterTags[] = ['label' => 'Status', 'value' => 'Partial', 'type' => 'status'];
         } else {
             $filterTags[] = ['label' => 'Status', 'value' => 'All Statuses', 'type' => 'status'];
         }

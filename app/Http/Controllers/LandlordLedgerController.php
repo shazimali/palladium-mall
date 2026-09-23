@@ -146,6 +146,7 @@ class LandlordLedgerController extends Controller
             ['key' => 'unit_number',     'label' => 'Flat/Shop'],
             ['key' => 'description',     'label' => 'Description'],
             ['key' => 'voucher_no',      'label' => 'Voucher / Ref #', 'td_class' => 'mono'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #', 'td_class' => 'mono'],
             ['key' => 'debit',           'label' => 'Debit (Payable)', 'type' => 'debit',   'class' => 'text-right'],
             ['key' => 'credit',          'label' => 'Credit (Paid)',   'type' => 'credit',  'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
@@ -303,6 +304,7 @@ class LandlordLedgerController extends Controller
             $entries->push([
                 'date'        => $grv->date,
                 'voucher_no'  => $grv->voucher_no,
+                'manual_voucher_no' => $grv->manual_voucher_no,
                 'type'        => 'General Receipt',
                 'description' => 'General Receipt: ' . $grv->voucher_no . ($grv->notes ? ' - ' . $grv->notes : ''),
                 'debit'       => 0.00,

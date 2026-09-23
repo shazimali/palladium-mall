@@ -189,6 +189,7 @@ class AllLedgersController extends Controller
             ['key' => 'unit_number', 'label' => 'Flat/Shop'],
             ['key' => 'description', 'label' => 'Description'],
             ['key' => 'reference', 'label' => 'Ref / Voucher #'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #'],
             ['key' => 'debit', 'label' => 'Debit (Charged)', 'type' => 'debit', 'class' => 'text-right'],
             ['key' => 'credit', 'label' => 'Credit (Paid)', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
@@ -258,6 +259,7 @@ class AllLedgersController extends Controller
         $columns = [
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
             ['key' => 'voucher_no', 'label' => 'Voucher #'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #'],
             ['key' => 'account', 'label' => 'Account'],
             ['key' => 'reference', 'label' => 'Reference'],
             ['key' => 'notes', 'label' => 'Notes'],
@@ -323,10 +325,11 @@ class AllLedgersController extends Controller
         $columns = [
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
             ['key' => 'voucher_no', 'label' => 'Voucher #'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #'],
             ['key' => 'type', 'label' => 'Type', 'type' => 'badge'],
             ['key' => 'description', 'label' => 'Description / Ref'],
-            ['key' => 'debit', 'label' => 'Debit (Inflow)', 'type' => 'debit', 'class' => 'text-right'],
-            ['key' => 'credit', 'label' => 'Credit (Outflow)', 'type' => 'credit', 'class' => 'text-right'],
+            ['key' => 'debit', 'label' => 'Debit', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
@@ -436,6 +439,7 @@ class AllLedgersController extends Controller
             ['key' => 'unit_number', 'label' => 'Flat/Shop'],
             ['key' => 'description', 'label' => 'Description'],
             ['key' => 'voucher_no', 'label' => 'Voucher / Ref #'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #'],
             ['key' => 'debit', 'label' => 'Debit (Payable)', 'type' => 'debit', 'class' => 'text-right'],
             ['key' => 'credit', 'label' => 'Credit (Paid)', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
@@ -501,6 +505,7 @@ class AllLedgersController extends Controller
             ['key' => 'tenant_name', 'label' => 'Tenant'],
             ['key' => 'type', 'label' => 'Transaction', 'type' => 'badge'],
             ['key' => 'reference', 'label' => 'Reference'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #'],
             ['key' => 'debit', 'label' => 'Debit', 'type' => 'debit', 'class' => 'text-right'],
             ['key' => 'credit', 'label' => 'Credit', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'balance', 'label' => 'Balance', 'type' => 'balance', 'class' => 'text-right'],
@@ -632,6 +637,7 @@ class AllLedgersController extends Controller
         $columns = [
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
             ['key' => 'ref', 'label' => 'Ref / Voucher #'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #'],
             ['key' => 'type', 'label' => 'Transaction Type', 'type' => 'badge'],
             ['key' => 'description', 'label' => 'Details / Description'],
             ['key' => 'debit', 'label' => 'Debit (Dr)', 'type' => 'debit', 'class' => 'text-right'],

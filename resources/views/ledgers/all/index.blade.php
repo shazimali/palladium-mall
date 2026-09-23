@@ -248,7 +248,6 @@
                                 ['value' => 'all', 'label' => 'All Statuses'],
                                 ['value' => 'paid', 'label' => 'Paid'],
                                 ['value' => 'unpaid', 'label' => 'Unpaid'],
-                                ['value' => 'partial', 'label' => 'Partial'],
                             ]"
                         />
                     </div>

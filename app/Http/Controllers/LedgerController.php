@@ -427,6 +427,7 @@ class LedgerController extends Controller
                 'date' => $voucher->date,
                 'description' => $desc,
                 'reference' => $voucher->voucher_no,
+                'manual_voucher_no' => $voucher->manual_voucher_no,
                 'debit' => 0.00,
                 'credit' => $creditAmount,
                 'type' => 'voucher',
@@ -754,6 +755,7 @@ class LedgerController extends Controller
             $entries->push([
                 'date' => $deposit->date,
                 'voucher_no' => $deposit->voucher_no,
+                'manual_voucher_no' => $deposit->manual_voucher_no,
                 'account' => $deposit->paymentAccount->name ?? '—',
                 'reference' => $deposit->reference ?? '—',
                 'notes' => $deposit->notes ?? 'Capital Deposit',
@@ -883,6 +885,7 @@ class LedgerController extends Controller
             $entries->push([
                 'date' => $receipt->date,
                 'voucher_no' => $receipt->voucher_no,
+                'manual_voucher_no' => $receipt->manual_voucher_no,
                 'type' => 'Receipt',
                 'description' => $receipt->notes ?? 'Received Payment',
                 'debit' => (float) $receipt->amount, // Cash/Bank debit is inflow
@@ -914,6 +917,7 @@ class LedgerController extends Controller
             $entries->push([
                 'date' => $receipt->date,
                 'voucher_no' => $receipt->voucher_no,
+                'manual_voucher_no' => $receipt->manual_voucher_no,
                 'type' => $typeLabel,
                 'description' => $desc,
                 'debit' => (float) $receipt->amount,
@@ -1186,9 +1190,7 @@ class LedgerController extends Controller
         $unit = $ledgerData['unit'];
         $tenant = $unit->tenant ?? $unit->otherTenant;
 
-        $filterChips = [
-            ['label' => 'Flat / Shop', 'value' => $unit->unit_number . ($tenant ? ' — ' . $tenant->name : '')],
-        ];
+        $filterChips = [];
         if ($dateFrom)
             $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
         if ($dateTo)
@@ -1205,6 +1207,7 @@ class LedgerController extends Controller
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
             ['key' => 'description', 'label' => 'Description'],
             ['key' => 'reference', 'label' => 'Ref / Voucher #', 'td_class' => 'mono'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #', 'td_class' => 'mono'],
             ['key' => 'debit', 'label' => 'Debit (Charged)', 'type' => 'debit', 'class' => 'text-right'],
             ['key' => 'credit', 'label' => 'Credit (Paid)', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
@@ -1212,6 +1215,7 @@ class LedgerController extends Controller
 
         return view('ledgers.print_page', [
             'pageTitle' => 'Tenant / Unit Ledger — ' . $unit->unit_number,
+            'highlightName' => $unit->unit_number . ($tenant ? ' — ' . $tenant->name : ''),
             'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
             'columns' => $columns,
@@ -1248,6 +1252,7 @@ class LedgerController extends Controller
         $columns = [
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
             ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #', 'td_class' => 'mono'],
             ['key' => 'account', 'label' => 'Account'],
             ['key' => 'reference', 'label' => 'Reference', 'td_class' => 'mono'],
             ['key' => 'notes', 'label' => 'Notes'],
@@ -1280,9 +1285,7 @@ class LedgerController extends Controller
         $ledgerData = $this->getAccountLedgerData($accountId, $dateFrom, $dateTo);
         $account = $ledgerData['account'];
 
-        $filterChips = [
-            ['label' => 'Account', 'value' => $account->name . ' (' . ucfirst($account->type) . ')'],
-        ];
+        $filterChips = [];
         if ($dateFrom)
             $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
         if ($dateTo)
@@ -1298,15 +1301,20 @@ class LedgerController extends Controller
         $columns = [
             ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
             ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #', 'td_class' => 'mono'],
             ['key' => 'type', 'label' => 'Type', 'type' => 'badge'],
             ['key' => 'description', 'label' => 'Description / Ref'],
-            ['key' => 'debit', 'label' => 'Debit (Inflow)', 'type' => 'debit', 'class' => 'text-right'],
-            ['key' => 'credit', 'label' => 'Credit (Outflow)', 'type' => 'credit', 'class' => 'text-right'],
+            ['key' => 'debit', 'label' => 'Debit', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
         return view('ledgers.print_page', [
             'pageTitle' => 'Cash & Bank Ledger — ' . $account->name,
+            'highlightName' => $account->name . ' (' . match ($account->type) {
+                'bank_transfer' => 'Bank Account',
+                default => ucwords(str_replace('_', ' ', $account->type)),
+            } . ')',
             'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
             'columns' => $columns,

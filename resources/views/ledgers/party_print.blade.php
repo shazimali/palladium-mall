@@ -255,10 +255,11 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 15%">Date</th>
-                <th style="width: 20%">Ref/Voucher #</th>
-                <th style="width: 20%">Transaction Type</th>
-                <th style="width: 25%">Details</th>
+                <th style="width: 13%">Date</th>
+                <th style="width: 16%">Ref/Voucher #</th>
+                <th style="width: 16%">Manual Voucher #</th>
+                <th style="width: 16%">Transaction Type</th>
+                <th style="width: 19%">Details</th>
                 <th style="width: 10%" class="text-right">Debit (Dr)</th>
                 <th style="width: 10%" class="text-right">Credit (Cr)</th>
             </tr>
@@ -270,6 +271,7 @@
                         {{ ($entry['date'] instanceof \Carbon\Carbon ? $entry['date'] : \Carbon\Carbon::parse($entry['date']))->format('d M Y') }}
                     </td>
                     <td class="mono"><strong>{{ $entry['ref'] }}</strong></td>
+                    <td class="mono">{{ $entry['manual_voucher_no'] ?? '—' }}</td>
                     <td>{{ $entry['type'] }}</td>
                     <td>{{ $entry['description'] }}</td>
                     <td class="text-right mono">{{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 0) : '—' }}
@@ -279,7 +281,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" style="text-align: center; color: #94a3b8; padding: 40px 0;">No ledger transactions
+                    <td colspan="7" style="text-align: center; color: #94a3b8; padding: 40px 0;">No ledger transactions
                         found.</td>
                 </tr>
             @endforelse
@@ -292,7 +294,7 @@
             <tfoot>
                 <tr
                     style="background: #e2e8f0; border-top: 3px solid #0f172a; border-bottom: 3px solid #0f172a; font-weight: 900;">
-                    <td colspan="4" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #000;">TOTAL
+                    <td colspan="5" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #000;">TOTAL
                         SUMMARY</td>
                     <td class="text-right mono debit" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem;">Rs.
                         {{ number_format($totalDebit, 0) }}</td>

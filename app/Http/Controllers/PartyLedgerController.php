@@ -124,6 +124,7 @@ class PartyLedgerController extends Controller
                 'date' => $receipt->date instanceof Carbon ? $receipt->date : Carbon::parse($receipt->date),
                 'created_at' => $receipt->created_at,
                 'ref' => $receipt->voucher_no,
+                'manual_voucher_no' => $receipt->manual_voucher_no,
                 'type' => 'Receipt (General)',
                 'description' => $receipt->notes ?? 'Received Inflow',
                 'debit' => 0.0,
