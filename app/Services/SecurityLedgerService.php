@@ -68,6 +68,9 @@ class SecurityLedgerService
         $totalDeducted = 0.0;
         $totalRefunded = 0.0;
         $totalBalance = 0.0;
+        // Opening balances of units that do have activity in the period — these have
+        // no row of their own, so they seed the combined running balance instead.
+        $unrowedOpening = 0.0;
 
         foreach ($units as $unit) {
             $unitReceipts = ($receiptsByUnit->get($unit->id) ?? collect())
@@ -167,6 +170,8 @@ class SecurityLedgerService
                     'balance' => $runningBalance,
                 ]);
             } else {
+                $unrowedOpening += $openingBalance;
+
                 foreach ($periodEntries as $e) {
                     $runningBalance += ($e['credit'] - $e['debit']);
 
@@ -197,9 +202,17 @@ class SecurityLedgerService
         }
 
         // Rows are pushed grouped by unit; re-sort the whole set chronologically
-        // (stable — ties keep their per-unit push order) and renumber Sr #.
-        $rows = $rows->sortBy('_ts')->values()->map(function ($row, $index) {
+        // (stable — ties keep their per-unit push order), renumber Sr #, and replace
+        // the per-unit balance with one running balance across all units so the
+        // last row equals the combined total held.
+        $combinedBalance = $unrowedOpening;
+        $rows = $rows->sortBy('_ts')->values()->map(function ($row, $index) use (&$combinedBalance) {
+            $combinedBalance += $row['type'] === 'Balance c/f'
+                ? $row['balance']
+                : ($row['credit'] - $row['debit']);
+
             $row['sr'] = $index + 1;
+            $row['balance'] = $combinedBalance;
             unset($row['_ts']);
             return $row;
         });

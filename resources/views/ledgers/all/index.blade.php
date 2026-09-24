@@ -308,6 +308,17 @@
         </form>
 
         @if($hasSelection)
+            @php
+                // Optional per-column colour for 'amount' cells (e.g. Received vs Pending).
+                $amountColors = [
+                    'blue' => 'text-blue-600 dark:text-blue-400',
+                    'emerald' => 'text-emerald-600 dark:text-emerald-400',
+                    'orange' => 'text-orange-600 dark:text-orange-400',
+                    'amber' => 'text-amber-600 dark:text-amber-400',
+                    'teal' => 'text-teal-600 dark:text-teal-400',
+                    'purple' => 'text-purple-600 dark:text-purple-400',
+                ];
+            @endphp
 
             {{-- Results Table --}}
             <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
@@ -342,7 +353,7 @@
                                             @elseif($type === 'balance')
                                                 <span class="font-mono font-black">{{ 'Rs. ' . number_format((float) $val, 2) }}</span>
                                             @elseif($type === 'amount')
-                                                <span class="font-mono font-black">{{ (float) $val > 0 ? 'Rs. ' . number_format($val, 2) : '—' }}</span>
+                                                <span class="font-mono font-black {{ (float) $val > 0 ? ($amountColors[$col['color'] ?? ''] ?? '') : '' }}">{{ (float) $val > 0 ? 'Rs. ' . number_format($val, 2) : '—' }}</span>
                                             @elseif($type === 'badge')
                                                 <span class="rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-black uppercase text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">{{ $val ?? '—' }}</span>
                                             @elseif($type === 'status')
@@ -390,7 +401,7 @@
                                             @elseif($type === 'credit')
                                                 <span class="font-mono font-black text-emerald-600 dark:text-emerald-400">Rs. {{ number_format($sum, 2) }}</span>
                                             @elseif($type === 'amount')
-                                                <span class="font-mono font-black">Rs. {{ number_format($sum, 2) }}</span>
+                                                <span class="font-mono font-black {{ $amountColors[$col['color'] ?? ''] ?? '' }}">Rs. {{ number_format($sum, 2) }}</span>
                                             @elseif($type === 'balance')
                                                 <span class="font-mono font-black">Rs. {{ number_format((float) ($footerBalanceOverride ?? $lastVal), 2) }}</span>
                                             @else

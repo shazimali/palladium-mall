@@ -519,8 +519,8 @@ class AllLedgersController extends Controller
             'summaryCards' => $summaryCards,
             'filterChips' => $data['filter_tags'],
             'paginator' => $data['rows'] instanceof LengthAwarePaginator ? $data['rows'] : null,
-            // 'balance' here is a per-unit running balance (not one continuous ledger),
-            // so the footer must use the pre-aggregated total, not sum/last-row logic.
+            // 'balance' is one running balance across all units; the footer shows the
+            // combined total held by all ledgers (equal to the last row's balance).
             'footerBalanceOverride' => $s['total_balance'] ?? 0,
             'printRoute' => route('ledgers.all.print', array_merge($request->query(), ['ledger_type' => 'security'])),
             'pdfRoute' => null,
@@ -567,12 +567,12 @@ class AllLedgersController extends Controller
                 ['key' => 'owner', 'label' => 'Owner'],
                 ['key' => 'tenant_name', 'label' => 'Tenant'],
                 ['key' => 'status', 'label' => 'Status', 'type' => 'badge'],
-                ['key' => 'required_deposit', 'label' => 'Required Deposit', 'type' => 'amount', 'class' => 'text-right'],
-                ['key' => 'collected_deposit', 'label' => 'Collected Deposit', 'type' => 'amount', 'class' => 'text-right'],
-                ['key' => 'pending_deposit', 'label' => 'Pending Deposit', 'type' => 'amount', 'class' => 'text-right'],
-                ['key' => 'deduction_deposit', 'label' => 'Deductions / Damage', 'type' => 'amount', 'class' => 'text-right'],
-                ['key' => 'refunded_deposit', 'label' => 'Refunded Deposit', 'type' => 'amount', 'class' => 'text-right'],
-                ['key' => 'net_refundable', 'label' => 'Net Refundable', 'type' => 'amount', 'class' => 'text-right'],
+                ['key' => 'required_deposit', 'label' => 'Required Deposit', 'type' => 'amount', 'class' => 'text-right', 'color' => 'blue'],
+                ['key' => 'collected_deposit', 'label' => 'Collected Deposit', 'type' => 'amount', 'class' => 'text-right', 'color' => 'emerald'],
+                ['key' => 'pending_deposit', 'label' => 'Pending Deposit', 'type' => 'amount', 'class' => 'text-right', 'color' => 'orange'],
+                ['key' => 'deduction_deposit', 'label' => 'Deductions / Damage', 'type' => 'amount', 'class' => 'text-right', 'color' => 'amber'],
+                ['key' => 'refunded_deposit', 'label' => 'Refunded Deposit', 'type' => 'amount', 'class' => 'text-right', 'color' => 'teal'],
+                ['key' => 'net_refundable', 'label' => 'Net Refundable', 'type' => 'amount', 'class' => 'text-right', 'color' => 'purple'],
             ];
         } else {
             $summaryCards = [
