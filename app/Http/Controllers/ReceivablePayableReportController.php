@@ -466,6 +466,32 @@ class ReceivablePayableReportController extends Controller
                         ];
                     }
                 }
+
+                // Excess receipts: the mirror of the receivables "Landlord Credit" row —
+                // when receipts exceed the opening credit, the surplus is owed back.
+                $landlords = Landlord::with('ownerships.unit')->get();
+
+                foreach ($landlords as $landlord) {
+                    $openingBalance = (float) $landlord->ownerships->sum('credit_amount');
+                    $totalReceived = (float) $inRange(ReceivingVoucher::where('owner_id', $landlord->id))->sum('amount')
+                        + (float) $inRange(GeneralReceivingVoucher::where('landlord_id', $landlord->id))->sum('amount');
+                    $netPayable = round($totalReceived - $openingBalance, 2);
+
+                    if ($netPayable > 0.01) {
+                        $payables[] = [
+                            'category' => 'Landlord Payable',
+                            'types' => ['Landlord Payable'],
+                            'name' => $landlord->name,
+                            'unit' => $landlord->ownerships->map(fn($o) => $o->unit?->unit_number)->filter()->implode(', '),
+                            'details' => 'Excess Received over Opening Credit',
+                            'due' => $totalReceived,
+                            'paid' => $openingBalance,
+                            'net' => $netPayable,
+                            'is_self' => false,
+                            'is_other_receivable' => false,
+                        ];
+                    }
+                }
             }
 
             // ── 4. Unpaid JV Vouchers (Expenses) ──────────────────────────────

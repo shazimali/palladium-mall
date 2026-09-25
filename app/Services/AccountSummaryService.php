@@ -590,7 +590,8 @@ class AccountSummaryService
     /**
      * Landlords carry two separate balances, split into their own groups:
      *  - Landlord Receivables: unit value still owed by the landlord (ownership
-     *    credit) less what they've paid us.
+     *    credit) less what they've paid us. If receipts exceed the credit, the
+     *    row moves to Landlord Payables (the surplus is owed back).
      *  - Landlord Payables: ORP (rent purchased on the landlord's behalf) that we
      *    owe them, less payouts made to them. Negative closing = we owe them.
      * Net of the two equals the landlord ledger balance.
@@ -621,11 +622,13 @@ class AccountSummaryService
             $recClosing = $recOpening - $recCredit;
 
             if ($recOpening != 0 || $recCredit != 0) {
+                // Receipts beyond the unit credit are owed back — report under payables.
+                $isExcess = $recClosing < 0;
                 $results->push([
                     'id' => $landlord->id,
                     'name' => $landlord->name,
-                    'type' => 'Landlord Receivable',
-                    'group' => 'landlord_receivable',
+                    'type' => $isExcess ? 'Landlord Payable' : 'Landlord Receivable',
+                    'group' => $isExcess ? 'landlord_payable' : 'landlord_receivable',
                     'opening' => $recOpening,
                     'debit' => 0.0,
                     'credit' => $recCredit,
