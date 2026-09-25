@@ -471,7 +471,7 @@ class AccountSummaryService
                 'closing' => -$closing,
                 'receivable' => max(0, -$closing),
                 'payable' => max(0, $closing),
-                'url' => route('ledgers.all', ['ledger_type' => 'security', 'unit_id' => $unit->id]),
+                'url' => route('ledgers.security.index', ['unit_id' => $unit->id]),
             ]);
         }
 
