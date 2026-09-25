@@ -36,6 +36,7 @@ class AccountSummaryService
         if ($type === 'all' || $type === 'receivable') {
             $detailed = $detailed->concat($this->getReceivablesSummary($dateFrom, $dateTo));
             $detailed = $detailed->concat($this->getTenantSecurityDepositsSummary($dateFrom, $dateTo));
+            $detailed = $detailed->concat($this->getTenantPendingDepositsSummary($dateFrom, $dateTo));
         }
 
         if ($type === 'all' || $type === 'expense') {
@@ -82,6 +83,9 @@ class AccountSummaryService
 
             $detailed = $detailed->concat($this->getTenantSecurityDepositsSummary($dateFrom, $dateTo));
             $categoryKeys[] = 'tenant_security_deposit';
+
+            $detailed = $detailed->concat($this->getTenantPendingDepositsSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'tenant_security_deposit_pending';
         }
 
         if ($type === 'all' || $type === 'expense') {
@@ -91,12 +95,14 @@ class AccountSummaryService
 
         if ($type === 'all' || $type === 'landlord_payable') {
             $detailed = $detailed->concat($this->getLandlordPayablesSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'landlord_receivable';
             $categoryKeys[] = 'landlord_payable';
         }
 
         if ($type === 'all' || $type === 'party_due') {
             $detailed = $detailed->concat($this->getPartyDuesSummary($dateFrom, $dateTo));
-            $categoryKeys[] = 'party_due';
+            $categoryKeys[] = 'party_receivable';
+            $categoryKeys[] = 'party_payable';
         }
 
         if ($type === 'all' || $type === 'jv_payable') {
@@ -119,9 +125,12 @@ class AccountSummaryService
             'liability'        => 'Equity & Liabilities (Owners)',
             'receivable'       => 'Tenants',
             'tenant_security_deposit' => 'Tenant Security Deposits',
+            'tenant_security_deposit_pending' => 'Pending Security Deposits',
             'expense'          => 'Expenses',
+            'landlord_receivable' => 'Landlord Receivables',
             'landlord_payable' => 'Landlord Payables',
-            'party_due'        => 'Party Dues',
+            'party_receivable' => 'Party Receivables',
+            'party_payable'    => 'Party Payables',
             'jv_payable'       => 'JV Payables',
         ];
 
@@ -388,79 +397,64 @@ class AccountSummaryService
     }
 
     /**
-     * Tenant security deposits, shown separately from rent/maintenance dues.
-     * Pending (uncollected) deposits are a receivable; once collected they become
-     * a payable (held on behalf of the tenant until refunded on move-out).
+     * Tenant security deposits held, mirroring the Security Deposit ledger
+     * (SecurityLedgerService): received deposits minus deductions and refunds.
+     * Uncollected (pending) deposits are not a held balance, so they're excluded.
+     * Held deposits are owed back to tenants, so balances are negative (payable).
      */
     private function getTenantSecurityDepositsSummary($dateFrom, $dateTo)
     {
         $results = collect();
 
-        $unitIds = Payment::where('type', 'security_deposit')->distinct()->pluck('unit_id');
-        $units = Unit::with(['tenant', 'otherTenant'])->whereIn('id', $unitIds)->orderBy('unit_number')->get();
+        $units = Unit::with(['tenant', 'otherTenant'])->orderBy('unit_number')->get();
+        $unitIds = $units->pluck('id')->toArray();
+
+        $depositPayments = Payment::whereIn('unit_id', $unitIds)
+            ->whereIn('type', ['security_deposit', 'deposit_deduction'])
+            ->where('amount_paid', '>', 0)
+            ->get()
+            ->groupBy('unit_id');
+
+        // Same unit attribution as the ledger: voucher's unit, else its tenant's unit.
+        $refundsByUnit = PaymentVoucher::where('paid_to_type', 'tenant')
+            ->with('tenant')
+            ->get()
+            ->groupBy(fn($pv) => $pv->unit_id ?? $pv->tenant?->unit_id);
+
+        $from = $dateFrom ? Carbon::parse($dateFrom)->startOfDay() : null;
+        $to = $dateTo ? Carbon::parse($dateTo)->endOfDay() : null;
 
         foreach ($units as $unit) {
-            $unitId = $unit->id;
+            $entries = ($depositPayments->get($unit->id) ?? collect())
+                ->map(fn($p) => [
+                    'date' => $p->paid_at ?: ($p->month ?: $p->due_date),
+                    'credit' => $p->type === 'security_deposit' ? (float) $p->amount_paid : 0.0,
+                    'debit' => $p->type === 'deposit_deduction' ? (float) $p->amount_paid : 0.0,
+                ])
+                ->concat(($refundsByUnit->get($unit->id) ?? collect())->map(fn($pv) => [
+                    'date' => $pv->date,
+                    'credit' => 0.0,
+                    'debit' => (float) $pv->amount,
+                ]))
+                ->filter(fn($e) => $e['date']);
 
-            // Prior Period
-            $priorDepositInvoiced = 0.0;
-            $priorDepositPaid = 0.0;
-            $priorDepositRefunded = 0.0;
+            $opening = 0.0;
+            $periodCredit = 0.0;
+            $periodDebit = 0.0;
 
-            if ($dateFrom) {
-                $priorDepositInvoiced = (float) Payment::where('unit_id', $unitId)
-                    ->where('type', 'security_deposit')
-                    ->where('month', '<', $dateFrom)->sum('amount');
-
-                $priorDepositPaid = (float) Payment::where('unit_id', $unitId)
-                    ->where('type', 'security_deposit')
-                    ->where(function ($q) use ($dateFrom) {
-                        $q->whereNull('paid_at')->where('month', '<', $dateFrom)
-                          ->orWhere('paid_at', '<', $dateFrom);
-                    })->sum('amount_paid');
-
-                $priorDepositRefunded = (float) PaymentVoucher::where('paid_to_type', 'tenant')
-                    ->where(function ($q) use ($unitId, $unit) {
-                        $q->where('unit_id', $unitId);
-                        if ($unit->tenant_id) $q->orWhere('tenant_id', $unit->tenant_id);
-                    })->where('date', '<', $dateFrom)->sum('amount');
+            foreach ($entries as $e) {
+                $d = Carbon::parse($e['date']);
+                if ($from && $d->lt($from)) {
+                    $opening += $e['credit'] - $e['debit'];
+                } elseif (!$to || $d->lte($to)) {
+                    $periodCredit += $e['credit'];
+                    $periodDebit += $e['debit'];
+                }
             }
 
-            $openingPendingDeposit = $priorDepositInvoiced - $priorDepositPaid;
-            $openingHeldDeposit = $priorDepositPaid - $priorDepositRefunded;
+            $closing = $opening + $periodCredit - $periodDebit;
 
-            // Current Period
-            $periodDepositInvoiced = (float) Payment::where('unit_id', $unitId)
-                ->where('type', 'security_deposit')
-                ->when($dateFrom, fn($q) => $q->where('month', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('month', '<=', $dateTo))->sum('amount');
-
-            $periodDepositPaid = (float) Payment::where('unit_id', $unitId)
-                ->where('type', 'security_deposit')
-                ->where(function ($q) use ($dateFrom, $dateTo) {
-                    if ($dateFrom) {
-                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '>=', $dateFrom)->orWhere('paid_at', '>=', $dateFrom));
-                    }
-                    if ($dateTo) {
-                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '<=', $dateTo)->orWhere('paid_at', '<=', $dateTo));
-                    }
-                })->sum('amount_paid');
-
-            $periodDepositRefunded = (float) PaymentVoucher::where('paid_to_type', 'tenant')
-                ->where(function ($q) use ($unitId, $unit) {
-                    $q->where('unit_id', $unitId);
-                    if ($unit->tenant_id) $q->orWhere('tenant_id', $unit->tenant_id);
-                })
-                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-
-            $pendingDeposit = $openingPendingDeposit + $periodDepositInvoiced - $periodDepositPaid;
-            $heldDeposit = $openingHeldDeposit + $periodDepositPaid - $periodDepositRefunded;
-
-            $entryReceivable = max(0, $pendingDeposit);
-            $entryPayable = max(0, $heldDeposit);
-
-            if ($entryReceivable == 0 && $entryPayable == 0) {
+            if (abs($opening) < 0.005 && abs($closing) < 0.005 && $periodCredit == 0 && $periodDebit == 0) {
                 continue;
             }
 
@@ -471,12 +465,84 @@ class AccountSummaryService
                 'name' => 'Unit ' . $unit->unit_number . ($tenantName ? ' (' . $tenantName . ')' : ''),
                 'type' => 'Tenant Security Deposit',
                 'group' => 'tenant_security_deposit',
-                'opening' => $openingPendingDeposit - $openingHeldDeposit,
-                'debit' => $periodDepositInvoiced,
-                'credit' => $periodDepositPaid + $periodDepositRefunded,
-                'closing' => $entryReceivable - $entryPayable,
-                'receivable' => $entryReceivable,
-                'payable' => $entryPayable,
+                'opening' => -$opening,
+                'debit' => $periodDebit,
+                'credit' => $periodCredit,
+                'closing' => -$closing,
+                'receivable' => max(0, -$closing),
+                'payable' => max(0, $closing),
+                'url' => route('ledgers.all', ['ledger_type' => 'security', 'unit_id' => $unit->id]),
+            ]);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Security deposits billed to tenants but not yet collected — a receivable,
+     * kept apart from the held deposits so those still match the ledger.
+     */
+    private function getTenantPendingDepositsSummary($dateFrom, $dateTo)
+    {
+        $results = collect();
+
+        $unitIds = Payment::where('type', 'security_deposit')->distinct()->pluck('unit_id');
+        $units = Unit::with(['tenant', 'otherTenant'])->whereIn('id', $unitIds)->orderBy('unit_number')->get();
+
+        foreach ($units as $unit) {
+            $unitId = $unit->id;
+
+            $opening = 0.0;
+            if ($dateFrom) {
+                $priorInvoiced = (float) Payment::where('unit_id', $unitId)
+                    ->where('type', 'security_deposit')
+                    ->where('month', '<', $dateFrom)->sum('amount');
+
+                $priorPaid = (float) Payment::where('unit_id', $unitId)
+                    ->where('type', 'security_deposit')
+                    ->where(function ($q) use ($dateFrom) {
+                        $q->whereNull('paid_at')->where('month', '<', $dateFrom)
+                          ->orWhere('paid_at', '<', $dateFrom);
+                    })->sum('amount_paid');
+
+                $opening = $priorInvoiced - $priorPaid;
+            }
+
+            $periodInvoiced = (float) Payment::where('unit_id', $unitId)
+                ->where('type', 'security_deposit')
+                ->when($dateFrom, fn($q) => $q->where('month', '>=', $dateFrom))
+                ->when($dateTo, fn($q) => $q->where('month', '<=', $dateTo))->sum('amount');
+
+            $periodPaid = (float) Payment::where('unit_id', $unitId)
+                ->where('type', 'security_deposit')
+                ->where(function ($q) use ($dateFrom, $dateTo) {
+                    if ($dateFrom) {
+                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '>=', $dateFrom)->orWhere('paid_at', '>=', $dateFrom));
+                    }
+                    if ($dateTo) {
+                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '<=', $dateTo)->orWhere('paid_at', '<=', $dateTo));
+                    }
+                })->sum('amount_paid');
+
+            $closing = $opening + $periodInvoiced - $periodPaid;
+
+            if (abs($closing) < 0.005) {
+                continue;
+            }
+
+            $tenantName = $unit->tenant->name ?? $unit->otherTenant->name ?? null;
+
+            $results->push([
+                'id' => $unit->id,
+                'name' => 'Unit ' . $unit->unit_number . ($tenantName ? ' (' . $tenantName . ')' : ''),
+                'type' => 'Pending Security Deposit',
+                'group' => 'tenant_security_deposit_pending',
+                'opening' => $opening,
+                'debit' => $periodInvoiced,
+                'credit' => $periodPaid,
+                'closing' => $closing,
+                'receivable' => max(0, $closing),
+                'payable' => max(0, -$closing),
                 'url' => route('ledgers.tenant', ['unit_id' => $unit->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
             ]);
         }
@@ -521,85 +587,78 @@ class AccountSummaryService
         return $results;
     }
 
+    /**
+     * Landlords carry two separate balances, split into their own groups:
+     *  - Landlord Receivables: unit value still owed by the landlord (ownership
+     *    credit) less what they've paid us.
+     *  - Landlord Payables: ORP (rent purchased on the landlord's behalf) that we
+     *    owe them, less payouts made to them. Negative closing = we owe them.
+     * Net of the two equals the landlord ledger balance.
+     */
     private function getLandlordPayablesSummary($dateFrom, $dateTo)
     {
         $results = collect();
         $landlords = \App\Models\Landlord::with('ownerships')->orderBy('name')->get();
+        $orpModel = \App\Models\OtherOwnedRentPurchaseVoucher::class;
+
+        $inPeriod = fn($q) => $q
+            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo));
 
         foreach ($landlords as $landlord) {
-            $unitValueOwed = (float) $landlord->ownerships->sum('credit_amount');
+            $receipts = fn() => ReceivingVoucher::where('received_from_type', 'owner')->where('owner_id', $landlord->id);
+            $grvs = fn() => GeneralReceivingVoucher::where('landlord_id', $landlord->id);
+            $payouts = fn() => PaymentVoucher::where('paid_to_type', 'landlord')->where('landlord_id', $landlord->id);
+            $orps = fn() => $orpModel::where('landlord_id', $landlord->id);
 
-            // Prior Period
-            $priorPaid = 0.0;
-            $priorCharged = 0.0;
+            // ── Receivable: unit value owed by the landlord ──
+            $recOpening = (float) $landlord->ownerships->sum('credit_amount');
             if ($dateFrom) {
-                $priorPaid += (float) ReceivingVoucher::where('received_from_type', 'owner')
-                    ->where('owner_id', $landlord->id)->where('date', '<', $dateFrom)->sum('amount');
-                $priorPaid += (float) GeneralReceivingVoucher::where('landlord_id', $landlord->id)
-                    ->where('date', '<', $dateFrom)->sum('amount');
-                $priorPaid += (float) Payment::where('landlord_id', $landlord->id)
-                    ->where('type', 'extra_payment')->where('amount_paid', '>', 0)
-                    ->where(function ($q) use ($dateFrom) {
-                        $q->whereNull('paid_at')->where('month', '<', $dateFrom)
-                          ->orWhere('paid_at', '<', $dateFrom);
-                    })->sum('amount_paid');
+                $recOpening -= (float) $receipts()->where('date', '<', $dateFrom)->sum('amount')
+                    + (float) $grvs()->where('date', '<', $dateFrom)->sum('amount');
+            }
+            $recCredit = (float) $inPeriod($receipts())->sum('amount') + (float) $inPeriod($grvs())->sum('amount');
+            $recClosing = $recOpening - $recCredit;
 
-                $priorCharged += (float) PaymentVoucher::where('paid_to_type', 'landlord')
-                    ->where('landlord_id', $landlord->id)->where('date', '<', $dateFrom)->sum('amount');
-                $priorCharged += (float) \App\Models\OtherOwnedRentPurchaseVoucher::where('landlord_id', $landlord->id)
-                    ->where('date', '<', $dateFrom)->sum('amount');
+            if ($recOpening != 0 || $recCredit != 0) {
+                $results->push([
+                    'id' => $landlord->id,
+                    'name' => $landlord->name,
+                    'type' => 'Landlord Receivable',
+                    'group' => 'landlord_receivable',
+                    'opening' => $recOpening,
+                    'debit' => 0.0,
+                    'credit' => $recCredit,
+                    'closing' => $recClosing,
+                    'url' => route('landlord_ledgers.index', ['landlord_id' => $landlord->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+                ]);
             }
 
-            $openingBalance = $unitValueOwed - $priorPaid + $priorCharged;
-
-            // Current Period Credits (payments received)
-            $rvPaid = (float) ReceivingVoucher::where('received_from_type', 'owner')
-                ->where('owner_id', $landlord->id)
-                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-            $grvPaid = (float) GeneralReceivingVoucher::where('landlord_id', $landlord->id)
-                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-            $extraPaid = (float) Payment::where('landlord_id', $landlord->id)
-                ->where('type', 'extra_payment')->where('amount_paid', '>', 0)
-                ->where(function ($q) use ($dateFrom, $dateTo) {
-                    if ($dateFrom) {
-                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '>=', $dateFrom)->orWhere('paid_at', '>=', $dateFrom));
-                    }
-                    if ($dateTo) {
-                        $q->where(fn($sub) => $sub->whereNull('paid_at')->where('month', '<=', $dateTo)->orWhere('paid_at', '<=', $dateTo));
-                    }
-                })->sum('amount_paid');
-
-            $totalCredit = $rvPaid + $grvPaid + $extraPaid;
-
-            // Current Period Debits (payouts / rent purchases)
-            $payouts = (float) PaymentVoucher::where('paid_to_type', 'landlord')
-                ->where('landlord_id', $landlord->id)
-                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-            $orp = (float) \App\Models\OtherOwnedRentPurchaseVoucher::where('landlord_id', $landlord->id)
-                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-
-            $totalDebit = $payouts + $orp;
-            $closingBalance = $openingBalance + $totalDebit - $totalCredit;
-
-            if ($openingBalance == 0 && $totalDebit == 0 && $totalCredit == 0) {
-                continue;
+            // ── Payable: ORP owed to the landlord, less payouts ──
+            $payOpening = 0.0;
+            if ($dateFrom) {
+                $payOpening = (float) $payouts()->where('date', '<', $dateFrom)->sum('amount')
+                    - (float) $orps()->where('date', '<', $dateFrom)->sum('amount');
             }
+            $payDebit = (float) $inPeriod($payouts())->sum('amount');
+            $payCredit = (float) $inPeriod($orps())->sum('amount');
+            $payClosing = $payOpening + $payDebit - $payCredit;
 
-            $results->push([
-                'id' => $landlord->id,
-                'name' => $landlord->name,
-                'type' => 'Landlord Payable',
-                'group' => 'landlord_payable',
-                'opening' => $openingBalance,
-                'debit' => $totalDebit,
-                'credit' => $totalCredit,
-                'closing' => $closingBalance,
-                'url' => route('landlord_ledgers.index', ['landlord_id' => $landlord->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
-            ]);
+            if ($payOpening != 0 || $payDebit != 0 || $payCredit != 0) {
+                $results->push([
+                    'id' => $landlord->id,
+                    'name' => $landlord->name,
+                    'type' => 'Landlord Payable',
+                    'group' => 'landlord_payable',
+                    'opening' => $payOpening,
+                    'debit' => $payDebit,
+                    'credit' => $payCredit,
+                    'closing' => $payClosing,
+                    'receivable' => max(0, $payClosing),
+                    'payable' => max(0, -$payClosing),
+                    'url' => route('landlord_ledgers.index', ['landlord_id' => $landlord->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+                ]);
+            }
         }
 
         return $results;
@@ -614,7 +673,11 @@ class AccountSummaryService
             $opBal = (float) ($party->opening_balance ?? 0);
             $opReceivable = $opBal > 0 ? $opBal : 0.0;
             $opPayable = $opBal < 0 ? abs($opBal) : 0.0;
-            $includeOpeningBalance = !$dateFrom || !$party->created_at || $party->created_at->lt(\Carbon\Carbon::parse($dateFrom));
+            // The party ledger dates the opening balance at the party's creation, so it
+            // belongs to whichever side of the period that date falls on.
+            $opDate = $party->created_at ?? Carbon::parse('2026-01-01');
+            $opBeforePeriod = !$dateFrom || $opDate->lt(Carbon::parse($dateFrom)->startOfDay());
+            $opInPeriod = !$opBeforePeriod && (!$dateTo || $opDate->lte(Carbon::parse($dateTo)->endOfDay()));
 
             // Prior Period
             $priorDebit = 0.0;
@@ -631,7 +694,7 @@ class AccountSummaryService
                     ->where('date', '<', $dateFrom)->sum('amount');
             }
 
-            $openingBalance = ($includeOpeningBalance ? ($opReceivable - $opPayable) : 0) + $priorDebit - $priorCredit;
+            $openingBalance = ($opBeforePeriod ? ($opReceivable - $opPayable) : 0) + $priorDebit - $priorCredit;
 
             // Current Period
             $duesReceivable = (float) \App\Models\PartyDue::where('party_id', $party->id)
@@ -642,7 +705,7 @@ class AccountSummaryService
                 ->where('paid_to_type', 'other')
                 ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-            $totalDebit = $duesReceivable + $payments;
+            $totalDebit = $duesReceivable + $payments + ($opInPeriod ? $opReceivable : 0);
 
             $duesPayable = (float) \App\Models\PartyDue::where('party_id', $party->id)
                 ->where('type', 'payable')
@@ -651,7 +714,7 @@ class AccountSummaryService
             $receipts = (float) GeneralReceivingVoucher::where('party_id', $party->id)
                 ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
-            $totalCredit = $duesPayable + $receipts;
+            $totalCredit = $duesPayable + $receipts + ($opInPeriod ? $opPayable : 0);
 
             $closingBalance = $openingBalance + $totalDebit - $totalCredit;
 
@@ -663,7 +726,8 @@ class AccountSummaryService
                 'id' => $party->id,
                 'name' => $party->name,
                 'type' => 'Party Due',
-                'group' => 'party_due',
+                // Negative closing = we owe the party.
+                'group' => $closingBalance < 0 ? 'party_payable' : 'party_receivable',
                 'opening' => $openingBalance,
                 'debit' => $totalDebit,
                 'credit' => $totalCredit,

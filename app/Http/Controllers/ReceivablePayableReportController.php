@@ -286,6 +286,19 @@ class ReceivablePayableReportController extends Controller
                 $dQueryReceivable->where('date', '<=', $dateTo);
             $totalReceivableDue = (float) $dQueryReceivable->sum('amount');
 
+            // Opening balance, dated at the party's creation like the party ledger.
+            $opBal = (float) ($party->opening_balance ?? 0);
+            $opDate = $party->created_at ?? \Carbon\Carbon::parse('2026-01-01');
+            if ($opBal != 0
+                && (!$dateFrom || $opDate->gte(\Carbon\Carbon::parse($dateFrom)->startOfDay()))
+                && (!$dateTo || $opDate->lte(\Carbon\Carbon::parse($dateTo)->endOfDay()))) {
+                if ($opBal > 0) {
+                    $totalReceivableDue += $opBal;
+                } else {
+                    $totalPayableDue += abs($opBal);
+                }
+            }
+
             if ($type === 'payables') {
                 if (!empty($categories) && !in_array('Party Payable', $categories)) {
                     continue;
@@ -402,7 +415,7 @@ class ReceivablePayableReportController extends Controller
                 $totalPaid = (float) $ep->amount_paid;
                 $netPayable = round($totalDue - $totalPaid, 2);
 
-                if ($netPayable > 0.01 || $totalPaid > 0.01) {
+                if ($netPayable > 0.01) {
                     $payables[] = [
                         'category' => 'Landlord Payable',
                         'types' => ['Landlord Payable'],
@@ -415,6 +428,43 @@ class ReceivablePayableReportController extends Controller
                         'is_self' => (bool) ($ep->unit ? $ep->unit->is_self : false),
                         'is_other_receivable' => false,
                     ];
+                }
+            }
+
+            // ORP vouchers: rent purchased on the landlord's behalf is owed to them,
+            // less the payouts already made to the landlord.
+            if (empty($categories) || in_array('Landlord Payable', $categories)) {
+                $inRange = fn($q) => $q
+                    ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                    ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo));
+
+                $orpByLandlord = $inRange(\App\Models\OtherOwnedRentPurchaseVoucher::query())
+                    ->selectRaw('landlord_id, SUM(amount) as total')
+                    ->groupBy('landlord_id')
+                    ->pluck('total', 'landlord_id');
+
+                $landlordsWithOrp = Landlord::with('ownerships.unit')->whereIn('id', $orpByLandlord->keys())->get();
+
+                foreach ($landlordsWithOrp as $landlord) {
+                    $orpTotal = (float) $orpByLandlord[$landlord->id];
+                    $paidTotal = (float) $inRange(PaymentVoucher::where('paid_to_type', 'landlord')
+                        ->where('landlord_id', $landlord->id))->sum('amount');
+                    $netPayable = round($orpTotal - $paidTotal, 2);
+
+                    if ($netPayable > 0.01) {
+                        $payables[] = [
+                            'category' => 'Landlord Payable',
+                            'types' => ['Landlord Payable'],
+                            'name' => $landlord->name,
+                            'unit' => $landlord->ownerships->map(fn($o) => $o->unit?->unit_number)->filter()->implode(', '),
+                            'details' => 'Rent Purchase (ORP)',
+                            'due' => $orpTotal,
+                            'paid' => $paidTotal,
+                            'net' => $netPayable,
+                            'is_self' => false,
+                            'is_other_receivable' => false,
+                        ];
+                    }
                 }
             }
 

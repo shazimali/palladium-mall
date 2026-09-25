@@ -163,9 +163,12 @@
                         'liability' => 'Equity & Liabilities (Owners)',
                         'receivable' => 'Tenants',
                         'tenant_security_deposit' => 'Tenant Security Deposits',
+                        'tenant_security_deposit_pending' => 'Pending Security Deposits',
                         'expense' => 'Expenses',
+                        'landlord_receivable' => 'Landlord Receivables',
                         'landlord_payable' => 'Landlord Payables',
-                        'party_due' => 'Party Dues',
+                        'party_receivable' => 'Party Receivables',
+                        'party_payable' => 'Party Payables',
                         'jv_payable' => 'JV Payables',
                     ];
                     $grandTotalOpening = 0;
