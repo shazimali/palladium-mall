@@ -111,10 +111,40 @@
     {{-- preloader end --}}
 
     @php
-        $hideSidebar = request()->has('no_sidebar') || request()->routeIs('reports.index');
+        $fullView = request()->boolean('full_view');
+        $hideSidebar = $fullView || request()->has('no_sidebar') || request()->routeIs('reports.index');
     @endphp
 
-    <div class="min-h-screen xl:flex">
+    @if($fullView)
+        {{-- Full View: only the element marked [data-ledger-table] is shown, under a slim exit bar. --}}
+        <style>
+            #full-view-root [data-ledger-table].overflow-auto,
+            #full-view-root [data-ledger-table] .overflow-auto { max-height: calc(100vh - 76px) !important; }
+        </style>
+        <div class="sticky top-0 z-[1000] flex h-[52px] items-center justify-between gap-4 border-b-2 border-gray-200 bg-white px-4 dark:border-gray-800 dark:bg-gray-900">
+            <h1 class="truncate text-base font-black uppercase tracking-wide text-gray-900 dark:text-white">@yield('fullViewTitle', 'Ledger')</h1>
+            <button type="button" onclick="exitFullView()"
+                class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-sm font-extrabold text-white shadow-md hover:bg-gray-800 transition-colors cursor-pointer">
+                ✕ Exit Full View <span class="font-bold text-gray-400">(Esc)</span>
+            </button>
+        </div>
+        <div id="full-view-root" class="p-3"></div>
+        <script>
+            function exitFullView() {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.focus();
+                    window.close();
+                    return;
+                }
+                const url = new URL(window.location.href);
+                ['full_view', 'paginate'].forEach(k => url.searchParams.delete(k));
+                window.location.href = url.toString();
+            }
+            document.addEventListener('keydown', e => { if (e.key === 'Escape') exitFullView(); });
+        </script>
+    @endif
+
+    <div class="{{ $fullView ? '' : 'min-h-screen xl:flex' }}">
         @if(!$hideSidebar)
             @include('layouts.backdrop')
             @include('layouts.sidebar')
@@ -130,9 +160,24 @@
                 @include('layouts.app-header')
             @endif
             <!-- app header end -->
-            <div class="p-4 mx-auto @yield('containerClass', 'max-w-(--breakpoint-2xl)') md:p-6">
+            <div id="full-view-source" class="p-4 mx-auto @yield('containerClass', 'max-w-(--breakpoint-2xl)') md:p-6">
                 @yield('content')
             </div>
+            @if($fullView)
+                <script>
+                    // Runs before Alpine/page scripts: move the table out and hide the rest (filters stay in the DOM for scripts).
+                    (function () {
+                        const table = document.querySelector('#full-view-source [data-ledger-table]');
+                        const root = document.getElementById('full-view-root');
+                        document.getElementById('full-view-source').style.display = 'none';
+                        if (table) {
+                            root.appendChild(table);
+                        } else {
+                            root.innerHTML = '<div class="p-8 text-center text-lg font-bold text-gray-400">Nothing to show. Exit and select a ledger first.</div>';
+                        }
+                    })();
+                </script>
+            @endif
         </div>
 
     </div>
@@ -171,6 +216,7 @@
             const path = window.location.pathname;
             const exempt = ['/create', '/edit', '/login', '/register', '/password', '/bills/'];
             if (exempt.some(function (p) { return path.includes(p); })) return;
+            if (new URLSearchParams(window.location.search).has('full_view')) return;
 
             // ─── Constants ────────────────────────────────────────────────────────────
             const KEY = 'pm_tab:' + path;                   // localStorage key for this page

@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('fullViewTitle', 'Security Ledgers')
+
 @section('content')
 <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
@@ -13,6 +15,7 @@
                 <p class="text-xs font-semibold text-gray-500 dark:text-gray-400">Security deposit received, deducted and refunded per flat/shop.</p>
             </div>
             <div class="flex items-center gap-2">
+                <x-ledger.full-view-button size="sm" />
                 <a href="{{ route('ledgers.security.print', request()->all()) }}" target="_blank"
                     class="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-3.5 py-2 text-xs font-bold text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 transition-all">
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -108,10 +111,10 @@
     </div>
 
     {{-- Main Table Container --}}
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden dark:border-gray-800 dark:bg-gray-900">
-        <div class="overflow-x-auto">
+    <div data-ledger-table class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden dark:border-gray-800 dark:bg-gray-900">
+        <div class="overflow-auto max-h-[70vh]">
             <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
-                <thead class="text-xs uppercase font-extrabold bg-gray-50 text-gray-500 border-b border-gray-200 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-200">
+                <thead class="sticky top-0 z-10 text-xs uppercase font-extrabold bg-gray-50 text-gray-500 border-b border-gray-200 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-200">
                     <tr>
                         <th class="px-4 py-4 tracking-wider">SR #</th>
                         <th class="px-4 py-4 tracking-wider">DATE</th>

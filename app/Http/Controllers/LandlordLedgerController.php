@@ -119,7 +119,7 @@ class LandlordLedgerController extends Controller
     /**
      * View Printable Statement in Pop-up.
      */
-    public function print(Request $request): View
+    public function print(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('landlords.view')) {
             abort(403, 'Unauthorized action.');
@@ -157,21 +157,23 @@ class LandlordLedgerController extends Controller
             return $e;
         })->toArray();
 
-        return view('ledgers.print_page', [
+        $pdf = Pdf::loadView('ledgers.print_pdf', [
             'type'         => 'landlord',
-            'pageTitle'    => 'Landlord Ledger — ' . $ledgerData['landlord']->name,
+            'pageTitle'    => 'Landlord Ledger',
+            'highlightName' => $ledgerData['landlord']->name,
             'filterChips'  => [
                 ['label' => 'Date From', 'value' => $dateFrom ?? 'All Time'],
                 ['label' => 'Date To', 'value' => $dateTo ?? 'All Time'],
             ],
             'metaItems'    => [
-                ['label' => 'Landlord Name', 'value' => $ledgerData['landlord']->name],
                 ['label' => 'Phone', 'value' => $ledgerData['landlord']->phone ?? '—'],
             ],
             'summaryCards' => $summaryCards,
             'columns'      => $columns,
             'rows'         => $rows,
-        ]);
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->stream('landlord_ledger_' . str_replace(' ', '_', strtolower($ledgerData['landlord']->name)) . '_' . now()->format('Y_m_d') . '.pdf');
     }
 
     /**

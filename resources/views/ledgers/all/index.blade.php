@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('fullViewTitle', 'All Ledgers')
+
 @section('content')
     <x-common.page-breadcrumb pageTitle="All Ledgers" />
 
@@ -284,6 +286,7 @@
                         Clear
                     </a>
                     @if($hasSelection)
+                        <x-ledger.full-view-button size="sm" />
                         @if($printRoute)
                             <a href="{{ $printRoute }}" target="_blank"
                                 class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-extrabold text-white shadow-md hover:bg-gray-800 transition-colors cursor-pointer">
@@ -321,10 +324,10 @@
             @endphp
 
             {{-- Results Table --}}
-            <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
-                <div class="overflow-x-auto">
+            <div data-ledger-table class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
+                <div class="overflow-auto max-h-[70vh]">
                     <table class="w-full text-xs sm:text-[13.5px] text-left text-gray-900 dark:text-gray-100">
-                        <thead class="text-xs font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
+                        <thead class="sticky top-0 z-10 text-xs font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
                             <tr>
                                 @foreach($columns as $col)
                                     <th class="px-3.5 py-2.5 text-white {{ $col['class'] ?? '' }}">{{ $col['label'] }}</th>

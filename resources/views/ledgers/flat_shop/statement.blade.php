@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('fullViewTitle', 'Flat / Shop Statement — Unit ' . $unit->unit_number)
+
 @section('content')
 <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
 
@@ -13,6 +15,7 @@
             Back to Flat / Shop Ledger Summary
         </a>
 
+        <x-ledger.full-view-button size="sm" />
         <a href="window.print()" onclick="window.print(); return false;"
             class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-bold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 shadow-sm transition-all">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -69,10 +72,10 @@
     </div>
 
     {{-- Statement Transactions Table --}}
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden dark:border-gray-800 dark:bg-gray-900">
-        <div class="overflow-x-auto">
+    <div data-ledger-table class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden dark:border-gray-800 dark:bg-gray-900">
+        <div class="overflow-auto max-h-[70vh]">
             <table class="w-full text-sm text-left text-gray-600 dark:text-gray-300">
-                <thead class="text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-200">
+                <thead class="sticky top-0 z-10 text-xs uppercase bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-200">
                     <tr>
                         <th class="px-4 py-3.5">Month</th>
                         <th class="px-4 py-3.5">Voucher / Ref #</th>

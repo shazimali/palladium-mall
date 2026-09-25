@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('fullViewTitle', 'Expense Head Ledger')
+
 @section('content')
     <x-common.page-breadcrumb pageTitle="Expense Head Ledger" />
 
@@ -180,6 +182,7 @@
                         </a>
                     @endif
                     @if($ledgerData)
+                        <x-ledger.full-view-button />
                         <a href="{{ route('ledgers.expense.print', request()->all()) }}"
                             onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
                             class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-base font-extrabold text-white shadow-md hover:bg-gray-800 transition-colors cursor-pointer">
@@ -195,9 +198,9 @@
         @if($ledgerData)
 
             {{-- Table --}}
-            <div class="overflow-hidden border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
+            <div data-ledger-table class="overflow-auto max-h-[70vh] border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">
                 <table class="w-full text-xs sm:text-[13.5px] text-left text-gray-900 dark:text-gray-100">
-                    <thead class="text-xs font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
+                    <thead class="sticky top-0 z-10 text-xs font-black uppercase tracking-wider bg-brand-600 text-white dark:bg-brand-700 border-b-2 border-gray-200 dark:border-gray-700">
                         <tr>
                             <th class="px-3.5 py-2.5 text-white">Date</th>
                             <th class="px-3.5 py-2.5 text-white">Voucher #</th>

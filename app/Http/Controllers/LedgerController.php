@@ -1171,10 +1171,17 @@ class LedgerController extends Controller
     }
 
     // -----------------------------------------------------------------------
-    // Print pages (open in new window)
+    // Print pages (PDF streamed in new window)
     // -----------------------------------------------------------------------
 
-    public function printTenant(Request $request): \Illuminate\View\View
+    private function streamLedgerPdf(string $fileName, array $data)
+    {
+        return Pdf::loadView('ledgers.print_pdf', $data)
+            ->setPaper('a4', 'landscape')
+            ->stream($fileName . '_' . now()->format('Y_m_d') . '.pdf');
+    }
+
+    public function printTenant(Request $request)
     {
         $this->authorizeLedger();
 
@@ -1213,8 +1220,8 @@ class LedgerController extends Controller
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
-        return view('ledgers.print_page', [
-            'pageTitle' => 'Tenant / Unit Ledger — ' . $unit->unit_number,
+        return $this->streamLedgerPdf('tenant_ledger_' . $unit->unit_number, [
+            'pageTitle' => 'Tenant / Unit Ledger',
             'highlightName' => $unit->unit_number . ($tenant ? ' — ' . $tenant->name : ''),
             'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
@@ -1223,7 +1230,7 @@ class LedgerController extends Controller
         ]);
     }
 
-    public function printOwner(Request $request): \Illuminate\View\View
+    public function printOwner(Request $request)
     {
         $this->authorizeLedger();
 
@@ -1237,10 +1244,10 @@ class LedgerController extends Controller
         $ledgerData = $this->getOwnerLedgerData($ownerId, $year, $months);
         $owner = $ledgerData['owner'];
 
-        $filterChips = [
-            ['label' => 'Owner', 'value' => $owner->name . ($owner->email ? ' (' . $owner->email . ')' : '')],
-            ['label' => 'Months', 'value' => $this->ownerMonthsRangeLabel($year, $months)],
-        ];
+        $filterChips = [];
+        if ($owner->email)
+            $filterChips[] = ['label' => 'Email', 'value' => $owner->email];
+        $filterChips[] = ['label' => 'Months', 'value' => $this->ownerMonthsRangeLabel($year, $months)];
 
         $s = $ledgerData['summary'];
         $summaryCards = [
@@ -1261,8 +1268,9 @@ class LedgerController extends Controller
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
-        return view('ledgers.print_page', [
-            'pageTitle' => 'Owner Capital Statement — ' . $owner->name,
+        return $this->streamLedgerPdf('owner_ledger_' . str_replace(' ', '_', strtolower($owner->name)), [
+            'pageTitle' => 'Owner Capital Statement',
+            'highlightName' => $owner->name,
             'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
             'columns' => $columns,
@@ -1270,7 +1278,7 @@ class LedgerController extends Controller
         ]);
     }
 
-    public function printAccount(Request $request): \Illuminate\View\View
+    public function printAccount(Request $request)
     {
         $this->authorizeLedger();
 
@@ -1309,8 +1317,8 @@ class LedgerController extends Controller
             ['key' => 'running_balance', 'label' => 'Running Balance', 'type' => 'balance', 'class' => 'text-right'],
         ];
 
-        return view('ledgers.print_page', [
-            'pageTitle' => 'Cash & Bank Ledger — ' . $account->name,
+        return $this->streamLedgerPdf('account_ledger_' . str_replace(' ', '_', strtolower($account->name)), [
+            'pageTitle' => 'Cash & Bank Ledger',
             'highlightName' => $account->name . ' (' . match ($account->type) {
                 'bank_transfer' => 'Bank Account',
                 default => ucwords(str_replace('_', ' ', $account->type)),
@@ -1322,7 +1330,7 @@ class LedgerController extends Controller
         ]);
     }
 
-    public function printExpense(Request $request): \Illuminate\View\View
+    public function printExpense(Request $request)
     {
         $this->authorizeLedger();
 
@@ -1338,9 +1346,9 @@ class LedgerController extends Controller
         $head = $ledgerData['head'];
         $headName = $head->name ?? 'All Expenses';
 
-        $filterChips = [
-            ['label' => 'Expense Category', 'value' => $head ? ($head->name . ($head->code ? ' (Code: ' . $head->code . ')' : '')) : 'All Expenses'],
-        ];
+        $filterChips = [];
+        if ($head && $head->code)
+            $filterChips[] = ['label' => 'Code', 'value' => $head->code];
         if ($dateFrom)
             $filterChips[] = ['label' => 'Date From', 'value' => \Carbon\Carbon::parse($dateFrom)->format('d M Y')];
         if ($dateTo)
@@ -1363,8 +1371,9 @@ class LedgerController extends Controller
         $columns[] = ['key' => 'reference', 'label' => 'Reference', 'td_class' => 'mono'];
         $columns[] = ['key' => 'amount', 'label' => 'Amount', 'type' => 'amount', 'class' => 'text-right'];
 
-        return view('ledgers.print_page', [
-            'pageTitle' => 'Expense Ledger — ' . $headName,
+        return $this->streamLedgerPdf('expense_head_ledger_' . str_replace(' ', '_', strtolower($headName)), [
+            'pageTitle' => 'Expense Ledger',
+            'highlightName' => $headName,
             'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
             'columns' => $columns,

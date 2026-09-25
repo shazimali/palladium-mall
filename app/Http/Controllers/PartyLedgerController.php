@@ -211,7 +211,7 @@ class PartyLedgerController extends Controller
     /**
      * Print the party ledger.
      */
-    public function print(Request $request): View
+    public function print(Request $request)
     {
         if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('ledgers.view')) {
             abort(403, 'Unauthorized action.');
@@ -219,13 +219,34 @@ class PartyLedgerController extends Controller
 
         $data = $this->getPartyLedgerData($request->party_id);
         $selectedParty = $data['party'];
-        $ledgerEntries = $data['entries'];
         $summary = $data['summary'];
 
-        return view('ledgers.party_print', [
-            'selectedParty' => $selectedParty,
-            'ledgerEntries' => $ledgerEntries,
-            'summary' => $summary,
-        ]);
+        $columns = [
+            ['key' => 'date', 'label' => 'Date', 'type' => 'date'],
+            ['key' => 'ref', 'label' => 'Ref / Voucher #'],
+            ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #'],
+            ['key' => 'type', 'label' => 'Transaction Type'],
+            ['key' => 'description', 'label' => 'Details'],
+            ['key' => 'debit', 'label' => 'Debit (Dr)', 'type' => 'debit', 'class' => 'text-right'],
+            ['key' => 'credit', 'label' => 'Credit (Cr)', 'type' => 'credit', 'class' => 'text-right'],
+            ['key' => 'balance', 'label' => 'Balance', 'type' => 'balance', 'class' => 'text-right'],
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('ledgers.print_pdf', [
+            'pageTitle' => 'Party Statement of Account',
+            'highlightName' => $selectedParty->name,
+            'metaItems' => [
+                ['label' => 'Phone', 'value' => $selectedParty->phone ?? '—'],
+                ['label' => 'WhatsApp', 'value' => $selectedParty->whatsapp_number ?? '—'],
+            ],
+            'summaryCards' => [
+                ['label' => 'Net Receivable', 'value' => 'Rs. ' . number_format($summary['net_receivable'], 2), 'color' => 's-green'],
+                ['label' => 'Net Payable', 'value' => 'Rs. ' . number_format($summary['net_payable'], 2), 'color' => 's-red'],
+            ],
+            'columns' => $columns,
+            'rows' => $data['entries']->values()->toArray(),
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->stream('party_ledger_' . str_replace(' ', '_', strtolower($selectedParty->name)) . '_' . now()->format('Y_m_d') . '.pdf');
     }
 }
