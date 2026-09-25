@@ -108,8 +108,7 @@
                         <option value="all" {{ $accountType == 'all' ? 'selected' : '' }}>All Accounts</option>
                         <option value="asset" {{ $accountType == 'asset' ? 'selected' : '' }}>Assets (Banks/Cash)</option>
                         <option value="liability" {{ $accountType == 'liability' ? 'selected' : '' }}>Equity / Liabilities (Owners)</option>
-                        <option value="receivable" {{ $accountType == 'receivable' ? 'selected' : '' }}>Tenants (incl. Security Deposits)</option>
-                        <option value="expense" {{ $accountType == 'expense' ? 'selected' : '' }}>Expenses</option>
+                        <option value="receivable" {{ $accountType == 'receivable' ? 'selected' : '' }}>Security Deposits</option>
                         <option value="landlord_payable" {{ $accountType == 'landlord_payable' ? 'selected' : '' }}>Landlord Payables</option>
                         <option value="party_due" {{ $accountType == 'party_due' ? 'selected' : '' }}>Party Dues</option>
                         <option value="jv_payable" {{ $accountType == 'jv_payable' ? 'selected' : '' }}>JV Payables</option>
@@ -158,19 +157,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700 text-base">
                 @php
-                    $groupLabels = [
-                        'asset' => 'Assets (Bank & Cash)',
-                        'liability' => 'Equity & Liabilities (Owners)',
-                        'receivable' => 'Tenants',
-                        'tenant_security_deposit' => 'Tenant Security Deposits',
-                        'tenant_security_deposit_pending' => 'Pending Security Deposits',
-                        'expense' => 'Expenses',
-                        'landlord_receivable' => 'Landlord Receivables',
-                        'landlord_payable' => 'Landlord Payables',
-                        'party_receivable' => 'Party Receivables',
-                        'party_payable' => 'Party Payables',
-                        'jv_payable' => 'JV Payables',
-                    ];
+                    $groupLabels = \App\Services\AccountSummaryService::sectionLabels();
                     $grandTotalOpening = 0;
                     $grandTotalDebit = 0;
                     $grandTotalCredit = 0;

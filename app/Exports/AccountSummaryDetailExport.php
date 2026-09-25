@@ -14,20 +14,6 @@ class AccountSummaryDetailExport implements FromArray, WithHeadings, WithStyles,
     protected $dateFrom;
     protected $dateTo;
 
-    protected $groupLabels = [
-        'asset' => 'Assets (Bank & Cash)',
-        'liability' => 'Equity & Liabilities (Owners)',
-        'receivable' => 'Tenants',
-        'tenant_security_deposit' => 'Tenant Security Deposits',
-        'tenant_security_deposit_pending' => 'Pending Security Deposits',
-        'expense' => 'Expenses',
-        'landlord_receivable' => 'Landlord Receivables',
-        'landlord_payable' => 'Landlord Payables',
-        'party_receivable' => 'Party Receivables',
-        'party_payable' => 'Party Payables',
-        'jv_payable' => 'JV Payables',
-    ];
-
     public function __construct($summary, $dateFrom, $dateTo)
     {
         $this->summary = $summary->groupBy('group');
@@ -45,7 +31,7 @@ class AccountSummaryDetailExport implements FromArray, WithHeadings, WithStyles,
         $grandTotalClosing = 0;
 
         foreach ($this->summary as $groupName => $entries) {
-            $groupLabel = $this->groupLabels[$groupName] ?? ucfirst(str_replace('_', ' ', $groupName));
+            $groupLabel = \App\Services\AccountSummaryService::sectionLabels()[$groupName] ?? ucfirst(str_replace('_', ' ', $groupName));
 
             // Group Header
             $data[] = [

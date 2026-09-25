@@ -18,6 +18,44 @@ use Illuminate\Support\Facades\DB;
 class AccountSummaryService
 {
     /**
+     * Payment types left out of the tenant receivable: security deposits have their
+     * own rows, and rent/maintenance are not tracked in the account summary.
+     */
+    private const TENANT_EXCLUDED_TYPES = ['security_deposit', 'rent', 'maintenance'];
+
+    /** Account groups left out of both the summary and the detailed summary. */
+    private const HIDDEN_GROUPS = ['receivable', 'expense', 'landlord_receivable', 'tenant_security_deposit_pending'];
+
+    /**
+     * Report sections in display order, shared by the summary and the detailed summary.
+     * Assets are split into Cash and Bank sections.
+     */
+    private const SECTIONS = [
+        'asset_cash'       => 'Cash',
+        'asset_bank'       => 'Bank',
+        'party_receivable' => 'Party Receivables',
+        'liability'        => 'Equity & Liabilities (Owners)',
+        'receivable'       => 'Tenants',
+        'tenant_security_deposit' => 'Tenant Security Deposits',
+        'tenant_security_deposit_pending' => 'Pending Security Deposits',
+        'expense'          => 'Expenses',
+        'landlord_receivable' => 'Landlord Receivables',
+        'landlord_payable' => 'Landlord Payables',
+        'party_payable'    => 'Party Payables',
+        'jv_payable'       => 'JV Payables',
+    ];
+
+    public static function sectionLabels(): array
+    {
+        return self::SECTIONS;
+    }
+
+    private function sectionKey(array $row): string
+    {
+        return $row['group'] === 'asset' ? 'asset_' . ($row['subtype'] ?? 'bank') : $row['group'];
+    }
+
+    /**
      * Flat, per-entity balances (no category collapsing) — one row per real
      * account/owner/tenant/expense head/landlord/party, grouped by 'group' key.
      */
@@ -55,7 +93,14 @@ class AccountSummaryService
             $detailed = $detailed->concat($this->getJvPayablesSummary($dateFrom, $dateTo));
         }
 
-        return $detailed;
+        // Group rows by the same sections, in the same order, as the summary.
+        $order = array_flip(array_keys(self::SECTIONS));
+
+        return $detailed
+            ->map(fn($row) => array_merge($row, ['group' => $this->sectionKey($row)]))
+            ->whereNotIn('group', self::HIDDEN_GROUPS)
+            ->sortBy(fn($row) => $order[$row['group']])
+            ->values();
     }
 
     /**
@@ -110,6 +155,12 @@ class AccountSummaryService
             $categoryKeys[] = 'jv_payable';
         }
 
+        // Sections in display order, without the hidden ones.
+        $categoryKeys = array_values(array_diff(
+            array_intersect(array_keys(self::SECTIONS), $categoryKeys),
+            self::HIDDEN_GROUPS
+        ));
+
         return $this->collapseToCategories($detailed, $categoryKeys);
     }
 
@@ -119,28 +170,15 @@ class AccountSummaryService
      */
     private function collapseToCategories($detailed, array $categoryKeys)
     {
-        $labels = [
-            'asset_cash'       => 'Cash',
-            'asset_bank'       => 'Bank',
-            'liability'        => 'Equity & Liabilities (Owners)',
-            'receivable'       => 'Tenants',
-            'tenant_security_deposit' => 'Tenant Security Deposits',
-            'tenant_security_deposit_pending' => 'Pending Security Deposits',
-            'expense'          => 'Expenses',
-            'landlord_receivable' => 'Landlord Receivables',
-            'landlord_payable' => 'Landlord Payables',
-            'party_receivable' => 'Party Receivables',
-            'party_payable'    => 'Party Payables',
-            'jv_payable'       => 'JV Payables',
-        ];
+        $labels = self::SECTIONS;
 
-        $byKey = $detailed->groupBy(function ($row) {
-            return $row['group'] === 'asset' ? 'asset_' . ($row['subtype'] ?? 'bank') : $row['group'];
-        });
+        $byKey = $detailed->groupBy(fn($row) => $this->sectionKey($row));
 
         $results = collect();
         foreach ($categoryKeys as $key) {
             $entries = $byKey->get($key, collect());
+            $receivable = $entries->sum(fn($e) => $e['receivable'] ?? max(0, $e['closing']));
+            $payable = $entries->sum(fn($e) => $e['payable'] ?? max(0, -$e['closing']));
             $results->push([
                 'id'      => $key,
                 'name'    => $labels[$key],
@@ -149,9 +187,10 @@ class AccountSummaryService
                 'opening'    => $entries->sum('opening'),
                 'debit'      => $entries->sum('debit'),
                 'credit'     => $entries->sum('credit'),
-                'closing'    => $entries->sum('closing'),
-                'receivable' => $entries->sum(fn($e) => $e['receivable'] ?? max(0, $e['closing'])),
-                'payable'    => $entries->sum(fn($e) => $e['payable'] ?? max(0, -$e['closing'])),
+                // Balance is the row's receivables less its payables.
+                'closing'    => $receivable - $payable,
+                'receivable' => $receivable,
+                'payable'    => $payable,
                 'url'        => null,
             ]);
         }
@@ -277,10 +316,11 @@ class AccountSummaryService
                 'name' => $owner->name,
                 'type' => 'Equity (Owner)',
                 'group' => 'liability',
-                'opening' => $openingBalance,
+                // Equity is owed to the owners, so balances are negative (payable).
+                'opening' => -$openingBalance,
                 'debit' => $totalDebit,    // Withdrawals
                 'credit' => $totalCredit,  // Profit Share + Deposits
-                'closing' => $closingBalance,
+                'closing' => -$closingBalance,
                 'url' => route('ledgers.owner', ['owner_id' => $owner->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
             ]);
         }
@@ -302,7 +342,7 @@ class AccountSummaryService
             
             if ($dateFrom) {
                 $priorPayments = Payment::where('unit_id', $unitId)
-                    ->where('type', '!=', 'security_deposit')
+                    ->whereNotIn('type', self::TENANT_EXCLUDED_TYPES)
                     ->where('month', '<', $dateFrom)->get();
                 $priorInvoiced = $priorPayments->sum('amount');
                 
@@ -321,10 +361,7 @@ class AccountSummaryService
                     ->with('payments')
                     ->get()->unique('id');
 
-                $priorVoucherPaid = $priorReceivingVouchers->sum(function($voucher) use ($unitId) {
-                    $allocatedForUnit = $voucher->payments->where('unit_id', $unitId)->sum(fn($p) => (float)$p->pivot->amount_allocated);
-                    return $allocatedForUnit > 0 ? $allocatedForUnit : (float)$voucher->amount;
-                });
+                $priorVoucherPaid = $priorReceivingVouchers->sum(fn($voucher) => $this->tenantVoucherAmount($voucher, $unitId));
 
                 $priorPayouts = PaymentVoucher::where('paid_to_type', 'tenant')
                     ->where(function($q) use ($unitId, $unit) {
@@ -340,7 +377,7 @@ class AccountSummaryService
 
             // Current Period
             $periodPayments = Payment::where('unit_id', $unitId)
-                ->where('type', '!=', 'security_deposit')
+                ->whereNotIn('type', self::TENANT_EXCLUDED_TYPES)
                 ->when($dateFrom, fn($q) => $q->where('month', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('month', '<=', $dateTo))->get();
             
@@ -362,10 +399,7 @@ class AccountSummaryService
                 ->with('payments')
                 ->get()->unique('id');
 
-            $voucherPaid = $periodVouchers->sum(function($voucher) use ($unitId) {
-                $allocatedForUnit = $voucher->payments->where('unit_id', $unitId)->sum(fn($p) => (float)$p->pivot->amount_allocated);
-                return $allocatedForUnit > 0 ? $allocatedForUnit : (float)$voucher->amount;
-            });
+            $voucherPaid = $periodVouchers->sum(fn($voucher) => $this->tenantVoucherAmount($voucher, $unitId));
 
             $payouts = PaymentVoucher::where('paid_to_type', 'tenant')
                 ->where(function($q) use ($unitId, $unit) {
@@ -394,6 +428,22 @@ class AccountSummaryService
         }
 
         return $results;
+    }
+
+    /**
+     * Portion of a tenant receiving voucher that counts toward the unit's receivable:
+     * its allocations to the unit's included payment types, or the full amount when
+     * the voucher is not allocated to this unit at all.
+     */
+    private function tenantVoucherAmount($voucher, $unitId)
+    {
+        $unitPayments = $voucher->payments->where('unit_id', $unitId);
+        if ($unitPayments->isEmpty()) {
+            return (float)$voucher->amount;
+        }
+
+        return $unitPayments->whereNotIn('type', self::TENANT_EXCLUDED_TYPES)
+            ->sum(fn($p) => (float)$p->pivot->amount_allocated);
     }
 
     /**
@@ -556,15 +606,11 @@ class AccountSummaryService
         $heads = ExpenseHead::orderBy('name')->get();
 
         foreach ($heads as $head) {
-            $openingBalance = $dateFrom ? (float)Expense::where('expense_head_id', $head->id)
-                ->where('date', '<', $dateFrom)->sum('amount')
-                + (float)\App\Models\JvVoucher::where('expense_head_id', $head->id)
+            // Direct expenses are excluded from the summary; only JV expenses are reported.
+            $openingBalance = $dateFrom ? (float)\App\Models\JvVoucher::where('expense_head_id', $head->id)
                 ->where('date', '<', $dateFrom)->sum('amount') : 0;
 
-            $totalDebit = (float)Expense::where('expense_head_id', $head->id)
-                ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-                ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount')
-                + (float)\App\Models\JvVoucher::where('expense_head_id', $head->id)
+            $totalDebit = (float)\App\Models\JvVoucher::where('expense_head_id', $head->id)
                 ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
                 ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))->sum('amount');
 
@@ -784,10 +830,11 @@ class AccountSummaryService
                 'name' => $head->name,
                 'type' => 'JV Payable',
                 'group' => 'jv_payable',
-                'opening' => $openingPayable,
-                'debit' => $periodCreated,
-                'credit' => $periodPaid,
-                'closing' => $closingPayable,
+                // Owed to suppliers, so balances are negative (payable).
+                'opening' => -$openingPayable,
+                'debit' => $periodPaid,
+                'credit' => $periodCreated,
+                'closing' => -$closingPayable,
                 'receivable' => 0.0,
                 'payable' => $closingPayable,
                 'url' => route('ledgers.expense', ['expense_head_id' => $head->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),

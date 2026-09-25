@@ -108,8 +108,7 @@
                         <option value="all" {{ $accountType == 'all' ? 'selected' : '' }}>All Accounts</option>
                         <option value="asset" {{ $accountType == 'asset' ? 'selected' : '' }}>Assets (Banks/Cash)</option>
                         <option value="liability" {{ $accountType == 'liability' ? 'selected' : '' }}>Equity / Liabilities (Owners)</option>
-                        <option value="receivable" {{ $accountType == 'receivable' ? 'selected' : '' }}>Tenants (incl. Security Deposits)</option>
-                        <option value="expense" {{ $accountType == 'expense' ? 'selected' : '' }}>Expenses</option>
+                        <option value="receivable" {{ $accountType == 'receivable' ? 'selected' : '' }}>Security Deposits</option>
                         <option value="landlord_payable" {{ $accountType == 'landlord_payable' ? 'selected' : '' }}>Landlord Payables</option>
                         <option value="party_due" {{ $accountType == 'party_due' ? 'selected' : '' }}>Party Dues</option>
                         <option value="jv_payable" {{ $accountType == 'jv_payable' ? 'selected' : '' }}>JV Payables</option>
