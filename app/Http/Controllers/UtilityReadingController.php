@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
@@ -445,6 +446,149 @@ class UtilityReadingController extends Controller
     }
 
     /**
+     * AJAX: Load all meter rows for a month to fill the bulk entry form.
+     */
+    public function bulkData(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$this->canEditReadings($user)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized action.'], 403);
+        }
+
+        $data = $this->buildReadingsData(new Request(['month' => $request->input('month')]), $user);
+
+        return response()->json([
+            'success'   => true,
+            'month'     => $data['selectedMonth'],
+            'monthName' => $data['monthCarbon']->format('F Y'),
+            'readings'  => $data['readings'],
+        ]);
+    }
+
+    /**
+     * AJAX: Save meter readings for many meters of one month in a single request.
+     * Rows with a blank current reading are skipped.
+     */
+    public function bulkSave(Request $request): JsonResponse
+    {
+        $user = auth()->user();
+        if (!$this->canEditReadings($user)) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized action.'], 403);
+        }
+
+        $validated = $request->validate([
+            'month'                   => ['required', 'date_format:Y-m'],
+            'bill_generate_date'      => ['nullable', 'date'],
+            'rows'                    => ['required', 'array', 'min:1'],
+            'rows.*.meter_id'         => ['required', 'integer', 'exists:meters,id'],
+            'rows.*.previous_reading' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.current_reading'  => ['nullable', 'numeric', 'min:0'],
+            'rows.*.amount'           => ['nullable', 'numeric', 'min:0'],
+            'rows.*.status'           => ['nullable', 'in:paid,unpaid,pending'],
+        ]);
+
+        $monthCarbon  = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
+        $startOfMonth = $monthCarbon->copy()->startOfMonth()->format('Y-m-d');
+        $endOfMonth   = $monthCarbon->copy()->endOfMonth()->format('Y-m-d');
+
+        $rows = collect($validated['rows'])
+            ->filter(fn($row) => isset($row['current_reading']) && $row['current_reading'] !== '');
+
+        if ($rows->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Enter at least one meter reading before saving.'], 422);
+        }
+
+        $meters = Meter::with('unit')->whereIn('id', $rows->pluck('meter_id'))->get()->keyBy('id');
+
+        $saved   = 0;
+        $skipped = [];
+
+        DB::transaction(function () use ($rows, $meters, $user, $monthCarbon, $startOfMonth, $endOfMonth, $validated, &$saved, &$skipped) {
+            foreach ($rows as $row) {
+                $meter = $meters->get($row['meter_id']);
+                if (!$meter) {
+                    continue;
+                }
+
+                $voucher = MeterReadingVoucher::where('unit_id', $meter->unit_id)
+                    ->where('meter_ref_no', $meter->meter_ref_no)
+                    ->whereDate('date', '>=', $startOfMonth)
+                    ->whereDate('date', '<=', $endOfMonth)
+                    ->first();
+
+                // Same lock as single-row edit: paid records are Super Admin only
+                if ($voucher && strtolower($voucher->status) === 'paid' && !$user->isSuperAdmin()) {
+                    $skipped[] = ($meter->unit->unit_number ?? 'N/A') . ' (' . $meter->getTypeLabelAttribute() . ')';
+                    continue;
+                }
+
+                if (!$voucher) {
+                    $voucher = new MeterReadingVoucher([
+                        'unit_id'      => $meter->unit_id,
+                        'meter_ref_no' => $meter->meter_ref_no,
+                        'date'         => $monthCarbon->copy()->day(15)->format('Y-m-d'),
+                        'due_date'     => $endOfMonth,
+                        'status'       => 'unpaid',
+                    ]);
+                }
+
+                $prevReading = (float) ($row['previous_reading'] ?? 0);
+                if ($prevReading <= 0) {
+                    $prevVoucher = MeterReadingVoucher::where('unit_id', $meter->unit_id)
+                        ->whereDate('date', '<', $startOfMonth)
+                        ->orderBy('date', 'desc')
+                        ->first();
+                    if ($prevVoucher && (float) $prevVoucher->current_reading > 0) {
+                        $prevReading = (float) $prevVoucher->current_reading;
+                    }
+                }
+
+                $currentReading = (float) $row['current_reading'];
+
+                $voucher->previous_reading = $prevReading;
+                $voucher->current_reading  = $currentReading;
+                $voucher->units_consumed   = max(0.00, $currentReading - $prevReading);
+                if (isset($row['amount']) && $row['amount'] !== '') {
+                    $voucher->amount = $row['amount'];
+                } elseif (!$voucher->exists) {
+                    $voucher->amount = 0;
+                }
+                if (!empty($row['status'])) {
+                    $voucher->status = $row['status'];
+                }
+                if (!empty($validated['bill_generate_date'])) {
+                    $voucher->bill_generate_date = $validated['bill_generate_date'];
+                }
+                $voucher->user_id = $user->id;
+                $voucher->save();
+
+                $saved++;
+            }
+        });
+
+        $message = "{$saved} meter reading(s) saved for " . $monthCarbon->format('F Y') . '.';
+        if (!empty($skipped)) {
+            $message .= ' Skipped ' . count($skipped) . ' paid record(s): ' . implode(', ', $skipped) . '.';
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'saved'   => $saved,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    private function canEditReadings($user): bool
+    {
+        return $user->isSuperAdmin() ||
+               $user->hasPermission('utility_readings.edit') ||
+               $user->hasPermission('utilities.record') ||
+               $user->hasPermission('utility_meters_management') ||
+               $user->hasPermission('meters.edit');
+    }
+
+    /**
      * AJAX: Upload meter photo for a row.
      */
     public function uploadImage(Request $request): JsonResponse
@@ -467,7 +611,6 @@ class UtilityReadingController extends Controller
         ]);
 
         $meter = Meter::findOrFail($validated['meter_id']);
-        $path  = $request->file('meter_image')->store('meter_readings', 'public');
 
         try {
             $monthCarbon = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
@@ -483,6 +626,16 @@ class UtilityReadingController extends Controller
             ->whereDate('date', '>=', $startOfMonth)
             ->whereDate('date', '<=', $endOfMonth)
             ->first();
+
+        // Lock enforcement: If existing voucher is Paid, only Super Admin can change its image
+        if ($voucher && strtolower($voucher->status) === 'paid' && !$user->isSuperAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This reading has been marked as Paid. Only Super Admin can change its image.',
+            ], 403);
+        }
+
+        $path = $request->file('meter_image')->store('meter_readings', 'public');
 
         if ($voucher) {
             if ($voucher->meter_image && Storage::disk('public')->exists($voucher->meter_image)) {

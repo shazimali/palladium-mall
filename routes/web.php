@@ -159,6 +159,8 @@ Route::middleware('auth')->group(function () {
         Route::get('utility-readings/download-pdf', [\App\Http\Controllers\UtilityReadingController::class, 'downloadPdf'])->name('utility-readings.download-pdf');
         Route::post('utility-readings/update-row', [\App\Http\Controllers\UtilityReadingController::class, 'updateRow'])->name('utility-readings.update-row');
         Route::post('utility-readings/upload-image', [\App\Http\Controllers\UtilityReadingController::class, 'uploadImage'])->name('utility-readings.upload-image');
+        Route::get('utility-readings/bulk-data', [\App\Http\Controllers\UtilityReadingController::class, 'bulkData'])->name('utility-readings.bulk-data');
+        Route::post('utility-readings/bulk-save', [\App\Http\Controllers\UtilityReadingController::class, 'bulkSave'])->name('utility-readings.bulk-save');
     });
  
     Route::middleware('permission:payment_accounts.view')->group(function () {
