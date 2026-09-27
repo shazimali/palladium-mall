@@ -1,54 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-<style>
-    @media print {
-        @page {
-            size: A4;
-            margin: 0.5cm;
-        }
-        .no-print {
-            display: none !important;
-        }
-        body {
-            background-color: white !important;
-            color: black !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            font-weight: bold !important;
-            zoom: 0.8;
-        }
-        table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            font-size: 13px !important;
-        }
-        th, td {
-            border: 1px solid #9ca3af !important;
-            padding: 8px 10px !important;
-            color: black !important;
-        }
-        tfoot {
-            display: table-row-group !important;
-        }
-        tfoot tr {
-            font-weight: 900 !important;
-            font-size: 15px !important;
-            background-color: #e5e7eb !important;
-        }
-    }
-</style>
-
-<div class="hidden print:block mb-6 text-center border-b-2 border-black pb-4">
-    <h1 class="text-2xl font-black uppercase tracking-wider text-black">PALLADIUM MALL</h1>
-    <p class="text-xs font-bold text-gray-700 uppercase">Management Office — Islamabad</p>
-    <h2 class="text-lg font-black uppercase text-black mt-2">{{ $title }}</h2>
-    <p class="text-sm font-bold text-black mt-1">
-        Statement Period: {{ $dateFrom ? date('d M Y', strtotime($dateFrom)) : 'Start' }} —
-        {{ $dateTo ? date('d M Y', strtotime($dateTo)) : 'End' }}
-    </p>
-</div>
-
     <x-common.page-breadcrumb pageTitle="{{ $title }}" />
 
     {{-- STICKY HEADER --}}
@@ -70,17 +22,10 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <a href="{{ route('reports.account_summary.pdf', request()->all()) }}" target="_blank"
-                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors w-full sm:w-auto">
-                    📄 PDF
-                </a>
-                <button onclick="window.print()"
-                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-transparent bg-brand-500 px-4 text-sm font-semibold text-white shadow-sm hover:bg-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 transition-colors w-full sm:w-auto">
+                <a href="{{ route('reports.account_summary.print', request()->all()) }}"
+                    onclick="window.open(this.href,'_blank','width=1100,height=800,scrollbars=yes'); return false;"
+                    class="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-base font-extrabold text-white shadow-md hover:bg-gray-800 transition-colors cursor-pointer">
                     🖨️ Print
-                </button>
-                <a href="{{ route('reports.account_summary.excel', request()->all()) }}"
-                    class="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-transparent bg-emerald-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors w-full sm:w-auto">
-                    📊 Excel
                 </a>
             </div>
         </div>

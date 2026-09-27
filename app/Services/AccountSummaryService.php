@@ -35,6 +35,7 @@ class AccountSummaryService
         'asset_bank'       => 'Bank',
         'party_receivable' => 'Party Receivables',
         'liability'        => 'Equity & Liabilities (Owners)',
+        'opening_capital'  => 'Opening Balances (Capital)',
         'receivable'       => 'Tenants',
         'tenant_security_deposit' => 'Tenant Security Deposits',
         'tenant_security_deposit_pending' => 'Pending Security Deposits',
@@ -69,6 +70,7 @@ class AccountSummaryService
 
         if ($type === 'all' || $type === 'liability') {
             $detailed = $detailed->concat($this->getLiabilitiesSummary($dateFrom, $dateTo));
+            $detailed = $detailed->concat($this->getOpeningCapitalSummary($dateFrom, $dateTo));
         }
 
         if ($type === 'all' || $type === 'receivable') {
@@ -120,6 +122,9 @@ class AccountSummaryService
         if ($type === 'all' || $type === 'liability') {
             $detailed = $detailed->concat($this->getLiabilitiesSummary($dateFrom, $dateTo));
             $categoryKeys[] = 'liability';
+
+            $detailed = $detailed->concat($this->getOpeningCapitalSummary($dateFrom, $dateTo));
+            $categoryKeys[] = 'opening_capital';
         }
 
         if ($type === 'all' || $type === 'receivable') {
@@ -322,6 +327,59 @@ class AccountSummaryService
                 'credit' => $totalCredit,  // Profit Share + Deposits
                 'closing' => -$closingBalance,
                 'url' => route('ledgers.owner', ['owner_id' => $owner->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+            ]);
+        }
+
+        return $results;
+    }
+
+    /**
+     * Opening Balance Equity: the other side of balances that existed before the system
+     * started (party and bank/cash opening balances), which have no voucher of their own.
+     * One row per source; an opening balance owed to us is capital, so balances are
+     * negative (payable). Party openings follow the party ledger's date rule, as in
+     * getPartyDuesSummary(); account openings are undated, as in getAssetsSummary().
+     */
+    private function getOpeningCapitalSummary($dateFrom, $dateTo)
+    {
+        $results = collect();
+
+        foreach (PaymentAccount::where('is_active', true)->where('opening_balance', '!=', 0)->get() as $account) {
+            $opening = (float) $account->opening_balance;
+
+            $results->push([
+                'id' => $account->id,
+                'name' => $account->name,
+                'type' => 'Opening Balance (Capital)',
+                'group' => 'opening_capital',
+                'opening' => -$opening,
+                'debit' => 0.0,
+                'credit' => 0.0,
+                'closing' => -$opening,
+                'url' => route('ledgers.payment-account', ['payment_account_id' => $account->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+            ]);
+        }
+
+        foreach (\App\Models\Party::where('opening_balance', '!=', 0)->orderBy('name')->get() as $party) {
+            $opBal = (float) $party->opening_balance;
+            $opDate = $party->created_at ?? Carbon::parse('2026-01-01');
+            $opBeforePeriod = !$dateFrom || $opDate->lt(Carbon::parse($dateFrom)->startOfDay());
+            $opInPeriod = !$opBeforePeriod && (!$dateTo || $opDate->lte(Carbon::parse($dateTo)->endOfDay()));
+
+            if (!$opBeforePeriod && !$opInPeriod) {
+                continue;
+            }
+
+            $results->push([
+                'id' => $party->id,
+                'name' => $party->name,
+                'type' => 'Opening Balance (Capital)',
+                'group' => 'opening_capital',
+                'opening' => $opBeforePeriod ? -$opBal : 0.0,
+                'debit' => $opInPeriod ? max(0, -$opBal) : 0.0,
+                'credit' => $opInPeriod ? max(0, $opBal) : 0.0,
+                'closing' => -$opBal,
+                'url' => route('ledgers.party', ['party_id' => $party->id]),
             ]);
         }
 
