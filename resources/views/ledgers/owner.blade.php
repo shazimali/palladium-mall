@@ -116,6 +116,7 @@
                         <tr>
                             <th class="px-3.5 py-2.5 text-white">Date</th>
                             <th class="px-3.5 py-2.5 text-white">Voucher #</th>
+                            <th class="px-3.5 py-2.5 text-white">Manual Voucher #</th>
                             <th class="px-3.5 py-2.5 text-white">Payment Account</th>
                             <th class="px-3.5 py-2.5 text-white">Reference</th>
                             <th class="px-3.5 py-2.5 text-white">Notes</th>
@@ -133,6 +134,7 @@
                                 <td class="px-3.5 py-2 text-xs sm:text-[13px] font-mono font-black whitespace-nowrap">
                                     {{ $openingEntry['voucher_no'] }}
                                 </td>
+                                <td class="px-3.5 py-2 text-xs sm:text-[13px] font-mono font-bold whitespace-nowrap">—</td>
                                 <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">{{ $openingEntry['account'] }}</td>
                                 <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">{{ $openingEntry['reference'] }}</td>
                                 <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">{{ $openingEntry['notes'] }}</td>
@@ -151,7 +153,7 @@
                         @forelse($ledgerData['monthly_subtotals'] as $monthKey => $monthInfo)
                             {{-- Month section header --}}
                             <tr class="bg-brand-50 dark:bg-brand-500/10">
-                                <td colspan="8" class="px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-brand-700 dark:text-brand-300">
+                                <td colspan="9" class="px-3.5 py-1.5 text-xs font-black uppercase tracking-wider text-brand-700 dark:text-brand-300">
                                     {{ $monthInfo['label'] }}
                                 </td>
                             </tr>
@@ -186,6 +188,9 @@
                                             {{ $entry['voucher_no'] }}
                                         @endif
                                     </td>
+                                    <td class="px-3.5 py-2 text-xs sm:text-[13px] font-mono font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                        {{ $entry['manual_voucher_no'] ?? '—' }}
+                                    </td>
                                     <td class="px-3.5 py-2 text-xs sm:text-[13px] font-semibold">
                                         {{ $entry['account'] }}
                                     </td>
@@ -207,7 +212,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="px-4 py-4 text-center text-gray-400 dark:text-gray-600 text-xs font-bold">
+                                    <td colspan="9" class="px-4 py-4 text-center text-gray-400 dark:text-gray-600 text-xs font-bold">
                                         No transactions in {{ $monthInfo['label'] }}.
                                     </td>
                                 </tr>
@@ -215,7 +220,7 @@
 
                             {{-- Month subtotal --}}
                             <tr class="bg-gray-50 dark:bg-white/5 border-y-2 border-gray-200 dark:border-gray-700">
-                                <td colspan="5" class="px-3.5 py-2 text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-400">
+                                <td colspan="6" class="px-3.5 py-2 text-xs font-black uppercase tracking-wider text-gray-600 dark:text-gray-400">
                                     Subtotal — {{ $monthInfo['label'] }}
                                     <span class="ml-2 font-mono normal-case tracking-normal text-gray-500 dark:text-gray-400">
                                         (Net: Rs. {{ number_format($monthInfo['net'], 2) }})
@@ -233,7 +238,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
+                                <td colspan="9" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
                                     No month selected.
                                 </td>
                             </tr>
@@ -248,7 +253,7 @@
                         <tfoot
                             class="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-black text-xs sm:text-sm">
                             <tr>
-                                <td colspan="5"
+                                <td colspan="6"
                                     class="px-3.5 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                     <span class="ml-2 font-mono normal-case tracking-normal text-gray-500 dark:text-gray-400">

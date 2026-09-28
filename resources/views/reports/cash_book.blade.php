@@ -83,6 +83,7 @@
                 <tr>
                     <th class="px-3 py-2.5 text-white">Date</th>
                     <th class="px-3 py-2.5 text-white">Voucher #</th>
+                    <th class="px-3 py-2.5 text-white">Manual Voucher #</th>
                     <th class="px-3 py-2.5 text-white">Type</th>
                     <th class="px-3 py-2.5 text-white">Description / Ref</th>
                     <th class="px-2 py-2 text-white w-1 whitespace-nowrap text-center">Unit</th>
@@ -136,6 +137,9 @@
                                 <span class="text-gray-500 font-bold text-xs sm:text-[13px] dark:text-gray-400">{{ $entry['voucher_no'] }}</span>
                             @endif
                         </td>
+                        <td class="px-3 py-2 text-xs sm:text-[13px] font-mono font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                            {{ $entry['manual_voucher_no'] ?? '—' }}
+                        </td>
                         <td class="px-3 py-2 text-xs">
                             @php
                                 $typeBadge = match (true) {
@@ -178,7 +182,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
+                        <td colspan="9" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
                             No cash transactions logged for this period.
                         </td>
                     </tr>
@@ -188,7 +192,7 @@
                 <tfoot
                     class="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-black text-xs sm:text-sm">
                     <tr>
-                        <td colspan="5"
+                        <td colspan="6"
                             class="px-3 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
                             Total Summary
                         </td>

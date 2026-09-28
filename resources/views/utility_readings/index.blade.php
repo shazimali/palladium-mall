@@ -133,6 +133,7 @@
                             <th class="py-3.5 px-4 text-right">Bill Amount (Rs.)</th>
                             <th class="py-3.5 px-4 text-center">Status</th>
                             <th class="py-3.5 px-4 text-center">Bill Gen. Date</th>
+                            <th class="py-3.5 px-4 text-center">Due Date</th>
                             <th class="py-3.5 px-4 text-center">Meter Status</th>
                             <th class="py-3.5 px-4 text-center">Edited By</th>
                             <th class="py-3.5 px-4 text-center">Action</th>
@@ -255,6 +256,17 @@
                                     </template>
                                 </td>
 
+                                {{-- Due Date Column --}}
+                                <td class="py-3.5 px-4 text-center">
+                                    <template x-if="row.due_date_label">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                                            x-text="row.due_date_label"></span>
+                                    </template>
+                                    <template x-if="!row.due_date_label">
+                                        <span class="text-xs text-gray-400 font-semibold">—</span>
+                                    </template>
+                                </td>
+
                                 {{-- Meter Status Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="row.is_active">
@@ -317,7 +329,7 @@
 
                         <template x-if="readings.length === 0">
                             <tr>
-                                <td colspan="14" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                                <td colspan="15" class="py-12 text-center text-gray-400 dark:text-gray-500">
                                     <p class="text-3xl mb-2">⚡</p>
                                     <p class="font-bold text-sm">No utility meters found matching your filter criteria.</p>
                                 </td>
@@ -573,7 +585,7 @@
 
             {{-- Modal Panel --}}
             <div x-show="bulkOpen" x-transition
-                class="relative w-full max-w-6xl rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-gray-200 dark:bg-gray-900 dark:border-gray-800 z-10 my-auto max-h-[95vh] flex flex-col gap-4">
+                class="relative w-full max-w-7xl rounded-2xl bg-white p-5 sm:p-6 shadow-2xl border border-gray-200 dark:bg-gray-900 dark:border-gray-800 z-10 my-auto max-h-[95vh] flex flex-col gap-4">
 
                 {{-- Header --}}
                 <div class="flex items-start justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
@@ -592,7 +604,7 @@
                 </div>
 
                 {{-- Controls --}}
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-1">
                             📅 Month <span class="text-brand-500">*</span>
@@ -610,18 +622,6 @@
                             <option value="water">💧 Water</option>
                             <option value="gas">🔥 Gas</option>
                         </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-1">📅 Bill Gen. Date (all rows)</label>
-                        <input type="text" id="bulk_bill_generate_date" x-model="bulkBillDate"
-                            autocomplete="off" placeholder="Select date"
-                            x-init="flatpickr($el, {
-                                dateFormat: 'Y-m-d',
-                                allowInput: true,
-                                disableMobile: true,
-                                onChange: (selectedDates, dateStr) => { bulkBillDate = dateStr; }
-                            })"
-                            class="w-full h-11 px-3 text-xs sm:text-sm font-bold cursor-pointer bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-600 dark:text-gray-400 mb-1">Search Flat / Ref</label>
@@ -660,6 +660,8 @@
                                 <th class="py-3 px-3 text-right">Units</th>
                                 <th class="py-3 px-3 text-right">Bill Amount (Rs.)</th>
                                 <th class="py-3 px-3 text-center">Status</th>
+                                <th class="py-3 px-3 text-center">Bill Gen. Date</th>
+                                <th class="py-3 px-3 text-center">Due Date</th>
                                 <th class="py-3 px-3 text-center">Bill Image</th>
                             </tr>
                         </thead>
@@ -704,6 +706,30 @@
                                             <option value="pending">Pending</option>
                                             <option value="paid">Paid</option>
                                         </select>
+                                    </td>
+                                    <td class="py-2 px-3 text-center">
+                                        <input type="text" x-model="row.bill_generate_date" :disabled="row.locked"
+                                            autocomplete="off" placeholder="Select date"
+                                            x-init="flatpickr($el, {
+                                                dateFormat: 'Y-m-d',
+                                                allowInput: true,
+                                                disableMobile: true,
+                                                defaultDate: row.bill_generate_date || null,
+                                                onChange: (selectedDates, dateStr) => { row.bill_generate_date = dateStr; }
+                                            })"
+                                            class="w-28 h-9 px-2 text-xs cursor-pointer bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:outline-none">
+                                    </td>
+                                    <td class="py-2 px-3 text-center">
+                                        <input type="text" x-model="row.due_date" :disabled="row.locked"
+                                            autocomplete="off" placeholder="Select date"
+                                            x-init="flatpickr($el, {
+                                                dateFormat: 'Y-m-d',
+                                                allowInput: true,
+                                                disableMobile: true,
+                                                defaultDate: row.due_date || null,
+                                                onChange: (selectedDates, dateStr) => { row.due_date = dateStr; }
+                                            })"
+                                            class="w-28 h-9 px-2 text-xs cursor-pointer bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-brand-500/20 focus:outline-none">
                                     </td>
                                     <td class="py-2 px-3">
                                         <div class="flex items-center justify-center gap-2">
@@ -970,7 +996,6 @@
                 bulkMonthName: '',
                 bulkType: '',
                 bulkSearch: '',
-                bulkBillDate: '',
                 bulkRows: [],
                 bulkMonthPicker: null,
                 bulkProgress: '',
@@ -1038,6 +1063,8 @@
                             current_reading: r.current_reading > 0 ? r.current_reading : '',
                             amount: r.amount > 0 ? r.amount : '',
                             status: r.status || 'unpaid',
+                            bill_generate_date: r.bill_generate_date || '',
+                            due_date: r.due_date || '',
                             meter_image_url: r.meter_image_url || '',
                             image_file: null,
                             image_preview: null,
@@ -1139,6 +1166,8 @@
                             current_reading: r.current_reading,
                             amount: r.amount,
                             status: r.status,
+                            bill_generate_date: r.bill_generate_date || null,
+                            due_date: r.due_date || null,
                         }));
                     let imageRows = this.bulkRows.filter(r => !r.locked && r.image_file);
 
@@ -1212,7 +1241,6 @@
                                 },
                                 body: JSON.stringify({
                                     month: this.bulkMonth,
-                                    bill_generate_date: this.bulkBillDate || null,
                                     rows: readingRows,
                                 })
                             });

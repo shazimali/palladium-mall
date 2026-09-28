@@ -98,7 +98,6 @@
                         <th class="py-2.5 px-3 border border-gray-300">#</th>
                         <th class="py-2.5 px-3 border border-gray-300">Flat / Shop</th>
                         <th class="py-2.5 px-3 border border-gray-300">Floor & Block</th>
-                        <th class="py-2.5 px-3 border border-gray-300">Meter Type</th>
                         <th class="py-2.5 px-3 border border-gray-300">Ref Number</th>
                         <th class="py-2.5 px-3 border border-gray-300">Consumer ID</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Breaker</th>
@@ -110,7 +109,7 @@
                         <th class="py-2.5 px-3 border border-gray-300 text-right">Amount (Rs.)</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Status</th>
                         <th class="py-2.5 px-3 border border-gray-300 text-center">Bill Gen. Date</th>
-                        <th class="py-2.5 px-3 border border-gray-300 text-center">Edited By</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-center">Due Date</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-300 font-semibold text-gray-900">
@@ -121,8 +120,6 @@
                             </td>
                             <td class="py-2 px-3 border border-gray-300">{{ $row['floor'] }}
                                 {{ $row['block'] ? '• ' . $row['block'] : '' }}
-                            </td>
-                            <td class="py-2 px-3 border border-gray-300 font-bold uppercase">{{ $row['meter_type_label'] }}
                             </td>
                             <td class="py-2 px-3 border border-gray-300 font-mono">{{ $row['meter_ref_no'] }}</td>
                             <td class="py-2 px-3 border border-gray-300 font-mono">{{ $row['meter_consumer_id'] }}</td>
@@ -176,13 +173,13 @@
                             <td class="py-2 px-3 border border-gray-300 text-center text-xs font-semibold text-gray-700">
                                 {{ $row['bill_generate_date_label'] ?? '—' }}
                             </td>
-                            <td class="py-2 px-3 border border-gray-300 text-center text-xs font-bold text-gray-700">
-                                {{ $row['edited_by'] ?? '—' }}
+                            <td class="py-2 px-3 border border-gray-300 text-center text-xs font-semibold text-gray-700">
+                                {{ $row['due_date_label'] ?? '—' }}
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="16" class="py-8 text-center text-gray-500 font-bold">
+                            <td colspan="15" class="py-8 text-center text-gray-500 font-bold">
                                 No utility readings found for {{ $selectedMonthName }}.
                             </td>
                         </tr>
@@ -191,7 +188,7 @@
                 <tfoot>
                     {{-- Totals Row --}}
                     <tr class="bg-gray-100 font-black border-t-2 border-gray-400">
-                        <td colspan="10" class="py-3 px-3 text-right uppercase border border-gray-300">Total Units Consumed:</td>
+                        <td colspan="9" class="py-3 px-3 text-right uppercase border border-gray-300">Total Units Consumed:</td>
                         <td class="py-3 px-3 text-right font-mono border border-gray-300 text-blue-900">
                             {{ number_format($totalUnitsConsumed, 2) }}
                         </td>

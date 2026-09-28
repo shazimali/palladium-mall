@@ -173,6 +173,7 @@
                         <tr>
                             <th class="px-3.5 py-2.5 text-white">Date</th>
                             <th class="px-3.5 py-2.5 text-white">Ref / Voucher #</th>
+                            <th class="px-3.5 py-2.5 text-white">Manual Voucher #</th>
                             <th class="px-3.5 py-2.5 text-white">Transaction Type</th>
                             <th class="px-3.5 py-2.5 text-white">Details / Description</th>
                             <th class="px-3.5 py-2.5 text-right text-white">Debit (Dr)</th>
@@ -201,6 +202,9 @@
                                         <span class="font-mono text-gray-500 font-bold dark:text-gray-400">{{ $entry['ref'] }}</span>
                                     @endif
                                 </td>
+                                <td class="px-3.5 py-2 text-xs sm:text-[13px] font-mono font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    {{ $entry['manual_voucher_no'] ?? '—' }}
+                                </td>
                                 <td class="px-3.5 py-2 text-xs">
                                     <span class="inline-flex rounded-md px-2 py-0.5 text-[11px] font-black 
                                                     {{ strpos($entry['type'], 'Due') !== false ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200 dark:border-amber-800' : '' }}
@@ -228,7 +232,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
+                                <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
                                     No ledger entries found for this party.
                                 </td>
                             </tr>
@@ -242,7 +246,7 @@
                         <tfoot
                             class="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-black text-xs sm:text-sm">
                             <tr>
-                                <td colspan="4"
+                                <td colspan="5"
                                     class="px-3.5 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                 </td>

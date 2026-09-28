@@ -166,6 +166,8 @@ class UtilityReadingController extends Controller
                 'is_paid_locked'     => $isPaidLocked,
                 'bill_generate_date' => $voucher?->bill_generate_date ? $voucher->bill_generate_date->format('Y-m-d') : '',
                 'bill_generate_date_label' => $voucher?->bill_generate_date ? $voucher->bill_generate_date->format('d M Y') : null,
+                'due_date'           => $voucher?->due_date ? $voucher->due_date->format('Y-m-d') : '',
+                'due_date_label'     => $voucher?->due_date ? $voucher->due_date->format('d M Y') : null,
                 'edited_by'          => $voucher?->user?->name,
                 'last_updated'       => $voucher?->updated_at ? $voucher->updated_at->format('d M Y, h:i A') : null,
             ];
@@ -477,14 +479,15 @@ class UtilityReadingController extends Controller
         }
 
         $validated = $request->validate([
-            'month'                   => ['required', 'date_format:Y-m'],
-            'bill_generate_date'      => ['nullable', 'date'],
-            'rows'                    => ['required', 'array', 'min:1'],
-            'rows.*.meter_id'         => ['required', 'integer', 'exists:meters,id'],
-            'rows.*.previous_reading' => ['nullable', 'numeric', 'min:0'],
-            'rows.*.current_reading'  => ['nullable', 'numeric', 'min:0'],
-            'rows.*.amount'           => ['nullable', 'numeric', 'min:0'],
-            'rows.*.status'           => ['nullable', 'in:paid,unpaid,pending'],
+            'month'                     => ['required', 'date_format:Y-m'],
+            'rows'                      => ['required', 'array', 'min:1'],
+            'rows.*.meter_id'           => ['required', 'integer', 'exists:meters,id'],
+            'rows.*.previous_reading'   => ['nullable', 'numeric', 'min:0'],
+            'rows.*.current_reading'    => ['nullable', 'numeric', 'min:0'],
+            'rows.*.amount'             => ['nullable', 'numeric', 'min:0'],
+            'rows.*.status'             => ['nullable', 'in:paid,unpaid,pending'],
+            'rows.*.bill_generate_date' => ['nullable', 'date'],
+            'rows.*.due_date'           => ['nullable', 'date'],
         ]);
 
         $monthCarbon  = Carbon::createFromFormat('Y-m', $validated['month'])->startOfMonth();
@@ -503,7 +506,7 @@ class UtilityReadingController extends Controller
         $saved   = 0;
         $skipped = [];
 
-        DB::transaction(function () use ($rows, $meters, $user, $monthCarbon, $startOfMonth, $endOfMonth, $validated, &$saved, &$skipped) {
+        DB::transaction(function () use ($rows, $meters, $user, $monthCarbon, $startOfMonth, $endOfMonth, &$saved, &$skipped) {
             foreach ($rows as $row) {
                 $meter = $meters->get($row['meter_id']);
                 if (!$meter) {
@@ -556,8 +559,9 @@ class UtilityReadingController extends Controller
                 if (!empty($row['status'])) {
                     $voucher->status = $row['status'];
                 }
-                if (!empty($validated['bill_generate_date'])) {
-                    $voucher->bill_generate_date = $validated['bill_generate_date'];
+                $voucher->bill_generate_date = !empty($row['bill_generate_date']) ? $row['bill_generate_date'] : null;
+                if (!empty($row['due_date'])) {
+                    $voucher->due_date = $row['due_date'];
                 }
                 $voucher->user_id = $user->id;
                 $voucher->save();

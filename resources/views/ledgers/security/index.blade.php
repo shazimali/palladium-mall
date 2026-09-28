@@ -122,6 +122,7 @@
                         <th class="px-4 py-4 tracking-wider">TENANT</th>
                         <th class="px-4 py-4 tracking-wider">TRANSACTION</th>
                         <th class="px-4 py-4 tracking-wider">REFERENCE</th>
+                        <th class="px-4 py-4 tracking-wider">MANUAL VOUCHER #</th>
                         <th class="px-4 py-4 text-right tracking-wider">DEBIT</th>
                         <th class="px-4 py-4 text-right tracking-wider">CREDIT</th>
                         <th class="px-4 py-4 text-right tracking-wider">BALANCE</th>
@@ -162,6 +163,7 @@
                                     <span class="text-gray-500 dark:text-gray-400">{{ $r['reference'] }}</span>
                                 @endif
                             </td>
+                            <td class="px-4 py-3.5 text-xs font-mono font-bold text-gray-700 dark:text-gray-300">{{ $r['manual_voucher_no'] ?? '—' }}</td>
                             <td class="px-4 py-3.5 text-right font-bold {{ $r['debit'] > 0 ? 'text-rose-600' : 'text-gray-400' }}">
                                 {{ $r['debit'] > 0 ? 'Rs. ' . number_format($r['debit']) : '—' }}
                             </td>
@@ -174,14 +176,14 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-12 text-center text-gray-400 font-semibold">No security ledger records match the selected filters.</td>
+                            <td colspan="10" class="px-4 py-12 text-center text-gray-400 font-semibold">No security ledger records match the selected filters.</td>
                         </tr>
                     @endforelse
                 </tbody>
                 @if($rows->isNotEmpty())
                 <tfoot>
                     <tr class="bg-gray-100 dark:bg-gray-800 font-black text-sm text-gray-900 dark:text-white uppercase border-t-2 border-b-2 border-gray-300 dark:border-gray-700 tracking-wider">
-                        <td colspan="6" class="px-4 py-4.5 text-sm font-black">Total ({{ $summary['total_records'] }} Records)</td>
+                        <td colspan="7" class="px-4 py-4.5 text-sm font-black">Total ({{ $summary['total_records'] }} Records)</td>
                         <td class="px-4 py-4.5 text-right text-sm font-black text-rose-600">Rs. {{ number_format($summary['total_deducted'] + $summary['total_refunded']) }}</td>
                         <td class="px-4 py-4.5 text-right text-sm font-black text-emerald-600">Rs. {{ number_format($summary['total_received']) }}</td>
                         <td class="px-4 py-4.5 text-right text-sm font-black text-purple-600">Rs. {{ number_format($summary['total_balance']) }}</td>

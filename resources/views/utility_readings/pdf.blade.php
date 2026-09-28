@@ -203,6 +203,7 @@
                 <th class="text-center">Breaker</th>
                 <th class="text-center">Meter Status</th>
                 <th class="text-center">Bill Gen. Date</th>
+                <th class="text-center">Due Date</th>
                 <th class="text-right">Prev Reading</th>
                 <th class="text-right">Meter Reading</th>
                 <th class="text-right">Units Consumed</th>
@@ -236,6 +237,7 @@
                         @endif
                     </td>
                     <td class="text-center">{{ $row['bill_generate_date_label'] ?? '—' }}</td>
+                    <td class="text-center">{{ $row['due_date_label'] ?? '—' }}</td>
                     <td class="text-right font-mono">{{ number_format($row['previous_reading'], 2) }}</td>
                     <td class="text-right font-mono font-bold">{{ number_format($row['current_reading'], 2) }}</td>
                     <td class="text-right font-mono font-bold">{{ number_format($row['units_consumed'], 2) }}</td>
@@ -255,7 +257,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="16" class="text-center" style="padding: 15px; color: #94A3B8;">
+                    <td colspan="17" class="text-center" style="padding: 15px; color: #94A3B8;">
                         No utility readings found for {{ $selectedMonthName }}.
                     </td>
                 </tr>
@@ -267,6 +269,7 @@
                 <td class="text-right font-mono">{{ number_format($totalUnitsConsumed, 2) }}</td>
                 <td></td>
                 <td class="text-right font-mono">Rs. {{ number_format($totalBilled, 2) }}</td>
+                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>

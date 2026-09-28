@@ -203,6 +203,7 @@
                             <th class="px-3.5 py-2.5 text-white">Flat/Shop</th>
                             <th class="px-3.5 py-2.5 text-white">Description</th>
                             <th class="px-3.5 py-2.5 text-white">Ref / Voucher #</th>
+                            <th class="px-3.5 py-2.5 text-white">Manual Voucher #</th>
                             <th class="px-3.5 py-2.5 text-right text-white">Debit (Charged)</th>
                             <th class="px-3.5 py-2.5 text-right text-white">Credit (Paid)</th>
                             <th class="px-3.5 py-2.5 text-right text-white">Running Balance</th>
@@ -243,6 +244,9 @@
                                         <span class="font-mono text-gray-500 font-bold dark:text-gray-400">{{ $entry['reference'] }}</span>
                                     @endif
                                 </td>
+                                <td class="px-3.5 py-2 text-xs sm:text-[13px] font-mono font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    {{ $entry['manual_voucher_no'] ?? '—' }}
+                                </td>
                                 <td class="px-3.5 py-2 text-right font-black text-rose-600 dark:text-rose-400 text-xs sm:text-[13.5px] font-mono">
                                     {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
                                 </td>
@@ -255,7 +259,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
+                                <td colspan="8" class="px-4 py-8 text-center text-gray-400 dark:text-gray-600 text-xs sm:text-sm font-bold">
                                     No transaction entries found for the selected period.
                                 </td>
                             </tr>
@@ -269,7 +273,7 @@
                         @endphp
                         <tfoot class="bg-gray-100 dark:bg-gray-800 border-t-2 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white font-black text-xs sm:text-sm">
                             <tr>
-                                <td colspan="4" class="px-3.5 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
+                                <td colspan="5" class="px-3.5 py-2.5 uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                 </td>
                                 <td class="px-3.5 py-2.5 text-right text-rose-600 dark:text-rose-400 font-mono font-black">

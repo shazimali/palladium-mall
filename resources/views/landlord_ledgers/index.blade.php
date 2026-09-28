@@ -203,6 +203,7 @@
                             <th class="px-5 py-4 text-white">Flat/Shop</th>
                             <th class="px-5 py-4 text-white">Description</th>
                             <th class="px-5 py-4 text-white">Ref / Voucher #</th>
+                            <th class="px-5 py-4 text-white">Manual Voucher #</th>
                             <th class="px-5 py-4 text-right text-white">Debit (Owed)</th>
                             <th class="px-5 py-4 text-right text-white">Credit (Paid)</th>
                             <th class="px-5 py-4 text-right text-white">Running Balance</th>
@@ -247,6 +248,9 @@
                                         <span class="font-mono text-gray-500 font-bold dark:text-gray-400">{{ $entry['voucher_no'] ?? '—' }}</span>
                                     @endif
                                 </td>
+                                <td class="px-5 py-4 text-base sm:text-lg font-mono font-bold text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                                    {{ $entry['manual_voucher_no'] ?? '—' }}
+                                </td>
                                 <td class="px-5 py-4 text-right font-black text-rose-600 dark:text-rose-400 text-base sm:text-lg font-mono">
                                     {{ $entry['debit'] > 0 ? 'Rs. ' . number_format($entry['debit'], 2) : '—' }}
                                 </td>
@@ -259,7 +263,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-5 py-12 text-center text-gray-400 dark:text-gray-600 text-lg font-bold">
+                                <td colspan="8" class="px-5 py-12 text-center text-gray-400 dark:text-gray-600 text-lg font-bold">
                                     No transaction entries found for the selected period.
                                 </td>
                             </tr>
@@ -273,7 +277,7 @@
                         @endphp
                         <tfoot class="bg-gray-200/90 dark:bg-gray-800 border-t-4 border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white font-black">
                             <tr>
-                                <td colspan="4" class="px-5 py-4 text-lg sm:text-xl uppercase tracking-wider font-black text-gray-900 dark:text-white">
+                                <td colspan="5" class="px-5 py-4 text-lg sm:text-xl uppercase tracking-wider font-black text-gray-900 dark:text-white">
                                     Total Summary
                                 </td>
                                 <td class="px-5 py-4 text-right text-rose-600 dark:text-rose-400 font-mono font-black text-xl sm:text-2xl">
