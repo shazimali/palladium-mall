@@ -283,7 +283,7 @@ class LedgerController extends Controller
 
         $ledgerData = null;
         if ($expenseHeadId) {
-            $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
+            $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo, $request->query('view'));
         }
 
         return view('ledgers.expense', [
@@ -293,6 +293,7 @@ class LedgerController extends Controller
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
             'ledgerData' => $ledgerData,
+            'ledgerView' => $request->query('view'),
         ]);
     }
 
@@ -308,7 +309,7 @@ class LedgerController extends Controller
             return back()->with('error', 'Select an expense category to export.');
         }
 
-        $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
+        $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo, $request->query('view'));
         $headName = $ledgerData['head']->name ?? 'All Expenses';
 
         $pdf = Pdf::loadView('ledgers.pdf', array_merge($ledgerData, [
@@ -333,7 +334,7 @@ class LedgerController extends Controller
             return back()->with('error', 'Select an expense category to export.');
         }
 
-        $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
+        $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo, $request->query('view'));
         $headName = $ledgerData['head']->name ?? 'All Expenses';
 
         return Excel::download(
@@ -1101,12 +1102,17 @@ class LedgerController extends Controller
         ];
     }
 
-    public function getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo)
+    /**
+     * $view = 'jv_payable' limits the ledger to JV vouchers still outstanding at $dateTo
+     * (same rule as the JV Payables row in the account summary), so the two totals agree.
+     */
+    public function getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo, $view = null)
     {
         $isAll = $expenseHeadId === 'all';
         $head = $isAll ? null : ExpenseHead::findOrFail($expenseHeadId);
+        $isJvPayable = $view === 'jv_payable';
 
-        $expenses = Expense::when(!$isAll, fn($q) => $q->where('expense_head_id', $expenseHeadId))
+        $expenses = $isJvPayable ? collect() : Expense::when(!$isAll, fn($q) => $q->where('expense_head_id', $expenseHeadId))
             ->with(['paymentAccount', 'expenseHead'])
             ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
@@ -1114,8 +1120,18 @@ class LedgerController extends Controller
 
         $jvVouchers = \App\Models\JvVoucher::when(!$isAll, fn($q) => $q->where('expense_head_id', $expenseHeadId))
             ->with(['paymentAccount', 'expenseHead'])
-            ->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
-            ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+            ->when($isJvPayable, function ($q) use ($dateTo) {
+                // Outstanding at period end: unpaid, or paid only after the period closed.
+                // Opening date is ignored since older unpaid JVs are still owed.
+                $q->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo))
+                  ->where(function ($q) use ($dateTo) {
+                      $q->where('status', 'unpaid')
+                        ->when($dateTo, fn($sub) => $sub->orWhere(fn($s2) => $s2->where('status', 'paid')->where('paid_date', '>', $dateTo)));
+                  });
+            }, function ($q) use ($dateFrom, $dateTo) {
+                $q->when($dateFrom, fn($q) => $q->where('date', '>=', $dateFrom))
+                  ->when($dateTo, fn($q) => $q->where('date', '<=', $dateTo));
+            })
             ->get();
 
         $entries = collect();
@@ -1156,6 +1172,7 @@ class LedgerController extends Controller
         return [
             'head' => $head,
             'is_all' => $isAll,
+            'is_jv_payable' => $isJvPayable,
             'entries' => $entries,
             'summary' => [
                 'total_amount' => $totalAmount,
@@ -1342,7 +1359,7 @@ class LedgerController extends Controller
             abort(400, 'No expense category selected.');
         }
 
-        $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo);
+        $ledgerData = $this->getExpenseLedgerData($expenseHeadId, $dateFrom, $dateTo, $request->query('view'));
         $head = $ledgerData['head'];
         $headName = $head->name ?? 'All Expenses';
 
@@ -1354,9 +1371,12 @@ class LedgerController extends Controller
         if ($dateTo)
             $filterChips[] = ['label' => 'Date To', 'value' => \Carbon\Carbon::parse($dateTo)->format('d M Y')];
 
+        if ($ledgerData['is_jv_payable'])
+            $filterChips[] = ['label' => 'View', 'value' => 'Outstanding JV Payables'];
+
         $s = $ledgerData['summary'];
         $summaryCards = [
-            ['label' => 'Total Spent Under Head', 'value' => 'Rs. ' . number_format($s['total_amount'], 2), 'color' => 's-amber'],
+            ['label' => $ledgerData['is_jv_payable'] ? 'Outstanding JV Payable' : 'Total Spent Under Head', 'value' => 'Rs. ' . number_format($s['total_amount'], 2), 'color' => 's-amber'],
         ];
 
         $columns = [

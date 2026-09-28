@@ -101,6 +101,9 @@
 
                     {{-- Hidden input --}}
                     <input type="hidden" name="expense_head_id" :value="expenseHeadId">
+                    @if($ledgerView ?? null)
+                        <input type="hidden" name="view" value="{{ $ledgerView }}">
+                    @endif
 
                     {{-- Dropdown Container --}}
                     <div x-show="open" x-transition x-cloak
@@ -196,6 +199,13 @@
         </form>
 
         @if($ledgerData)
+
+            @if($ledgerData['is_jv_payable'] ?? false)
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-300">
+                    <span>Showing only JV vouchers still unpaid{{ $dateTo ? ' as of ' . \Carbon\Carbon::parse($dateTo)->format('d M Y') : '' }} (JV Payables).</span>
+                    <a href="{{ route('ledgers.expense', request()->except('view')) }}" class="underline hover:no-underline">View full expense ledger</a>
+                </div>
+            @endif
 
             {{-- Table --}}
             <div data-ledger-table class="overflow-auto max-h-[70vh] border-2 border-gray-200 rounded-2xl dark:border-gray-800 shadow-md">

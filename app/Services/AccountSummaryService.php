@@ -895,7 +895,7 @@ class AccountSummaryService
                 'closing' => -$closingPayable,
                 'receivable' => 0.0,
                 'payable' => $closingPayable,
-                'url' => route('ledgers.expense', ['expense_head_id' => $head->id, 'date_from' => $dateFrom, 'date_to' => $dateTo]),
+                'url' => route('ledgers.expense', ['expense_head_id' => $head->id, 'date_from' => $dateFrom, 'date_to' => $dateTo, 'view' => 'jv_payable']),
             ]);
         }
 
