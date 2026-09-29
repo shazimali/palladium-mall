@@ -31,7 +31,7 @@ class ReceivablePayableReportController extends Controller
         $data = $this->buildReportData($request);
 
         return view('reports.receivables', array_merge($data, [
-            'title' => 'Receivables Report',
+            'title' => 'Due Receivable Report',
         ]));
     }
 
@@ -48,7 +48,7 @@ class ReceivablePayableReportController extends Controller
         $data = $this->buildReportData($request);
 
         $pdf = Pdf::loadView('reports.receivables_pdf', array_merge($data, [
-            'title' => 'Receivables Report',
+            'title' => 'Due Receivable Report',
         ]))->setPaper('a4', 'portrait');
 
         return $pdf->download('receivables_report_' . now()->format('Y_m_d') . '.pdf');
@@ -161,6 +161,7 @@ class ReceivablePayableReportController extends Controller
                         $unitNo = $first->unit ? $first->unit->unit_number : '';
                         $payables[] = [
                             'category' => 'Tenant Security Deposit',
+                            'types' => ['Security Deposit'],
                             'name' => $tenantName,
                             'unit' => $unitNo,
                             'due' => $totalCollected,
