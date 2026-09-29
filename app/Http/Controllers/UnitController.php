@@ -182,6 +182,83 @@ class UnitController extends Controller
         return $pdf->download('units_list_' . now()->format('Y-m-d') . '.pdf');
     }
 
+    /**
+     * Tenancy history of a single flat/shop: every agreement (and other-owned
+     * occupant) that has been attached to the unit, oldest first.
+     */
+    private function buildUnitHistory(?Unit $unit)
+    {
+        if (!$unit) {
+            return collect();
+        }
+
+        $unit->load([
+            'agreements' => fn($q) => $q->where('status', '!=', 'draft'),
+            'agreements.tenant',
+            'agreements.flatMoveOutReport',
+            'otherTenantHistory.otherTenant',
+        ]);
+
+        $rows = $unit->agreements->map(fn($agreement) => [
+            'name'       => $agreement->tenant->name ?? '—',
+            'phone'      => $agreement->tenant->phone ?? null,
+            'rent'       => (float) $agreement->monthly_rent,
+            'advance'    => (float) $agreement->security_deposit,
+            'start_date' => $agreement->start_date,
+            'end_date'   => $agreement->end_date,
+            'vacated_at' => $agreement->status === 'terminated'
+                ? ($agreement->flatMoveOutReport->inspected_at ?? $agreement->updated_at)
+                : null,
+            'status'     => ucfirst($agreement->status),
+            'kind'       => 'Tenant',
+            'url'        => route('agreements.show', $agreement->id),
+        ]);
+
+        $otherRows = $unit->otherTenantHistory->map(fn($history) => [
+            'name'       => $history->otherTenant->name ?? '—',
+            'phone'      => $history->otherTenant->phone ?? null,
+            'rent'       => (float) ($history->otherTenant->monthly_rent ?? 0),
+            'advance'    => null,
+            'start_date' => $history->attached_at,
+            'end_date'   => null,
+            'vacated_at' => $history->detached_at,
+            'status'     => $history->isCurrent() ? 'Active' : 'Left',
+            'kind'       => 'Other-Owned',
+            'url'        => null,
+        ]);
+
+        return $rows->concat($otherRows)
+            ->sortBy(fn($row) => $row['start_date']?->timestamp ?? 0)
+            ->values();
+    }
+
+    public function history(Request $request): View
+    {
+        $unit = $request->filled('unit_id')
+            ? Unit::with(['floor', 'block', 'landlord'])->find($request->unit_id)
+            : null;
+
+        $units = Unit::with(['tenant', 'otherTenant'])
+            ->orderBy('unit_number')
+            ->get(['id', 'unit_number', 'type']);
+
+        return view('units.history', [
+            'units'   => $units,
+            'unit'    => $unit,
+            'history' => $this->buildUnitHistory($unit),
+        ]);
+    }
+
+    public function printHistory(Request $request): View
+    {
+        $unit = Unit::with(['floor', 'block', 'landlord'])->findOrFail($request->unit_id);
+
+        return view('units.print_history', [
+            'unit'    => $unit,
+            'history' => $this->buildUnitHistory($unit),
+        ]);
+    }
+
     public function printOne(Unit $unit): View
     {
         $unit->load([

@@ -106,6 +106,13 @@
                     </svg>
                     PDF
                 </a>
+                <a href="{{ route('units.history') }}"
+                    class="inline-flex items-center gap-2.5 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/5 transition-colors shadow-xs">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    History
+                </a>
                 <a href="{{ route('units.print', request()->all()) }}" id="print-list-btn" target="_blank"
                     class="inline-flex items-center gap-2.5 rounded-xl border-2 border-gray-300 bg-white px-4 py-2.5 text-sm font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-white/5 transition-colors shadow-xs">
                     <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">

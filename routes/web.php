@@ -66,6 +66,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:units.view')->group(function () {
         Route::get('units/print',               [UnitController::class, 'print'])->name('units.print');
         Route::get('units/print-meters',        [UnitController::class, 'printMeters'])->name('units.print-meters');
+        Route::get('units/history',             [UnitController::class, 'history'])->name('units.history');
+        Route::get('units/history/print',       [UnitController::class, 'printHistory'])->name('units.history.print');
         Route::get('units/export-excel',        [UnitController::class, 'exportExcel'])->name('units.export-excel');
         Route::get('units/export-pdf',          [UnitController::class, 'exportPdf'])->name('units.export-pdf');
         Route::get('units/{unit}/print',        [UnitController::class, 'printOne'])->name('units.print-one');

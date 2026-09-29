@@ -5,6 +5,7 @@
     'placeholder' => 'Select an option',
     'autoSubmit' => false,
     'clearable' => true,
+    'boldOptions' => false,
 ])
 
 {{--
@@ -80,7 +81,10 @@
     }"
     x-init="
         document.addEventListener('click', onDocumentClick);
-        window.addEventListener('scroll', () => { open = false }, true);
+        window.addEventListener('scroll', (e) => {
+            if ($refs.panel && $refs.panel.contains(e.target)) return;
+            open = false;
+        }, true);
         window.addEventListener('resize', () => { open = false });
     "
     class="relative"
@@ -114,7 +118,7 @@
                 @endif
                 <template x-for="(opt, index) in filteredOptions" :key="opt.value">
                     <button type="button" @click="select(opt)" @mouseenter="highlightedIndex = index"
-                        class="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors truncate"
+                        class="w-full text-left px-3 py-2 text-sm rounded-lg transition-colors truncate {{ $boldOptions ? 'font-bold' : '' }}"
                         :class="value === opt.value ? 'bg-brand-600 text-white font-black' : (highlightedIndex === index ? 'bg-brand-50 text-brand-900 dark:bg-brand-950/40 dark:text-brand-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5')"
                         x-text="opt.label">
                     </button>
