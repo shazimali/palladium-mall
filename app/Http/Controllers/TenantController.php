@@ -1730,7 +1730,7 @@ class TenantController extends Controller
         $status = $request->status;
 
         // 1. Fetch Standard Tenants
-        $tenantsQuery = Tenant::with(['unit.landlord', 'activeAgreement', 'agreements.unit.landlord', 'emergencyContacts'])
+        $tenantsQuery = Tenant::with(['unit.landlord', 'unit.floor', 'unit.block', 'activeAgreement', 'agreements.unit.landlord', 'agreements.unit.floor', 'agreements.unit.block', 'emergencyContacts'])
             ->when($status === 'active', fn($q) => $q->active())
             ->when($status === 'inactive', fn($q) => $q->inactive())
             ->when($status === 'draft', fn($q) => $q->draft())
@@ -1770,10 +1770,16 @@ class TenantController extends Controller
 
             return [
                 'unit_number' => $effUnit?->unit_number ?? '—',
+                'floor' => $effUnit?->floor?->name ?? '—',
+                'block_id' => $effUnit?->block_id,
+                'block' => $effUnit?->block?->name,
                 'tenant_name' => $t->name,
                 'phone' => $t->phone ?? '—',
+                'secondary_phone' => $t->whatsapp_number ?: '—',
+                'emergency_phone' => $emContact?->phone ?: '—',
                 'emergency_contact' => $emContactStr,
                 'landlord_name' => $effUnit?->landlord?->name ?? $t->unit?->landlord?->name ?? '—',
+                'landlord_phone' => $effUnit?->landlord?->phone ?? $t->unit?->landlord?->phone ?? '—',
                 'start_date' => $agreement?->start_date ? $agreement->start_date->format('d M Y') : '—',
                 'photo_url' => $t->passport_photo_url,
                 'monthly_rent' => (float) ($agreement?->monthly_rent ?? 0),
@@ -1785,7 +1791,7 @@ class TenantController extends Controller
         // 2. Fetch Other-Owned Tenants (Only if status is not inactive)
         $otherOccupants = collect();
         if ($status !== 'inactive') {
-            $otherTenantsQuery = \App\Models\OtherTenant::with(['unit.landlord', 'unitHistory.unit.landlord'])
+            $otherTenantsQuery = \App\Models\OtherTenant::with(['unit.landlord', 'unit.floor', 'unit.block', 'unitHistory.unit.landlord', 'unitHistory.unit.floor', 'unitHistory.unit.block'])
                 ->when($status === 'active', fn($q) => $q->where('status', 'active'))
                 ->when($status === 'draft', fn($q) => $q->where('status', 'draft'))
                 ->when(empty($status) && !$request->anyFilled(['search', 'landlord_id', 'date_from', 'date_to', 'expiring_days']), fn($q) => $q->where('status', 'active'))
@@ -1807,10 +1813,16 @@ class TenantController extends Controller
 
                 return [
                     'unit_number' => $effUnit?->unit_number ?? '—',
+                    'floor' => $effUnit?->floor?->name ?? '—',
+                    'block_id' => $effUnit?->block_id,
+                    'block' => $effUnit?->block?->name,
                     'tenant_name' => $ot->name,
                     'phone' => $ot->phone ?? '—',
+                    'secondary_phone' => $ot->whatsapp_number ?: '—',
+                    'emergency_phone' => '—',
                     'emergency_contact' => $emContactStr,
                     'landlord_name' => $effUnit?->landlord?->name ?? $ot->unit?->landlord?->name ?? '—',
+                    'landlord_phone' => $effUnit?->landlord?->phone ?? $ot->unit?->landlord?->phone ?? '—',
                     'start_date' => $startDate,
                     'photo_url' => $ot->photo_url,
                     'monthly_rent' => (float) ($ot->monthly_rent ?? $effUnit?->rent_amount ?? 0),
@@ -1827,6 +1839,19 @@ class TenantController extends Controller
     }
 
     /**
+     * Status label for occupant print views, matching the status filter applied in getUnifiedActiveOccupantsData().
+     */
+    private function occupantsStatusLabel(Request $request): string
+    {
+        return match ($request->status) {
+            'active' => 'Active',
+            'inactive' => 'Inactive',
+            'draft' => 'Draft',
+            default => $request->anyFilled(['search', 'landlord_id', 'date_from', 'date_to', 'expiring_days']) ? 'All' : 'Active',
+        };
+    }
+
+    /**
      * Print View — For Guards
      */
     public function printGuards(Request $request): View
@@ -1836,10 +1861,24 @@ class TenantController extends Controller
         }
 
         $occupants = $this->getUnifiedActiveOccupantsData($request);
+        $blocks = \App\Models\Block::orderBy('name')->get(['id', 'name']);
+
+        if ($request->filled('block_id')) {
+            $occupants = $occupants->filter(fn($o) => (string) $o['block_id'] === (string) $request->block_id)->values();
+        }
+
+        // Each block is printed as its own section (starting on a new page); units without a block go last.
+        $blockGroups = $occupants
+            ->groupBy(fn($o) => $o['block'] ?? 'Unassigned Block')
+            ->sortKeysUsing(fn($a, $b) => ($a === 'Unassigned Block') <=> ($b === 'Unassigned Block') ?: strnatcasecmp($a, $b));
 
         return view('tenants.print_guards', [
-            'pageTitle' => 'Active Tenants Directory (For Guards)',
+            'pageTitle' => $this->occupantsStatusLabel($request) . ' Tenants (For Security Guard)',
+            'statusLabel' => $this->occupantsStatusLabel($request),
             'occupants' => $occupants,
+            'blockGroups' => $blockGroups,
+            'blocks' => $blocks,
+            'selectedBlockId' => $request->block_id,
         ]);
     }
 
@@ -1855,7 +1894,8 @@ class TenantController extends Controller
         $occupants = $this->getUnifiedActiveOccupantsData($request);
 
         return view('tenants.print_staff', [
-            'pageTitle' => 'Active Tenants Directory (For Staff)',
+            'pageTitle' => $this->occupantsStatusLabel($request) . ' Tenants (For Staff)',
+            'statusLabel' => $this->occupantsStatusLabel($request),
             'occupants' => $occupants,
         ]);
     }

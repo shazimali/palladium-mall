@@ -1,171 +1,194 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $pageTitle }} — Palladium Mall</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 15px;
+        }
 
         body {
-            font-family: DejaVu Sans, ui-sans-serif, system-ui, -apple-system, sans-serif;
-            font-size: 12px;
-            color: #0F172A;
-            line-height: 1.4;
-            padding: 16px 24px;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #000;
             background: #fff;
+            padding: 24px 32px;
+            line-height: 1.5;
+            font-weight: 700;
         }
 
         .header {
-            text-align: center;
-            border-bottom: 2px solid #0F172A;
-            padding-bottom: 10px;
-            margin-bottom: 14px;
-        }
-
-        .header h1 {
-            font-size: 20px;
-            font-weight: 900;
-            color: #0F172A;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            text-align: center;
-        }
-
-        .header p {
-            font-size: 11px;
-            font-weight: 600;
-            color: #475569;
-            text-align: center;
-        }
-
-        .inline-summary-container {
-            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 3px solid #0f172a;
+            padding-bottom: 12px;
             margin-bottom: 16px;
-            font-size: 11px;
-            color: #1E293B;
-            line-height: 1.6;
+        }
+
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        .doc-title {
+            text-align: right;
+        }
+
+        .doc-title h2 {
+            font-size: 1.15rem;
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        .doc-title p {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #475569;
+            margin-top: 2px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            margin-bottom: 24px;
         }
 
         thead tr {
-            background: #F1F5F9;
-            color: #0F172A;
-            border-bottom: 2px solid #334155;
+            background: #e2e8f0;
         }
 
         thead th {
-            padding: 9px 10px;
+            padding: 10px;
             text-align: left;
-            font-size: 11px;
             font-weight: 900;
+            font-size: 0.82rem;
             text-transform: uppercase;
-            color: #0F172A;
-            border: 1px solid #CBD5E1;
+            color: #0f172a;
+            border-bottom: 2px solid #0f172a;
         }
 
-        thead th.text-right, tbody td.text-right {
+        thead th.text-right,
+        tbody td.text-right,
+        tfoot td.text-right {
             text-align: right;
         }
 
-        tbody tr:nth-child(even) {
-            background: #F8FAFC;
+        thead th.text-center,
+        tbody td.text-center {
+            text-align: center;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+            page-break-inside: avoid;
         }
 
         tbody td {
-            padding: 8px 10px;
-            border: 1px solid #E2E8F0;
-            font-size: 11px;
-            color: #0F172A;
+            padding: 9px 10px;
+            color: #000;
+            font-weight: 700;
             vertical-align: middle;
         }
 
-        .unit-badge {
-            display: inline-block;
-            background: #0F172A;
-            color: #fff;
-            font-weight: 900;
-            font-size: 12px;
-            padding: 3px 8px;
-            border-radius: 6px;
+        .mono {
             font-family: monospace;
-        }
-
-        .other-badge {
-            display: inline-block;
-            background: #8b5cf6;
-            color: #fff;
+            font-size: 0.9rem;
             font-weight: 800;
-            font-size: 9px;
-            padding: 2px 6px;
-            border-radius: 4px;
-            margin-left: 6px;
-            text-transform: uppercase;
-        }
-
-        .contact-box {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .primary-phone {
-            font-family: monospace;
-            font-size: 11px;
-            font-weight: 900;
-            color: #0F172A;
-        }
-
-        .emergency-contact {
-            font-size: 10px;
-            font-weight: 800;
-            color: #dc2626;
         }
 
         .amount {
             font-family: monospace;
             font-weight: 900;
-            font-size: 11px;
+            font-size: 1.05rem;
+            color: #0f172a;
+        }
+
+        .unit {
+            font-size: 1.05rem;
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        .name {
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            border-radius: 4px;
+            text-transform: uppercase;
+            background: #e0e7ff;
+            color: #3730a3;
+            margin-left: 4px;
+        }
+
+        .sub-line {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #475569;
+        }
+
+        .emergency {
+            color: #dc2626;
         }
 
         .footer {
-            margin-top: 18px;
-            font-size: 10px;
-            font-weight: 600;
-            color: #64748B;
-            text-align: center;
-            border-top: 1px solid #CBD5E1;
+            margin-top: 30px;
+            border-top: 2px solid #0f172a;
             padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #475569;
         }
 
         .no-print {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .print-btn {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: #0F172A;
+            background: #0f172a;
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             padding: 10px 24px;
-            font-size: 13px;
-            font-weight: 900;
+            font-size: 0.95rem;
+            font-weight: 800;
             cursor: pointer;
+        }
+
+        .print-btn:hover {
+            background: #000;
         }
 
         /* @page MUST be top-level — nesting inside @media print breaks @bottom-right in all browsers */
         @page {
-            size: landscape;
-            margin: 1.2cm 0.8cm 1.5cm 0.8cm;
+            size: A4 portrait;
+            margin: 1.5cm 0.5cm 1.8cm 0.5cm;
 
             @bottom-right {
                 content: "Page " counter(page) " of " counter(pages);
@@ -179,37 +202,18 @@
             .no-print {
                 display: none !important;
             }
+
             body {
-                background: white !important;
+                background-color: white !important;
                 color: black !important;
-                font-size: 12px !important;
                 padding: 0 !important;
+                margin: 0 !important;
+                font-weight: bold !important;
+                zoom: 0.8;
             }
-            .header {
-                background: transparent !important;
-                border-bottom: 2px solid #000 !important;
-                padding-bottom: 8px !important;
-            }
-            .header h1 {
-                color: black !important;
-                font-size: 22px !important;
-                font-weight: 900 !important;
-            }
-            .header p {
-                color: #222 !important;
-                font-size: 11px !important;
-            }
-            thead th {
-                background: #f1f5f9 !important;
-                color: black !important;
-                font-size: 11px !important;
-                font-weight: 900 !important;
-                border: 1px solid #94a3b8 !important;
-            }
-            tbody td {
-                font-size: 11px !important;
-                color: black !important;
-                border: 1px solid #cbd5e1 !important;
+
+            thead {
+                display: table-header-group;
             }
 
             /* position:fixed repeats on every printed page — cross-browser fallback */
@@ -225,92 +229,94 @@
         }
     </style>
 </head>
+
 <body>
+
     <div class="no-print">
         <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
     </div>
 
-    {{-- Centered Header --}}
     <div class="header">
-        <h1>Palladium Mall Management System</h1>
-        <p>
-            {{ $pageTitle }} &bull; Generated: {{ now()->format('d M Y, H:i') }}
-        </p>
-    </div>
-
-    {{-- Clean Inline Metadata & Summary Section --}}
-    <div class="inline-summary-container">
-        <div>
-            <span style="font-weight: bold; color: #64748B;">Directory Type:</span> <span style="font-weight: 800; color: #0F172A;">{{ $pageTitle }}</span>
-            <span style="margin: 0 6px; color: #94A3B8;">&bull;</span>
-            <span style="font-weight: bold; color: #64748B;">Total Tenants Listed:</span> <span style="font-weight: 800; color: #0F172A;">{{ number_format(count($occupants)) }}</span>
-            <span style="margin: 0 6px; color: #94A3B8;">&bull;</span>
-            <span style="font-weight: bold; color: #64748B;">Printed On:</span> <span style="font-weight: 800; color: #0F172A;">{{ now()->format('d M Y, H:i') }}</span>
+        <span class="logo-text">PALLADIUM MALL</span>
+        <div class="doc-title">
+            <h2>{{ $pageTitle }}</h2>
+            <p>Printed: {{ now()->format('d M Y, h:i A') }}</p>
         </div>
     </div>
 
     <table>
         <thead>
             <tr>
-                <th style="width: 45px; text-align: center;">Sr #</th>
-                <th>Flat / Shop</th>
+                <th class="text-center" style="width: 40px;">Sr #</th>
+                <th style="width: 70px;">Flat No</th>
+                <th style="width: 80px;">Floor</th>
                 <th>Tenant Name</th>
-                <th>Contact Details</th>
+                <th style="width: 150px;">Contact No / Emer No</th>
                 <th>Landlord</th>
-                <th>Start Date</th>
-                <th class="text-right">Monthly Rent</th>
-                <th class="text-right">Security Deposit</th>
+                <th style="width: 95px;">Start Date</th>
+                <th class="text-right" style="width: 110px;">Rent / Sec</th>
             </tr>
         </thead>
         <tbody>
             @forelse($occupants as $index => $occupant)
                 <tr>
-                    <td style="text-align: center; font-weight: 800; color: #475569;">{{ $index + 1 }}</td>
-                    <td>
-                        <span class="unit-badge">{{ $occupant['unit_number'] }}</span>
-                    </td>
-                    <td style="font-weight: 900;">
+                    <td class="text-center" style="color: #475569;">{{ $index + 1 }}</td>
+                    <td class="unit">{{ $occupant['unit_number'] }}</td>
+                    <td>{{ $occupant['floor'] }}</td>
+                    <td class="name">
                         {{ $occupant['tenant_name'] }}
                         @if($occupant['is_other_owned'])
-                            <span class="other-badge">Other-Owned</span>
+                            <span class="badge">Other-Owned</span>
+                        @endif
+                    </td>
+                    <td class="mono">
+                        @foreach(array_unique(array_filter([$occupant['phone'], $occupant['secondary_phone']], fn($n) => $n !== '—')) as $number)
+                            <div>{{ $number }}</div>
+                        @endforeach
+                        @if($occupant['emergency_phone'] !== '—')
+                            <div class="emergency">Emer: {{ $occupant['emergency_phone'] }}</div>
+                        @endif
+                        @if($occupant['phone'] === '—' && $occupant['secondary_phone'] === '—' && $occupant['emergency_phone'] === '—')
+                            <div>—</div>
                         @endif
                     </td>
                     <td>
-                        <div class="contact-box">
-                            <span class="primary-phone">📞 {{ $occupant['phone'] }}</span>
-                            @if(!empty($occupant['emergency_contact']) && $occupant['emergency_contact'] !== '—')
-                                <span class="emergency-contact">🚨 Emer: {{ $occupant['emergency_contact'] }}</span>
-                            @endif
-                        </div>
+                        <span style="font-weight: 900;">{{ $occupant['landlord_name'] }}</span>
+                        @if(!empty($occupant['landlord_phone']) && $occupant['landlord_phone'] !== '—')
+                            <span class="sub-line mono">{{ $occupant['landlord_phone'] }}</span>
+                        @endif
                     </td>
-                    <td style="font-weight: 800;">
-                        {{ $occupant['landlord_name'] }}
-                    </td>
-                    <td style="font-family: monospace; font-weight: 800;">
-                        {{ $occupant['start_date'] }}
-                    </td>
-                    <td class="text-right amount" style="color: #059669;">
-                        Rs. {{ number_format($occupant['monthly_rent'], 2) }}
-                    </td>
-                    <td class="text-right amount" style="color: #2563eb;">
-                        Rs. {{ number_format($occupant['security_deposit'], 2) }}
+                    <td><span class="mono">{{ $occupant['start_date'] }}</span></td>
+                    <td class="text-right">
+                        <span class="amount">{{ number_format($occupant['monthly_rent'], 0) }}</span>
+                        <span class="sub-line mono">{{ $occupant['security_deposit'] > 0 ? number_format($occupant['security_deposit'], 0) : '—' }}</span>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 30px; font-size: 12px; font-weight: 800; color: #64748B;">
-                        No tenants found matching current filters.
-                    </td>
+                    <td colspan="8" style="text-align: center; color: #94a3b8; padding: 40px 0;">No tenants found matching current filters.</td>
                 </tr>
             @endforelse
         </tbody>
+        @if(count($occupants) > 0)
+            <tfoot>
+                <tr style="background: #e2e8f0; border-top: 3px solid #0f172a; border-bottom: 3px solid #0f172a;">
+                    <td colspan="7" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">TOTAL (Rent / Security)</td>
+                    <td class="text-right" style="padding: 12px 10px;">
+                        <span class="amount">{{ number_format(collect($occupants)->sum('monthly_rent'), 0) }}</span>
+                        <span class="sub-line mono">{{ number_format(collect($occupants)->sum('security_deposit'), 0) }}</span>
+                    </td>
+                </tr>
+            </tfoot>
+        @endif
     </table>
 
     <div class="footer">
-        Palladium Mall Management Office &bull; {{ $pageTitle }} &bull; Printed on {{ now()->format('d M Y, H:i') }}
+        <span>Palladium Mall Management Office</span>
+        <span>Generated on {{ now()->format('d M Y \a\t h:i A') }}</span>
     </div>
 
-    <!-- Fixed page-number footer: repeats on every printed page (cross-browser fallback) -->
     <div class="print-page-number" style="display:none;"></div>
 </body>
+
 </html>

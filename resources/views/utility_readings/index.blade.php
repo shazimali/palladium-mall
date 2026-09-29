@@ -119,7 +119,7 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs sm:text-sm">
+                <table class="w-full text-left text-[11px]">
                     <thead class="bg-gray-50 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 uppercase tracking-wider font-extrabold text-[11px] border-b border-gray-200 dark:border-gray-800">
                         <tr>
                             <th class="py-3.5 px-4 text-center">Meter Image</th>
@@ -135,8 +135,6 @@
                             <th class="py-3.5 px-4 text-center">Bill Gen. Date</th>
                             <th class="py-3.5 px-4 text-center">Due Date</th>
                             <th class="py-3.5 px-4 text-center">Meter Status</th>
-                            <th class="py-3.5 px-4 text-center">Edited By</th>
-                            <th class="py-3.5 px-4 text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-800 text-gray-800 dark:text-gray-200 font-semibold">
@@ -148,14 +146,14 @@
                                     <template x-if="row.meter_image_url">
                                         <div class="relative group cursor-pointer inline-block" x-on:click="openImagePreview(row)">
                                             <img :src="row.meter_image_url" alt="Meter Photo" class="h-10 w-10 rounded-xl object-cover border-2 border-brand-300 dark:border-brand-800 shadow-xs">
-                                            <div class="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs transition-opacity">
+                                            <div class="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[11px] transition-opacity">
                                                 🔍
                                             </div>
                                         </div>
                                     </template>
 
                                     <template x-if="!row.meter_image_url">
-                                        <span class="inline-flex h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 items-center justify-center text-gray-400 text-xs" title="No photo uploaded">
+                                        <span class="inline-flex h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 items-center justify-center text-gray-400 text-[11px]" title="No photo uploaded">
                                             📷
                                         </span>
                                     </template>
@@ -165,47 +163,47 @@
                                 <td class="py-3.5 px-4">
                                     <div class="flex items-center gap-1.5 flex-wrap">
                                         <a :href="'/units/' + row.unit_id" class="inline-block hover:opacity-90 transition-opacity">
-                                            <span class="unit-badge-lg text-sm px-2.5 py-0.5 font-black" x-text="row.unit_number"></span>
+                                            <span class="unit-badge-lg text-xs px-2.5 py-0.5 font-black" x-text="row.unit_number"></span>
                                         </a>
                                         <template x-if="row.meter_type === 'electricity'">
-                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40" title="Electricity Meter">
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40" title="Electricity Meter">
                                                 ⚡ Elect
                                             </span>
                                         </template>
                                         <template x-if="row.meter_type === 'water'">
-                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40" title="Water Meter">
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40" title="Water Meter">
                                                 💧 Water
                                             </span>
                                         </template>
                                         <template x-if="row.meter_type === 'gas'">
-                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40" title="Gas Meter">
+                                            <span class="inline-flex items-center gap-0.5 rounded-md bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 border border-rose-200 dark:border-rose-800/40" title="Gas Meter">
                                                 🔥 Gas
                                             </span>
                                         </template>
                                     </div>
-                                    <span class="text-xs text-gray-400 font-medium block mt-1" x-text="row.floor + (row.block ? ' • ' + row.block : '')"></span>
+                                    <span class="text-[11px] text-gray-400 font-medium block mt-1" x-text="row.floor + (row.block ? ' • ' + row.block : '')"></span>
                                 </td>
 
                                 {{-- Ref Number Column --}}
-                                <td class="py-3.5 px-4 font-mono text-xs text-gray-600 dark:text-gray-400" x-text="row.meter_ref_no"></td>
+                                <td class="py-3.5 px-4 font-mono text-[11px] text-gray-600 dark:text-gray-400" x-text="row.meter_ref_no"></td>
 
                                 {{-- Consumer ID Column --}}
-                                <td class="py-3.5 px-4 font-mono text-xs text-gray-600 dark:text-gray-400" x-text="row.meter_consumer_id"></td>
+                                <td class="py-3.5 px-4 font-mono text-[11px] text-gray-600 dark:text-gray-400" x-text="row.meter_consumer_id"></td>
 
                                 {{-- Prev Reading Column --}}
-                                <td class="py-3.5 px-4 text-right font-mono font-bold text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                                <td class="py-3.5 px-4 text-right font-mono font-bold text-[11px] text-gray-600 dark:text-gray-400">
                                     <span class="inline-block bg-gray-100 dark:bg-gray-800/80 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700"
                                         x-text="parseFloat(row.previous_reading || 0).toFixed(2)"></span>
                                 </td>
 
                                 {{-- Meter Reading Column --}}
-                                <td class="py-3.5 px-4 text-right font-mono font-bold text-xs sm:text-sm text-gray-900 dark:text-white">
+                                <td class="py-3.5 px-4 text-right font-mono font-bold text-[11px] text-gray-900 dark:text-white">
                                     <span class="inline-block px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                         x-text="parseFloat(row.current_reading || 0).toFixed(2)"></span>
                                 </td>
 
                                 {{-- Units Consumed Column --}}
-                                <td class="py-3.5 px-4 text-right font-mono font-black text-xs sm:text-sm text-indigo-600 dark:text-indigo-400">
+                                <td class="py-3.5 px-4 text-right font-mono font-black text-[11px] text-indigo-600 dark:text-indigo-400">
                                     <span class="inline-block bg-indigo-50 dark:bg-indigo-950/40 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800"
                                         x-text="((parseFloat(row.current_reading || 0) > 0 && parseFloat(row.current_reading || 0) >= parseFloat(row.previous_reading || 0)) ? (parseFloat(row.current_reading) - parseFloat(row.previous_reading || 0)) : 0).toFixed(2)"></span>
                                 </td>
@@ -213,33 +211,33 @@
                                 {{-- Available Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="row.available">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 text-xs font-bold rounded-lg bg-blue-50 border border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
+                                        <span class="inline-flex items-center px-2.5 py-0.5 text-[11px] font-bold rounded-lg bg-blue-50 border border-blue-200 text-blue-700 dark:bg-blue-950/40 dark:border-blue-800 dark:text-blue-300"
                                             x-text="row.available"></span>
                                     </template>
                                     <template x-if="!row.available">
-                                        <span class="text-xs text-gray-400 font-semibold">—</span>
+                                        <span class="text-[11px] text-gray-400 font-semibold">—</span>
                                     </template>
                                 </td>
 
                                 {{-- Bill Amount Column --}}
-                                <td class="py-3.5 px-4 text-right font-mono font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white">
+                                <td class="py-3.5 px-4 text-right font-mono font-extrabold text-[11px] text-gray-900 dark:text-white">
                                     <span x-text="'Rs. ' + parseFloat(row.amount || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
                                 </td>
 
                                 {{-- Status Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="row.status === 'paid'">
-                                        <span class="inline-flex items-center px-2.5 py-1 text-xs font-extrabold uppercase rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+                                        <span class="inline-flex items-center px-2.5 py-1 text-[11px] font-extrabold uppercase rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
                                             Paid
                                         </span>
                                     </template>
                                     <template x-if="row.status === 'unpaid'">
-                                        <span class="inline-flex items-center px-2.5 py-1 text-xs font-extrabold uppercase rounded-lg bg-rose-50 border border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
+                                        <span class="inline-flex items-center px-2.5 py-1 text-[11px] font-extrabold uppercase rounded-lg bg-rose-50 border border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300">
                                             Unpaid
                                         </span>
                                     </template>
                                     <template x-if="row.status === 'pending'">
-                                        <span class="inline-flex items-center px-2.5 py-1 text-xs font-extrabold uppercase rounded-lg bg-amber-50 border border-amber-300 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
+                                        <span class="inline-flex items-center px-2.5 py-1 text-[11px] font-extrabold uppercase rounded-lg bg-amber-50 border border-amber-300 text-amber-700 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-300">
                                             Pending
                                         </span>
                                     </template>
@@ -248,90 +246,46 @@
                                 {{-- Bill Generate Date Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="row.bill_generate_date_label">
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
                                             x-text="row.bill_generate_date_label"></span>
                                     </template>
                                     <template x-if="!row.bill_generate_date_label">
-                                        <span class="text-xs text-gray-400 font-semibold">—</span>
+                                        <span class="text-[11px] text-gray-400 font-semibold">—</span>
                                     </template>
                                 </td>
 
                                 {{-- Due Date Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="row.due_date_label">
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"
                                             x-text="row.due_date_label"></span>
                                     </template>
                                     <template x-if="!row.due_date_label">
-                                        <span class="text-xs text-gray-400 font-semibold">—</span>
+                                        <span class="text-[11px] text-gray-400 font-semibold">—</span>
                                     </template>
                                 </td>
 
                                 {{-- Meter Status Column --}}
                                 <td class="py-3.5 px-4 text-center">
                                     <template x-if="row.is_active">
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold uppercase rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-extrabold uppercase rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300">
                                             <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 inline-block"></span> Active
                                         </span>
                                     </template>
                                     <template x-if="!row.is_active">
-                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-extrabold uppercase rounded-lg bg-gray-100 border border-gray-300 text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-extrabold uppercase rounded-lg bg-gray-100 border border-gray-300 text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400">
                                             <span class="h-1.5 w-1.5 rounded-full bg-gray-400 inline-block"></span> Inactive
                                         </span>
                                     </template>
                                 </td>
-
-                                {{-- Edited By Column --}}
-                                <td class="py-3.5 px-4 text-center">
-                                    <template x-if="row.edited_by">
-                                        <div class="inline-flex flex-col items-center">
-                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 shadow-2xs"
-                                                :title="row.last_updated ? 'Last updated: ' + row.last_updated : ''">
-                                                <span class="h-1.5 w-1.5 rounded-full bg-brand-500 inline-block"></span>
-                                                <span x-text="row.edited_by"></span>
-                                            </span>
-                                            <template x-if="row.last_updated">
-                                                <span class="text-[10px] text-gray-400 font-medium mt-0.5" x-text="row.last_updated"></span>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <template x-if="!row.edited_by">
-                                        <span class="text-xs text-gray-400 font-semibold">—</span>
-                                    </template>
-                                </td>
-
-                                {{-- Action Column --}}
-                                <td class="py-3.5 px-4 text-center">
-                                    <template x-if="canEdit">
-                                        <div>
-                                            <template x-if="row.is_paid_locked">
-                                                <button type="button" x-on:click="showToast('🔒 This record is marked as Paid. Only Super Admin can edit it.', 'error')"
-                                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500 text-xs font-bold border border-gray-200 dark:border-gray-700 cursor-not-allowed"
-                                                    title="Paid record locked — Super Admin only">
-                                                    🔒 Paid
-                                                </button>
-                                            </template>
-                                            <template x-if="!row.is_paid_locked">
-                                                <button type="button" x-on:click="openEditModal(row)"
-                                                    class="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-brand-50 hover:bg-brand-100 dark:bg-brand-900/30 dark:hover:bg-brand-900/50 text-brand-600 dark:text-brand-400 text-xs font-extrabold border border-brand-200 dark:border-brand-800 shadow-2xs transition-colors cursor-pointer">
-                                                    ✏️ Edit
-                                                </button>
-                                            </template>
-                                        </div>
-                                    </template>
-                                    <template x-if="!canEdit">
-                                        <span class="text-xs text-gray-400 font-semibold uppercase">Read Only</span>
-                                    </template>
-                                </td>
-
                             </tr>
                         </template>
 
                         <template x-if="readings.length === 0">
                             <tr>
-                                <td colspan="15" class="py-12 text-center text-gray-400 dark:text-gray-500">
-                                    <p class="text-3xl mb-2">⚡</p>
-                                    <p class="font-bold text-sm">No utility meters found matching your filter criteria.</p>
+                                <td colspan="13" class="py-12 text-center text-gray-400 dark:text-gray-500">
+                                    <p class="text-2xl mb-2">⚡</p>
+                                    <p class="font-bold text-xs">No utility meters found matching your filter criteria.</p>
                                 </td>
                             </tr>
                         </template>

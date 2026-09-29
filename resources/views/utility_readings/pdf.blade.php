@@ -197,7 +197,6 @@
                 <th>#</th>
                 <th>Flat / Shop</th>
                 <th>Floor &amp; Block</th>
-                <th>Meter Type</th>
                 <th>Ref Number</th>
                 <th>Consumer ID</th>
                 <th class="text-center">Breaker</th>
@@ -219,7 +218,6 @@
                     <td class="text-center font-mono">{{ $index + 1 }}</td>
                     <td class="font-bold">{{ $row['unit_number'] }}</td>
                     <td>{{ $row['floor'] }}{{ $row['block'] ? ' • ' . $row['block'] : '' }}</td>
-                    <td class="font-bold">{{ $row['meter_type_label'] }}</td>
                     <td class="font-mono">{{ $row['meter_ref_no'] }}</td>
                     <td class="font-mono">{{ $row['meter_consumer_id'] }}</td>
                     <td class="text-center font-bold">
@@ -257,7 +255,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="17" class="text-center" style="padding: 15px; color: #94A3B8;">
+                    <td colspan="16" class="text-center" style="padding: 15px; color: #94A3B8;">
                         No utility readings found for {{ $selectedMonthName }}.
                     </td>
                 </tr>
@@ -265,12 +263,10 @@
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="10" class="text-right">Total Units Consumed:</td>
+                <td colspan="11" class="text-right">Total Units Consumed:</td>
                 <td class="text-right font-mono">{{ number_format($totalUnitsConsumed, 2) }}</td>
                 <td></td>
                 <td class="text-right font-mono">Rs. {{ number_format($totalBilled, 2) }}</td>
-                <td></td>
-                <td></td>
                 <td></td>
                 <td></td>
             </tr>
