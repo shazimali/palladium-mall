@@ -80,10 +80,10 @@
                         <option value="{{ $account->id }}" @selected((string) request('payment_account_id') === (string) $account->id)>{{ $account->name }}</option>
                     @endforeach
                 </select>
-                <input type="date" name="start_date" value="{{ request('start_date') }}"
-                    class="h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:text-white/90">
-                <input type="date" name="end_date" value="{{ request('end_date') }}"
-                    class="h-11 rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:text-white/90">
+                <input type="text" id="start_date" name="start_date" value="{{ request('start_date') }}" placeholder="Date From" autocomplete="off"
+                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 cursor-pointer">
+                <input type="text" id="end_date" name="end_date" value="{{ request('end_date') }}" placeholder="Date To" autocomplete="off"
+                    class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 text-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white/90 cursor-pointer">
                 <div class="lg:col-span-7 flex justify-end">
                     <button type="submit" class="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-600 cursor-pointer">Apply</button>
                 </div>
@@ -159,3 +159,23 @@
         <div class="mt-4">{{ $vouchers->links() }}</div>
     </x-common.component-card>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (typeof flatpickr === 'undefined') return;
+
+            const options = { dateFormat: 'Y-m-d', altInput: true, altFormat: 'd M Y', allowInput: true, disableMobile: true };
+            const from = flatpickr('#start_date', {
+                ...options,
+                onChange: ([date]) => to.set('minDate', date || null),
+            });
+            const to = flatpickr('#end_date', {
+                ...options,
+                minDate: @js(request('start_date')) || null,
+                onChange: ([date]) => from.set('maxDate', date || null),
+            });
+            if (@js(request('end_date'))) from.set('maxDate', @js(request('end_date')));
+        });
+    </script>
+@endpush
