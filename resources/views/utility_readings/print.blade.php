@@ -10,7 +10,7 @@
     <style>
         @media print {
             @page {
-                size: A4 landscape;
+                size: A4 portrait;
                 margin: 0.5cm;
             }
 
@@ -19,6 +19,8 @@
             }
 
             body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
                 background-color: white !important;
                 color: black !important;
                 padding: 0 !important;
@@ -35,8 +37,26 @@
                 box-shadow: none !important;
             }
 
+            .overflow-x-auto {
+                overflow: visible !important;
+            }
+
             table {
-                font-size: 11px !important;
+                width: 100% !important;
+                table-layout: auto;
+                font-size: 9px !important;
+            }
+
+            th,
+            td {
+                padding: 3px 4px !important;
+                white-space: normal !important;
+                word-break: break-word;
+            }
+
+            td img {
+                height: 40px !important;
+                width: 40px !important;
             }
         }
     </style>
@@ -74,19 +94,34 @@
         </div>
 
         <!-- SUMMARY BAR -->
-        <div class="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide">
+        <div
+            class="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide">
             <span class="text-gray-400 font-extrabold mr-1">Meter Status:</span>
-            <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">● Active: {{ $activeMeters }}</span>
-            <span class="inline-flex items-center gap-1 rounded bg-gray-200 px-2 py-0.5 text-gray-600 border border-gray-300">● Inactive: {{ $inactiveMeters }}</span>
+            <span
+                class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">●
+                Active: {{ $activeMeters }}</span>
+            <span
+                class="inline-flex items-center gap-1 rounded bg-gray-200 px-2 py-0.5 text-gray-600 border border-gray-300">●
+                Inactive: {{ $inactiveMeters }}</span>
             <span class="mx-2 text-gray-300">|</span>
             <span class="text-gray-400 font-extrabold mr-1">Breaker:</span>
-            <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">⚡ ON: {{ $breakerOn }}</span>
-            <span class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-rose-800 border border-rose-300">🔌 OFF: {{ $breakerOff }}</span>
+            <span
+                class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">⚡
+                ON: {{ $breakerOn }}</span>
+            <span
+                class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-rose-800 border border-rose-300">🔌
+                OFF: {{ $breakerOff }}</span>
             <span class="mx-2 text-gray-300">|</span>
             <span class="text-gray-400 font-extrabold mr-1">Payment:</span>
-            <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">✅ Paid: {{ $paidCount }}</span>
-            <span class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-rose-800 border border-rose-300">❌ Unpaid: {{ $unpaidCount }}</span>
-            <span class="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-amber-800 border border-amber-300">⏳ Pending: {{ $pendingCount }}</span>
+            <span
+                class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-emerald-800 border border-emerald-300">✅
+                Paid: {{ $paidCount }}</span>
+            <span
+                class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-rose-800 border border-rose-300">❌
+                Unpaid: {{ $unpaidCount }}</span>
+            <span
+                class="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-amber-800 border border-amber-300">⏳
+                Pending: {{ $pendingCount }}</span>
         </div>
 
         <!-- READINGS DATA TABLE -->
@@ -96,6 +131,7 @@
                     <tr
                         class="bg-gray-100 text-gray-900 border-b-2 border-gray-400 font-extrabold uppercase text-[10px]">
                         <th class="py-2.5 px-3 border border-gray-300">#</th>
+                        <th class="py-2.5 px-3 border border-gray-300 text-center">Meter Photo</th>
                         <th class="py-2.5 px-3 border border-gray-300">Flat / Shop</th>
                         <th class="py-2.5 px-3 border border-gray-300">Floor & Block</th>
                         <th class="py-2.5 px-3 border border-gray-300">Ref Number</th>
@@ -116,7 +152,17 @@
                     @forelse($readings as $index => $row)
                         <tr class="hover:bg-gray-50">
                             <td class="py-2 px-3 border border-gray-300 text-center font-mono">{{ $index + 1 }}</td>
-                            <td class="py-2 px-3 border border-gray-300 font-black text-sm text-blue-900">{{ $row['unit_number'] }}
+                            <td class="py-1 px-2 border border-gray-300 text-center">
+                                @if(!empty($row['meter_image_url']))
+                                    <img src="{{ $row['meter_image_url'] }}" alt="Meter photo"
+                                        onclick="openPhotoModal(this.src, @js($row['unit_number']))"
+                                        class="h-14 w-14 object-cover rounded border border-gray-300 mx-auto cursor-pointer">
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="py-2 px-3 border border-gray-300 font-black text-sm text-blue-900">
+                                {{ $row['unit_number'] }}
                             </td>
                             <td class="py-2 px-3 border border-gray-300">{{ $row['floor'] }}
                                 {{ $row['block'] ? '• ' . $row['block'] : '' }}
@@ -125,25 +171,17 @@
                             <td class="py-2 px-3 border border-gray-300 font-mono">{{ $row['meter_consumer_id'] }}</td>
                             <td class="py-2 px-3 border border-gray-300 text-center font-bold">
                                 @if(strtoupper($row['breaker_status'] ?? 'OFF') === 'ON')
-                                    <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 border border-emerald-300">
-                                        ⚡ ON
-                                    </span>
+                                    <span class="text-green-700">ON</span>
                                 @else
-                                    <span class="inline-flex items-center gap-1 rounded bg-rose-100 px-2 py-0.5 text-xs text-rose-800 border border-rose-300">
-                                        🔌 OFF
-                                    </span>
+                                    <span class="text-red-700">OFF</span>
                                 @endif
                             </td>
                             {{-- Meter Status Column --}}
                             <td class="py-2 px-3 border border-gray-300 text-center font-bold">
                                 @if($row['is_active'])
-                                    <span class="inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800 border border-emerald-300 font-extrabold uppercase">
-                                        ● Active
-                                    </span>
+                                    <span class="text-green-700">Active</span>
                                 @else
-                                    <span class="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600 border border-gray-300 font-extrabold uppercase">
-                                        ● Inactive
-                                    </span>
+                                    <span class="text-red-700">Inactive</span>
                                 @endif
                             </td>
                             <td class="py-2 px-3 border border-gray-300 text-right font-mono text-gray-600">
@@ -179,7 +217,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="15" class="py-8 text-center text-gray-500 font-bold">
+                            <td colspan="16" class="py-8 text-center text-gray-500 font-bold">
                                 No utility readings found for {{ $selectedMonthName }}.
                             </td>
                         </tr>
@@ -188,7 +226,8 @@
                 <tfoot>
                     {{-- Totals Row --}}
                     <tr class="bg-gray-100 font-black border-t-2 border-gray-400">
-                        <td colspan="9" class="py-3 px-3 text-right uppercase border border-gray-300">Total Units Consumed:</td>
+                        <td colspan="10" class="py-3 px-3 text-right uppercase border border-gray-300">Total Units
+                            Consumed:</td>
                         <td class="py-3 px-3 text-right font-mono border border-gray-300 text-blue-900">
                             {{ number_format($totalUnitsConsumed, 2) }}
                         </td>
@@ -218,9 +257,36 @@
 
     </div>
 
+    <!-- METER PHOTO MODAL (HIDDEN DURING PRINT) -->
+    <div id="photoModal" onclick="closePhotoModal()"
+        class="no-print fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4">
+        <div class="relative max-h-full max-w-3xl rounded-xl bg-white p-3 shadow-2xl" onclick="event.stopPropagation()">
+            <div class="mb-2 flex items-center justify-between gap-4">
+                <p id="photoModalTitle" class="text-sm font-bold text-gray-800"></p>
+                <button onclick="closePhotoModal()"
+                    class="rounded-lg px-2 text-xl font-bold text-gray-500 hover:bg-gray-100 hover:text-gray-900 cursor-pointer">&times;</button>
+            </div>
+            <img id="photoModalImg" src="" alt="Meter photo" class="max-h-[80vh] w-auto rounded-lg object-contain">
+        </div>
+    </div>
+
     <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => { window.print(); }, 400);
+        function openPhotoModal(src, unit) {
+            document.getElementById('photoModalImg').src = src;
+            document.getElementById('photoModalTitle').textContent = 'Meter Photo — ' + (unit || '');
+            const modal = document.getElementById('photoModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePhotoModal() {
+            const modal = document.getElementById('photoModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePhotoModal();
         });
     </script>
 </body>
