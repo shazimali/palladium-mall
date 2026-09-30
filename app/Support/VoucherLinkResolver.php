@@ -23,10 +23,27 @@ class VoucherLinkResolver
         'other_owned_rent_purchase_voucher' => 'other-owned-rent-purchase-vouchers.show',
     ];
 
+    /**
+     * Legacy line tables that can belong to a multi-line Voucher header.
+     */
+    private const LINE_MODELS = [
+        'receiving_voucher' => \App\Models\ReceivingVoucher::class,
+        'general_receiving_voucher' => \App\Models\GeneralReceivingVoucher::class,
+        'payment_voucher' => \App\Models\PaymentVoucher::class,
+        'expense' => \App\Models\Expense::class,
+    ];
+
+    /** @var array<string, array<int, int>> line id => voucher id, loaded once per type per request */
+    private static array $voucherMaps = [];
+
     public static function resolve(?string $modelType, $id): ?string
     {
         if (!$modelType || !$id || !isset(self::ROUTES[$modelType])) {
             return null;
+        }
+
+        if ($voucherId = self::headerVoucherId($modelType, (int) $id)) {
+            return Route::has('vouchers.print') ? route('vouchers.print', $voucherId) : null;
         }
 
         $routeName = self::ROUTES[$modelType];
@@ -36,5 +53,19 @@ class VoucherLinkResolver
         }
 
         return route($routeName, $id);
+    }
+
+    private static function headerVoucherId(string $modelType, int $id): ?int
+    {
+        if (!isset(self::LINE_MODELS[$modelType])) {
+            return null;
+        }
+
+        self::$voucherMaps[$modelType] ??= self::LINE_MODELS[$modelType]::withTrashed()
+            ->whereNotNull('voucher_id')
+            ->pluck('voucher_id', 'id')
+            ->all();
+
+        return self::$voucherMaps[$modelType][$id] ?? null;
     }
 }

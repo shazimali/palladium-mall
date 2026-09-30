@@ -58,6 +58,7 @@ class PermissionGroupSeeder extends Seeder
             'Payment Vouchers',
             'General Receiving Vouchers',
             'JV Vouchers',
+            'Cash & Bank Vouchers',
             'Other Owned Rent Purchase Vouchers',
             'Ledgers Management',
             'Inventory Management',

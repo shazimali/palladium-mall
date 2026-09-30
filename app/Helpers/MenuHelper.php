@@ -293,18 +293,15 @@ class MenuHelper
 
         // 17. Voucher
         $voucherSubItems = [];
-        if ($user->can('receiving_vouchers.view')) {
-            $voucherSubItems[] = ['name' => 'Tenants Receiving Vouchers', 'path' => '/receiving-vouchers'];
+        if ($user->can('vouchers.view')) {
+            $voucherSubItems[] = ['name' => 'All Vouchers', 'path' => '/vouchers'];
+            $voucherSubItems[] = ['name' => 'Cash Received', 'path' => '/vouchers/create?type=cash_received'];
+            $voucherSubItems[] = ['name' => 'Cash Paid', 'path' => '/vouchers/create?type=cash_paid'];
+            $voucherSubItems[] = ['name' => 'Bank Received', 'path' => '/vouchers/create?type=bank_received'];
+            $voucherSubItems[] = ['name' => 'Bank Paid', 'path' => '/vouchers/create?type=bank_paid'];
         }
-        if ($user->can('general_receiving_vouchers.view')) {
-            $voucherSubItems[] = ['name' => 'General Receiving Vouchers', 'path' => '/general-receiving-vouchers'];
-        }
-        if ($user->can('payment_vouchers.view')) {
-            $voucherSubItems[] = ['name' => 'Paid Vouchers', 'path' => '/payment-vouchers'];
-        }
-        if ($user->can('expenses.view')) {
-            $voucherSubItems[] = ['name' => 'Expense Vouchers', 'path' => '/expense-vouchers'];
-        }
+        // Tenant Receiving, General Receiving, Paid and Expense vouchers are all in "All Vouchers"
+        // (their old pages stay reachable read-only from ledgers and print links)
         if ($user->can('jv_vouchers.view')) {
             $voucherSubItems[] = ['name' => 'JV Voucher', 'path' => '/jv-vouchers'];
         }

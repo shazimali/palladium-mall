@@ -21,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Give voucher rows written outside the new voucher form a header in the unified Vouchers list
+        foreach (\App\Services\LegacyVoucherLinker::LINE_MODELS as $lineModel) {
+            $lineModel::observe(\App\Observers\VoucherLineObserver::class);
+        }
+
         // Super Admin bypass
         \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
             if ($user->isSuperAdmin()) {

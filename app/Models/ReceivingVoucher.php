@@ -14,6 +14,8 @@ class ReceivingVoucher extends Model
     use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
+        'voucher_id',
+        'line_no',
         'voucher_no',
         'manual_voucher_no',
         'date',
@@ -64,6 +66,11 @@ class ReceivingVoucher extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(Owner::class)->withTrashed();
+    }
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
     }
 
     public function paymentAccount(): BelongsTo
