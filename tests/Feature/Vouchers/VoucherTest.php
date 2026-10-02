@@ -176,7 +176,9 @@ it('renders the list, form, edit and print pages', function () {
     $this->get(route('vouchers.create', ['type' => 'bank_paid']))->assertOk();
     $this->get(route('vouchers.edit', $voucher))->assertOk();
     $this->get(route('vouchers.print', $voucher))->assertOk()->assertSee('ABC Traders')->assertSee('S-01');
-    $this->get(route('vouchers.print-list'))->assertOk();
+    $this->get(route('vouchers.print-list', ['type' => 'cash_received']))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
 });
 
 it('forbids users without voucher permissions', function () {
@@ -299,4 +301,36 @@ it('lists the security deposit payable to a tenant and refunds it', function () 
         'type' => 'bank_paid', 'date' => '2026-09-30', 'payment_account_id' => $this->bank->id,
         'lines' => [['entry_type' => 'tenant', 'tenant_id' => $tenant->id, 'unit_id' => $this->unit->id, 'amount' => 6000]],
     ])->assertSessionHasErrors('lines.0.amount');
+});
+
+it('filters vouchers by side, cash/bank, entry type, party/unit, amount, preparer and name search', function () {
+    $otherParty = Party::create(['name' => 'Zeta Supplies']);
+    // 1: cash received — tenant S-01 (7000) + ABC Traders (3000) = 10000
+    $this->post(route('vouchers.store'), receivedPayload(['manual_voucher_no' => null]))->assertSessionHasNoErrors();
+    // 2: bank paid — expense 1500
+    $this->post(route('vouchers.store'), ['type' => 'bank_paid', 'date' => '2026-09-30', 'payment_account_id' => $this->bank->id,
+        'lines' => [['entry_type' => 'expense', 'expense_head_id' => $this->head->id, 'amount' => 1500]]])->assertSessionHasNoErrors();
+    // 3: bank paid — Zeta Supplies 2500
+    $this->post(route('vouchers.store'), ['type' => 'bank_paid', 'date' => '2026-09-30', 'payment_account_id' => $this->bank->id,
+        'lines' => [['entry_type' => 'party', 'party_id' => $otherParty->id, 'amount' => 2500]]])->assertSessionHasNoErrors();
+
+    $numbers = fn(array $query) => collect($this->get(route('vouchers.index', $query))->assertOk()->viewData('vouchers')->items())
+        ->pluck('voucher_no')->sort()->values()->all();
+
+    expect($numbers(['type' => 'paid']))->toBe(['000002', '000003'])
+        ->and($numbers(['type' => 'received']))->toBe(['000001'])
+        ->and($numbers(['cash_bank' => 'bank']))->toBe(['000002', '000003'])
+        ->and($numbers(['entry' => 'party']))->toBe(['000001', '000003'])                       // both sides
+        ->and($numbers(['type' => 'paid', 'entry' => 'party']))->toBe(['000003'])
+        ->and($numbers(['entry' => 'party', 'entity_id' => $this->party->id]))->toBe(['000001'])
+        ->and($numbers(['entry' => 'tenant', 'entity_id' => $this->unit->id]))->toBe(['000001'])
+        ->and($numbers(['type' => 'paid', 'entry' => 'expense', 'entity_id' => $this->head->id]))->toBe(['000002'])
+        ->and($numbers(['amount_min' => 2000, 'amount_max' => 5000]))->toBe(['000003'])
+        ->and($numbers(['user_id' => $this->user->id]))->toHaveCount(3)
+        ->and($numbers(['search' => 'Zeta']))->toBe(['000003'])
+        ->and($numbers(['search' => 'Electricity']))->toBe(['000002']);
+
+    // Print uses the same filters
+    $this->get(route('vouchers.print-list', ['type' => 'paid', 'entry' => 'party', 'entity_id' => $otherParty->id]))
+        ->assertOk()->assertHeader('content-type', 'application/pdf');
 });
