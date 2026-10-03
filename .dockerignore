@@ -13,3 +13,4 @@ tests
 !.env.example
 docker-compose.yml
 README.md
+bootstrap/cache/*.php

@@ -21,6 +21,11 @@ done
 
 echo "✅ Database ready"
 
+# bootstrap/cache is a persistent volume, so rebuild the package manifest
+# to pick up newly added packages (e.g. laravel/reverb)
+echo "📦 Discovering packages..."
+php artisan package:discover --ansi
+
 if [ "${CONTAINER_ROLE:-app}" = "app" ]; then
     if [ -z "$APP_KEY" ]; then
         echo "🗝️ Generating APP_KEY..."
