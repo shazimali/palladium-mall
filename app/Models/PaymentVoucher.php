@@ -13,6 +13,8 @@ class PaymentVoucher extends Model
     use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
+        'voucher_id',
+        'line_no',
         'voucher_no',
         'date',
         'amount',
@@ -83,6 +85,11 @@ class PaymentVoucher extends Model
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class)->withTrashed();
+    }
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
     }
 
     public function paymentAccount(): BelongsTo

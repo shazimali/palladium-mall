@@ -20,6 +20,7 @@ use App\Http\Controllers\InspectionPersonController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\ReceivingVoucherController;
 use App\Http\Controllers\PaymentVoucherController;
+use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\ProfitLossController;
 use App\Http\Controllers\ReceivablePayableReportController;
 use App\Http\Controllers\OwnerDuesController;
@@ -149,7 +150,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:general_receiving_vouchers.view')->group(function () {
         Route::get('general-receiving-vouchers-print-list', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'printList'])
             ->name('general-receiving-vouchers.print-list');
-        Route::resource('general-receiving-vouchers', \App\Http\Controllers\GeneralReceivingVoucherController::class);
+        // Old screen is read-only: create/edit/delete go to the unified voucher form
+        \App\Http\Controllers\LegacyVoucherRedirectController::routes('general-receiving-vouchers', 'general_receiving_voucher', 'general-receiving-vouchers', 'grv');
+        Route::resource('general-receiving-vouchers', \App\Http\Controllers\GeneralReceivingVoucherController::class)->only(['index', 'show']);
         Route::get('general-receiving-vouchers/{general_receiving_voucher}/print', [\App\Http\Controllers\GeneralReceivingVoucherController::class, 'print'])->name('general-receiving-vouchers.print');
     });
 
@@ -362,7 +365,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:receiving_vouchers.view')->group(function () {
         Route::get('receiving-vouchers-print-list', [ReceivingVoucherController::class, 'printList'])
             ->name('receiving-vouchers.print-list');
-        Route::resource('receiving-vouchers', ReceivingVoucherController::class);
+        // Old screen is read-only: create/edit/delete go to the unified voucher form
+        \App\Http\Controllers\LegacyVoucherRedirectController::routes('receiving-vouchers', 'receiving_voucher', 'receiving-vouchers', 'rv');
+        Route::resource('receiving-vouchers', ReceivingVoucherController::class)->only(['index', 'show']);
         Route::get('receiving-vouchers/{receiving_voucher}/print', [ReceivingVoucherController::class, 'print'])
             ->name('receiving-vouchers.print');
     });
@@ -371,9 +376,19 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:payment_vouchers.view')->group(function () {
         Route::get('payment-vouchers-print-list', [PaymentVoucherController::class, 'printList'])
             ->name('payment-vouchers.print-list');
-        Route::resource('payment-vouchers', PaymentVoucherController::class);
+        // Old screen is read-only: create/edit/delete go to the unified voucher form
+        \App\Http\Controllers\LegacyVoucherRedirectController::routes('payment-vouchers', 'payment_voucher', 'payment-vouchers', 'pv');
+        Route::resource('payment-vouchers', PaymentVoucherController::class)->only(['index', 'show']);
         Route::get('payment-vouchers/{payment_voucher}/print', [PaymentVoucherController::class, 'print'])
             ->name('payment-vouchers.print');
+    });
+
+    // Cash / Bank Received & Paid Vouchers (multi-line; lines post into the legacy voucher tables)
+    Route::middleware('permission:vouchers.view')->group(function () {
+        Route::get('vouchers-print-list', [VoucherController::class, 'printList'])->name('vouchers.print-list');
+        Route::get('vouchers/{voucher}/print', [VoucherController::class, 'print'])->name('vouchers.print');
+        Route::get('vouchers-tenant-payables', [VoucherController::class, 'tenantPayables'])->name('vouchers.tenant-payables');
+        Route::resource('vouchers', VoucherController::class);
     });
 
     // Profit & Loss Report
@@ -476,7 +491,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:expenses.view')->group(function () {
         Route::get('expense-vouchers-print-list', [\App\Http\Controllers\ExpenseController::class, 'printList'])
             ->name('expenses.print-list');
-        Route::resource('expense-vouchers', \App\Http\Controllers\ExpenseController::class)->names([
+        // Old screen is read-only: create/edit/delete go to the unified voucher form
+        \App\Http\Controllers\LegacyVoucherRedirectController::routes('expense-vouchers', 'expense', 'expenses', 'ev');
+        Route::resource('expense-vouchers', \App\Http\Controllers\ExpenseController::class)->only(['index', 'show'])->names([
             'index'   => 'expenses.index',
             'create'  => 'expenses.create',
             'store'   => 'expenses.store',

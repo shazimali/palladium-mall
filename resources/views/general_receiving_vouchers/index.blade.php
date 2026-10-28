@@ -209,19 +209,7 @@
                                                     Edit
                                                 </a>
                                             @endif
-                                            @if(auth()->user()->hasPermission('general_receiving_vouchers.delete') || auth()->user()->isSuperAdmin())
-                                                <form action="{{ route('general-receiving-vouchers.destroy', $voucher) }}"
-                                                    method="POST" x-data
-                                                    @submit.prevent="confirmAction($el, 'Are you sure you want to delete this general receiving voucher?', 'Delete Voucher?', 'Yes, Delete')"
-                                                    class="inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors">
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            {{-- Delete: old voucher screens are read-only; delete from the Vouchers list --}}
                                         </div>
                                     </td>
                                 </tr>

@@ -35,6 +35,7 @@ class DatabaseSeeder extends Seeder
             PartyPermissionSeeder::class,
             GeneralReceivingVoucherPermissionSeeder::class,
             JvVoucherPermissionSeeder::class,
+            VoucherPermissionSeeder::class,
             SystemPermissionSeeder::class,
             TaskPermissionSeeder::class,
             NotePadPermissionSeeder::class,

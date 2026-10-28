@@ -14,6 +14,8 @@ class Expense extends Model
     use HasFactory, SoftDeletes, LogsActivity;
 
     protected $fillable = [
+        'voucher_id',
+        'line_no',
         'voucher_no',
         'expense_head_id',
         'amount',
@@ -64,6 +66,11 @@ class Expense extends Model
     /**
      * Get the payment account associated with this expense.
      */
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
+    }
+
     public function paymentAccount(): BelongsTo
     {
         return $this->belongsTo(PaymentAccount::class);

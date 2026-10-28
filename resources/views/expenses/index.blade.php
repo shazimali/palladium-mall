@@ -224,18 +224,7 @@
                                                     Edit
                                                 </a>
                                             @endif
-                                            @if(auth()->user()->hasPermission('expenses.delete') || auth()->user()->isSuperAdmin())
-                                                <form action="{{ route('expenses.destroy', $expense) }}" method="POST" x-data
-                                                    @submit.prevent="confirmAction($el, 'Are you sure you want to cancel and delete this Expense Voucher of Rs. {{ number_format($expense->amount) }}? This will reverse any balances.', 'Cancel / Delete?', 'Yes, Delete')"
-                                                    class="inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-100 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 transition-colors">
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            {{-- Delete: old voucher screens are read-only; delete from the Vouchers list --}}
                                         </div>
                                     </td>
                                 </tr>
