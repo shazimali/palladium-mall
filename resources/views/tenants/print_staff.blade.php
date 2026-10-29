@@ -331,7 +331,8 @@
                         <th>Tenant Name</th>
                         <th style="width: 150px;">Contact No / Emer No</th>
                         <th>Landlord</th>
-                        <th style="width: 95px;">Start / End</th>
+                        <th style="width: 95px;">Start Date</th>
+                        <th style="width: 95px;">End Date</th>
                         <th class="text-right" style="width: 110px;">Rent / Sec</th>
                     </tr>
                 </thead>
@@ -364,10 +365,8 @@
                                     <span class="sub-line mono">{{ $occupant['landlord_phone'] }}</span>
                                 @endif
                             </td>
-                            <td>
-                                <span class="mono">{{ $occupant['start_date'] }}</span>
-                                <span class="sub-line mono">{{ $occupant['end_date'] }}</span>
-                            </td>
+                            <td><span class="mono">{{ $occupant['start_date'] }}</span></td>
+                            <td><span class="mono">{{ $occupant['end_date'] }}</span></td>
                             <td class="text-right">
                                 <span class="amount">{{ number_format($occupant['monthly_rent'], 0) }}</span>
                                 <span class="sub-line mono">{{ $occupant['security_deposit'] > 0 ? number_format($occupant['security_deposit'], 0) : '—' }}</span>
@@ -377,7 +376,7 @@
                 </tbody>
                 <tfoot>
                     <tr style="background: #e2e8f0; border-top: 3px solid #0f172a; border-bottom: 3px solid #0f172a;">
-                        <td colspan="7" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">BLOCK TOTAL (Rent / Security)</td>
+                        <td colspan="8" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">BLOCK TOTAL (Rent / Security)</td>
                         <td class="text-right" style="padding: 12px 10px;">
                             <span class="amount">{{ number_format($blockOccupants->sum('monthly_rent'), 0) }}</span>
                             <span class="sub-line mono">{{ number_format($blockOccupants->sum('security_deposit'), 0) }}</span>
@@ -385,7 +384,7 @@
                     </tr>
                     @if($loop->last && $blockGroups->count() > 1)
                         <tr style="background: #cbd5e1; border-bottom: 3px solid #0f172a;">
-                            <td colspan="7" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">GRAND TOTAL (Rent / Security)</td>
+                            <td colspan="8" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">GRAND TOTAL (Rent / Security)</td>
                             <td class="text-right" style="padding: 12px 10px;">
                                 <span class="amount">{{ number_format($occupants->sum('monthly_rent'), 0) }}</span>
                                 <span class="sub-line mono">{{ number_format($occupants->sum('security_deposit'), 0) }}</span>
