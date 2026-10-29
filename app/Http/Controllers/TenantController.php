@@ -1781,6 +1781,7 @@ class TenantController extends Controller
                 'landlord_name' => $effUnit?->landlord?->name ?? $t->unit?->landlord?->name ?? '—',
                 'landlord_phone' => $effUnit?->landlord?->phone ?? $t->unit?->landlord?->phone ?? '—',
                 'start_date' => $agreement?->start_date ? $agreement->start_date->format('d M Y') : '—',
+                'end_date' => $agreement?->end_date ? $agreement->end_date->format('d M Y') : '—',
                 'photo_url' => $t->passport_photo_url,
                 'monthly_rent' => (float) ($agreement?->monthly_rent ?? 0),
                 'security_deposit' => (float) ($agreement?->security_deposit ?? 0),
@@ -1824,6 +1825,7 @@ class TenantController extends Controller
                     'landlord_name' => $effUnit?->landlord?->name ?? $ot->unit?->landlord?->name ?? '—',
                     'landlord_phone' => $effUnit?->landlord?->phone ?? $ot->unit?->landlord?->phone ?? '—',
                     'start_date' => $startDate,
+                    'end_date' => $ot->unitHistory->first()?->detached_at?->format('d M Y') ?? '—',
                     'photo_url' => $ot->photo_url,
                     'monthly_rent' => (float) ($ot->monthly_rent ?? $effUnit?->rent_amount ?? 0),
                     'security_deposit' => 0.0,
@@ -1852,14 +1854,10 @@ class TenantController extends Controller
     }
 
     /**
-     * Print View — For Guards
+     * Occupants filtered by the optional block_id and grouped per block, shared by the guard and staff print views.
      */
-    public function printGuards(Request $request): View
+    private function blockGroupedOccupantsData(Request $request): array
     {
-        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('tenants.view')) {
-            abort(403, 'Unauthorized action.');
-        }
-
         $occupants = $this->getUnifiedActiveOccupantsData($request);
         $blocks = \App\Models\Block::orderBy('name')->get(['id', 'name']);
 
@@ -1872,13 +1870,27 @@ class TenantController extends Controller
             ->groupBy(fn($o) => $o['block'] ?? 'Unassigned Block')
             ->sortKeysUsing(fn($a, $b) => ($a === 'Unassigned Block') <=> ($b === 'Unassigned Block') ?: strnatcasecmp($a, $b));
 
-        return view('tenants.print_guards', [
-            'pageTitle' => $this->occupantsStatusLabel($request) . ' Tenants (For Security Guard)',
-            'statusLabel' => $this->occupantsStatusLabel($request),
+        return [
             'occupants' => $occupants,
             'blockGroups' => $blockGroups,
             'blocks' => $blocks,
             'selectedBlockId' => $request->block_id,
+        ];
+    }
+
+    /**
+     * Print View — For Guards
+     */
+    public function printGuards(Request $request): View
+    {
+        if (!auth()->user()->isSuperAdmin() && !auth()->user()->hasPermission('tenants.view')) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return view('tenants.print_guards', [
+            'pageTitle' => $this->occupantsStatusLabel($request) . ' Tenants (For Security Guard)',
+            'statusLabel' => $this->occupantsStatusLabel($request),
+            ...$this->blockGroupedOccupantsData($request),
         ]);
     }
 
@@ -1891,12 +1903,10 @@ class TenantController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        $occupants = $this->getUnifiedActiveOccupantsData($request);
-
         return view('tenants.print_staff', [
             'pageTitle' => $this->occupantsStatusLabel($request) . ' Tenants (For Staff)',
             'statusLabel' => $this->occupantsStatusLabel($request),
-            'occupants' => $occupants,
+            ...$this->blockGroupedOccupantsData($request),
         ]);
     }
 

@@ -151,6 +151,55 @@
             color: #dc2626;
         }
 
+        .block-title {
+            font-size: 1.1rem;
+            font-weight: 900;
+            color: #0f172a;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .block-count {
+            margin-left: 8px;
+            font-size: 0.85rem;
+            font-weight: 800;
+            color: #475569;
+            text-transform: none;
+        }
+
+        .doc-title .total {
+            color: #0f172a;
+            font-weight: 900;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .block-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .block-filter select {
+            padding: 4px 8px;
+            border: 1px solid #94a3b8;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        tbody td,
+        thead th,
+        tfoot td {
+            border: 1px solid #94a3b8;
+        }
+
         .footer {
             margin-top: 30px;
             border-top: 2px solid #0f172a;
@@ -216,6 +265,12 @@
                 display: table-header-group;
             }
 
+            /* Each block starts on its own page */
+            .block-section + .block-section {
+                page-break-before: always;
+                break-before: page;
+            }
+
             /* position:fixed repeats on every printed page — cross-browser fallback */
             .print-page-number {
                 display: block !important;
@@ -232,84 +287,132 @@
 
 <body>
 
-    <div class="no-print">
+    <div class="no-print toolbar">
         <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+        <form method="GET" class="block-filter">
+            @foreach(request()->except('block_id') as $key => $value)
+                @if(!is_array($value))
+                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                @endif
+            @endforeach
+            <label for="block_id">Block:</label>
+            <select name="block_id" id="block_id" onchange="this.form.submit()">
+                <option value="">All Blocks</option>
+                @foreach($blocks as $block)
+                    <option value="{{ $block->id }}" @selected((string) $selectedBlockId === (string) $block->id)>{{ $block->name }}</option>
+                @endforeach
+            </select>
+        </form>
     </div>
 
-    <div class="header">
-        <span class="logo-text">PALLADIUM MALL</span>
-        <div class="doc-title">
-            <h2>{{ $pageTitle }}</h2>
-            <p>Printed: {{ now()->format('d M Y, h:i A') }}</p>
+    @forelse($blockGroups as $blockName => $blockOccupants)
+        <section class="block-section">
+            <div class="header">
+                <div>
+                    <span class="logo-text">PALLADIUM MALL</span>
+                    <div class="block-title">
+                        {{ Str::contains(strtolower($blockName), 'block') ? $blockName : $blockName . ' Block' }}
+                        <span class="block-count">{{ number_format(count($blockOccupants)) }} {{ Str::plural('Tenant', count($blockOccupants)) }}</span>
+                    </div>
+                </div>
+                <div class="doc-title">
+                    <h2>{{ $pageTitle }}</h2>
+                    <p>Printed: {{ now()->format('d M Y, h:i A') }}</p>
+                    <p class="total">Total {{ $statusLabel }} Occupants: {{ number_format(count($occupants)) }}</p>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 40px;">Sr #</th>
+                        <th style="width: 70px;">Flat No</th>
+                        <th style="width: 80px;">Floor</th>
+                        <th>Tenant Name</th>
+                        <th style="width: 150px;">Contact No / Emer No</th>
+                        <th>Landlord</th>
+                        <th style="width: 95px;">Start / End</th>
+                        <th class="text-right" style="width: 110px;">Rent / Sec</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($blockOccupants->values() as $index => $occupant)
+                        <tr>
+                            <td class="text-center" style="color: #475569;">{{ $index + 1 }}</td>
+                            <td class="unit">{{ $occupant['unit_number'] }}</td>
+                            <td>{{ $occupant['floor'] }}</td>
+                            <td class="name">
+                                {{ $occupant['tenant_name'] }}
+                                @if($occupant['is_other_owned'])
+                                    <span class="badge">Other-Owned</span>
+                                @endif
+                            </td>
+                            <td class="mono">
+                                @foreach(array_unique(array_filter([$occupant['phone'], $occupant['secondary_phone']], fn($n) => $n !== '—')) as $number)
+                                    <div>{{ $number }}</div>
+                                @endforeach
+                                @if($occupant['emergency_phone'] !== '—')
+                                    <div class="emergency">Emer: {{ $occupant['emergency_phone'] }}</div>
+                                @endif
+                                @if($occupant['phone'] === '—' && $occupant['secondary_phone'] === '—' && $occupant['emergency_phone'] === '—')
+                                    <div>—</div>
+                                @endif
+                            </td>
+                            <td>
+                                <span style="font-weight: 900;">{{ $occupant['landlord_name'] }}</span>
+                                @if(!empty($occupant['landlord_phone']) && $occupant['landlord_phone'] !== '—')
+                                    <span class="sub-line mono">{{ $occupant['landlord_phone'] }}</span>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="mono">{{ $occupant['start_date'] }}</span>
+                                <span class="sub-line mono">{{ $occupant['end_date'] }}</span>
+                            </td>
+                            <td class="text-right">
+                                <span class="amount">{{ number_format($occupant['monthly_rent'], 0) }}</span>
+                                <span class="sub-line mono">{{ $occupant['security_deposit'] > 0 ? number_format($occupant['security_deposit'], 0) : '—' }}</span>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr style="background: #e2e8f0; border-top: 3px solid #0f172a; border-bottom: 3px solid #0f172a;">
+                        <td colspan="7" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">BLOCK TOTAL (Rent / Security)</td>
+                        <td class="text-right" style="padding: 12px 10px;">
+                            <span class="amount">{{ number_format($blockOccupants->sum('monthly_rent'), 0) }}</span>
+                            <span class="sub-line mono">{{ number_format($blockOccupants->sum('security_deposit'), 0) }}</span>
+                        </td>
+                    </tr>
+                    @if($loop->last && $blockGroups->count() > 1)
+                        <tr style="background: #cbd5e1; border-bottom: 3px solid #0f172a;">
+                            <td colspan="7" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">GRAND TOTAL (Rent / Security)</td>
+                            <td class="text-right" style="padding: 12px 10px;">
+                                <span class="amount">{{ number_format($occupants->sum('monthly_rent'), 0) }}</span>
+                                <span class="sub-line mono">{{ number_format($occupants->sum('security_deposit'), 0) }}</span>
+                            </td>
+                        </tr>
+                    @endif
+                </tfoot>
+            </table>
+        </section>
+    @empty
+        <div class="header">
+            <span class="logo-text">PALLADIUM MALL</span>
+            <div class="doc-title">
+                <h2>{{ $pageTitle }}</h2>
+                <p>Printed: {{ now()->format('d M Y, h:i A') }}</p>
+            </div>
         </div>
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th class="text-center" style="width: 40px;">Sr #</th>
-                <th style="width: 70px;">Flat No</th>
-                <th style="width: 80px;">Floor</th>
-                <th>Tenant Name</th>
-                <th style="width: 150px;">Contact No / Emer No</th>
-                <th>Landlord</th>
-                <th style="width: 95px;">Start Date</th>
-                <th class="text-right" style="width: 110px;">Rent / Sec</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($occupants as $index => $occupant)
+        <table>
+            <tbody>
                 <tr>
-                    <td class="text-center" style="color: #475569;">{{ $index + 1 }}</td>
-                    <td class="unit">{{ $occupant['unit_number'] }}</td>
-                    <td>{{ $occupant['floor'] }}</td>
-                    <td class="name">
-                        {{ $occupant['tenant_name'] }}
-                        @if($occupant['is_other_owned'])
-                            <span class="badge">Other-Owned</span>
-                        @endif
-                    </td>
-                    <td class="mono">
-                        @foreach(array_unique(array_filter([$occupant['phone'], $occupant['secondary_phone']], fn($n) => $n !== '—')) as $number)
-                            <div>{{ $number }}</div>
-                        @endforeach
-                        @if($occupant['emergency_phone'] !== '—')
-                            <div class="emergency">Emer: {{ $occupant['emergency_phone'] }}</div>
-                        @endif
-                        @if($occupant['phone'] === '—' && $occupant['secondary_phone'] === '—' && $occupant['emergency_phone'] === '—')
-                            <div>—</div>
-                        @endif
-                    </td>
-                    <td>
-                        <span style="font-weight: 900;">{{ $occupant['landlord_name'] }}</span>
-                        @if(!empty($occupant['landlord_phone']) && $occupant['landlord_phone'] !== '—')
-                            <span class="sub-line mono">{{ $occupant['landlord_phone'] }}</span>
-                        @endif
-                    </td>
-                    <td><span class="mono">{{ $occupant['start_date'] }}</span></td>
-                    <td class="text-right">
-                        <span class="amount">{{ number_format($occupant['monthly_rent'], 0) }}</span>
-                        <span class="sub-line mono">{{ $occupant['security_deposit'] > 0 ? number_format($occupant['security_deposit'], 0) : '—' }}</span>
+                    <td style="text-align: center; color: #94a3b8; padding: 40px 0;">
+                        No {{ strtolower($statusLabel) }} occupants found matching current filters.
                     </td>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="8" style="text-align: center; color: #94a3b8; padding: 40px 0;">No tenants found matching current filters.</td>
-                </tr>
-            @endforelse
-        </tbody>
-        @if(count($occupants) > 0)
-            <tfoot>
-                <tr style="background: #e2e8f0; border-top: 3px solid #0f172a; border-bottom: 3px solid #0f172a;">
-                    <td colspan="7" style="padding: 12px 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">TOTAL (Rent / Security)</td>
-                    <td class="text-right" style="padding: 12px 10px;">
-                        <span class="amount">{{ number_format(collect($occupants)->sum('monthly_rent'), 0) }}</span>
-                        <span class="sub-line mono">{{ number_format(collect($occupants)->sum('security_deposit'), 0) }}</span>
-                    </td>
-                </tr>
-            </tfoot>
-        @endif
-    </table>
+            </tbody>
+        </table>
+    @endforelse
 
     <div class="footer">
         <span>Palladium Mall Management Office</span>
