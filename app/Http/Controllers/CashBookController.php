@@ -65,8 +65,9 @@ class CashBookController extends Controller
             ['key' => 'voucher_no', 'label' => 'Voucher #', 'td_class' => 'mono'],
             ['key' => 'manual_voucher_no', 'label' => 'Manual Voucher #', 'td_class' => 'mono'],
             ['key' => 'type', 'label' => 'Type', 'type' => 'badge'],
+            ['key' => 'source', 'label' => 'Source'],
+            ['key' => 'unit_number', 'label' => 'Unit / Account'],
             ['key' => 'details', 'label' => 'Description / Ref'],
-            ['key' => 'unit_number', 'label' => 'Unit'],
             ['key' => 'debit', 'label' => 'Debit', 'type' => 'debit', 'class' => 'text-right'],
             ['key' => 'credit', 'label' => 'Credit', 'type' => 'credit', 'class' => 'text-right'],
             ['key' => 'running_balance', 'label' => 'Balance', 'type' => 'balance', 'class' => 'text-right'],
@@ -77,7 +78,10 @@ class CashBookController extends Controller
             'filterChips' => $filterChips,
             'summaryCards' => $summaryCards,
             'columns' => $columns,
-            'rows' => $data['ledgerEntries']->toArray(),
+            'rows' => $data['ledgerEntries']->map(function ($row) {
+                $row['unit_number'] = $row['unit_number'] ?: ($row['name'] ?? null);
+                return $row;
+            })->toArray(),
         ])
             ->setPaper('a4', 'landscape')
             ->stream('cash_book_' . $startDate->format('Y_m_d') . '_to_' . $endDate->format('Y_m_d') . '.pdf');
@@ -102,7 +106,7 @@ class CashBookController extends Controller
         }
 
         // Fetch Inflows (Receiving Vouchers) for payment_account_id = 2
-        $inflows = ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit'])
+        $inflows = ReceivingVoucher::with(['tenant', 'owner', 'paymentAccount', 'payments.unit', 'payments.otherTenant'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where('payment_account_id', 2)
             ->orderBy('date', 'asc')
@@ -110,7 +114,7 @@ class CashBookController extends Controller
             ->get();
 
         // Fetch General Inflows for payment_account_id = 2
-        $generalInflows = \App\Models\GeneralReceivingVoucher::with(['party', 'paymentAccount'])
+        $generalInflows = \App\Models\GeneralReceivingVoucher::with(['party', 'landlord', 'paymentAccount', 'fromPaymentAccount'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where('payment_account_id', 2)
             ->get();
@@ -122,7 +126,7 @@ class CashBookController extends Controller
             ->get();
 
         // Fetch Outflows (Payment Vouchers) for payment_account_id = 2
-        $paymentVouchers = PaymentVoucher::with(['paymentAccount', 'user'])
+        $paymentVouchers = PaymentVoucher::with(['paymentAccount', 'toPaymentAccount', 'owner', 'party', 'tenant', 'landlord', 'user'])
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->where('payment_account_id', 2)
             ->get();
@@ -189,6 +193,8 @@ class CashBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => (float) $inflow->amount,
                 'credit' => 0.0,
+                'source' => 'Tenant',
+                'name' => $name ?: $inflow->payments->first()?->otherTenant?->name,
                 'model_type' => 'receiving_voucher',
                 'model_id' => $inflow->id,
                 'unit_number' => $unitNo,
@@ -214,6 +220,16 @@ class CashBookController extends Controller
                 'method' => $inflow->payment_method . ($inflow->paymentAccount ? ' (' . $inflow->paymentAccount->name . ')' : ''),
                 'debit' => (float) $inflow->amount,
                 'credit' => 0.0,
+                'source' => match ($inflow->received_from_type) {
+                    'landlord' => 'Landlord',
+                    'account'  => 'Account',
+                    default    => 'Party',
+                },
+                'name' => match ($inflow->received_from_type) {
+                    'landlord' => $inflow->landlord?->name,
+                    'account'  => $inflow->fromPaymentAccount?->name,
+                    default    => $inflow->party?->name,
+                },
                 'model_type' => 'general_receiving_voucher',
                 'model_id' => $inflow->id,
                 'unit_number' => null,
@@ -235,6 +251,8 @@ class CashBookController extends Controller
                 'method' => $transfer->payment_method . ' (' . $sourceName . ')',
                 'debit' => (float) $transfer->amount,
                 'credit' => 0.0,
+                'source' => 'Account',
+                'name' => $sourceName,
                 'model_type' => 'payment_voucher',
                 'model_id' => $transfer->id,
                 'unit_number' => null,
@@ -250,7 +268,9 @@ class CashBookController extends Controller
 
             if ($isExpense) {
                 $type = 'Expense';
+                $source = 'Expense Head';
                 $head = $outflow->expenseHead?->name;
+                $name = $head;
                 if ($notes !== '') {
                     $details = ($head && strtolower($head) !== strtolower($notes)) ? $head . ' • ' . $notes : $notes;
                 } else {
@@ -258,6 +278,7 @@ class CashBookController extends Controller
                 }
             } elseif ($isWithdrawal) {
                 $type = 'Payout';
+                $source = 'Owner';
                 $name = $outflow->owner?->name;
                 if ($notes !== '') {
                     $details = ($name && !str_contains(strtolower($notes), strtolower($name))) ? $name . ' • ' . $notes : $notes;
@@ -266,7 +287,9 @@ class CashBookController extends Controller
                 }
             } elseif ($isJvVoucher) {
                 $type = 'Payout';
+                $source = 'Expense Head';
                 $head = $outflow->expenseHead?->name;
+                $name = $head;
                 if ($notes !== '') {
                     $details = ($head && strtolower($head) !== strtolower($notes)) ? $head . ' • ' . $notes : $notes;
                 } else {
@@ -274,11 +297,27 @@ class CashBookController extends Controller
                 }
             } elseif ($isGrvTransferOut) {
                 $type = 'Transfer Out';
+                $source = 'Account';
                 $destName = $outflow->paymentAccount?->name ?: 'Account';
+                $name = $destName;
                 $details = 'Transfer Out to ' . $destName . ($notes !== '' ? ' • ' . $notes : '');
             } else {
                 $type = 'Payout';
+                $source = match ($outflow->paid_to_type) {
+                    'tenant'   => 'Tenant',
+                    'landlord' => 'Landlord',
+                    'owner'    => 'Owner',
+                    'account'  => 'Account',
+                    default    => 'Party',
+                };
                 $recipient = $outflow->paid_to_type === 'owner' ? ($outflow->owner?->name) : ($outflow->other_name);
+                $name = match ($outflow->paid_to_type) {
+                    'owner'    => $outflow->owner?->name,
+                    'tenant'   => $outflow->tenant?->name,
+                    'landlord' => $outflow->landlord?->name,
+                    'account'  => $outflow->toPaymentAccount?->name,
+                    default    => $outflow->party?->name ?? $outflow->other_name,
+                };
                 if ($notes !== '') {
                     $details = ($recipient && !str_contains(strtolower($notes), strtolower($recipient))) ? $recipient . ' • ' . $notes : $notes;
                 } else {
@@ -298,6 +337,8 @@ class CashBookController extends Controller
                 'method' => ($isWithdrawal ? 'withdrawal' : $outflow->payment_method) . ($outflow->paymentAccount ? ' (' . $outflow->paymentAccount->name . ')' : ''),
                 'debit' => 0.0,
                 'credit' => (float) $outflow->amount,
+                'source' => $source,
+                'name' => $name,
                 'model_type' => $isExpense ? 'expense' : ($isWithdrawal ? 'withdrawal' : ($isJvVoucher ? 'jv_voucher' : ($isGrvTransferOut ? 'general_receiving_voucher' : 'payment_voucher'))),
                 'model_id' => $outflow->id,
                 'unit_number' => null,
@@ -317,6 +358,7 @@ class CashBookController extends Controller
             'method' => 'Cash',
             'debit' => $openingBalance >= 0 ? (float) $openingBalance : 0.0,
             'credit' => $openingBalance < 0 ? (float) abs($openingBalance) : 0.0,
+            'source' => '—',
             'model_type' => 'opening_balance',
             'model_id' => null,
             'unit_number' => null,
