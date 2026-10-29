@@ -108,7 +108,7 @@
 
             <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
                 @foreach($financialWidgets as $wKey => $data)
-                    <div class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
+                    <a href="{{ $data['url'] }}" class="group relative overflow-hidden rounded-2xl p-5 text-white shadow-lg transition-all duration-300 hover:-translate-y-1 hover:shadow-xl flex flex-col justify-between"
                         style="background: {{ $data['gradient'] }}; min-height: 150px;">
                         <div class="absolute -right-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white"></div>
                         <div class="absolute -bottom-4 -left-2 h-16 w-16 rounded-full opacity-10 bg-white"></div>
@@ -118,6 +118,14 @@
                             <span class="text-base">{{ $data['icon'] }}</span>
                         </div>
                         <div class="relative mt-2 space-y-1.5">
+                            @if($data['prev_unpaid'] != 0)
+                                <div class="flex justify-between items-baseline">
+                                    <span class="text-xs font-bold uppercase text-white/90">Prev. Unpaid</span>
+                                    <span class="font-bold text-white text-sm">
+                                        Rs. {{ number_format($data['prev_unpaid']) }}
+                                    </span>
+                                </div>
+                            @endif
                             <div class="flex justify-between items-baseline">
                                 <span class="text-xs font-bold uppercase text-white/90">Expected Total</span>
                                 <span class="font-bold text-white text-sm">
@@ -137,7 +145,7 @@
                                 </span>
                             </div>
                         </div>
-                    </div>
+                    </a>
                 @endforeach
             </div>
 

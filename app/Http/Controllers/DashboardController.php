@@ -14,11 +14,11 @@ use Illuminate\View\View;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
-use App\Services\MatrixService;
+use App\Services\FlatShopLedgerService;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, MatrixService $matrixService): View
+    public function index(Request $request, FlatShopLedgerService $ledgerService): View
     {
         $fromDateInput = $request->input('from_date');
         $toDateInput = $request->input('to_date');
@@ -57,69 +57,62 @@ class DashboardController extends Controller
             $dateLabel = $fromDate->format('d M Y') . ' — ' . $toDate->format('d M Y');
         }
 
-        // 1. Calculate Financial Widgets as per Matrix
-        $matrixReq = new Request([
-            'date_from' => $fromDateStr,
-            'report_type' => 'monthly_matrix',
-        ]);
-        $matrixEntries = $matrixService->buildMatrixEntries($matrixReq);
-        $matrixSummary = $matrixService->buildMatrixSummary($matrixEntries);
+        // 1. Calculate Financial Widgets as per Flat / Shop Ledger (PM Mall owner filter)
+        $ledgerFilters = [
+            'date_from'        => $fromDateStr,
+            'date_to'          => $toDateStr,
+            'owner_type'       => 'pm_mall',
+            'occupancy_status' => '',
+            'payment_status'   => 'all',
+            'unit_id'          => '',
+        ];
 
-        $rentDue  = (float) $matrixSummary['total_rent'];
-        $rentPaid = (float) $matrixSummary['total_rent_paid'];
+        $ledgerWidget = function (string $billingType) use ($ledgerService, $ledgerFilters): array {
+            $filters = array_merge($ledgerFilters, ['billing_type' => $billingType]);
+            $summary = $ledgerService->buildLedgerData(new Request(array_merge($filters, ['paginate' => false])))['summary'];
 
-        // Services = maintenance only (excludes extra payment types)
-        $servicesDue  = (float) $matrixSummary['total_serv'];
-        $servicesPaid = (float) $matrixSummary['total_serv_paid'];
+            if ($billingType === 'security_deposit') {
+                return [
+                    'prev_unpaid' => 0.0,
+                    'due'         => (float) $summary['total_required'],
+                    'paid'        => (float) $summary['total_collected'],
+                    'unpaid'      => (float) $summary['total_pending'],
+                    'url'         => route('ledgers.flat_shop.index', $filters),
+                ];
+            }
 
-        // Extra Payments (deposit_deduction, extra_payment, etc.)
-        $extraDue  = (float) $matrixSummary['total_extra'];
-        $extraPaid = (float) $matrixSummary['total_extra_paid'];
-
-        $depositDue  = (float) $matrixSummary['total_security_deposit'];
-        $depositPaid = (float) $matrixSummary['total_sec_paid'];
-
-        $grandDue  = (float) $matrixSummary['total_amount'];
-        $grandPaid = (float) $matrixSummary['total_received'];
+            return [
+                'prev_unpaid' => (float) $summary['total_prev_unpaid'],
+                'due'         => (float) $summary['total_amount_due'],
+                'paid'        => (float) $summary['total_amount_paid'],
+                'unpaid'      => (float) $summary['total_balance'],
+                'url'         => route('ledgers.flat_shop.index', $filters),
+            ];
+        };
 
         $financialWidgets = [
-            'grand_total' => [
+            'grand_total' => $ledgerWidget('all') + [
                 'label'    => 'Grand Total Summary',
-                'due'      => $grandDue,
-                'paid'     => $grandPaid,
-                'unpaid'   => $grandDue - $grandPaid,
                 'gradient' => 'linear-gradient(135deg, #465fff 0%, #2a31d8 100%)',
                 'icon'     => '📊',
             ],
-            'rent' => [
+            'rent' => $ledgerWidget('rent') + [
                 'label'    => 'Rent Summary',
-                'due'      => $rentDue,
-                'paid'     => $rentPaid,
-                'unpaid'   => $rentDue - $rentPaid,
                 'gradient' => 'linear-gradient(135deg, #f04438 0%, #912018 100%)',
                 'icon'     => '🔑',
             ],
-            'services' => [
+            'services' => $ledgerWidget('maintenance') + [
                 'label'    => 'Services Summary',
-                'due'      => $servicesDue,
-                'paid'     => $servicesPaid,
-                'unpaid'   => max(0.0, $servicesDue - $servicesPaid),
                 'gradient' => 'linear-gradient(135deg, #7a5af8 0%, #2a31d8 100%)',
                 'icon'     => '🛠️',
             ],
-            'extra_payments' => [
+            'extra_payments' => $ledgerWidget('extra_payment') + [
                 'label'    => 'Extra Payments',
-                'due'      => $extraDue,
-                'paid'     => $extraPaid,
-                'unpaid'   => max(0.0, $extraDue - $extraPaid),
                 'gradient' => 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
                 'icon'     => '➕',
             ],
-            'security_deposit' => [
+            'security_deposit' => $ledgerWidget('security_deposit') + [
                 'label'    => 'Security Deposit',
-                'due'      => $depositDue,
-                'paid'     => $depositPaid,
-                'unpaid'   => $depositDue - $depositPaid,
                 'gradient' => 'linear-gradient(135deg, #a855f7 0%, #701a75 100%)',
                 'icon'     => '🛡️',
             ],
