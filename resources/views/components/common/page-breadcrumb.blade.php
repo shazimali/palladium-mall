@@ -1,5 +1,8 @@
 @props(['pageTitle' => 'Page'])
 
+{{-- Feeds the browser tab title in layouts.app --}}
+@section('pageTitle', html_entity_decode(strip_tags((string) $pageTitle), ENT_QUOTES))
+
 <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
     <h2 class="text-xl font-semibold text-gray-800 dark:text-white/90">
         {{ $pageTitle }}
