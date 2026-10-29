@@ -151,6 +151,29 @@
             color: #dc2626;
         }
 
+        .tenant-img,
+        .no-photo {
+            width: 48px;
+            height: 48px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+        }
+
+        .tenant-img {
+            object-fit: cover;
+            display: block;
+        }
+
+        .no-photo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: #94a3b8;
+            border-style: dashed;
+        }
+
         .block-title {
             font-size: 1.1rem;
             font-weight: 900;
@@ -326,8 +349,8 @@
                 <thead>
                     <tr>
                         <th class="text-center" style="width: 40px;">Sr #</th>
+                        <th class="text-center" style="width: 70px;">Photo</th>
                         <th style="width: 70px;">Flat No</th>
-                        <th style="width: 80px;">Floor</th>
                         <th>Tenant Name</th>
                         <th style="width: 150px;">Contact No / Emer No</th>
                         <th>Landlord</th>
@@ -340,8 +363,14 @@
                     @foreach($blockOccupants->values() as $index => $occupant)
                         <tr>
                             <td class="text-center" style="color: #475569;">{{ $index + 1 }}</td>
+                            <td class="text-center">
+                                @if(!empty($occupant['photo_url']))
+                                    <img src="{{ $occupant['photo_url'] }}" alt="{{ $occupant['tenant_name'] }}" class="tenant-img">
+                                @else
+                                    <div class="no-photo">👤</div>
+                                @endif
+                            </td>
                             <td class="unit">{{ $occupant['unit_number'] }}</td>
-                            <td>{{ $occupant['floor'] }}</td>
                             <td class="name">
                                 {{ $occupant['tenant_name'] }}
                                 @if($occupant['is_other_owned'])
