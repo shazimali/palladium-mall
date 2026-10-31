@@ -123,6 +123,18 @@ class Agreement extends Model
         return $query->where('status', 'expired');
     }
 
+    /**
+     * Agreements whose end date has passed but the tenant has not moved out yet
+     * (move-out terminates the agreement and records a move_out checklist).
+     */
+    public function scopeEndedNotMovedOut(Builder $query): Builder
+    {
+        return $query->where('status', 'active')
+            ->whereNotNull('end_date')
+            ->where('end_date', '<', Carbon::today())
+            ->whereDoesntHave('moveOutChecklist');
+    }
+
     public function scopeExpiringSoon(Builder $query, int $days = 30): Builder
     {
         return $query->where('status', 'active')
@@ -175,6 +187,15 @@ class Agreement extends Model
         }
 
         return (int) max(0, Carbon::today()->diffInDays($this->end_date, false));
+    }
+
+    public function daysOverdue(): int
+    {
+        if (!$this->end_date || $this->end_date->gte(Carbon::today())) {
+            return 0;
+        }
+
+        return (int) $this->end_date->diffInDays(Carbon::today());
     }
 
     public function isExpiringSoon(int $days = 30): bool

@@ -128,12 +128,18 @@ class DashboardController extends Controller
             ->orderBy('end_date', 'asc')
             ->get();
 
+        $expiredAgreements = Agreement::endedNotMovedOut()
+            ->with(['tenant', 'unit'])
+            ->orderBy('end_date', 'asc')
+            ->get();
+
         return view('dashboard.index', [
             'title' => 'Dashboard',
             'financialWidgets' => $financialWidgets,
             'currentMonthLabel' => $dateLabel,
             'fromDate' => $fromDateStr,
             'toDate' => $toDateStr,
+            'expiredAgreements' => $expiredAgreements,
             'expiringAgreements' => $expiringAgreements,
             'overall' => $this->buildUnitGroupStats($allUnits, $fromDateStr, $toDateStr),
             'pmMall' => $this->buildUnitGroupStats($pmMallUnits, $fromDateStr, $toDateStr),

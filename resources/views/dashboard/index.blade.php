@@ -38,6 +38,65 @@
             </form>
         </div>
 
+        {{-- Expired Agreements (end date passed, not moved out) Top Alert Widget --}}
+        @if(isset($expiredAgreements) && $expiredAgreements->isNotEmpty())
+            <div
+                class="rounded-2xl border-2 border-red-300 bg-red-50/90 p-5 dark:border-red-800/80 dark:bg-red-950/40 shadow-sm">
+                <div
+                    class="flex items-center justify-between flex-wrap gap-4 mb-4 pb-3 border-b border-red-200 dark:border-red-900/60">
+                    <div class="flex items-center gap-3">
+                        <span
+                            class="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500 text-white font-black text-xl shadow-xs">⚠️</span>
+                        <div>
+                            <h3 class="text-base font-black text-red-950 dark:text-red-200">
+                                Expired Agreements ({{ $expiredAgreements->count() }})
+                            </h3>
+                            <p class="text-xs font-semibold text-red-700 dark:text-red-400">
+                                The following tenant agreements have passed their end date but the tenant has not moved out.
+                                Please renew, extend, or process move-out.
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ route('tenants.index', ['expired_agreements' => 1]) }}"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-red-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-red-700 transition-colors shadow-xs">
+                        View All Tenants / Agreements →
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    @foreach($expiredAgreements->take(8) as $ag)
+                        @php
+                            $days = $ag->daysOverdue();
+                            $badgeColor = 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/80 dark:text-red-300';
+                        @endphp
+                        <div
+                            class="rounded-xl border border-red-200/80 bg-white p-3.5 shadow-2xs dark:border-red-900/40 dark:bg-gray-900 flex items-center justify-between">
+                            <div class="truncate mr-2">
+                                <p class="text-sm font-extrabold text-gray-900 dark:text-white truncate">
+                                    {{ $ag->unit?->unit_number ?? '—' }}
+                                </p>
+                                <p class="text-sm font-extrabold text-gray-900 dark:text-white truncate"
+                                    title="{{ $ag->tenant?->name }}">{{ $ag->tenant?->name ?? '—' }}</p>
+                                <p class="text-[11px] font-semibold text-gray-400">End:
+                                    {{ $ag->end_date ? $ag->end_date->format('d M Y') : '—' }}
+                                </p>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <span
+                                    class="inline-flex items-center rounded-lg border px-2 py-1 text-xs font-black {{ $badgeColor }}">
+                                    {{ $days }}d overdue
+                                </span>
+                                <a href="{{ route('tenants.index', ['search' => $ag->unit?->unit_number ?? $ag->unit_id]) }}"
+                                    class="block mt-1 text-[11px] font-black text-brand-600 hover:underline">
+                                    Manage →
+                                </a>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
         {{-- Expiring Agreements Top Alert Widget --}}
         @if(isset($expiringAgreements) && $expiringAgreements->isNotEmpty())
             <div
@@ -49,7 +108,7 @@
                             class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white font-black text-xl shadow-xs">⚠️</span>
                         <div>
                             <h3 class="text-base font-black text-amber-950 dark:text-amber-200">
-                                Expiring Agreements Alert ({{ $expiringAgreements->count() }}
+                                Expiring Soon ({{ $expiringAgreements->count() }}
                                 {{ Str::plural('Agreement', $expiringAgreements->count()) }} Ending Soon)
                             </h3>
                             <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">

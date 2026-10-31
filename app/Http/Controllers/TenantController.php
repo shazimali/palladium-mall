@@ -49,6 +49,9 @@ class TenantController extends Controller
                             \Carbon\Carbon::today()->addDays($days),
                         ]);
                 });
+            })
+            ->when($request->boolean('expired_agreements'), function ($q) {
+                $q->whereHas('agreements', fn($qa) => $qa->endedNotMovedOut());
             });
 
         // Calculate counts based on current filters (excluding status)
