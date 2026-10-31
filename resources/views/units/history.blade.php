@@ -23,7 +23,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <a href="{{ route('units.index') }}"
+                <a href="{{ route('tenants.index') }}"
                     class="rounded-xl border-2 border-gray-300 px-5 py-2.5 text-sm font-extrabold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-white/5 transition-colors">
                     Back
                 </a>
