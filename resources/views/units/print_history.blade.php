@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ ucfirst($unit->type) }} {{ $unit->unit_number }} History</title>
+    <title>{{ $unit ? ucfirst($unit->type) . ' ' . $unit->unit_number : 'All Flats / Shops' }} History</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -100,16 +100,21 @@
             <p class="text-sm font-bold text-gray-600">Palladium Mall</p>
             <h1 class="text-3xl font-black uppercase tracking-wide text-gray-900 mt-1">Flat / Shop History</h1>
             <p class="text-xs font-bold text-gray-600 mt-2">
-                Printed On: {{ now()->format('d M Y h:i A') }} &nbsp;·&nbsp; Total Records: {{ $history->count() }}
+                Printed On: {{ now()->format('d M Y h:i A') }} &nbsp;·&nbsp; Total Records: {{ $rows->count() }}
             </p>
         </div>
 
         <div class="mb-6 text-center">
             <h2 class="inline-block rounded-full border-2 border-gray-800 px-8 py-2 text-xl font-black uppercase tracking-wide text-gray-900">
-                {{ ucfirst($unit->type) }} No {{ $unit->unit_number }}
+                {{ $unit ? ucfirst($unit->type) . ' No ' . $unit->unit_number : 'All Flats / Shops' }}
             </h2>
             <p class="text-sm font-bold text-gray-700 mt-2">
-                {{ $unit->floor->name ?? '' }}{{ $unit->block ? ' · ' . $unit->block->name : '' }}{{ $unit->landlord ? ' · Owner: ' . $unit->landlord->name : '' }}
+                @if($unit)
+                    {{ $unit->floor->name ?? '' }}{{ $unit->block ? ' · ' . $unit->block->name : '' }}{{ $unit->landlord ? ' · Owner: ' . $unit->landlord->name : '' }}
+                @endif
+                @if($filters['date_from'] || $filters['date_to'])
+                    {{ $unit ? ' · ' : '' }}Period: {{ $filters['date_from'] ? \Carbon\Carbon::parse($filters['date_from'])->format('d M Y') : 'Beginning' }} – {{ $filters['date_to'] ? \Carbon\Carbon::parse($filters['date_to'])->format('d M Y') : 'Today' }}
+                @endif
             </p>
         </div>
 
@@ -118,10 +123,13 @@
                 <thead class="text-xs uppercase bg-gray-100 text-gray-700">
                     <tr>
                         <th class="px-3 py-3 border border-gray-300">#</th>
-                        <th class="px-3 py-3 border border-gray-300">Name</th>
+                        <th class="px-3 py-3 border border-gray-300">Flat / Shop</th>
+                        <th class="px-3 py-3 border border-gray-300">Tenant Name</th>
                         <th class="px-3 py-3 border border-gray-300">Contact No</th>
+                        @unless($isAll)
                         <th class="px-3 py-3 border border-gray-300 text-right">Rent</th>
                         <th class="px-3 py-3 border border-gray-300 text-right">Advance</th>
+                        @endunless
                         <th class="px-3 py-3 border border-gray-300">Agreement Start</th>
                         <th class="px-3 py-3 border border-gray-300">Agreement End</th>
                         <th class="px-3 py-3 border border-gray-300">Vacated On</th>
@@ -129,9 +137,10 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    @forelse($history as $row)
+                    @forelse($rows as $row)
                         <tr>
                             <td class="px-3 py-3 border border-gray-300 text-gray-400">{{ $loop->iteration }}</td>
+                            <td class="px-3 py-3 border border-gray-300 font-black text-gray-900 whitespace-nowrap">{{ $row['unit']->unit_number }}</td>
                             <td class="px-3 py-3 border border-gray-300 font-semibold text-gray-800">
                                 {{ $row['name'] }}
                                 @if($row['kind'] !== 'Tenant')
@@ -139,8 +148,10 @@
                                 @endif
                             </td>
                             <td class="px-3 py-3 border border-gray-300 font-mono">{{ $row['phone'] ?: '—' }}</td>
+                            @unless($isAll)
                             <td class="px-3 py-3 border border-gray-300 text-right font-mono">{{ $row['rent'] ? number_format($row['rent']) : '—' }}</td>
                             <td class="px-3 py-3 border border-gray-300 text-right font-mono">{{ $row['advance'] ? number_format($row['advance']) : '—' }}</td>
+                            @endunless
                             <td class="px-3 py-3 border border-gray-300 whitespace-nowrap">{{ $row['start_date']?->format('d M Y') ?? '—' }}</td>
                             <td class="px-3 py-3 border border-gray-300 whitespace-nowrap">{{ $row['end_date']?->format('d M Y') ?? '—' }}</td>
                             <td class="px-3 py-3 border border-gray-300 whitespace-nowrap">{{ $row['vacated_at']?->format('d M Y') ?? '—' }}</td>
@@ -148,8 +159,8 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-8 border border-gray-300 text-center text-gray-400">
-                                No history found for this flat / shop.
+                            <td colspan="{{ $isAll ? 8 : 10 }}" class="px-4 py-8 border border-gray-300 text-center text-gray-400">
+                                No history found.
                             </td>
                         </tr>
                     @endforelse

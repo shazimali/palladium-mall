@@ -192,7 +192,7 @@ class UnitController extends Controller
             return collect();
         }
 
-        $unit->load([
+        $unit->loadMissing([
             'agreements' => fn($q) => $q->where('status', '!=', 'draft'),
             'agreements.tenant',
             'agreements.flatMoveOutReport',
@@ -234,29 +234,92 @@ class UnitController extends Controller
 
     public function history(Request $request): View
     {
-        $unit = $request->filled('unit_id')
-            ? Unit::with(['floor', 'block', 'landlord'])->find($request->unit_id)
-            : null;
-
         $units = Unit::with(['tenant', 'otherTenant'])
             ->orderBy('unit_number')
             ->get(['id', 'unit_number', 'type']);
 
         return view('units.history', [
             'units'   => $units,
-            'unit'    => $unit,
-            'history' => $this->buildUnitHistory($unit),
-        ]);
+            'filters' => $this->historyFilters($request),
+        ] + $this->buildHistoryReport($request));
     }
 
     public function printHistory(Request $request): View
     {
-        $unit = Unit::with(['floor', 'block', 'landlord'])->findOrFail($request->unit_id);
+        $report = $this->buildHistoryReport($request);
+        abort_if($report['rows']->isEmpty(), 404);
 
         return view('units.print_history', [
-            'unit'    => $unit,
-            'history' => $this->buildUnitHistory($unit),
-        ]);
+            'filters' => $this->historyFilters($request),
+        ] + $report);
+    }
+
+    /**
+     * History filters: `unit_id` (a unit id or the literal 'all') plus an optional
+     * date range. A date range with no unit picked means every unit.
+     */
+    private function historyFilters(Request $request): array
+    {
+        $from = $request->input('date_from');
+        $to   = $request->input('date_to');
+
+        return [
+            'unit_id'   => $request->input('unit_id') ?: (($from || $to) ? 'all' : null),
+            'date_from' => $from,
+            'date_to'   => $to,
+        ];
+    }
+
+    /**
+     * Flat list of history rows (each tagged with its unit) for the selected unit(s),
+     * keeping only occupancies that overlap the date range. A unit with no
+     * occupancy in range gets a single "Vacant" row so every unit is accounted for.
+     */
+    private function buildHistoryReport(Request $request): array
+    {
+        $filters = $this->historyFilters($request);
+        $isAll   = $filters['unit_id'] === 'all';
+
+        if (!$filters['unit_id']) {
+            return ['rows' => collect(), 'unit' => null, 'isAll' => false];
+        }
+
+        $from = $filters['date_from'] ? Carbon::parse($filters['date_from'])->startOfDay() : null;
+        $to   = $filters['date_to'] ? Carbon::parse($filters['date_to'])->endOfDay() : null;
+
+        $units = Unit::with([
+                'floor', 'block', 'landlord',
+                'agreements' => fn($q) => $q->where('status', '!=', 'draft'),
+                'agreements.tenant',
+                'agreements.flatMoveOutReport',
+                'otherTenantHistory.otherTenant',
+            ])
+            ->when(!$isAll, fn($q) => $q->whereKey($filters['unit_id']))
+            ->orderBy('unit_number')
+            ->get();
+
+        $rows = $units->flatMap(function ($unit) use ($from, $to) {
+            $rows = $this->buildUnitHistory($unit)->filter(fn($row) =>
+                (!$to || !$row['start_date'] || $row['start_date']->lte($to)) &&
+                (!$from || !$row['vacated_at'] || $row['vacated_at']->gte($from))
+            );
+
+            if ($rows->isEmpty()) {
+                $rows = collect([[
+                    'name' => '—', 'phone' => null, 'rent' => null, 'advance' => null,
+                    'start_date' => null, 'end_date' => null, 'vacated_at' => null,
+                    'status' => 'Vacant', 'kind' => 'Tenant', 'url' => null,
+                ]]);
+            }
+
+            return $rows->map(fn($row) => $row + ['unit' => $unit]);
+        })->values();
+
+        return [
+            'rows'  => $rows,
+            'unit'  => $isAll ? null : $units->first(),
+            'isAll' => $isAll,
+        ];
     }
 
     public function printOne(Unit $unit): View
