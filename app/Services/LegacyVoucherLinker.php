@@ -82,16 +82,30 @@ class LegacyVoucherLinker
 
     /**
      * Keep a non-form header in step with its row after the row was changed or deleted
-     * by an old screen or another module. Form vouchers are managed by VoucherPostingService.
+     * by an old screen or another module. Form vouchers are otherwise managed by
+     * VoucherPostingService (which pauses this sync), so for them only the total is
+     * refreshed — e.g. when a line's amount is edited on the Receiving Voucher screen.
      */
     public function sync(Voucher $voucher): void
     {
-        if ($voucher->source === 'form') {
-            return;
-        }
-
         $rows = collect(self::LINE_MODELS)
             ->flatMap(fn($class) => $class::where('voucher_id', $voucher->id)->get());
+
+        if ($voucher->source === 'form') {
+            Voucher::withoutEvents(function () use ($voucher, $rows) {
+                if ($rows->isEmpty()) {
+                    if (!$voucher->trashed()) {
+                        $voucher->delete();
+                    }
+                    return;
+                }
+                if ($voucher->trashed()) {
+                    $voucher->restore();
+                }
+                $voucher->update(['total_amount' => $rows->sum(fn($r) => (float) $r->amount)]);
+            });
+            return;
+        }
 
         Voucher::withoutEvents(function () use ($voucher, $rows) {
             if ($rows->isEmpty()) {

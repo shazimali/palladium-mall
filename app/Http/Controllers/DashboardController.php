@@ -119,7 +119,7 @@ class DashboardController extends Controller
         ];
 
         // 2. Calculate Flat/Shop/Office Status Grids as per Date Filter Range
-        $allUnits = Unit::with(['otherTenant', 'agreements', 'payments', 'otherTenantHistory'])->get();
+        $allUnits = Unit::with(['otherTenant', 'agreements.moveOutChecklist', 'payments', 'otherTenantHistory'])->get();
         $pmMallUnits = $allUnits->filter(fn($u) => !$u->is_self);
         $otherOwnedUnits = $allUnits->filter(fn($u) => $u->is_self);
 
@@ -196,6 +196,20 @@ class DashboardController extends Controller
                 $endDate = $a->end_date ? ($a->end_date instanceof Carbon ? $a->end_date->format('Y-m-d') : substr((string) $a->end_date, 0, 10)) : null;
 
                 $overlapsStart = $startDate <= $toDateStr;
+
+                // Moved-out / ended agreements: the tenancy ends on the move-out date (the
+                // agreement's end_date is left as the original contract end). The unit counts as
+                // rented only if the tenant was still there at the end of the range (or today,
+                // for a range that runs into the future).
+                if (in_array($a->status, ['terminated', 'expired'])) {
+                    $moveOutDate = $a->moveOutChecklist?->checklist_date?->format('Y-m-d');
+                    $leftOn = $moveOutDate ?? $endDate;
+                    if ($leftOn) {
+                        $snapshot = min($toDateStr, Carbon::today()->toDateString());
+                        return $overlapsStart && $leftOn > $snapshot;
+                    }
+                }
+
                 $overlapsEnd = is_null($endDate) || $endDate >= $fromDateStr;
 
                 return $overlapsStart && $overlapsEnd;
@@ -245,7 +259,7 @@ class DashboardController extends Controller
         }
 
         // Fetch units based on type filter ('all', 'pm_mall', or 'other_owned')
-        $query = Unit::with(['floor', 'block', 'area', 'otherTenant', 'agreements', 'payments', 'otherTenantHistory']);
+        $query = Unit::with(['floor', 'block', 'area', 'otherTenant', 'agreements.moveOutChecklist', 'payments', 'otherTenantHistory']);
 
         if ($type === 'other_owned') {
             $query->where('is_self', true);
